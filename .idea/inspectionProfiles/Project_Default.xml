@@ -1,0 +1,30 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <value>
+          <list size="14">
+            <item index="0" class="java.lang.String" itemvalue="django" />
+            <item index="1" class="java.lang.String" itemvalue="asgiref" />
+            <item index="2" class="java.lang.String" itemvalue="pytz" />
+            <item index="3" class="java.lang.String" itemvalue="djangorestframework" />
+            <item index="4" class="java.lang.String" itemvalue="pyparsing" />
+            <item index="5" class="java.lang.String" itemvalue="sqlparse" />
+            <item index="6" class="java.lang.String" itemvalue="azure" />
+            <item index="7" class="java.lang.String" itemvalue="regex" />
+            <item index="8" class="java.lang.String" itemvalue="cryptography" />
+            <item index="9" class="java.lang.String" itemvalue="urllib3" />
+            <item index="10" class="java.lang.String" itemvalue="click" />
+            <item index="11" class="java.lang.String" itemvalue="pytest" />
+            <item index="12" class="java.lang.String" itemvalue="faker" />
+            <item index="13" class="java.lang.String" itemvalue="asynctest" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyRedundantParenthesesInspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="myIgnoreTupleInReturn" value="true" />
+    </inspection_tool>
+  </profile>
+</component>

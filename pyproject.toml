@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "Celery Soup"
+version = "0.1.0"
+description = "Modern Real-Time Monitor for Celery"
+authors = ["Dan Yishai <danyi1212@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.94.0"
+python-dotenv = "^1.0.0"
+uvicorn = "^0.21.0"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
