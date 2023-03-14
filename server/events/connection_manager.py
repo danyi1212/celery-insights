@@ -16,9 +16,9 @@ class ConnectionManager:
     def unsubscribe(self, websocket: WebSocket) -> None:
         self.active_connections.remove(websocket)
 
-    async def broadcast(self, event: dict) -> None:
+    async def broadcast(self, message: str) -> None:
         await asyncio.gather(*[
-            connection.send_json(event)
+            connection.send_text(message)
             for connection in self.active_connections
         ])
 
