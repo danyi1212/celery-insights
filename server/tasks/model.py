@@ -1,0 +1,86 @@
+from datetime import datetime
+from enum import Enum
+from typing import Any, Self
+
+from celery import states
+from celery.events.state import Task as CeleryTask
+from pydantic import BaseModel, Field
+
+from tasks.utils import timestamp_to_datetime
+
+
+class TaskState(str, Enum):
+    PENDING = states.PENDING
+    RECEIVED = states.RECEIVED
+    STARTED = states.STARTED
+    SUCCESS = states.SUCCESS
+    FAILURE = states.FAILURE
+    REVOKED = states.REVOKED
+    REJECTED = states.REJECTED
+    RETRY = states.RETRY
+    IGNORED = states.IGNORED
+
+
+class Task(BaseModel):
+    id: str = Field(description="Task UUID")
+    type: str | None = Field(description="Task function name")
+    state: TaskState = Field(description="Task last known state")
+
+    sent_at: datetime | None = Field(description="When task was published by client to queue")
+    received_at: datetime | None = Field(description="When task was received by worker")
+    started_at: datetime | None = Field(description="When task was started to be executed by worker")
+    succeeded_at: datetime | None = Field(description="When task was finished successfully by worker")
+    failed_at: datetime | None = Field(description="When task was finished with failure by worker")
+    retried_at: datetime | None = Field(description="When task was last published for retry")
+    revoked_at: datetime | None = Field(description="When task was revoked last")
+    rejected_at: datetime | None = Field(description="When task was rejected by worker")
+    runtime: float | None = Field(description="How long task executed in seconds")
+
+    args: tuple = Field(description="Positional arguments provided to task")
+    kwargs: dict[str, Any] = Field(description="Keyword arguments provided to task")
+    eta: datetime | None = Field(description="Absolute time when task should be executed")
+    expires: datetime | None = Field(description="Absolute time when task should be expired")
+    retries: int | None = Field(description="Retry count")
+    exchange: str | None = Field(description="Broker exchange name")
+    routing_key: str | None = Field(description="Broker routing key")
+    root_id: str | None = Field(description="Root Task ID")
+    parent_id: str | None = Field(description="Parent Task ID")
+    children: list[str] = Field(description="Children Task IDs")
+    worker: str | None = Field(description="Executing worker hostname")
+    result: str | None = Field(description="Task returned result")
+    exception: str | None = Field(description="Task failure exception message")
+    traceback: str | None = Field(description="Task failure traceback")
+
+    @classmethod
+    def from_celery_task(cls, task: CeleryTask) -> Self:
+        return cls(
+            id=task.id,
+            type=task.name,
+            state=task.state,
+
+            sent_at=timestamp_to_datetime(task.sent),
+            received_at=timestamp_to_datetime(task.received),
+            started_at=timestamp_to_datetime(task.started),
+            succeeded_at=timestamp_to_datetime(task.succeeded),
+            failed_at=timestamp_to_datetime(task.failed),
+            retried_at=timestamp_to_datetime(task.retried),
+            revoked_at=timestamp_to_datetime(task.revoked),
+            rejected_at=timestamp_to_datetime(task.rejected),
+            runtime=task.runtime,
+
+            args=eval(task.args) if task.args is not None else tuple(),
+            kwargs=eval(task.kwargs) if task.kwargs is not None else {},
+            eta=timestamp_to_datetime(task.eta),
+            expires=timestamp_to_datetime(task.expires),
+            retries=task.retries,
+            exchange=task.exchange,
+            routing_key=task.routing_key,
+            root_id=task.root_id,
+            parent_id=task.parent_id,
+            children=[child.id for child in task.children],
+            client=task.client,
+            worker=task.worker.id if task.worker is not None else None,
+            result=task.result,
+            exception=task.exception,
+            traceback=task.traceback,
+        )
