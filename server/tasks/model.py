@@ -36,8 +36,8 @@ class Task(BaseModel):
     rejected_at: datetime | None = Field(description="When task was rejected by worker")
     runtime: float | None = Field(description="How long task executed in seconds")
 
-    args: tuple = Field(description="Positional arguments provided to task")
-    kwargs: dict[str, Any] = Field(description="Keyword arguments provided to task")
+    args: str = Field(description="Positional arguments provided to task")
+    kwargs: str = Field(description="Keyword arguments provided to task")
     eta: datetime | None = Field(description="Absolute time when task should be executed")
     expires: datetime | None = Field(description="Absolute time when task should be expired")
     retries: int | None = Field(description="Retry count")
@@ -68,8 +68,8 @@ class Task(BaseModel):
             rejected_at=timestamp_to_datetime(task.rejected),
             runtime=task.runtime,
 
-            args=eval(task.args) if task.args is not None else tuple(),
-            kwargs=eval(task.kwargs) if task.kwargs is not None else {},
+            args=task.args,
+            kwargs=task.kwargs,
             eta=timestamp_to_datetime(task.eta),
             expires=timestamp_to_datetime(task.expires),
             retries=task.retries,
