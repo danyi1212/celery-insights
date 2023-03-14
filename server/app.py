@@ -3,6 +3,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI
+from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
@@ -17,11 +18,17 @@ logging.config.dictConfig(LoggingConfig().dict())
 logger = logging.getLogger(__name__)
 logger.info("Welcome!")
 
+
+def custom_generate_unique_id(route: APIRoute) -> str:
+    return route.name
+
+
 app = FastAPI(
     title="Celery Soup",
     description="Modern Real-Time Monitoring for Celery",
     debug=settings.debug,
     lifespan=lifespan,
+    generate_unique_id_function=custom_generate_unique_id,
 )
 
 app.add_middleware(
