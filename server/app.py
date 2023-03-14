@@ -1,12 +1,11 @@
 import logging.config
-from pathlib import Path
-from uuid import uuid4
-
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
+from pathlib import Path
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
+from uuid import uuid4
 
 from api import api_router
 from events.connection_manager import ws_manager
@@ -34,7 +33,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:5173",
         "http://localhost:8555",
+        "http://127.0.0.1:5173",
         "http://127.0.0.1:8555",
     ],
     allow_credentials=True,
