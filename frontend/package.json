@@ -38,6 +38,7 @@
     "openapi-typescript-codegen": "^0.23.0"
   },
   "prettier": {
-    "tabWidth": 4
+    "tabWidth": 4,
+    "semi": false
   }
 }
