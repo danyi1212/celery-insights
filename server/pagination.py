@@ -16,6 +16,7 @@ class Paginated(GenericModel, Generic[T]):
 
 
 def get_paginated_response(items: Iterable[T], count: int, request: Request, limit: int, offset: int) -> Paginated[T]:
+    # TODO restrict negative values
     next_url = (
         str(request.url.replace_query_params(offset=offset + limit, limit=min(limit, count - offset - limit)))
         if offset + limit < count else None
