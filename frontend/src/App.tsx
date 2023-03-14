@@ -11,8 +11,8 @@ function App() {
                 Celery Soup
             </Typography>
             <ul>
-                {tasks.map((task) => (
-                    <li key={task.id}>
+                {Array.from(tasks.entries()).map(([task_id, task]) => (
+                    <li key={task_id}>
                         {task.id} | {task.type} Hello world
                     </li>
                 ))}

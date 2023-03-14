@@ -26,7 +26,11 @@ const ContextFetcher: React.FC<ContextFetcherProps> = ({ children }) => {
     useEffect(() => {
         new ServerClient({ BASE: "http://localhost:8555" }).api
             .getTasks()
-            .then((response) => setTasksState(response.results))
+            .then((response) =>
+                setTasksState(
+                    new Map(response.results.map((task) => [task.id, task]))
+                )
+            )
     }, [setTasksState])
 
     return <>{children}</>
