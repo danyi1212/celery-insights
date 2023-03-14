@@ -11,6 +11,7 @@ interface ContextFetcherProps {
 const ContextFetcher: React.FC<ContextFetcherProps> = ({ children }) => {
     const setTasksState = useSetRecoilState(tasksState)
     useWebSocket("ws://localhost:8555/ws/events", {
+        shouldReconnect: () => true,
         onOpen: () => console.log("Connected to websockets!"),
         onClose: () => console.log("Disconnected from websockets!"),
         onError: (error) =>
