@@ -17,7 +17,7 @@ class Worker(BaseModel):
     active_tasks: int = Field(description="Amount of tasks currently processing by worker")
     processed_tasks: int = Field(description="Amount of tasks completed by worker")
     last_updated: datetime = Field(description="When worker last event published")
-    heartbeat_expires: datetime = Field(description="When worker will be considered offline")
+    heartbeat_expires: datetime | None = Field(description="When worker will be considered offline")
     cpu_load: tuple[float, float, float] | None = Field(description="Host CPU load average in last 1, 5 and 15 minutes")
 
     @classmethod
@@ -32,7 +32,7 @@ class Worker(BaseModel):
             software_sys=worker.sw_sys,
             active_tasks=worker.active or 0,
             processed_tasks=worker.processed or 0,
-            heartbeat_expires=timestamp_to_datetime(worker.heartbeat_expires),
+            heartbeat_expires=timestamp_to_datetime(worker.heartbeat_expires) if worker.heartbeats else None,
             cpu_load=tuple(worker.loadavg) if worker.loadavg is not None else None,
         )
 
