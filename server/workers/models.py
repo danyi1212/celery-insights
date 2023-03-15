@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Self
 
 from celery.events.state import Worker as CeleryWorker
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Extra, Field
 
 from tasks.utils import timestamp_to_datetime
 
@@ -37,7 +37,7 @@ class Worker(BaseModel):
         )
 
 
-class Broker(BaseModel):
+class Broker(BaseModel, extra=Extra.allow):
     connection_timeout: int | None = Field(description="How many seconds before failing to connect to broker")
     heartbeat: int = Field(description="Heartbeat interval in seconds")
     hostname: str = Field(description="Node name of remote broker")
@@ -51,7 +51,7 @@ class Broker(BaseModel):
     virtual_host: str = Field(description="Virtual host used")
 
 
-class Pool(BaseModel):
+class Pool(BaseModel, extra=Extra.allow):
     max_concurrency: int = Field(description="Maximum number of child parallelism (processes/threads)",
                                  alias="max-concurrency")
     max_tasks_per_child: int | str = Field(description="Maximum number of tasks to be executed before child recycled",
@@ -60,7 +60,7 @@ class Pool(BaseModel):
     timeouts: tuple[int, int] = Field(description="Soft time limit and hard time limit, in seconds")
 
 
-class Stats(BaseModel):
+class Stats(BaseModel, extra=Extra.allow):
     broker: Broker = Field(description="Current broker stats")
     clock: int = Field(description="Current logical clock time")
     uptime: int = Field(description="Uptime in seconds")
@@ -71,12 +71,12 @@ class Stats(BaseModel):
     total: dict[str, int] = Field(description="Count of accepted tasks by type")
 
 
-class ExchangeInfo(BaseModel):
+class ExchangeInfo(BaseModel, extra=Extra.allow):
     name: str = Field(description="Name of exchange")
     type: str = Field(description="Exchange routing type")
 
 
-class QueueInfo(BaseModel):
+class QueueInfo(BaseModel, extra=Extra.allow):
     name: str = Field(description="Name of the queue")
     exchange: ExchangeInfo = Field(description="Exchange information")
     routing_key: str = Field(description="Routing key for the queue")
