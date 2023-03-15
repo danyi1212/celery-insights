@@ -1,17 +1,20 @@
 import logging.config
+from pathlib import Path
+from uuid import uuid4
+
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
-from pathlib import Path
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
-from uuid import uuid4
 
-from api import api_router
 from events.connection_manager import ws_manager
+from events.router import events_router
 from lifespan import lifespan
 from logging_config import LoggingConfig
 from settings import settings
+from tasks.router import tasks_router
+from workers.router import workers_router
 
 logging.config.dictConfig(LoggingConfig().dict())
 logger = logging.getLogger(__name__)
@@ -46,7 +49,9 @@ app.add_middleware(
 if Path("static").exists():
     app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
-app.include_router(api_router)
+app.include_router(tasks_router)
+app.include_router(workers_router)
+app.include_router(events_router)
 
 
 @app.websocket("/ws/events")
