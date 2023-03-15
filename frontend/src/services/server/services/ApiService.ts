@@ -1,11 +1,13 @@
 /* istanbul ignore file */
-import type {BaseHttpRequest} from "../core/BaseHttpRequest"
+import type {BaseHttpRequest} from '../core/BaseHttpRequest';
 
-import type {CancelablePromise} from "../core/CancelablePromise"
+import type {CancelablePromise} from '../core/CancelablePromise';
 /* tslint:disable */
 /* eslint-disable */
-import type {Paginated_Task_} from "../models/Paginated_Task_"
-import type {Task} from "../models/Task"
+import type {Paginated_Task_} from '../models/Paginated_Task_';
+import type {Task} from '../models/Task';
+import type {TaskEventMessage} from '../models/TaskEventMessage';
+import type {WorkerEventMessage} from '../models/WorkerEventMessage';
 
 export class ApiService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
@@ -63,6 +65,20 @@ export class ApiService {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/workers",
+        })
+    }
+
+    /**
+     * Get Events
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public getEvents(): CancelablePromise<
+        Array<TaskEventMessage | WorkerEventMessage>
+    > {
+        return this.httpRequest.request({
+            method: "GET",
+            url: "/api/events",
         })
     }
 }

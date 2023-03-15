@@ -13,7 +13,7 @@ function App() {
             <ul>
                 {Array.from(tasks.entries()).map(([task_id, task]) => (
                     <li key={task_id}>
-                        {task.id} | {task.type} Hello world
+                        {task.id} | {task.type} | {task.state}
                     </li>
                 ))}
             </ul>
