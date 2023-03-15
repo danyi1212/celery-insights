@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from starlette.requests import Request
 
 from events.consumer import state
+from events.models import EventMessage
 from pagination import Paginated, get_paginated_response
 from tasks.model import Task
 
@@ -29,3 +30,8 @@ def get_task_detail(task_id: str) -> Task:
 @api_router.get("/workers")
 def get_workers():
     return state.workers
+
+
+@api_router.get("/events")
+def get_events() -> list[EventMessage]:
+    return []
