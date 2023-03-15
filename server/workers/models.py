@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Self
+from typing import Any, Self
 
 from celery.events.state import Worker as CeleryWorker
 from pydantic import BaseModel, Field
@@ -35,3 +35,37 @@ class Worker(BaseModel):
             heartbeat_expires=timestamp_to_datetime(worker.heartbeat_expires),
             cpu_load=tuple(worker.loadavg) if worker.loadavg is not None else None,
         )
+
+
+class Broker(BaseModel):
+    connection_timeout: int | None = Field(description="How many seconds before failing to connect to broker")
+    heartbeat: int = Field(description="Heartbeat interval in seconds")
+    hostname: str = Field(description="Node name of remote broker")
+    login_method: str = Field(description="Login method used to connect to the broker")
+    port: int = Field(description="Broker port")
+    ssl: bool = Field(description="Whether to use ssl connections")
+    transport: str = Field(description="Name of transport used (e.g, amqp / redis)")
+    transport_options: dict = Field(description="Additional options used to connect to broker")
+    uri_prefix: str | None = Field(description="Prefix to be added to broker uri")
+    userid: str = Field(description="User ID used to connect to the broker with")
+    virtual_host: str = Field(description="Virtual host used")
+
+
+class Pool(BaseModel):
+    max_concurrency: int = Field(description="Maximum number of child parallelism (processes/threads)",
+                                 alias="max-concurrency")
+    max_tasks_per_child: int | str = Field(description="Maximum number of tasks to be executed before child recycled",
+                                           alias="max-tasks-per-child")
+    processes: list[int] = Field(description="Child process IDs (or thread IDs)")
+    timeouts: tuple[int, int] = Field(description="Soft time limit and hard time limit, in seconds")
+
+
+class Stats(BaseModel):
+    broker: Broker = Field(description="Current broker stats")
+    clock: int = Field(description="Current logical clock time")
+    uptime: int = Field(description="Uptime in seconds")
+    pid: int = Field(description="Process ID of worker instance (Main process)")
+    pool: Pool = Field(description="Current pool stats")
+    prefetch_count: int = Field(description="Current prefetch task queue for consumer")
+    rusage: dict[str, Any] = Field(description="Operating System statistics")
+    total: dict[str, int] = Field(description="Count of accepted tasks by type")
