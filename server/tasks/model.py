@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, Self
+from typing import Self
 
 from celery import states
 from celery.events.state import Task as CeleryTask
@@ -35,6 +35,7 @@ class Task(BaseModel):
     revoked_at: datetime | None = Field(description="When task was revoked last")
     rejected_at: datetime | None = Field(description="When task was rejected by worker")
     runtime: float | None = Field(description="How long task executed in seconds")
+    last_updated: datetime = Field(description="When task last event published")
 
     args: str = Field(description="Positional arguments provided to task")
     kwargs: str = Field(description="Keyword arguments provided to task")
@@ -67,6 +68,7 @@ class Task(BaseModel):
             revoked_at=timestamp_to_datetime(task.revoked),
             rejected_at=timestamp_to_datetime(task.rejected),
             runtime=task.runtime,
+            last_updated=timestamp_to_datetime(task.timestamp),
 
             args=task.args,
             kwargs=task.kwargs,

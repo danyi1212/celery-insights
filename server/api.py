@@ -5,6 +5,7 @@ from events.consumer import state
 from events.models import EventMessage
 from pagination import Paginated, get_paginated_response
 from tasks.model import Task
+from workers.models import Worker
 
 api_router = APIRouter(prefix="/api", tags=["api"])
 
@@ -28,8 +29,13 @@ def get_task_detail(task_id: str) -> Task:
 
 
 @api_router.get("/workers")
-def get_workers():
-    return state.workers
+def get_workers(alive: bool | None = None) -> list[Worker]:
+    return [
+        Worker.from_celery_worker(worker)
+        for worker in state.workers.itervalues()
+        if alive is not None and worker.alive == alive
+
+    ]
 
 
 @api_router.get("/events")
