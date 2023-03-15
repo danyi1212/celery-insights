@@ -69,3 +69,25 @@ class Stats(BaseModel):
     prefetch_count: int = Field(description="Current prefetch task queue for consumer")
     rusage: dict[str, Any] = Field(description="Operating System statistics")
     total: dict[str, int] = Field(description="Count of accepted tasks by type")
+
+
+class ExchangeInfo(BaseModel):
+    name: str = Field(description="Name of exchange")
+    type: str = Field(description="Exchange routing type")
+
+
+class QueueInfo(BaseModel):
+    name: str = Field(description="Name of the queue")
+    exchange: ExchangeInfo = Field(description="Exchange information")
+    routing_key: str = Field(description="Routing key for the queue")
+    queue_arguments: dict[str, Any] | None = Field(description="Arguments for the queue")
+    binding_arguments: dict[str, Any] | None = Field(description="Arguments for bindings")
+    consumer_arguments: dict[str, Any] | None = Field(description="Arguments for consumers")
+    durable: bool = Field(description="Queue will survive broker restart")
+    exclusive: bool = Field(description="Queue can be used by only one consumer")
+    auto_delete: bool = Field(description="Queue will be deleted after last consumer unsubscribes")
+    no_ack: bool = Field(description="Task messages will not be acknowledged by workers")
+    alias: str | None = Field(description="Queue alias if used for queue names")
+    message_ttl: int | None = Field(description="Message TTL in seconds")
+    max_length: int | None = Field(description="Maximum number of task messages allowed in the queue")
+    max_priority: int | None = Field(description="Maximum priority for task messages in the queue")

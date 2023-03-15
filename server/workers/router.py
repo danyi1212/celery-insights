@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 
 from events.consumer import state
 from workers.dependencies import get_inspect
-from workers.models import Stats, Worker
+from workers.models import QueueInfo, Stats, Worker
 
 workers_router = APIRouter(prefix="/api/workers", tags=["workers"])
 
@@ -48,3 +48,8 @@ async def get_worker_reserved(inspect: Inspect = Depends(get_inspect)) -> dict[s
 @workers_router.get("/workers/active", description="Worker currently executing tasks")
 async def get_worker_active(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[str]]:
     return await asyncio.to_thread(inspect.active)
+
+
+@workers_router.get("/workers/queues", description="Worker active consumer queues")
+async def get_worker_queues(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[QueueInfo]]:
+    return await asyncio.to_thread(inspect.active_queues)
