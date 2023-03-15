@@ -23,3 +23,28 @@ def get_workers(alive: bool | None = None) -> list[Worker]:
 @workers_router.get("/workers/stats", description="Worker Statistics")
 async def get_worker_stats(inspect: Inspect = Depends(get_inspect)) -> dict[str, Stats]:
     return await asyncio.to_thread(inspect.stats)
+
+
+@workers_router.get("/workers/registered", description="Worker Registered Task Types")
+async def get_worker_registered(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[str]]:
+    return await asyncio.to_thread(inspect.registered)
+
+
+@workers_router.get("/workers/revoked", description="Worker Revoked Tasks list")
+async def get_worker_revoked(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[str]]:
+    return await asyncio.to_thread(inspect.revoked)
+
+
+@workers_router.get("/workers/scheduled", description="Worker Scheduled Tasks (eta / countdown)")
+async def get_worker_scheduled(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[str]]:
+    return await asyncio.to_thread(inspect.scheduled)
+
+
+@workers_router.get("/workers/reserved", description="Worker Prefetched Tasks")
+async def get_worker_reserved(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[str]]:
+    return await asyncio.to_thread(inspect.reserved)
+
+
+@workers_router.get("/workers/active", description="Worker currently executing tasks")
+async def get_worker_active(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[str]]:
+    return await asyncio.to_thread(inspect.active)
