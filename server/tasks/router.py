@@ -1,9 +1,11 @@
+from celery.result import AsyncResult
 from fastapi import APIRouter, HTTPException
 from starlette.requests import Request
 
+from celery_app import celery_app
 from events.consumer import state
 from pagination import Paginated, get_paginated_response
-from tasks.model import Task
+from tasks.model import Task, TaskResult
 
 tasks_router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -24,3 +26,21 @@ def get_task_detail(task_id: str) -> Task:
         raise HTTPException(status_code=404, detail="Task not found.")
 
     return Task.from_celery_task(task)
+
+
+@tasks_router.get("/{task_id}/result", responses={404: {"model": str, "description": "Task not found."}})
+def get_task_result(task_id: str) -> TaskResult:
+    result = AsyncResult(task_id, app=celery_app)
+    return TaskResult(
+        id=result.id,
+        type=result.name,
+        state=result.state,
+        queue=result.queue,
+        result=result.result,
+        traceback=str(result.traceback) if result.traceback is not None else None,
+        ignored=result.ignored,
+        args=result.args or [],
+        kwargs=result.kwargs or {},
+        retries=result.retries or 0,
+        worker=result.worker,
+    )

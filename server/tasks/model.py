@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Self
+from typing import Any, Self
 
 from celery import states
 from celery.events.state import Task as CeleryTask
@@ -37,8 +37,8 @@ class Task(BaseModel):
     runtime: float | None = Field(description="How long task executed in seconds")
     last_updated: datetime = Field(description="When task last event published")
 
-    args: str = Field(description="Positional arguments provided to task")
-    kwargs: str = Field(description="Keyword arguments provided to task")
+    args: str = Field(description="Positional arguments provided to task (truncated)")
+    kwargs: str = Field(description="Keyword arguments provided to task (truncated)")
     eta: datetime | None = Field(description="Absolute time when task should be executed")
     expires: datetime | None = Field(description="Absolute time when task should be expired")
     retries: int | None = Field(description="Retry count")
@@ -86,3 +86,17 @@ class Task(BaseModel):
             exception=task.exception,
             traceback=task.traceback,
         )
+
+
+class TaskResult(BaseModel):
+    id: str = Field(description="Task ID")
+    type: str | None = Field(description="Task type name")
+    state: TaskState = Field(description="Task current state")
+    queue: str | None = Field(description="Task queue name")
+    result: Any | None = Field(description="Task return value or exception")
+    traceback: str | None = Field(description="Task exception traceback")
+    ignored: bool = Field(description="Task result is ignored")
+    args: list[Any] = Field(description="Task positional arguments")
+    kwargs: dict[str, Any] = Field(description="Task keyword arguments")
+    retries: int = Field(description="Task retries count")
+    worker: str | None = Field(description="Executing worker id")
