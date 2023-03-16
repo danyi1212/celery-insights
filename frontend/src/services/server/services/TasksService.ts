@@ -1,15 +1,14 @@
 /* istanbul ignore file */
-import type {BaseHttpRequest} from '../core/BaseHttpRequest';
+import type {BaseHttpRequest} from "../core/BaseHttpRequest"
 
-import type {CancelablePromise} from '../core/CancelablePromise';
+import type {CancelablePromise} from "../core/CancelablePromise"
 /* tslint:disable */
 /* eslint-disable */
-import type {Paginated_Task_} from '../models/Paginated_Task_';
-import type {Task} from '../models/Task';
-import type {TaskEventMessage} from '../models/TaskEventMessage';
-import type {WorkerEventMessage} from '../models/WorkerEventMessage';
+import type {Paginated_Task_} from "../models/Paginated_Task_"
+import type {Task} from "../models/Task"
+import type {TaskResult} from "../models/TaskResult"
 
-export class ApiService {
+export class TasksService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
 
     /**
@@ -57,28 +56,22 @@ export class ApiService {
     }
 
     /**
-     * Get Workers
-     * @returns any Successful Response
+     * Get Task Result
+     * @param taskId
+     * @returns TaskResult Successful Response
      * @throws ApiError
      */
-    public getWorkers(): CancelablePromise<any> {
+    public getTaskResult(taskId: string): CancelablePromise<TaskResult> {
         return this.httpRequest.request({
             method: "GET",
-            url: "/api/workers",
-        })
-    }
-
-    /**
-     * Get Events
-     * @returns any Successful Response
-     * @throws ApiError
-     */
-    public getEvents(): CancelablePromise<
-        Array<TaskEventMessage | WorkerEventMessage>
-    > {
-        return this.httpRequest.request({
-            method: "GET",
-            url: "/api/events",
+            url: "/api/tasks/{task_id}/result",
+            path: {
+                task_id: taskId,
+            },
+            errors: {
+                404: `Task not found.`,
+                422: `Validation Error`,
+            },
         })
     }
 }

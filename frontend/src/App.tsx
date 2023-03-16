@@ -1,9 +1,8 @@
 import Typography from "@mui/material/Typography"
-import { useRecoilValue } from "recoil"
-import { tasksState } from "./atoms/tasks"
+import { useStateStore } from "@stores/useStateStore"
 
 function App() {
-    const tasks = useRecoilValue(tasksState)
+    const tasks = useStateStore((state) => state.tasks)
 
     return (
         <div>

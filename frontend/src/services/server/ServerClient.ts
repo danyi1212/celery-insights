@@ -5,13 +5,17 @@ import {AxiosHttpRequest} from './core/AxiosHttpRequest';
 import type {BaseHttpRequest} from './core/BaseHttpRequest';
 import type {OpenAPIConfig} from './core/OpenAPI';
 
-import {ApiService} from './services/ApiService';
+import {EventsService} from './services/EventsService';
+import {TasksService} from './services/TasksService';
+import {WorkersService} from './services/WorkersService';
 
 type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest;
 
 export class ServerClient {
 
-    public readonly api: ApiService;
+    public readonly events: EventsService;
+    public readonly tasks: TasksService;
+    public readonly workers: WorkersService;
 
     public readonly request: BaseHttpRequest;
 
@@ -28,7 +32,9 @@ export class ServerClient {
             ENCODE_PATH: config?.ENCODE_PATH,
         });
 
-        this.api = new ApiService(this.request)
+        this.events = new EventsService(this.request);
+        this.tasks = new TasksService(this.request);
+        this.workers = new WorkersService(this.request);
     }
 }
 

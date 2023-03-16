@@ -54,11 +54,15 @@ export type Task = {
      */
     runtime?: number
     /**
-     * Positional arguments provided to task
+     * When task last event published
+     */
+    last_updated: string
+    /**
+     * Positional arguments provided to task (truncated)
      */
     args: string
     /**
-     * Keyword arguments provided to task
+     * Keyword arguments provided to task (truncated)
      */
     kwargs: string
     /**
