@@ -1,12 +1,12 @@
-import React, { useEffect } from "react"
-import useWebSocket from "react-use-websocket"
-import { useSetRecoilState } from "recoil"
-import { tasksState } from "./atoms/tasks"
+import { tasksState } from "@atoms/tasks"
 import {
     ServerClient,
     TaskEventMessage,
     WorkerEventMessage,
-} from "./services/server"
+} from "@services/server"
+import React, { useEffect } from "react"
+import useWebSocket from "react-use-websocket"
+import { useSetRecoilState } from "recoil"
 
 interface ContextFetcherProps {
     children: React.ReactNode
