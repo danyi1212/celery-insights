@@ -10,7 +10,7 @@ import ListItemIcon from "@mui/material/ListItemIcon"
 import ListItemText from "@mui/material/ListItemText"
 import { styled } from "@mui/material/styles"
 import React from "react"
-import { NavigateFunction, useLocation, useNavigate } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 
 const DRAWER_WIDTH = 240
 
@@ -40,33 +40,32 @@ const StyledLogo = styled(Box)({
 interface MenuLink {
     label: string
     icon: React.ReactElement
-    isSelected: (path: string) => boolean
-    onClick: (navigate: NavigateFunction) => void
+    to: string
+    external: boolean
 }
 
 const menuLinks: MenuLink[] = [
     {
         label: "Home",
         icon: <InboxIcon />,
-        onClick: (navigate) => navigate("/"),
-        isSelected: (path) => path === "/",
+        to: "/",
+        external: false,
     },
     {
         label: "API Explorer",
         icon: <ApiIcon />,
-        onClick: () => (window.location.href = "/docs"),
-        isSelected: () => false,
+        to: "/docs",
+        external: true,
     },
     {
         label: "API Docs",
         icon: <SubjectIcon />,
-        onClick: () => (window.location.href = "/redoc"),
-        isSelected: () => false,
+        to: "/redoc",
+        external: true,
     },
 ]
 
 const Menu: React.FC = () => {
-    const navigate = useNavigate()
     const location = useLocation()
     return (
         <StyledDrawer variant="permanent">
@@ -77,8 +76,9 @@ const Menu: React.FC = () => {
                 {menuLinks.map((link, index) => (
                     <ListItem key={index} disablePadding>
                         <ListItemButton
-                            selected={link.isSelected(location.pathname)}
-                            onClick={() => link.onClick(navigate)}
+                            selected={link.to === location.pathname}
+                            component={link.external ? "a" : Link}
+                            to={link.to}
                         >
                             <ListItemIcon>{link.icon}</ListItemIcon>
                             <ListItemText primary={link.label} />
