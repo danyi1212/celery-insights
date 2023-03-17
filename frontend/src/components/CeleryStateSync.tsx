@@ -2,11 +2,7 @@ import { handleEvent, loadInitialState } from "@stores/useStateStore"
 import React, { useEffect } from "react"
 import useWebSocket from "react-use-websocket"
 
-interface ContextFetcherProps {
-    children: React.ReactNode
-}
-
-const ContextFetcher: React.FC<ContextFetcherProps> = ({ children }) => {
+const CeleryStateSync: React.FC = () => {
     useWebSocket("ws://localhost:8555/ws/events", {
         shouldReconnect: () => true,
         onOpen: () => console.log("Connected to websockets!"),
@@ -27,7 +23,7 @@ const ContextFetcher: React.FC<ContextFetcherProps> = ({ children }) => {
         loadInitialState()
     }, [])
 
-    return <>{children}</>
+    return <></>
 }
 
-export default ContextFetcher
+export default CeleryStateSync
