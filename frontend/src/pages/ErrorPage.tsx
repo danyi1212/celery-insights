@@ -1,6 +1,9 @@
-import { Link } from "@mui/material"
 import Box from "@mui/material/Box"
+import CssBaseline from "@mui/material/CssBaseline"
+import Link from "@mui/material/Link"
+import { ThemeProvider } from "@mui/material/styles"
 import Typography from "@mui/material/Typography"
+import theme from "@theme"
 import React from "react"
 import {
     isRouteErrorResponse,
@@ -41,21 +44,24 @@ const ErrorPage: React.FC = () => {
     console.log(error)
     const message = getErrorMessage(error)
     return (
-        <Box
-            minHeight="100vh"
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            flexDirection="column"
-        >
-            <Typography variant="h1">
-                {message.status} {message.title}
-            </Typography>
-            <Typography variant="h5">{message.message}</Typography>
-            <Link component={RouterLink} to="/">
-                Back Home
-            </Link>
-        </Box>
+        <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <Box
+                minHeight="100vh"
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                flexDirection="column"
+            >
+                <Typography variant="h1">
+                    {message.status} {message.title}
+                </Typography>
+                <Typography variant="h5">{message.message}</Typography>
+                <Link component={RouterLink} to="/">
+                    Back Home
+                </Link>
+            </Box>
+        </ThemeProvider>
     )
 }
 
