@@ -1,10 +1,11 @@
 import CeleryStateSync from "@components/CeleryStateSync"
+import Header from "@layout/Header"
 import Menu from "@layout/Menu"
-import { Container } from "@mui/material"
 import Box from "@mui/material/Box"
+import Container from "@mui/material/Container"
 import CssBaseline from "@mui/material/CssBaseline"
 import { ThemeProvider } from "@mui/material/styles"
-import Typography from "@mui/material/Typography"
+import Toolbar from "@mui/material/Toolbar"
 import theme from "@theme"
 import React from "react"
 import { Outlet } from "react-router-dom"
@@ -22,9 +23,8 @@ const RootLayout: React.FC = () => {
                     minHeight="100vh"
                     overflow="auto"
                 >
-                    <Typography variant="h1" align="center">
-                        Celery Soup
-                    </Typography>
+                    <Header />
+                    <Toolbar />
                     <Container maxWidth="lg">
                         <Outlet />
                     </Container>

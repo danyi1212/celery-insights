@@ -1,9 +1,13 @@
-import { handleEvent, loadInitialState } from "@stores/useStateStore"
+import {
+    handleEvent,
+    loadInitialState,
+    useStateStore,
+} from "@stores/useStateStore"
 import React, { useEffect } from "react"
 import useWebSocket from "react-use-websocket"
 
 const CeleryStateSync: React.FC = () => {
-    useWebSocket("ws://localhost:8555/ws/events", {
+    const { readyState } = useWebSocket("ws://localhost:8555/ws/events", {
         shouldReconnect: () => true,
         onOpen: () => console.log("Connected to websockets!"),
         onClose: () => console.log("Disconnected from websockets!"),
@@ -18,6 +22,10 @@ const CeleryStateSync: React.FC = () => {
             handleEvent(message)
         },
     })
+
+    useEffect(() => {
+        useStateStore.setState({ status: readyState })
+    }, [readyState])
 
     useEffect(() => {
         loadInitialState()

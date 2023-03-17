@@ -5,16 +5,19 @@ import {
     Worker,
     WorkerEventMessage,
 } from "@services/server"
+import { ReadyState } from "react-use-websocket"
 import { create } from "zustand"
 
 interface State {
     tasks: Map<string, Task>
     workers: Map<string, Worker>
+    status: ReadyState
 }
 
 export const useStateStore = create<State>(() => ({
     tasks: new Map(),
     workers: new Map(),
+    status: ReadyState.UNINSTANTIATED,
 }))
 
 export const loadInitialState = () => {

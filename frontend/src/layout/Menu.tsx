@@ -12,7 +12,7 @@ import { styled } from "@mui/material/styles"
 import React from "react"
 import { Link, useLocation } from "react-router-dom"
 
-const DRAWER_WIDTH = 240
+export const DRAWER_WIDTH = 240
 
 const StyledDrawer = styled(Drawer)({
     width: DRAWER_WIDTH,
