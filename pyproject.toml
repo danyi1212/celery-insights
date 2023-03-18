@@ -12,6 +12,7 @@ python-dotenv = "^1.0.0"
 uvicorn = "^0.21.0"
 celery = { extras = ["redis"], version = "^5.2.7" }
 websockets = "^10.4"
+fastapi-cache2 = "^0.2.1"
 
 [tool.poetry.dev-dependencies]
 
