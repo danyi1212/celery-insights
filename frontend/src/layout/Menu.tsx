@@ -1,3 +1,4 @@
+import WorkerStatusList from "@components/layout/menu/WorkerStatusList"
 import ApiIcon from "@mui/icons-material/Api"
 import InboxIcon from "@mui/icons-material/Inbox"
 import SubjectIcon from "@mui/icons-material/Subject"
@@ -73,7 +74,7 @@ const Menu: React.FC = () => {
             <StyledLogoContainer to="/">
                 <StyledLogo />
             </StyledLogoContainer>
-            <List>
+            <List sx={{ flexGrow: 1 }}>
                 {menuLinks.map((link, index) => (
                     <ListItem key={index} disablePadding>
                         <ListItemButton
@@ -87,6 +88,7 @@ const Menu: React.FC = () => {
                     </ListItem>
                 ))}
             </List>
+            <WorkerStatusList />
         </StyledDrawer>
     )
 }
