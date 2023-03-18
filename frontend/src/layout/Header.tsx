@@ -1,5 +1,5 @@
 import { DRAWER_WIDTH } from "@layout/Menu"
-import NotificationBudge from "@layout/NotificationBudge"
+import NotificationBadge from "@layout/NotificationBadge"
 import SearchBox from "@layout/SearchBox"
 import WSStatus from "@layout/WSStatus"
 import AppBar from "@mui/material/AppBar"
@@ -19,7 +19,7 @@ const Header: React.FC = () => {
                     <SearchBox />
                     <Box flexGrow="1" />
                     <WSStatus />
-                    <NotificationBudge />
+                    <NotificationBadge />
                 </Toolbar>
             </AppBar>
         </Slide>
