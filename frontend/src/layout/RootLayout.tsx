@@ -25,7 +25,7 @@ const RootLayout: React.FC = () => {
                 >
                     <Header />
                     <Toolbar />
-                    <Container maxWidth="lg">
+                    <Container maxWidth="xl">
                         <Outlet />
                     </Container>
                 </Box>
