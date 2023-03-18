@@ -23,11 +23,12 @@ const StyledDrawer = styled(Drawer)({
     },
 })
 
-const StyledLogoContainer = styled(Box)({
+const StyledLogoContainer = styled(Link)({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     margin: "20px",
+    textDecoration: "none",
 })
 
 const StyledLogo = styled(Box)({
@@ -69,7 +70,7 @@ const Menu: React.FC = () => {
     const location = useLocation()
     return (
         <StyledDrawer variant="permanent">
-            <StyledLogoContainer>
+            <StyledLogoContainer to="/">
                 <StyledLogo />
             </StyledLogoContainer>
             <List>
