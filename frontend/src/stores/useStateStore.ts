@@ -36,7 +36,6 @@ export const loadInitialState = () => {
 }
 
 export const handleEvent = (message: TaskEventMessage | WorkerEventMessage) => {
-    console.log(message)
     switch (message.category) {
         case TaskEventMessage.category.TASK: {
             return useStateStore.setState((state) => ({
