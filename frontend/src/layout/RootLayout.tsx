@@ -1,20 +1,15 @@
-import CeleryStateSync from "@components/CeleryStateSync"
+import ConsolidatedProviders from "@layout/ConsolidatedProviders"
 import Header from "@layout/Header"
 import Menu from "@layout/Menu"
 import Box from "@mui/material/Box"
 import Container from "@mui/material/Container"
-import CssBaseline from "@mui/material/CssBaseline"
-import { ThemeProvider } from "@mui/material/styles"
 import Toolbar from "@mui/material/Toolbar"
-import theme from "@theme"
 import React from "react"
 import { Outlet } from "react-router-dom"
 
 const RootLayout: React.FC = () => {
     return (
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <CeleryStateSync />
+        <ConsolidatedProviders>
             <Box display="flex">
                 <Menu />
                 <Box
@@ -30,7 +25,7 @@ const RootLayout: React.FC = () => {
                     </Container>
                 </Box>
             </Box>
-        </ThemeProvider>
+        </ConsolidatedProviders>
     )
 }
 
