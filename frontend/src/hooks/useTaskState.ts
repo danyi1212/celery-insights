@@ -20,7 +20,7 @@ const useTaskState = (taskId: string): TaskStateResult => {
             .getTaskDetail(taskId)
             .then((task) =>
                 useStateStore.setState((state) => ({
-                    tasks: new Map(state.tasks).set(task.id, task),
+                    tasks: state.tasks.iset(task.id, task),
                 }))
             )
             .catch((error) => setError(error))

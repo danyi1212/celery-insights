@@ -12,7 +12,7 @@ const WorkerStatusList: React.FC = () => {
     const { data } = useQuery("workers/stats", getWorkerStats)
     return (
         <Box display="flex" flexDirection="column">
-            {Array.from(workersState.entries()).map(([workerId, worker]) => {
+            {workersState.map((workerId, worker) => {
                 const stats = data?.[worker.hostname]
                 return <WorkerStatus key={workerId} worker={worker} stats={stats} />
             })}

@@ -8,8 +8,8 @@ function HomePage() {
 
     return (
         <ul>
-            {Array.from(tasks.entries()).map(([task_id, task]) => (
-                <li key={task_id}>
+            {tasks.map((taskId, task) => (
+                <li key={taskId}>
                     <Link component={RouterLink} to={`tasks/${task.id}`}>
                         {task.id}
                     </Link>{" "}
