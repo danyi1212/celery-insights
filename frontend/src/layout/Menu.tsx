@@ -1,6 +1,7 @@
 import WorkerStatusList from "@components/layout/menu/WorkerStatusList"
 import ApiIcon from "@mui/icons-material/Api"
 import InboxIcon from "@mui/icons-material/Inbox"
+import ManageSearchIcon from "@mui/icons-material/ManageSearch"
 import SubjectIcon from "@mui/icons-material/Subject"
 import Box from "@mui/material/Box"
 import Drawer from "@mui/material/Drawer"
@@ -51,6 +52,12 @@ const menuLinks: MenuLink[] = [
         label: "Home",
         icon: <InboxIcon />,
         to: "/",
+        external: false,
+    },
+    {
+        label: "Tasks Explorer",
+        icon: <ManageSearchIcon />,
+        to: "/explorer",
         external: false,
     },
     {
