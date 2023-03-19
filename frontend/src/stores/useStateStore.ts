@@ -1,11 +1,12 @@
-import { ServerClient, Task, TaskEventMessage, Worker, WorkerEventMessage } from "@services/server"
+import { ServerClient, TaskEventMessage, WorkerEventMessage } from "@services/server"
 import { LRUMap } from "@utils/LRUMap"
+import { StateTask, StateWorker, translateTask, translateWorker } from "@utils/translateServerModels"
 import { ReadyState } from "react-use-websocket"
 import { create } from "zustand"
 
 interface State {
-    tasks: LRUMap<string, Task>
-    workers: LRUMap<string, Worker>
+    tasks: LRUMap<string, StateTask>
+    workers: LRUMap<string, StateWorker>
     status: ReadyState
 }
 
@@ -20,7 +21,7 @@ export const loadInitialState = () => {
         console.log(`Loaded ${response.results.length} tasks`)
         useStateStore.setState((state) => {
             const tasks = new LRUMap(state.tasks)
-            response.results.forEach((task) => tasks.set(task.id, task))
+            response.results.forEach((task) => tasks.set(task.id, translateTask(task)))
             return { tasks }
         })
     })
@@ -28,7 +29,7 @@ export const loadInitialState = () => {
         console.log(`Loaded ${response.length} workers`)
         useStateStore.setState((state) => {
             const workers = new LRUMap(state.workers)
-            response.forEach((worker) => workers.set(worker.id, worker))
+            response.forEach((worker) => workers.set(worker.id, translateWorker(worker)))
             return { workers }
         })
     })
@@ -38,12 +39,12 @@ export const handleEvent = (message: TaskEventMessage | WorkerEventMessage) => {
     switch (message.category) {
         case TaskEventMessage.category.TASK: {
             return useStateStore.setState((state) => ({
-                tasks: state.tasks.iset(message.task.id, message.task),
+                tasks: state.tasks.iset(message.task.id, translateTask(message.task)),
             }))
         }
         case WorkerEventMessage.category.WORKER: {
             return useStateStore.setState((state) => ({
-                workers: state.workers.iset(message.worker.id, message.worker),
+                workers: state.workers.iset(message.worker.id, translateWorker(message.worker)),
             }))
         }
     }

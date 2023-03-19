@@ -1,9 +1,10 @@
-import { ServerClient, Task } from "@services/server"
+import { ServerClient } from "@services/server"
 import { useStateStore } from "@stores/useStateStore"
+import { StateTask, translateTask } from "@utils/translateServerModels"
 import { useCallback, useEffect, useState } from "react"
 
 interface TaskStateResult {
-    task: Task | undefined
+    task: StateTask | undefined
     loading: boolean
     error: Error | null
     refresh: () => void
@@ -20,7 +21,7 @@ const useTaskState = (taskId: string): TaskStateResult => {
             .getTaskDetail(taskId)
             .then((task) =>
                 useStateStore.setState((state) => ({
-                    tasks: state.tasks.iset(task.id, task),
+                    tasks: state.tasks.iset(task.id, translateTask(task)),
                 }))
             )
             .catch((error) => setError(error))

@@ -2,11 +2,12 @@ import LinearProgressWithLabel from "@components/common/LinearProgressWithLabel"
 import Box from "@mui/material/Box"
 import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
-import { Stats, Worker } from "@services/server"
+import { Stats } from "@services/server"
+import { StateWorker } from "@utils/translateServerModels"
 import React from "react"
 
 interface WorkerStatusProps {
-    worker: Worker
+    worker: StateWorker
     stats: Stats | undefined
 }
 
@@ -20,12 +21,12 @@ const WorkerStatus: React.FC<WorkerStatusProps> = ({ worker, stats }) => {
             </Tooltip>
             <Tooltip title="Worker Utilization (Active Tasks / Max Concurrency)" placement="right" arrow>
                 <div>
-                    <LinearProgressWithLabel value={worker.active_tasks} max={stats?.pool["max-concurrency"] || 1} />
+                    <LinearProgressWithLabel value={worker.activeTasks} max={stats?.pool["max-concurrency"] || 1} />
                 </div>
             </Tooltip>
             <Tooltip title="CPU Utilization" placement="right" arrow>
                 <div>
-                    <LinearProgressWithLabel value={worker.cpu_load?.[0] || 0} percentageLabel />
+                    <LinearProgressWithLabel value={worker.cpuLoad?.[0] || 0} percentageLabel />
                 </div>
             </Tooltip>
         </Box>
