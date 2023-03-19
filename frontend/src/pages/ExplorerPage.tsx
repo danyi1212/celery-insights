@@ -1,3 +1,4 @@
+import ExplorerGrid from "@components/explorer/ExplorerGrid"
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew"
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
 import { Divider, TextField } from "@mui/material"
@@ -5,21 +6,8 @@ import Box from "@mui/material/Box"
 import IconButton from "@mui/material/IconButton"
 import Toolbar from "@mui/material/Toolbar"
 import Typography from "@mui/material/Typography"
-import { DataGrid, GridColDef } from "@mui/x-data-grid"
 import { useStateStore } from "@stores/useStateStore"
-import { format } from "date-fns"
 import React, { useState } from "react"
-
-const columns: GridColDef[] = [
-    {
-        field: "lastUpdated",
-        headerName: "Last Updated",
-        minWidth: 160,
-        valueFormatter: (params) => format(params.value, "MMM dd  hh:mm:ss.SSS"),
-    },
-    { field: "id", headerName: "Task ID", width: 100 },
-    { field: "type", headerName: "Task Type", width: 300 },
-]
 
 const ExplorerPage: React.FC = () => {
     const tasks = useStateStore((state) => state.tasks.map((_, task) => task))
@@ -47,12 +35,7 @@ const ExplorerPage: React.FC = () => {
                         <Box flexGrow={1} />
                         <Typography variant="subtitle2">{tasks.length} Tasks found</Typography>
                     </Toolbar>
-                    <DataGrid
-                        columns={columns}
-                        rows={tasks}
-                        initialState={{ sorting: { sortModel: [{ field: "lastUpdated", sort: "desc" }] } }}
-                        autoHeight
-                    />
+                    <ExplorerGrid tasks={tasks} />
                 </Box>
             </Box>
         </Box>
