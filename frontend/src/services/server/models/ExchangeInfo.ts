@@ -6,9 +6,10 @@ export type ExchangeInfo = {
     /**
      * Name of exchange
      */
-    name: string
+    name: string;
     /**
      * Exchange routing type
      */
-    type: string
-}
+    type: string;
+};
+

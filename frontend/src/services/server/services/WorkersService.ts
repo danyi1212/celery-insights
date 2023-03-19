@@ -41,7 +41,7 @@ export class WorkersService {
     public getWorkerStats(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Stats>> {
         return this.httpRequest.request({
             method: "GET",
-            url: "/api/workers/workers/stats",
+            url: "/api/workers/stats",
             query: {
                 timeout: timeout,
                 worker: worker,
@@ -66,7 +66,7 @@ export class WorkersService {
     ): CancelablePromise<Record<string, Array<string>>> {
         return this.httpRequest.request({
             method: "GET",
-            url: "/api/workers/workers/registered",
+            url: "/api/workers/registered",
             query: {
                 timeout: timeout,
                 worker: worker,
@@ -88,7 +88,7 @@ export class WorkersService {
     public getWorkerRevoked(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Array<string>>> {
         return this.httpRequest.request({
             method: "GET",
-            url: "/api/workers/workers/revoked",
+            url: "/api/workers/revoked",
             query: {
                 timeout: timeout,
                 worker: worker,
@@ -110,7 +110,7 @@ export class WorkersService {
     public getWorkerScheduled(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Array<string>>> {
         return this.httpRequest.request({
             method: "GET",
-            url: "/api/workers/workers/scheduled",
+            url: "/api/workers/scheduled",
             query: {
                 timeout: timeout,
                 worker: worker,
@@ -132,7 +132,7 @@ export class WorkersService {
     public getWorkerReserved(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Array<string>>> {
         return this.httpRequest.request({
             method: "GET",
-            url: "/api/workers/workers/reserved",
+            url: "/api/workers/reserved",
             query: {
                 timeout: timeout,
                 worker: worker,
@@ -154,7 +154,7 @@ export class WorkersService {
     public getWorkerActive(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Array<string>>> {
         return this.httpRequest.request({
             method: "GET",
-            url: "/api/workers/workers/active",
+            url: "/api/workers/active",
             query: {
                 timeout: timeout,
                 worker: worker,
@@ -176,7 +176,7 @@ export class WorkersService {
     public getWorkerQueues(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Array<QueueInfo>>> {
         return this.httpRequest.request({
             method: "GET",
-            url: "/api/workers/workers/queues",
+            url: "/api/workers/queues",
             query: {
                 timeout: timeout,
                 worker: worker,

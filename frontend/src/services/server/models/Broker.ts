@@ -48,3 +48,4 @@ export type Broker = {
      */
     virtual_host: string
 }
+

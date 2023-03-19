@@ -48,3 +48,4 @@ export type Worker = {
      */
     cpu_load?: Array<any>
 }
+
