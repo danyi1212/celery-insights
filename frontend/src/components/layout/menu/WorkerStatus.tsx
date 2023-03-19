@@ -25,7 +25,7 @@ const WorkerStatus: React.FC<WorkerStatusProps> = ({ worker, stats }) => {
             </Tooltip>
             <Tooltip title="CPU Utilization" placement="right" arrow>
                 <div>
-                    <LinearProgressWithLabel value={worker.cpu_load?.[0] || 0} />
+                    <LinearProgressWithLabel value={worker.cpu_load?.[0] || 0} percentageLabel />
                 </div>
             </Tooltip>
         </Box>
