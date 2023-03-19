@@ -50,4 +50,3 @@ export type TaskResult = {
      */
     worker?: string
 }
-

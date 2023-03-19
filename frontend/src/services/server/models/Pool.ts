@@ -20,4 +20,3 @@ export type Pool = {
      */
     timeouts: Array<any>
 }
-

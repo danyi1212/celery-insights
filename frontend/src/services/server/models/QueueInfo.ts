@@ -62,4 +62,3 @@ export type QueueInfo = {
      */
     max_priority?: number
 }
-

@@ -1,28 +1,28 @@
 /* istanbul ignore file */
-import type {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios';
+import type {AxiosError, AxiosRequestConfig, AxiosResponse} from "axios"
 /* tslint:disable */
 /* eslint-disable */
-import axios from 'axios';
-import FormData from 'form-data';
+import axios from "axios"
+import FormData from "form-data"
 
-import {ApiError} from './ApiError';
-import type {ApiRequestOptions} from './ApiRequestOptions';
-import type {ApiResult} from './ApiResult';
-import type {OnCancel} from './CancelablePromise';
-import {CancelablePromise} from './CancelablePromise';
-import type {OpenAPIConfig} from './OpenAPI';
+import {ApiError} from "./ApiError"
+import type {ApiRequestOptions} from "./ApiRequestOptions"
+import type {ApiResult} from "./ApiResult"
+import type {OnCancel} from "./CancelablePromise"
+import {CancelablePromise} from "./CancelablePromise"
+import type {OpenAPIConfig} from "./OpenAPI"
 
 const isDefined = <T>(value: T | null | undefined): value is Exclude<T, null | undefined> => {
-    return value !== undefined && value !== null;
-};
+    return value !== undefined && value !== null
+}
 
 const isString = (value: any): value is string => {
-    return typeof value === 'string';
-};
+    return typeof value === "string"
+}
 
 const isStringWithValue = (value: any): value is string => {
-    return isString(value) && value !== '';
-};
+    return isString(value) && value !== ""
+}
 
 const isBlob = (value: any): value is Blob => {
     return (

@@ -1,5 +1,6 @@
 /* istanbul ignore file */
 /* tslint:disable */
+
 /* eslint-disable */
 export class CancelError extends Error {
     constructor(message: string) {
