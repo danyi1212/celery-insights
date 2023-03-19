@@ -18,23 +18,14 @@ const WorkerStatus: React.FC<WorkerStatusProps> = ({ worker, stats }) => {
                     {worker.hostname}
                 </Typography>
             </Tooltip>
-            <Tooltip
-                title="Worker Utilization (Active Tasks / Max Concurrency)"
-                placement="right"
-                arrow
-            >
+            <Tooltip title="Worker Utilization (Active Tasks / Max Concurrency)" placement="right" arrow>
                 <div>
-                    <LinearProgressWithLabel
-                        value={worker.active_tasks}
-                        max={stats?.pool["max-concurrency"] || 1}
-                    />
+                    <LinearProgressWithLabel value={worker.active_tasks} max={stats?.pool["max-concurrency"] || 1} />
                 </div>
             </Tooltip>
             <Tooltip title="CPU Utilization" placement="right" arrow>
                 <div>
-                    <LinearProgressWithLabel
-                        value={worker.cpu_load?.[0] || 0}
-                    />
+                    <LinearProgressWithLabel value={worker.cpu_load?.[0] || 0} />
                 </div>
             </Tooltip>
         </Box>

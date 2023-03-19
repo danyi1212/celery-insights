@@ -8,9 +8,7 @@ const TaskPage: React.FC = () => {
     const { taskId } = useParams() as { taskId: string }
     const { task } = useTaskState(taskId)
     const { taskResult } = useTaskResult(taskId)
-    return (
-        <Typography component="pre">{JSON.stringify(task, null, 2)}</Typography>
-    )
+    return <Typography component="pre">{JSON.stringify(task, null, 2)}</Typography>
 }
 
 export default TaskPage

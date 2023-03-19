@@ -38,10 +38,7 @@ export class WorkersService {
      * @returns Stats Successful Response
      * @throws ApiError
      */
-    public getWorkerStats(
-        timeout: number = 10,
-        worker?: string
-    ): CancelablePromise<Record<string, Stats>> {
+    public getWorkerStats(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Stats>> {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/workers/workers/stats",
@@ -88,10 +85,7 @@ export class WorkersService {
      * @returns string Successful Response
      * @throws ApiError
      */
-    public getWorkerRevoked(
-        timeout: number = 10,
-        worker?: string
-    ): CancelablePromise<Record<string, Array<string>>> {
+    public getWorkerRevoked(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Array<string>>> {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/workers/workers/revoked",
@@ -113,10 +107,7 @@ export class WorkersService {
      * @returns string Successful Response
      * @throws ApiError
      */
-    public getWorkerScheduled(
-        timeout: number = 10,
-        worker?: string
-    ): CancelablePromise<Record<string, Array<string>>> {
+    public getWorkerScheduled(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Array<string>>> {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/workers/workers/scheduled",
@@ -138,10 +129,7 @@ export class WorkersService {
      * @returns string Successful Response
      * @throws ApiError
      */
-    public getWorkerReserved(
-        timeout: number = 10,
-        worker?: string
-    ): CancelablePromise<Record<string, Array<string>>> {
+    public getWorkerReserved(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Array<string>>> {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/workers/workers/reserved",
@@ -163,10 +151,7 @@ export class WorkersService {
      * @returns string Successful Response
      * @throws ApiError
      */
-    public getWorkerActive(
-        timeout: number = 10,
-        worker?: string
-    ): CancelablePromise<Record<string, Array<string>>> {
+    public getWorkerActive(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Array<string>>> {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/workers/workers/active",
@@ -188,10 +173,7 @@ export class WorkersService {
      * @returns QueueInfo Successful Response
      * @throws ApiError
      */
-    public getWorkerQueues(
-        timeout: number = 10,
-        worker?: string
-    ): CancelablePromise<Record<string, Array<QueueInfo>>> {
+    public getWorkerQueues(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Array<QueueInfo>>> {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/workers/workers/queues",

@@ -10,9 +10,7 @@ interface TaskStateResult {
 }
 
 const useTaskState = (taskId: string): TaskStateResult => {
-    const task = useStateStore((state) =>
-        taskId ? state.tasks.get(taskId) : undefined
-    )
+    const task = useStateStore((state) => (taskId ? state.tasks.get(taskId) : undefined))
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<Error | null>(null)
 

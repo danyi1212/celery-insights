@@ -1,10 +1,4 @@
-import {
-    ServerClient,
-    Task,
-    TaskEventMessage,
-    Worker,
-    WorkerEventMessage,
-} from "@services/server"
+import { ServerClient, Task, TaskEventMessage, Worker, WorkerEventMessage } from "@services/server"
 import { ReadyState } from "react-use-websocket"
 import { create } from "zustand"
 
@@ -44,10 +38,7 @@ export const handleEvent = (message: TaskEventMessage | WorkerEventMessage) => {
         }
         case WorkerEventMessage.category.WORKER: {
             return useStateStore.setState((state) => ({
-                workers: new Map(state.workers).set(
-                    message.worker.id,
-                    message.worker
-                ),
+                workers: new Map(state.workers).set(message.worker.id, message.worker),
             }))
         }
     }

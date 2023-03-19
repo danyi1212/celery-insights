@@ -5,11 +5,7 @@ import { ThemeProvider } from "@mui/material/styles"
 import Typography from "@mui/material/Typography"
 import theme from "@theme"
 import React from "react"
-import {
-    isRouteErrorResponse,
-    Link as RouterLink,
-    useRouteError,
-} from "react-router-dom"
+import { isRouteErrorResponse, Link as RouterLink, useRouteError } from "react-router-dom"
 
 interface ErrorMessage {
     title: string
@@ -22,9 +18,7 @@ const getErrorMessage = (error: unknown): ErrorMessage => {
         return {
             title: error.statusText,
             status: error.status,
-            message:
-                error.error?.message ||
-                "Sorry, an unexpected error has occurred",
+            message: error.error?.message || "Sorry, an unexpected error has occurred",
         }
     } else if (error instanceof Error) {
         return {
@@ -46,13 +40,7 @@ const ErrorPage: React.FC = () => {
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
-            <Box
-                minHeight="100vh"
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                flexDirection="column"
-            >
+            <Box minHeight="100vh" display="flex" justifyContent="center" alignItems="center" flexDirection="column">
                 <Typography variant="h1">
                     {message.status} {message.title}
                 </Typography>

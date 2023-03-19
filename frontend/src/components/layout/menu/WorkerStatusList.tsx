@@ -14,13 +14,7 @@ const WorkerStatusList: React.FC = () => {
         <Box display="flex" flexDirection="column">
             {Array.from(workersState.entries()).map(([workerId, worker]) => {
                 const stats = data?.[worker.hostname]
-                return (
-                    <WorkerStatus
-                        key={workerId}
-                        worker={worker}
-                        stats={stats}
-                    />
-                )
+                return <WorkerStatus key={workerId} worker={worker} stats={stats} />
             })}
         </Box>
     )

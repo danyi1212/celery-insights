@@ -12,12 +12,7 @@ const RootLayout: React.FC = () => {
         <ConsolidatedProviders>
             <Box display="flex">
                 <Menu />
-                <Box
-                    component="main"
-                    flexGrow="1"
-                    minHeight="100vh"
-                    overflow="auto"
-                >
+                <Box component="main" flexGrow="1" minHeight="100vh" overflow="auto">
                     <Header />
                     <Toolbar />
                     <Container maxWidth="xl">

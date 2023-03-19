@@ -18,10 +18,7 @@ export class TasksService {
      * @returns Paginated_Task_ Successful Response
      * @throws ApiError
      */
-    public getTasks(
-        limit: number = 1000,
-        offset?: number
-    ): CancelablePromise<Paginated_Task_> {
+    public getTasks(limit: number = 1000, offset?: number): CancelablePromise<Paginated_Task_> {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/tasks",
