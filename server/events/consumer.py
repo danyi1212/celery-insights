@@ -29,6 +29,7 @@ class EventConsumer(Thread):
                 try:
                     import _thread as thread
                 except ImportError:
+                    # noinspection PyUnresolvedReferences
                     import thread
                 thread.interrupt_main()
             except Exception as e:

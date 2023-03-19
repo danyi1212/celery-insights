@@ -4,6 +4,7 @@ import eslint from "vite-plugin-eslint"
 import tsconfigPaths from "vite-tsconfig-paths"
 
 // https://vitejs.dev/config/
+// noinspection JSUnusedGlobalSymbols
 export default defineConfig({
     plugins: [eslint(), tsconfigPaths(), react()],
     server: {

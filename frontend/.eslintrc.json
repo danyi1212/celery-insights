@@ -24,7 +24,8 @@
   "plugins": [
     "react",
     "react-hooks",
-    "material-ui"
+    "material-ui",
+    "mui-path-imports"
   ],
   "rules": {
     "react/react-in-jsx-scope": "off",
@@ -34,6 +35,7 @@
       {
         "additionalHooks": "(useRecoilCallback|useRecoilTransaction_UNSTABLE)"
       }
-    ]
+    ],
+    "mui-path-imports/mui-path-imports": "warn"
   }
 }
