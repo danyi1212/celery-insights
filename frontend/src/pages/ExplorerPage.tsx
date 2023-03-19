@@ -1,17 +1,21 @@
 import ExplorerGrid from "@components/explorer/ExplorerGrid"
+import Facet from "@components/explorer/Facet"
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew"
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
-import { Divider, TextField } from "@mui/material"
 import Box from "@mui/material/Box"
+import Divider from "@mui/material/Divider"
 import IconButton from "@mui/material/IconButton"
+import TextField from "@mui/material/TextField"
 import Toolbar from "@mui/material/Toolbar"
 import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
-import React, { useState } from "react"
+import { countUniqueProperties } from "@utils/CountUniqueProperties"
+import React, { useMemo, useState } from "react"
 
 const ExplorerPage: React.FC = () => {
     const tasks = useStateStore((state) => state.tasks.map((_, task) => task))
     const [isFacetOpen, setFacetOpen] = useState(true)
+    const facetValues = useMemo(() => countUniqueProperties(tasks, ["state", "type", "result", "worker"]), [tasks])
     return (
         <Box>
             <Box mt={5}>
@@ -26,6 +30,9 @@ const ExplorerPage: React.FC = () => {
                         Facets
                     </Typography>
                     <Divider />
+                    {Array.from(facetValues.entries()).map(([facetName, values]) => (
+                        <Facet key={facetName} title={facetName} counts={values} />
+                    ))}
                 </Box>
                 <Box flexGrow={1}>
                     <Toolbar>
