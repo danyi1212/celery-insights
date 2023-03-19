@@ -10,7 +10,7 @@ interface TaskStateResult {
 }
 
 const useTaskState = (taskId: string): TaskStateResult => {
-    const task = useStateStore((state) => (taskId ? state.tasks.get(taskId) : undefined))
+    const task = useStateStore((state) => state.tasks.get(taskId))
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<Error | null>(null)
 
@@ -31,7 +31,7 @@ const useTaskState = (taskId: string): TaskStateResult => {
         if (task === undefined) {
             refresh()
         }
-    }, [task, taskId, refresh])
+    }, [task, refresh])
 
     return { task, loading, error, refresh }
 }
