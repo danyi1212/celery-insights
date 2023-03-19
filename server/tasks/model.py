@@ -37,8 +37,8 @@ class Task(BaseModel):
     runtime: float | None = Field(description="How long task executed in seconds")
     last_updated: datetime = Field(description="When task last event published")
 
-    args: str = Field(description="Positional arguments provided to task (truncated)")
-    kwargs: str = Field(description="Keyword arguments provided to task (truncated)")
+    args: str | None = Field(description="Positional arguments provided to task (truncated)")
+    kwargs: str | None = Field(description="Keyword arguments provided to task (truncated)")
     eta: datetime | None = Field(description="Absolute time when task should be executed")
     expires: datetime | None = Field(description="Absolute time when task should be expired")
     retries: int | None = Field(description="Retry count")
