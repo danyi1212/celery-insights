@@ -1,7 +1,7 @@
-type PropertyCountMap = Map<string, Map<string, number>>
+type PropertyCountMap<T> = Map<keyof T, Map<string, number>>
 
-export function countUniqueProperties<T>(objects: T[], properties: (keyof T)[]): PropertyCountMap {
-    const propertyCountMap: PropertyCountMap = new Map()
+export function countUniqueProperties<T>(objects: T[], properties: (keyof T)[]): PropertyCountMap<T> {
+    const propertyCountMap: PropertyCountMap<T> = new Map()
 
     for (const property of properties) {
         const propertyMap: Map<string, number> = new Map()
@@ -15,7 +15,7 @@ export function countUniqueProperties<T>(objects: T[], properties: (keyof T)[]):
             }
         }
 
-        propertyCountMap.set(property.toString(), propertyMap)
+        propertyCountMap.set(property, propertyMap)
     }
 
     return propertyCountMap
