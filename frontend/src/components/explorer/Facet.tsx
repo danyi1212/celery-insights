@@ -63,7 +63,11 @@ const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected }) =
                             <ListItem key={value} dense disablePadding>
                                 <ListItemButton dense sx={{ p: 0, pl: 2 }} onClick={() => handleSelect(value)}>
                                     <ListItemIcon sx={{ minWidth: 0 }}>
-                                        <Checkbox edge="start" tabIndex={-1} checked={selected.has(value)} />
+                                        <Checkbox
+                                            edge="start"
+                                            tabIndex={-1}
+                                            checked={selected.size === 0 || selected.has(value)}
+                                        />
                                     </ListItemIcon>
                                     <Tooltip title={value} placement="right" arrow>
                                         <ListItemText
