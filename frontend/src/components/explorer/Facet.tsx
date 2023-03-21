@@ -56,19 +56,14 @@ const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected }) =
             </Box>
             <Divider />
             <Collapse in={isOpen || isHover} orientation="vertical">
-                <List sx={{ maxHeight: 350, overflow: "auto" }}>
+                <List sx={{ maxHeight: 350, overflow: "auto" }} disablePadding>
                     {Array.from(counts.entries())
                         .sort((a, b) => b[1] - a[1])
                         .map(([value, count]) => (
                             <ListItem key={value} dense disablePadding>
-                                <ListItemButton dense sx={{ p: 0 }} onClick={() => handleSelect(value)}>
+                                <ListItemButton dense sx={{ p: 0, pl: 2 }} onClick={() => handleSelect(value)}>
                                     <ListItemIcon sx={{ minWidth: 0 }}>
-                                        <Checkbox
-                                            edge="start"
-                                            tabIndex={-1}
-                                            disableRipple
-                                            checked={selected.has(value)}
-                                        />
+                                        <Checkbox edge="start" tabIndex={-1} checked={selected.has(value)} />
                                     </ListItemIcon>
                                     <Tooltip title={value} placement="right" arrow>
                                         <ListItemText
