@@ -45,7 +45,7 @@ const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected }) =
                 <IconButton size="small" onClick={() => setOpen(!isOpen)}>
                     {isOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                 </IconButton>
-                <Typography variant="h5" px={2} flexGrow={1}>
+                <Typography variant="h6" flexGrow={1} noWrap>
                     {title}
                 </Typography>
                 <Tooltip title="Clear selection">

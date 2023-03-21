@@ -1,27 +1,30 @@
 import { DataGrid, GridColDef } from "@mui/x-data-grid"
+import { useExplorerColumns } from "@stores/useExplorerConfig"
 import { StateTask } from "@utils/translateServerModels"
-import { format } from "date-fns"
-import React from "react"
-
-const columns: GridColDef[] = [
-    {
-        field: "lastUpdated",
-        headerName: "Last Updated",
-        minWidth: 160,
-        valueFormatter: (params) => format(params.value, "MMM dd  hh:mm:ss.SSS"),
-    },
-    { field: "id", headerName: "Task ID", width: 100 },
-    { field: "type", headerName: "Task Type", width: 300 },
-]
+import React, { useMemo } from "react"
 
 interface ExplorerGridProps {
     tasks: StateTask[]
 }
 
+
 const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks }) => {
+    const columnConfigs = useExplorerColumns()
+    const columnDefs: GridColDef[] = useMemo(
+        () =>
+            columnConfigs.map((columnConfig) => ({
+                field: columnConfig.property,
+                headerName: columnConfig.label,
+                minWidth: columnConfig.columnWidth,
+                valueFormatter: (params) =>
+                    columnConfig.valueFormatter ? columnConfig.valueFormatter(params.value as never) : params.value,
+            })),
+        [columnConfigs]
+    )
+
     return (
         <DataGrid
-            columns={columns}
+            columns={columnDefs}
             rows={tasks}
             initialState={{ sorting: { sortModel: [{ field: "lastUpdated", sort: "desc" }] } }}
             autoHeight
