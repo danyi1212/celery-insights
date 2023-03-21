@@ -1,9 +1,7 @@
-import CancelIcon from "@mui/icons-material/Cancel"
+import FacetQuickFilter from "@components/explorer/FacetQuickFilter"
 import ClearAllIcon from "@mui/icons-material/ClearAll"
 import ExpandLessIcon from "@mui/icons-material/ExpandLess"
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
-import SearchIcon from "@mui/icons-material/Search"
-import { InputAdornment, TextField } from "@mui/material"
 import Box from "@mui/material/Box"
 import Checkbox from "@mui/material/Checkbox"
 import Collapse from "@mui/material/Collapse"
@@ -27,6 +25,7 @@ interface FacetProps {
 }
 
 const FACET_MAX_HEIGHT = 42 * 8 // 8 list items
+
 const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected }) => {
     const [isOpen, setOpen] = useState<boolean>(true)
     const [isHover, setHover] = useState<boolean>(false)
@@ -62,34 +61,7 @@ const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected }) =
             <Divider />
             <Collapse in={isOpen || isHover} orientation="vertical">
                 <Box>
-                    <TextField
-                        variant="outlined"
-                        placeholder="Filter values..."
-                        size="small"
-                        value={filter}
-                        onChange={(event) => setFilter(event.target.value)}
-                        sx={{ p: 1 }}
-                        inputProps={{ sx: { px: 1, py: 0.5 } }}
-                        InputProps={{
-                            sx: { px: 1, py: 0 },
-                            startAdornment: (
-                                <InputAdornment
-                                    position="start"
-                                    sx={{ m: 0, color: (theme) => theme.palette.text.disabled }}
-                                >
-                                    <SearchIcon />
-                                </InputAdornment>
-                            ),
-                            endAdornment: !filter ? null : (
-                                <InputAdornment position="end" sx={{ m: 0 }}>
-                                    <IconButton onClick={() => setFilter("")} edge="end" size="small">
-                                        <CancelIcon color="disabled" sx={{ p: 0.4 }} />
-                                    </IconButton>
-                                </InputAdornment>
-                            ),
-                        }}
-                        fullWidth
-                    />
+                    <FacetQuickFilter filter={filter} setFilter={setFilter} />
                     <List sx={{ maxHeight: FACET_MAX_HEIGHT, overflow: "auto" }} disablePadding>
                         {Array.from(counts.entries())
                             .filter(([value]) => !filter || value.toLowerCase().includes(filter.toLowerCase()))
