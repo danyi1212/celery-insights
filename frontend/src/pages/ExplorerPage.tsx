@@ -1,5 +1,6 @@
 import ExplorerGrid from "@components/explorer/ExplorerGrid"
 import Facet from "@components/explorer/Facet"
+import { useExplorerFilter } from "@hooks/useExplorerFilter"
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew"
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
 import Box from "@mui/material/Box"
@@ -16,6 +17,8 @@ const ExplorerPage: React.FC = () => {
     const tasks = useStateStore((state) => state.tasks.map((_, task) => task))
     const [isFacetOpen, setFacetOpen] = useState(true)
     const facetValues = useMemo(() => countUniqueProperties(tasks, ["state", "type", "result", "worker"]), [tasks])
+    const [filters, setFilter] = useExplorerFilter()
+
     return (
         <Box>
             <Box mt={5}>
@@ -31,7 +34,13 @@ const ExplorerPage: React.FC = () => {
                     </Typography>
                     <Divider />
                     {Array.from(facetValues.entries()).map(([facetName, values]) => (
-                        <Facet key={facetName} title={facetName} counts={values} />
+                        <Facet
+                            key={facetName}
+                            title={facetName}
+                            counts={values}
+                            selected={filters.get(facetName) || new Set()}
+                            setSelected={(values) => setFilter(facetName, values)}
+                        />
                     ))}
                 </Box>
                 <Box flexGrow={1}>

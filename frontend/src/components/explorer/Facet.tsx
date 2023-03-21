@@ -19,11 +19,26 @@ import React, { useState } from "react"
 interface FacetProps {
     title: string
     counts: Map<string, number>
+    selected: Set<string>
+    setSelected: (value: Set<string>) => void
 }
 
-const Facet: React.FC<FacetProps> = ({ title, counts }) => {
+const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected }) => {
     const [isOpen, setOpen] = useState<boolean>(true)
     const [isHover, setHover] = useState<boolean>(false)
+
+    const handleSelect = (value: string) => {
+        if (selected.has(value)) {
+            const newSelected = new Set(selected)
+            newSelected.delete(value)
+            setSelected(newSelected)
+        } else {
+            setSelected(new Set(selected).add(value))
+        }
+    }
+
+    const handleClearAll = () => setSelected(new Set())
+
     return (
         <Box>
             <Box display="flex" onMouseEnter={() => setHover(!isOpen)} onMouseLeave={() => setHover(false)}>
@@ -34,7 +49,7 @@ const Facet: React.FC<FacetProps> = ({ title, counts }) => {
                     {title}
                 </Typography>
                 <Tooltip title="Clear selection">
-                    <IconButton size="small" sx={{ mx: 1 }} onClick={() => console.log("Cleared all!")}>
+                    <IconButton size="small" sx={{ mx: 1 }} onClick={() => handleClearAll()}>
                         <ClearAllIcon />
                     </IconButton>
                 </Tooltip>
@@ -46,9 +61,14 @@ const Facet: React.FC<FacetProps> = ({ title, counts }) => {
                         .sort((a, b) => b[1] - a[1])
                         .map(([value, count]) => (
                             <ListItem key={value} dense disablePadding>
-                                <ListItemButton dense sx={{ p: 0 }}>
+                                <ListItemButton dense sx={{ p: 0 }} onClick={() => handleSelect(value)}>
                                     <ListItemIcon sx={{ minWidth: 0 }}>
-                                        <Checkbox edge="start" tabIndex={-1} disableRipple />
+                                        <Checkbox
+                                            edge="start"
+                                            tabIndex={-1}
+                                            disableRipple
+                                            checked={selected.has(value)}
+                                        />
                                     </ListItemIcon>
                                     <Tooltip title={value} placement="right" arrow>
                                         <ListItemText
