@@ -11,6 +11,7 @@ import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
 import React, { useState } from "react"
 
+const FACET_WIDTH = 300
 const ExplorerPage: React.FC = () => {
     const tasks = useStateStore((state) => state.tasks.map((_, task) => task))
     const [isFacetMenuOpen, setFacetMenuOpen] = useState(true)
@@ -20,7 +21,7 @@ const ExplorerPage: React.FC = () => {
         <Box>
             <Box display="flex" flexDirection="row">
                 <Box
-                    width={isFacetMenuOpen ? 250 : 0}
+                    width={isFacetMenuOpen ? FACET_WIDTH : 0}
                     sx={{ transition: (theme) => theme.transitions.create("width"), overflow: "hidden" }}
                 >
                     <Toolbar>
