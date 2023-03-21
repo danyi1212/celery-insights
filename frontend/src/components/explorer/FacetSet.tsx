@@ -28,6 +28,7 @@ const FacetSet: React.FC<FacetSetProps> = ({ tasks, filterState }) => {
                 <Facet
                     key={facetConfig.property}
                     title={facetConfig.label}
+                    valueFormatter={facetConfig.valueFormatter as (value: string) => React.ReactElement | string}
                     counts={facetValues.get(facetConfig.property) || new Map()}
                     selected={filters.get(facetConfig.property) || new Set()}
                     setSelected={(values) => setFilter(facetConfig.property, values)}

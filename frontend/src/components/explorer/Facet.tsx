@@ -17,11 +17,12 @@ interface FacetProps {
     counts: Map<string, number>
     selected: Set<string>
     setSelected: (value: Set<string>) => void
+    valueFormatter?: (value: string) => React.ReactElement | string
 }
 
 const FACET_MAX_HEIGHT = 42 * 8 // 8 list items
 
-const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected }) => {
+const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected, valueFormatter }) => {
     const [isOpen, setOpen] = useState<boolean>(true)
     const [isHover, setHover] = useState<boolean>(false)
     const [filter, setFilter] = useState<string>("")
@@ -65,6 +66,7 @@ const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected }) =
                                 <FacetValue
                                     key={value}
                                     value={value}
+                                    label={valueFormatter ? valueFormatter(value) : value}
                                     count={count}
                                     selected={selected}
                                     onSelect={() => handleSelect(value)}

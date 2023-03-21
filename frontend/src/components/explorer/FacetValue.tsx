@@ -10,12 +10,13 @@ import React from "react"
 
 interface FacetValueProps {
     value: string
+    label: React.ReactElement | string
     count: number
     onSelect: () => void
     selected: Set<string>
 }
 
-const FacetValue: React.FC<FacetValueProps> = ({ value, count, selected, onSelect }) => (
+const FacetValue: React.FC<FacetValueProps> = ({ value, count, selected, onSelect, label }) => (
     <ListItem dense disablePadding>
         <ListItemButton dense sx={{ p: 0, pl: 2 }} onClick={onSelect}>
             <ListItemIcon sx={{ minWidth: 0 }}>
@@ -23,7 +24,7 @@ const FacetValue: React.FC<FacetValueProps> = ({ value, count, selected, onSelec
             </ListItemIcon>
             <Tooltip title={value} placement="right" arrow>
                 <ListItemText
-                    primary={value}
+                    primary={label}
                     primaryTypographyProps={{
                         variant: "caption",
                         maxWidth: "80%",
