@@ -1,31 +1,27 @@
 import { useCallback, useEffect, useState } from "react"
-import { useSearchParams } from "react-router-dom"
 
 type TaskFilter = Map<string, Set<string>>
 
+const getQueryFilters = (): TaskFilter => {
+    const filters: TaskFilter = new Map()
+    const searchParams = new URLSearchParams(window.location.search)
+    for (const [key, value] of searchParams.entries()) {
+        if (!filters.has(key)) filters.set(key, new Set())
+        filters.get(key)?.add(value as string)
+    }
+    return filters
+}
+
 export const useExplorerFilter = (): [TaskFilter, (key: string, values: Set<string>) => void] => {
-    const [filters, setFilters] = useState<TaskFilter>(new Map())
-    const [searchParams, setSearchParams] = useSearchParams()
+    const [filters, setFilters] = useState<TaskFilter>(getQueryFilters())
 
     useEffect(() => {
         const filterParams: URLSearchParams = new URLSearchParams()
         for (const [key, values] of filters) for (const value of values) filterParams.append(key, value)
-
-        setSearchParams(filterParams, { replace: true })
-    }, [filters, setSearchParams])
-
-    useEffect(
-        () => {
-            const newFilters: TaskFilter = new Map()
-            Object.entries(searchParams).forEach(([key, value]) => {
-                if (!newFilters.has(key)) newFilters.set(key, new Set())
-                newFilters.get(key)?.add(value as string)
-            })
-            setFilters(newFilters)
-        },
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        []
-    )
+        const filterString = filterParams.toString()
+        const queryParams = filterString ? "?" + filterString : window.location.pathname
+        history.replaceState(null, "", queryParams)
+    }, [filters])
 
     const setFilter = useCallback(
         (key: string, values: Set<string>) => setFilters((filters) => new Map(filters).set(key, values)),
