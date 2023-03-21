@@ -6,7 +6,6 @@ import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
 import Box from "@mui/material/Box"
 import Divider from "@mui/material/Divider"
 import IconButton from "@mui/material/IconButton"
-import TextField from "@mui/material/TextField"
 import Toolbar from "@mui/material/Toolbar"
 import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
@@ -19,9 +18,6 @@ const ExplorerPage: React.FC = () => {
 
     return (
         <Box>
-            <Box mt={5}>
-                <TextField label="Filter" variant="outlined" fullWidth />
-            </Box>
             <Box display="flex" flexDirection="row">
                 <Box
                     width={isFacetMenuOpen ? 250 : 0}
