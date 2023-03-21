@@ -45,8 +45,8 @@ const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected }) =
     const handleClearAll = () => setSelected(new Set())
 
     return (
-        <Box>
-            <Box display="flex" onMouseEnter={() => setHover(!isOpen)} onMouseLeave={() => setHover(false)}>
+        <Box onMouseEnter={() => setHover(!isOpen)} onMouseLeave={() => setHover(false)}>
+            <Box display="flex">
                 <IconButton size="small" onClick={() => setOpen(!isOpen)}>
                     {isOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                 </IconButton>
