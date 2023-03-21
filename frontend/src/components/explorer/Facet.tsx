@@ -23,6 +23,7 @@ interface FacetProps {
     setSelected: (value: Set<string>) => void
 }
 
+const FACET_MAX_HEIGHT = 42 * 8 // 8 list items
 const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected }) => {
     const [isOpen, setOpen] = useState<boolean>(true)
     const [isHover, setHover] = useState<boolean>(false)
@@ -56,7 +57,7 @@ const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected }) =
             </Box>
             <Divider />
             <Collapse in={isOpen || isHover} orientation="vertical">
-                <List sx={{ maxHeight: 350, overflow: "auto" }} disablePadding>
+                <List sx={{ maxHeight: FACET_MAX_HEIGHT, overflow: "auto" }} disablePadding>
                     {Array.from(counts.entries())
                         .sort((a, b) => b[1] - a[1])
                         .map(([value, count]) => (
