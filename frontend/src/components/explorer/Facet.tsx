@@ -56,7 +56,7 @@ const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected }) =
             </Box>
             <Divider />
             <Collapse in={isOpen || isHover} orientation="vertical">
-                <List>
+                <List sx={{ maxHeight: 350, overflow: "auto" }}>
                     {Array.from(counts.entries())
                         .sort((a, b) => b[1] - a[1])
                         .map(([value, count]) => (
