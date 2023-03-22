@@ -50,10 +50,10 @@ export class LRUMap<K, V> {
         return newCache
     }
 
-    public map<T>(callback: (key: K, value: V) => T): T[] {
+    public map<T>(callback: (value: V) => T): T[] {
         const result: T[] = []
-        for (const [key, value] of this.values) {
-            result.push(callback(key, value.value))
+        for (const value of this.values.values()) {
+            result.push(callback(value.value))
         }
         return result
     }

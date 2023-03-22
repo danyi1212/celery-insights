@@ -73,7 +73,7 @@ interface WorkflowGraphProps {
 const WorkflowGraph: React.FC<WorkflowGraphProps> = ({ rootTaskId, currentTaskId }) => {
     const tasks = useStateStore((state) => state.tasks)
     const workflowTasks = useMemo(
-        () => tasks.map((_, task) => task).filter((task) => task.rootId === rootTaskId || task.id === rootTaskId),
+        () => tasks.map((task) => task).filter((task) => task.rootId === rootTaskId || task.id === rootTaskId),
         [tasks, rootTaskId]
     )
 

@@ -14,7 +14,7 @@ import React, { useState } from "react"
 
 const FACET_WIDTH = 300
 const ExplorerPage: React.FC = () => {
-    const tasks = useStateStore((state) => state.tasks.map((_, task) => task))
+    const tasks = useStateStore((state) => state.tasks.map((task) => task))
     const [isFacetMenuOpen, setFacetMenuOpen] = useState(true)
     const [filters, setFilter] = useExplorerFilter<StateTask>()
 

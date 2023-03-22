@@ -12,9 +12,9 @@ const WorkerStatusList: React.FC = () => {
     const { data } = useQuery("workers/stats", getWorkerStats)
     return (
         <Box display="flex" flexDirection="column">
-            {workersState.map((workerId, worker) => {
+            {workersState.map((worker) => {
                 const stats = data?.[worker.hostname]
-                return <WorkerStatus key={workerId} worker={worker} stats={stats} />
+                return <WorkerStatus key={worker.id} worker={worker} stats={stats} />
             })}
         </Box>
     )

@@ -9,8 +9,8 @@ function HomePage() {
 
     return (
         <ul>
-            {tasks.map((taskId, task) => (
-                <li key={taskId}>
+            {tasks.map((task) => (
+                <li key={task.id}>
                     <TaskStatusIcon status={task.state} />
                     <Link component={RouterLink} to={`tasks/${task.id}`}>
                         {task.id}
