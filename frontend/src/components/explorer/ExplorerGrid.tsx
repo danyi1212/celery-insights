@@ -1,14 +1,15 @@
+import { TaskFilter } from "@hooks/useExplorerFilter"
 import { DataGrid, GridColDef } from "@mui/x-data-grid"
 import { useExplorerColumns } from "@stores/useExplorerConfig"
 import { StateTask } from "@utils/translateServerModels"
-import React, { useMemo } from "react"
+import React, { useDeferredValue, useMemo } from "react"
 
 interface ExplorerGridProps {
     tasks: StateTask[]
+    filters: TaskFilter<StateTask>
 }
 
-
-const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks }) => {
+const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, filters }) => {
     const columnConfigs = useExplorerColumns()
     const columnDefs: GridColDef[] = useMemo(
         () =>
@@ -22,10 +23,23 @@ const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks }) => {
         [columnConfigs]
     )
 
+    const deferredTasks = useDeferredValue(tasks)
+    const filteredTasks = useMemo(
+        () =>
+            deferredTasks.filter((task) => {
+                for (const [property, values] of filters) {
+                    const value = task[property]?.toString()
+                    if (values.size != 0 && value && !values.has(value)) return false
+                }
+                return true
+            }),
+        [deferredTasks, filters]
+    )
+
     return (
         <DataGrid
             columns={columnDefs}
-            rows={tasks}
+            rows={filteredTasks}
             initialState={{ sorting: { sortModel: [{ field: "lastUpdated", sort: "desc" }] } }}
             autoHeight
         />
