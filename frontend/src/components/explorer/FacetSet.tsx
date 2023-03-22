@@ -1,5 +1,5 @@
 import Facet from "@components/explorer/Facet"
-import { useExplorerFilter } from "@hooks/useExplorerFilter"
+import { TaskFilter } from "@hooks/useExplorerFilter"
 import { useExplorerFacets } from "@stores/useExplorerConfig"
 import { countUniqueProperties } from "@utils/CountUniqueProperties"
 import { StateTask } from "@utils/translateServerModels"
@@ -7,11 +7,11 @@ import React, { useMemo } from "react"
 
 interface FacetSetProps {
     tasks: StateTask[]
-    filterState: ReturnType<typeof useExplorerFilter>
+    filters: TaskFilter<StateTask>
+    setFilter: (key: keyof StateTask, values: Set<string>) => void
 }
 
-const FacetSet: React.FC<FacetSetProps> = ({ tasks, filterState }) => {
-    const [filters, setFilter] = filterState
+const FacetSet: React.FC<FacetSetProps> = ({ tasks, filters, setFilter }) => {
     const facetConfigs = useExplorerFacets()
     const facetValues = useMemo(
         () =>
