@@ -4,8 +4,8 @@ import React, { useDeferredValue, useMemo } from "react"
 import { Background, Controls, Edge, Node, Position, ReactFlow, ReactFlowInstance } from "reactflow"
 import "reactflow/dist/style.css"
 
-const createNode = (task: StateTask, x: number, y: number): Node => ({
-    id: task.id,
+const createNode = (task: StateTask, x: number, y: number, nodeId?: string): Node => ({
+    id: nodeId || task.id,
     position: { x: x * 300, y: y * 100 },
     data: {
         label: `${task.id} | ${task.type}`,
@@ -16,11 +16,11 @@ const createNode = (task: StateTask, x: number, y: number): Node => ({
     sourcePosition: Position.Right,
 })
 
-function createEdge(source: StateTask, target: StateTask): Edge {
+function createEdge(sourceId: string, targetId: string): Edge {
     return {
-        id: `${source.id}-${target.id}`,
-        source: source.id,
-        target: target.id,
+        id: `${sourceId}-${targetId}`,
+        source: sourceId,
+        target: targetId,
         type: "straight",
         deletable: false,
     }
@@ -46,9 +46,11 @@ const getGraph = (tasks: StateTask[], rootTaskId: string): { nodes: Node[]; edge
         children.forEach((child, index) => {
             const childY = startY + index
             if (visited.has(child.id)) {
-                console.log("Possible loop between task", task.id, "and task", child.id)
+                const replacedId = child.id + "-replaced"
+                nodes.push(createNode(child, childX, childY, replacedId))
+                edges.push(createEdge(task.id, replacedId))
             } else {
-                edges.push(createEdge(task, child))
+                edges.push(createEdge(task.id, child.id))
                 dfs(child, childX, childY)
             }
         })
