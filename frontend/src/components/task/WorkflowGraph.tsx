@@ -1,16 +1,12 @@
 import { useStateStore } from "@stores/useStateStore"
 import { StateTask } from "@utils/translateServerModels"
 import React, { useDeferredValue, useMemo } from "react"
-import { Background, Controls, Edge, Node, Position, ReactFlow } from "reactflow"
+import { Background, Controls, Edge, Node, Position, ReactFlow, ReactFlowInstance } from "reactflow"
 import "reactflow/dist/style.css"
-
-interface WorkflowGraphProps {
-    rootTaskId: string
-}
 
 const createNode = (task: StateTask, x: number, y: number): Node => ({
     id: task.id,
-    position: { x: x * 500, y: y * 100 },
+    position: { x: x * 300, y: y * 100 },
     data: {
         label: `${task.id} | ${task.type}`,
     },
@@ -67,7 +63,12 @@ const getGraph = (tasks: StateTask[], rootTaskId: string): { nodes: Node[]; edge
     }
 }
 
-const WorkflowGraph: React.FC<WorkflowGraphProps> = ({ rootTaskId }) => {
+interface WorkflowGraphProps {
+    rootTaskId: string
+    currentTaskId?: string
+}
+
+const WorkflowGraph: React.FC<WorkflowGraphProps> = ({ rootTaskId, currentTaskId }) => {
     const tasks = useStateStore((state) => state.tasks)
     const workflowTasks = useMemo(
         () => tasks.map((_, task) => task).filter((task) => task.rootId === rootTaskId || task.id === rootTaskId),
@@ -77,8 +78,15 @@ const WorkflowGraph: React.FC<WorkflowGraphProps> = ({ rootTaskId }) => {
     const deferredTasks = useDeferredValue(workflowTasks)
     const graph = useMemo(() => getGraph(deferredTasks, rootTaskId), [deferredTasks, rootTaskId])
 
+    const handleInit = (flow: ReactFlowInstance) => {
+        if (!currentTaskId) return flow.fitView()
+        const node = graph.nodes.find((node) => node.id === currentTaskId)
+        if (node) flow.setCenter(node.position.x, node.position.y, { zoom: 0.9 })
+        else flow.setCenter(0, 0, { zoom: 0.9 })
+    }
+
     return (
-        <ReactFlow nodes={graph.nodes} edges={graph.edges}>
+        <ReactFlow nodes={graph.nodes} edges={graph.edges} onInit={handleInit}>
             <Background />
             <Controls />
         </ReactFlow>
