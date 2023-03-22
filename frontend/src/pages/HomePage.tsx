@@ -1,15 +1,19 @@
 import TaskStatusIcon from "@components/task/TaskStatusIcon"
 import Link from "@mui/material/Link"
 import { useStateStore } from "@stores/useStateStore"
-import React from "react"
+import React, { useMemo } from "react"
 import { Link as RouterLink } from "react-router-dom"
 
 function HomePage() {
     const tasks = useStateStore((state) => state.tasks)
+    const sortedTasks = useMemo(
+        () => tasks.map((t) => t).sort((a, b) => ((a.sentAt || a.lastUpdated) > (b.sentAt || b.lastUpdated) ? -1 : 1)),
+        [tasks]
+    )
 
     return (
         <ul>
-            {tasks.map((task) => (
+            {sortedTasks.map((task) => (
                 <li key={task.id}>
                     <TaskStatusIcon status={task.state} />
                     <Link component={RouterLink} to={`tasks/${task.id}`}>
