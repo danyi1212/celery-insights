@@ -1,11 +1,32 @@
-import TaskStatusIcon from "@components/task/TaskStatusIcon"
-import Link from "@mui/material/Link"
 import { useStateStore } from "@stores/useStateStore"
-import React, { useCallback } from "react"
-import { Link as RouterLink } from "react-router-dom"
+import { StateTask } from "@utils/translateServerModels"
+import React, { useCallback, useDeferredValue, useMemo } from "react"
+import { Background, Controls, Edge, Node, ReactFlow } from "reactflow"
+import "reactflow/dist/style.css"
 
 interface WorkflowGraphProps {
     rootTaskId: string
+}
+
+const getGraph = (tasks: StateTask[]): { nodes: Node[]; edges: Edge[] } => {
+    const nodes: Node[] = tasks.map((task, index) => ({
+        id: task.id,
+        position: { x: index * 100, y: index * 100 },
+        data: {
+            label: `${task.id} | ${task.type}`,
+        },
+    }))
+    const edges: Edge[] = tasks
+        .filter((task) => task.parentId !== undefined)
+        .map((task) => ({
+            id: `${task.parentId} > ${task.parentId}`,
+            source: task.parentId as string,
+            target: task.id,
+        }))
+    return {
+        nodes: nodes,
+        edges: edges,
+    }
 }
 
 const WorkflowGraph: React.FC<WorkflowGraphProps> = ({ rootTaskId }) => {
@@ -19,18 +40,14 @@ const WorkflowGraph: React.FC<WorkflowGraphProps> = ({ rootTaskId }) => {
         )
     )
 
+    const deferredTasks = useDeferredValue(tasks)
+    const graph = useMemo(() => getGraph(deferredTasks), [deferredTasks])
+
     return (
-        <ul style={{ overflow: "auto", height: "100%" }}>
-            {tasks.map((task) => (
-                <li key={task.id}>
-                    <TaskStatusIcon status={task.state} />
-                    <Link component={RouterLink} to={`/tasks/${task.id}`}>
-                        {task.id}
-                    </Link>{" "}
-                    | {task.type}
-                </li>
-            ))}
-        </ul>
+        <ReactFlow nodes={graph.nodes} edges={graph.edges}>
+            <Background />
+            <Controls />
+        </ReactFlow>
     )
 }
 

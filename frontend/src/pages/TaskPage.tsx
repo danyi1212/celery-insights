@@ -31,7 +31,7 @@ const TaskPage: React.FC = () => {
 
     return (
         <Container maxWidth="lg">
-            <Box width="100%" height="450px" bgcolor="grey">
+            <Box width="100%" height="450px">
                 <WorkflowGraph rootTaskId={task.rootId || task.id} />
             </Box>
             <Toolbar>
