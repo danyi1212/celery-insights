@@ -1,7 +1,13 @@
+import CenterFocusStrongIcon from "@mui/icons-material/CenterFocusStrong"
+import CropFreeIcon from "@mui/icons-material/CropFree"
+import DoNotTouchIcon from "@mui/icons-material/DoNotTouch"
+import PanToolIcon from "@mui/icons-material/PanTool"
+import Tooltip from "@mui/material/Tooltip"
 import { StateTask } from "@utils/translateServerModels"
-import React, { useCallback, useEffect } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import {
     Background,
+    ControlButton,
     Controls,
     Edge,
     Node,
@@ -73,6 +79,9 @@ const getGraph = (tasks: StateTask[], rootTaskId: string): { nodes: Node[]; edge
     }
 }
 
+const FOCUS_ZOOM = 1
+const ZOOM_ANIMATION_SPEED = 1000
+
 interface WorkflowFlowChart {
     tasks: StateTask[]
     rootTaskId: string
@@ -83,32 +92,70 @@ export const WorkflowFlowChart: React.FC<WorkflowFlowChart> = ({ tasks, rootTask
     const flow = useReactFlow()
     const [nodes, setNodes, onNodesChange] = useNodesState([])
     const [edges, setEdges, onEdgesChange] = useEdgesState([])
+    const [locked, setLocked] = useState<boolean>(true)
+
+    const focusNode = useCallback(
+        (nodeId: string) => {
+            const node = nodes.find((node) => node.id === nodeId)
+            if (node)
+                flow.setCenter(node.position.x, node.position.y, {
+                    zoom: FOCUS_ZOOM,
+                    duration: ZOOM_ANIMATION_SPEED,
+                })
+            else flow.setCenter(0, 0, { zoom: FOCUS_ZOOM, duration: ZOOM_ANIMATION_SPEED })
+        },
+        [flow, nodes]
+    )
+
+    const fitView = useCallback(() => flow.fitView({ duration: ZOOM_ANIMATION_SPEED }), [flow])
 
     useEffect(() => {
         const graph = getGraph(tasks, rootTaskId)
         setNodes(graph.nodes)
         setEdges(graph.edges)
-    }, [tasks, rootTaskId, setNodes, setEdges])
-
-    const focusNode = useCallback(
-        (nodeId: string) => {
-            const node = nodes.find((node) => node.id === nodeId)
-            if (node) flow.setCenter(node.position.x, node.position.y, { zoom: 0.9 })
-            else flow.setCenter(0, 0, { zoom: 0.9 })
-        },
-        [flow, nodes]
-    )
+        if (currentTaskId) {
+            const node = graph.nodes.find((node) => node.id === currentTaskId)
+            if (node)
+                flow.setCenter(node.position.x, node.position.y, {
+                    zoom: FOCUS_ZOOM,
+                    duration: ZOOM_ANIMATION_SPEED,
+                })
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tasks, rootTaskId, setNodes, setEdges, flow])
 
     useEffect(() => {
-        if (!currentTaskId) flow.fitView()
+        if (!currentTaskId) fitView()
         else focusNode(currentTaskId)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentTaskId])
 
     return (
-        <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}>
+        <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            nodesDraggable={locked}
+        >
             <Background />
-            <Controls />
+            <Controls showZoom={false} showFitView={false} showInteractive={false}>
+                <ControlButton onClick={() => setLocked((locked) => !locked)}>
+                    <Tooltip title={locked ? "Disable interation" : "Enable interation"} placement="right" arrow>
+                        {locked ? <DoNotTouchIcon /> : <PanToolIcon />}
+                    </Tooltip>
+                </ControlButton>
+                <ControlButton onClick={() => fitView()}>
+                    <Tooltip title="Fit view" placement="right" arrow>
+                        <CropFreeIcon />
+                    </Tooltip>
+                </ControlButton>
+                <ControlButton onClick={() => currentTaskId && focusNode(currentTaskId)} disabled={!currentTaskId}>
+                    <Tooltip title="Focus current task" placement="right" arrow>
+                        <CenterFocusStrongIcon />
+                    </Tooltip>
+                </ControlButton>
+            </Controls>
         </ReactFlow>
     )
 }
