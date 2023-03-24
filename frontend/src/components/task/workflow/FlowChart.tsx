@@ -3,6 +3,7 @@ import CenterFocusStrongIcon from "@mui/icons-material/CenterFocusStrong"
 import ControlCameraIcon from "@mui/icons-material/ControlCamera"
 import CropFreeIcon from "@mui/icons-material/CropFree"
 import PanToolIcon from "@mui/icons-material/PanTool"
+import { useTheme } from "@mui/material"
 import Tooltip from "@mui/material/Tooltip"
 import { StateTask } from "@utils/translateServerModels"
 import React, { useCallback, useEffect, useState } from "react"
@@ -11,6 +12,7 @@ import {
     ControlButton,
     Controls,
     Edge,
+    MiniMap,
     Node,
     NodeProps,
     ReactFlow,
@@ -95,6 +97,7 @@ const FlowChart: React.FC<FlowChartProps> = ({ tasks, rootTaskId, currentTaskId 
     const [edges, setEdges, onEdgesChange] = useEdgesState([])
     const [locked, setLocked] = useState<boolean>(true)
     const [isInitialized, setInitialized] = useState<boolean>(false)
+    const theme = useTheme()
 
     const focusNode = useCallback(
         (nodeId: string) => {
@@ -160,6 +163,12 @@ const FlowChart: React.FC<FlowChartProps> = ({ tasks, rootTaskId, currentTaskId 
                     </Tooltip>
                 </ControlButton>
             </Controls>
+            <MiniMap
+                position="top-right"
+                style={{ backgroundColor: theme.palette.background.default, height: 100, width: 200 }}
+                maskColor={theme.palette.action.hover}
+                pannable
+            />
         </ReactFlow>
     )
 }
