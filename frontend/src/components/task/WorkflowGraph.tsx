@@ -1,4 +1,4 @@
-import { WorkflowFlowChart } from "@components/task/WorkflowFlowChart"
+import FlowChart from "@components/task/workflow/FlowChart"
 import { useStateStore } from "@stores/useStateStore"
 import React, { useDeferredValue, useMemo } from "react"
 import { ReactFlowProvider } from "reactflow"
@@ -19,7 +19,7 @@ const WorkflowGraph: React.FC<WorkflowGraphProps> = ({ rootTaskId, currentTaskId
     const deferredTasks = useDeferredValue(workflowTasks)
     return (
         <ReactFlowProvider>
-            <WorkflowFlowChart tasks={deferredTasks} rootTaskId={rootTaskId} currentTaskId={currentTaskId} />
+            <FlowChart tasks={deferredTasks} rootTaskId={rootTaskId} currentTaskId={currentTaskId} />
         </ReactFlowProvider>
     )
 }

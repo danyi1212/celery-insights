@@ -1,4 +1,4 @@
-import WorkflowTaskNode from "@components/task/WorkflowTaskNode"
+import TaskNode from "@components/task/workflow/TaskNode"
 import CenterFocusStrongIcon from "@mui/icons-material/CenterFocusStrong"
 import ControlCameraIcon from "@mui/icons-material/ControlCamera"
 import CropFreeIcon from "@mui/icons-material/CropFree"
@@ -80,16 +80,16 @@ const getGraph = (tasks: StateTask[], rootTaskId: string): { nodes: Node[]; edge
 const FOCUS_ZOOM = 1
 const ZOOM_ANIMATION_SPEED = 1000
 
-interface WorkflowFlowChart {
+interface FlowChartProps {
     tasks: StateTask[]
     rootTaskId: string
     currentTaskId?: string
 }
 
 const nodeTypes: Record<string, React.ComponentType<NodeProps>> = {
-    taskNode: WorkflowTaskNode,
+    taskNode: TaskNode,
 }
-export const WorkflowFlowChart: React.FC<WorkflowFlowChart> = ({ tasks, rootTaskId, currentTaskId }) => {
+const FlowChart: React.FC<FlowChartProps> = ({ tasks, rootTaskId, currentTaskId }) => {
     const flow = useReactFlow()
     const [nodes, setNodes, onNodesChange] = useNodesState([])
     const [edges, setEdges, onEdgesChange] = useEdgesState([])
@@ -163,3 +163,5 @@ export const WorkflowFlowChart: React.FC<WorkflowFlowChart> = ({ tasks, rootTask
         </ReactFlow>
     )
 }
+
+export default FlowChart

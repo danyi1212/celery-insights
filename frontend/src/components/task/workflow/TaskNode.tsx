@@ -7,11 +7,11 @@ import React from "react"
 import { Link as RouterLink } from "react-router-dom"
 import { Handle, NodeProps, Position } from "reactflow"
 
-interface WorkflowTaskNodeProps extends NodeProps {
+interface TaskNodeProps extends NodeProps {
     data: StateTask
 }
 
-const WorkflowTaskNode: React.FC<WorkflowTaskNodeProps> = ({ data }) => {
+const TaskNode: React.FC<TaskNodeProps> = ({ data }) => {
     return (
         <>
             <Handle type="target" position={Position.Left} />
@@ -34,4 +34,4 @@ const WorkflowTaskNode: React.FC<WorkflowTaskNodeProps> = ({ data }) => {
     )
 }
 
-export default WorkflowTaskNode
+export default TaskNode
