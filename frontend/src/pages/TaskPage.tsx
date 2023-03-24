@@ -6,7 +6,6 @@ import AccountTreeIcon from "@mui/icons-material/AccountTree"
 import ViewTimelineIcon from "@mui/icons-material/ViewTimeline"
 import Box from "@mui/material/Box"
 import CircularProgress from "@mui/material/CircularProgress"
-import Container from "@mui/material/Container"
 import ToggleButton from "@mui/material/ToggleButton"
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup"
 import Toolbar from "@mui/material/Toolbar"
@@ -37,7 +36,7 @@ const TaskPage: React.FC = () => {
         )
 
     return (
-        <Container maxWidth="lg">
+        <Box>
             <Box width="100%" height="450px">
                 <WorkflowGraph chartType={chartType} rootTaskId={task.rootId || task.id} currentTaskId={task.id} />
             </Box>
@@ -67,7 +66,7 @@ const TaskPage: React.FC = () => {
             </Toolbar>
             <Typography component="pre">{JSON.stringify(task, null, 2)}</Typography>
             <Typography component="pre">{JSON.stringify(taskResult, null, 2)}</Typography>
-        </Container>
+        </Box>
     )
 }
 
