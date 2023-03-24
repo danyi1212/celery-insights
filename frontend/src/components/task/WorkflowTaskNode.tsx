@@ -1,8 +1,10 @@
 import TaskStatusIcon from "@components/task/TaskStatusIcon"
 import Box from "@mui/material/Box"
+import Link from "@mui/material/Link"
 import Typography from "@mui/material/Typography"
 import { StateTask } from "@utils/translateServerModels"
 import React from "react"
+import { Link as RouterLink } from "react-router-dom"
 import { Handle, NodeProps, Position } from "reactflow"
 
 interface WorkflowTaskNodeProps extends NodeProps {
@@ -21,7 +23,10 @@ const WorkflowTaskNode: React.FC<WorkflowTaskNodeProps> = ({ data }) => {
             >
                 <Typography overflow="hidden">
                     <TaskStatusIcon status={data.state} />
-                    {data.id} | {data.type}
+                    <Link component={RouterLink} to={`/tasks/${data.id}`}>
+                        {data.id}
+                    </Link>{" "}
+                    | {data.type}
                 </Typography>
             </Box>
             <Handle type="source" position={Position.Right} />

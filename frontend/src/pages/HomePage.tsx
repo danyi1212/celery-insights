@@ -16,7 +16,7 @@ function HomePage() {
             {sortedTasks.map((task) => (
                 <li key={task.id}>
                     <TaskStatusIcon status={task.state} />
-                    <Link component={RouterLink} to={`tasks/${task.id}`}>
+                    <Link component={RouterLink} to={`/tasks/${task.id}`}>
                         {task.id}
                     </Link>{" "}
                     | {task.type}
