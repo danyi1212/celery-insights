@@ -1,7 +1,7 @@
 import WorkflowTaskNode from "@components/task/WorkflowTaskNode"
 import CenterFocusStrongIcon from "@mui/icons-material/CenterFocusStrong"
+import ControlCameraIcon from "@mui/icons-material/ControlCamera"
 import CropFreeIcon from "@mui/icons-material/CropFree"
-import DoNotTouchIcon from "@mui/icons-material/DoNotTouch"
 import PanToolIcon from "@mui/icons-material/PanTool"
 import Tooltip from "@mui/material/Tooltip"
 import { StateTask } from "@utils/translateServerModels"
@@ -139,14 +139,14 @@ export const WorkflowFlowChart: React.FC<WorkflowFlowChart> = ({ tasks, rootTask
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
-            nodesDraggable={locked}
+            nodesDraggable={!locked}
             nodeTypes={nodeTypes}
         >
             <Background />
             <Controls showZoom={false} showFitView={false} showInteractive={false}>
                 <ControlButton onClick={() => setLocked((locked) => !locked)}>
-                    <Tooltip title={locked ? "Disable interation" : "Enable interation"} placement="right" arrow>
-                        {locked ? <DoNotTouchIcon /> : <PanToolIcon />}
+                    <Tooltip title={locked ? "Move nodes" : "Move camera"} placement="right" arrow>
+                        {locked ? <PanToolIcon /> : <ControlCameraIcon />}
                     </Tooltip>
                 </ControlButton>
                 <ControlButton onClick={() => fitView()}>
