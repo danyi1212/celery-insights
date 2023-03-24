@@ -94,6 +94,7 @@ export const WorkflowFlowChart: React.FC<WorkflowFlowChart> = ({ tasks, rootTask
     const [nodes, setNodes, onNodesChange] = useNodesState([])
     const [edges, setEdges, onEdgesChange] = useEdgesState([])
     const [locked, setLocked] = useState<boolean>(true)
+    const [isInitialized, setInitialized] = useState<boolean>(false)
 
     const focusNode = useCallback(
         (nodeId: string) => {
@@ -114,7 +115,7 @@ export const WorkflowFlowChart: React.FC<WorkflowFlowChart> = ({ tasks, rootTask
         const graph = getGraph(tasks, rootTaskId)
         setNodes(graph.nodes)
         setEdges(graph.edges)
-        if (currentTaskId) {
+        if (!isInitialized && currentTaskId) {
             const node = graph.nodes.find((node) => node.id === currentTaskId)
             if (node)
                 flow.setCenter(node.position.x, node.position.y, {
@@ -122,6 +123,7 @@ export const WorkflowFlowChart: React.FC<WorkflowFlowChart> = ({ tasks, rootTask
                     duration: ZOOM_ANIMATION_SPEED,
                 })
         }
+        setInitialized(true)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tasks, rootTaskId, setNodes, setEdges, flow])
 
