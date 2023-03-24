@@ -1,3 +1,4 @@
+import TaskStatusIcon from "@components/task/TaskStatusIcon"
 import Box from "@mui/material/Box"
 import Typography from "@mui/material/Typography"
 import { StateTask } from "@utils/translateServerModels"
@@ -19,6 +20,7 @@ const WorkflowTaskNode: React.FC<WorkflowTaskNodeProps> = ({ data }) => {
                 sx={{ backgroundColor: (theme) => theme.palette.action.selected, borderRadius: 5 }}
             >
                 <Typography overflow="hidden">
+                    <TaskStatusIcon status={data.state} />
                     {data.id} | {data.type}
                 </Typography>
             </Box>
