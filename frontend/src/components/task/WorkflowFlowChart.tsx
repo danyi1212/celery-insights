@@ -1,3 +1,4 @@
+import WorkflowTaskNode from "@components/task/WorkflowTaskNode"
 import CenterFocusStrongIcon from "@mui/icons-material/CenterFocusStrong"
 import CropFreeIcon from "@mui/icons-material/CropFree"
 import DoNotTouchIcon from "@mui/icons-material/DoNotTouch"
@@ -11,7 +12,7 @@ import {
     Controls,
     Edge,
     Node,
-    Position,
+    NodeProps,
     ReactFlow,
     useEdgesState,
     useNodesState,
@@ -20,19 +21,16 @@ import {
 
 const createNode = (task: StateTask, x: number, y: number, nodeId?: string): Node => ({
     id: nodeId || task.id,
+    type: "taskNode",
     position: { x: x * 300, y: y * 100 },
-    data: {
-        label: `${task.id} | ${task.type}`,
-    },
+    data: task,
     connectable: false,
     deletable: false,
-    targetPosition: Position.Left,
-    sourcePosition: Position.Right,
 })
 
 function createEdge(sourceId: string, targetId: string): Edge {
     return {
-        id: `${sourceId}-${targetId}`,
+        id: `${sourceId}>${targetId}`,
         source: sourceId,
         target: targetId,
         type: "straight",
@@ -88,6 +86,9 @@ interface WorkflowFlowChart {
     currentTaskId?: string
 }
 
+const nodeTypes: Record<string, React.ComponentType<NodeProps>> = {
+    taskNode: WorkflowTaskNode,
+}
 export const WorkflowFlowChart: React.FC<WorkflowFlowChart> = ({ tasks, rootTaskId, currentTaskId }) => {
     const flow = useReactFlow()
     const [nodes, setNodes, onNodesChange] = useNodesState([])
@@ -137,6 +138,7 @@ export const WorkflowFlowChart: React.FC<WorkflowFlowChart> = ({ tasks, rootTask
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             nodesDraggable={locked}
+            nodeTypes={nodeTypes}
         >
             <Background />
             <Controls showZoom={false} showFitView={false} showInteractive={false}>
