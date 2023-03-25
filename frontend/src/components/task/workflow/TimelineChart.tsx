@@ -9,7 +9,7 @@ const getTimestamp = (date: Date | undefined) => date?.getTime() || new Date().g
 
 const getSeries = (tasks: StateTask[]): ApexAxisChartSeries => {
     const data = tasks
-        .sort((a, b) => ((a.sentAt || a.lastUpdated) > (b.sentAt || a.lastUpdated) ? 1 : -1))
+        .sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1))
         .map((task) => ({
             x: task.id,
             y: [getTimestamp(task.startedAt), getTimestamp(task.succeededAt || task.failedAt)],

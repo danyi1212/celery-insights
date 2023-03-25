@@ -4,7 +4,7 @@ export interface StateTask {
     id: string
     type?: string
     state: TaskState
-    sentAt?: Date
+    sentAt: Date
     receivedAt?: Date
     startedAt?: Date
     succeededAt?: Date
@@ -14,10 +14,10 @@ export interface StateTask {
     rejectedAt?: Date
     runtime?: number
     lastUpdated: Date
-    args: string
-    kwargs: string
-    eta?: Date
-    expires?: Date
+    args?: string
+    kwargs?: string
+    eta?: string
+    expires?: string
     retries?: number
     exchange?: string
     routingKey?: string
@@ -34,7 +34,7 @@ export const translateTask = (task: ServerTask): StateTask => ({
     id: task.id,
     type: task.type,
     state: task.state,
-    sentAt: task.sent_at ? new Date(task.sent_at) : undefined,
+    sentAt: new Date(task.sent_at),
     receivedAt: task.received_at ? new Date(task.received_at) : undefined,
     startedAt: task.started_at ? new Date(task.started_at) : undefined,
     succeededAt: task.succeeded_at ? new Date(task.succeeded_at) : undefined,
@@ -46,8 +46,8 @@ export const translateTask = (task: ServerTask): StateTask => ({
     lastUpdated: new Date(task.last_updated),
     args: task.args,
     kwargs: task.kwargs,
-    eta: task.eta ? new Date(task.eta) : undefined,
-    expires: task.expires ? new Date(task.expires) : undefined,
+    eta: task.eta,
+    expires: task.expires,
     retries: task.retries,
     exchange: task.exchange,
     routingKey: task.routing_key,

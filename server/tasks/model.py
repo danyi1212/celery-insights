@@ -26,7 +26,7 @@ class Task(BaseModel):
     type: str | None = Field(description="Task function name")
     state: TaskState = Field(description="Task last known state")
 
-    sent_at: datetime | None = Field(description="When task was published by client to queue")
+    sent_at: datetime = Field(description="When task was published by client to queue")
     received_at: datetime | None = Field(description="When task was received by worker")
     started_at: datetime | None = Field(description="When task was started to be executed by worker")
     succeeded_at: datetime | None = Field(description="When task was finished successfully by worker")
@@ -59,7 +59,7 @@ class Task(BaseModel):
             type=task.name,
             state=task.state,
 
-            sent_at=timestamp_to_datetime(task.sent),
+            sent_at=timestamp_to_datetime(task.sent or task.timestamp),
             received_at=timestamp_to_datetime(task.received),
             started_at=timestamp_to_datetime(task.started),
             succeeded_at=timestamp_to_datetime(task.succeeded),

@@ -20,7 +20,7 @@ export type Task = {
     /**
      * When task was published by client to queue
      */
-    sent_at?: string
+    sent_at: string
     /**
      * When task was received by worker
      */
@@ -60,11 +60,11 @@ export type Task = {
     /**
      * Positional arguments provided to task (truncated)
      */
-    args: string
+    args?: string
     /**
      * Keyword arguments provided to task (truncated)
      */
-    kwargs: string
+    kwargs?: string
     /**
      * Absolute time when task should be executed
      */
