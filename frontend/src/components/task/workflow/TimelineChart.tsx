@@ -1,9 +1,17 @@
 import { useNow } from "@hooks/useNow"
+import DownloadIcon from "@mui/icons-material/Download"
+import HighlightAltIcon from "@mui/icons-material/HighlightAlt"
+import PanToolIcon from "@mui/icons-material/PanTool"
+import ZoomInIcon from "@mui/icons-material/ZoomIn"
+import ZoomOutIcon from "@mui/icons-material/ZoomOut"
+import ZoomOutMapIcon from "@mui/icons-material/ZoomOutMap"
 import { Theme, useTheme } from "@mui/material"
+import Box from "@mui/material/Box"
 import { StateTask } from "@utils/translateServerModels"
 import { ApexOptions } from "apexcharts"
 import React, { useMemo } from "react"
 import Chart from "react-apexcharts"
+import { renderToString } from "react-dom/server"
 
 const getTimestamp = (date: Date) => date.getTime()
 
@@ -27,6 +35,7 @@ const getOptions = (theme: Theme): ApexOptions => ({
         background: theme.palette.background.paper,
         foreColor: theme.palette.text.primary,
         fontFamily: theme.typography.fontFamily,
+        parentHeightOffset: 0,
         animations: {
             enabled: true,
             easing: "linear",
@@ -36,6 +45,21 @@ const getOptions = (theme: Theme): ApexOptions => ({
         },
         toolbar: {
             autoSelected: "pan",
+            offsetX: -15,
+            offsetY: -15,
+            tools: {
+                download: renderToString(<DownloadIcon />),
+                selection: renderToString(<HighlightAltIcon />),
+                pan: renderToString(<PanToolIcon />),
+                reset: renderToString(<ZoomOutMapIcon />),
+                zoomout: renderToString(<ZoomOutIcon />),
+                zoomin: renderToString(<ZoomInIcon />),
+                zoom: renderToString(<HighlightAltIcon />),
+            },
+        },
+        zoom: {
+            enabled: true,
+            type: "xy",
         },
     },
     tooltip: {
@@ -53,6 +77,7 @@ const getOptions = (theme: Theme): ApexOptions => ({
             horizontal: true,
             distributed: true,
             borderRadius: 3,
+            columnWidth: "15px",
             dataLabels: {
                 hideOverflowingLabels: true,
             },
@@ -73,6 +98,7 @@ const getOptions = (theme: Theme): ApexOptions => ({
     },
     xaxis: {
         type: "datetime",
+        position: "top",
         labels: {
             datetimeUTC: false,
         },
@@ -100,7 +126,18 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ tasks }) => {
     const now = useNow(isRealtime ? REALTIME_INTERVAL : undefined)
     const series = useMemo(() => getSeries(sortedTasks, now), [sortedTasks, now])
     const options: ApexOptions = useMemo(() => getOptions(theme), [theme])
-    return <Chart type="rangeBar" options={options} series={series} height="100%" width="100%" />
+    const isLarge = useMemo(() => tasks.length > 15, [tasks])
+    return (
+        <Box sx={{ overflowY: isLarge ? "auto" : "clip", overflowX: "clip" }} height="100%" pt="17px">
+            <Chart
+                type="rangeBar"
+                options={options}
+                series={series}
+                height={isLarge ? tasks.length * 25 : "100%"}
+                width="100%"
+            />
+        </Box>
+    )
 }
 
 export default TimelineChart
