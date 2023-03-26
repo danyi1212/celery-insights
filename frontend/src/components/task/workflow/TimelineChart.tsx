@@ -2,7 +2,6 @@ import { useNow } from "@hooks/useNow"
 import { Theme, useTheme } from "@mui/material"
 import { StateTask } from "@utils/translateServerModels"
 import { ApexOptions } from "apexcharts"
-import { formatDistanceStrict } from "date-fns"
 import React, { useMemo } from "react"
 import Chart from "react-apexcharts"
 
@@ -63,7 +62,13 @@ const getOptions = (theme: Theme): ApexOptions => ({
         enabled: true,
         formatter: (value) => {
             const [first, second] = value as [number, number]
-            return formatDistanceStrict(first, second, { unit: "second" })
+            const duration = second - first
+            const minutes = Math.floor(duration / (60 * 1000))
+            const seconds = Math.floor(duration / 1000)
+            const ms = duration % 1000
+            if (minutes) return `${minutes}min, ${seconds}s, ${ms}ms`
+            else if (seconds) return `${seconds}.${ms} seconds`
+            else return `${ms}ms`
         },
     },
     xaxis: {
