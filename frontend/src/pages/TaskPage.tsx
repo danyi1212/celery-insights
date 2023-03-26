@@ -64,8 +64,12 @@ const TaskPage: React.FC = () => {
                     </ToggleButton>
                 </ToggleButtonGroup>
             </Toolbar>
-            <Typography component="pre">{JSON.stringify(task, null, 2)}</Typography>
-            <Typography component="pre">{JSON.stringify(taskResult, null, 2)}</Typography>
+            <Typography component="pre" overflow="auto">
+                {JSON.stringify(task, null, 2)}
+            </Typography>
+            <Typography component="pre" overflow="auto">
+                {JSON.stringify(taskResult, null, 2)}
+            </Typography>
         </Box>
     )
 }
