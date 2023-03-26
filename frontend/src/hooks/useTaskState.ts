@@ -12,7 +12,7 @@ interface TaskStateResult {
 
 const useTaskState = (taskId: string): TaskStateResult => {
     const task = useStateStore(useCallback((state) => state.tasks.get(taskId), [taskId]))
-    const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(task === undefined)
     const [error, setError] = useState<Error | null>(null)
 
     const refresh = useCallback(() => {
