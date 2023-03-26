@@ -91,8 +91,8 @@ const getOptions = (theme: Theme): ApexOptions => ({
             const minutes = Math.floor(duration / (60 * 1000))
             const seconds = Math.floor(duration / 1000)
             const ms = duration % 1000
-            if (minutes) return `${minutes}min, ${seconds}s, ${ms}ms`
-            else if (seconds) return `${seconds}.${ms} seconds`
+            if (minutes) return `${minutes}min, ${seconds}.${ms}s`
+            else if (seconds) return `${seconds}.${ms}s`
             else return `${ms}ms`
         },
     },
