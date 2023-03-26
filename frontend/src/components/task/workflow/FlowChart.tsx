@@ -40,17 +40,30 @@ function createEdge(sourceId: string, targetId: string): Edge {
     }
 }
 
+const getChildMap = (tasks: StateTask[]): Map<string, StateTask[]> => {
+    const map = new Map<string, StateTask[]>()
+    for (const task of tasks)
+        if (task.parentId) {
+            const id = task.parentId
+            if (!map.has(id)) map.set(id, [])
+
+            map.get(id)?.push(task)
+        }
+    return map
+}
+
 const getGraph = (tasks: StateTask[], rootTaskId: string): { nodes: Node[]; edges: Edge[] } => {
     const nodes: Node[] = []
     const edges: Edge[] = []
     const taskMap = new Map<string, StateTask>(tasks.map((task) => [task.id, task]))
+    const childMap = getChildMap(tasks)
     const visited = new Set<string>()
 
     function dfs(task: StateTask, x: number, y: number) {
         visited.add(task.id)
         nodes.push(createNode(task, x, y))
 
-        const children = tasks.filter((child) => child.parentId === task.id)
+        const children = childMap.get(task.id) || []
 
         if (!children) return
 
