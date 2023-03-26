@@ -48,7 +48,7 @@ const TaskPage: React.FC = () => {
                 <Box flexGrow={1} />
                 <ToggleButtonGroup
                     value={chartType}
-                    onChange={(_, newValue) => setChartType(newValue)}
+                    onChange={(_, newValue) => newValue && setChartType(newValue)}
                     exclusive
                     size="small"
                 >
