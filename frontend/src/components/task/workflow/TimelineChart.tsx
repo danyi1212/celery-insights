@@ -12,6 +12,7 @@ const getSeries = (tasks: StateTask[], now: Date): ApexAxisChartSeries => {
     const data = tasks.map((task) => ({
         x: task.id,
         y: [getTimestamp(task.startedAt || now), getTimestamp(task.succeededAt || task.failedAt || now)],
+        name: task.type,
         goals: [{ value: getTimestamp(task.sentAt) }],
     }))
     return [
@@ -34,11 +35,25 @@ const getOptions = (theme: Theme): ApexOptions => ({
                 speed: REALTIME_INTERVAL,
             },
         },
+        toolbar: {
+            autoSelected: "pan",
+        },
+    },
+    tooltip: {
+        enabled: true,
+        x: {
+            format: "HH:mm:ss",
+        },
+    },
+    theme: {
+        mode: theme.palette.mode,
+        palette: "palette4",
     },
     plotOptions: {
         bar: {
             horizontal: true,
             distributed: true,
+            borderRadius: 3,
             dataLabels: {
                 hideOverflowingLabels: true,
             },
@@ -59,7 +74,7 @@ const getOptions = (theme: Theme): ApexOptions => ({
     },
     yaxis: {
         labels: {
-            formatter: (value) => value.toString().slice(0, 5),
+            show: false,
         },
     },
 })
