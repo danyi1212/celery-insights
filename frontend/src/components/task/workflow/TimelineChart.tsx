@@ -9,12 +9,11 @@ import Chart from "react-apexcharts"
 const getTimestamp = (date: Date) => date.getTime()
 
 const getSeries = (tasks: StateTask[], now: Date): ApexAxisChartSeries => {
-    const data = tasks
-        .sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1))
-        .map((task) => ({
-            x: task.id,
-            y: [getTimestamp(task.startedAt || now), getTimestamp(task.succeededAt || task.failedAt || now)],
-        }))
+    const data = tasks.map((task) => ({
+        x: task.id,
+        y: [getTimestamp(task.startedAt || now), getTimestamp(task.succeededAt || task.failedAt || now)],
+        goals: [{ value: getTimestamp(task.sentAt) }],
+    }))
     return [
         {
             data,
@@ -22,15 +21,17 @@ const getSeries = (tasks: StateTask[], now: Date): ApexAxisChartSeries => {
     ]
 }
 
+const REALTIME_INTERVAL = 100
 const getOptions = (theme: Theme): ApexOptions => ({
     chart: {
         background: theme.palette.background.paper,
         foreColor: theme.palette.text.primary,
         fontFamily: theme.typography.fontFamily,
         animations: {
+            enabled: true,
+            easing: "linear",
             dynamicAnimation: {
-                enabled: true,
-                speed: 1000,
+                speed: REALTIME_INTERVAL,
             },
         },
     },
@@ -71,12 +72,13 @@ interface TimelineChartProps {
 
 const TimelineChart: React.FC<TimelineChartProps> = ({ tasks }) => {
     const theme = useTheme()
+    const sortedTasks = useMemo(() => tasks.sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1)), [tasks])
     const isRealtime = useMemo(
         () => tasks.find((task) => (task.succeededAt || task.failedAt) === undefined) !== undefined,
         [tasks]
     )
-    const now = useNow(isRealtime ? 10 : undefined)
-    const series = useMemo(() => getSeries(tasks, now), [tasks, now])
+    const now = useNow(isRealtime ? REALTIME_INTERVAL : undefined)
+    const series = useMemo(() => getSeries(sortedTasks, now), [sortedTasks, now])
     const options: ApexOptions = useMemo(() => getOptions(theme), [theme])
     return <Chart type="rangeBar" options={options} series={series} height="100%" width="100%" />
 }
