@@ -1,5 +1,4 @@
 import { Task as ServerTask, TaskState, Worker as ServerWorker } from "@services/server"
-import { fromUnixTime } from "date-fns"
 
 export interface StateTask {
     id: string
@@ -32,7 +31,7 @@ export interface StateTask {
 }
 
 const timestampToDate = (timestamp: number): Date => {
-    const date_utc = fromUnixTime(timestamp)
+    const date_utc = new Date(Date.UTC(1970, 0, 1, 0, 0, 0, timestamp * 1000))
     return new Date(date_utc.getTime() - date_utc.getTimezoneOffset() * 60 * 1000)
 }
 
