@@ -20,35 +20,35 @@ export type Task = {
     /**
      * When task was published by client to queue
      */
-    sent_at: string
+    sent_at: number
     /**
      * When task was received by worker
      */
-    received_at?: string
+    received_at?: number
     /**
      * When task was started to be executed by worker
      */
-    started_at?: string
+    started_at?: number
     /**
      * When task was finished successfully by worker
      */
-    succeeded_at?: string
+    succeeded_at?: number
     /**
      * When task was finished with failure by worker
      */
-    failed_at?: string
+    failed_at?: number
     /**
      * When task was last published for retry
      */
-    retried_at?: string
+    retried_at?: number
     /**
      * When task was revoked last
      */
-    revoked_at?: string
+    revoked_at?: number
     /**
      * When task was rejected by worker
      */
-    rejected_at?: string
+    rejected_at?: number
     /**
      * How long task executed in seconds
      */
@@ -56,7 +56,7 @@ export type Task = {
     /**
      * When task last event published
      */
-    last_updated: string
+    last_updated: number
     /**
      * Positional arguments provided to task (truncated)
      */

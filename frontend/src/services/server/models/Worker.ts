@@ -38,11 +38,11 @@ export type Worker = {
     /**
      * When worker last event published
      */
-    last_updated: string
+    last_updated: number
     /**
      * When worker will be considered offline
      */
-    heartbeat_expires?: string
+    heartbeat_expires?: number
     /**
      * Host CPU load average in last 1, 5 and 15 minutes
      */

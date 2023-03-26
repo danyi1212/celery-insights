@@ -8,8 +8,7 @@ import type {TaskEventMessage} from "../models/TaskEventMessage"
 import type {WorkerEventMessage} from "../models/WorkerEventMessage"
 
 export class EventsService {
-    constructor(public readonly httpRequest: BaseHttpRequest) {
-    }
+    constructor(public readonly httpRequest: BaseHttpRequest) {}
 
     /**
      * Get Events

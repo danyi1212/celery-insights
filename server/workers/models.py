@@ -1,10 +1,7 @@
-from datetime import datetime
 from typing import Any, Self
 
 from celery.events.state import Worker as CeleryWorker
 from pydantic import BaseModel, Extra, Field
-
-from tasks.utils import timestamp_to_datetime
 
 
 class Worker(BaseModel):
@@ -16,8 +13,8 @@ class Worker(BaseModel):
     software_sys: str = Field(description="Software Operating System name (e.g, Linux/Darwin)")
     active_tasks: int = Field(description="Amount of tasks currently processing by worker")
     processed_tasks: int = Field(description="Amount of tasks completed by worker")
-    last_updated: datetime = Field(description="When worker last event published")
-    heartbeat_expires: datetime | None = Field(description="When worker will be considered offline")
+    last_updated: int = Field(description="When worker last event published")
+    heartbeat_expires: int | None = Field(description="When worker will be considered offline")
     cpu_load: tuple[float, float, float] | None = Field(description="Host CPU load average in last 1, 5 and 15 minutes")
 
     @classmethod
@@ -26,13 +23,13 @@ class Worker(BaseModel):
             id=worker.id,
             hostname=worker.hostname,
             pid=worker.pid,
-            last_updated=timestamp_to_datetime(worker.timestamp),
+            last_updated=worker.timestamp,
             software_identity=worker.sw_ident,
             software_version=worker.sw_ver,
             software_sys=worker.sw_sys,
             active_tasks=worker.active or 0,
             processed_tasks=worker.processed or 0,
-            heartbeat_expires=timestamp_to_datetime(worker.heartbeat_expires) if worker.heartbeats else None,
+            heartbeat_expires=worker.heartbeat_expires,
             cpu_load=tuple(worker.loadavg) if worker.loadavg is not None else None,
         )
 

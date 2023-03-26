@@ -1,4 +1,5 @@
 import { Task as ServerTask, TaskState, Worker as ServerWorker } from "@services/server"
+import { fromUnixTime } from "date-fns"
 
 export interface StateTask {
     id: string
@@ -30,20 +31,25 @@ export interface StateTask {
     traceback?: string
 }
 
+const timestampToDate = (timestamp: number): Date => {
+    const date_utc = fromUnixTime(timestamp)
+    return new Date(date_utc.getTime() - date_utc.getTimezoneOffset() * 60 * 1000)
+}
+
 export const translateTask = (task: ServerTask): StateTask => ({
     id: task.id,
     type: task.type,
     state: task.state,
-    sentAt: new Date(task.sent_at),
-    receivedAt: task.received_at ? new Date(task.received_at) : undefined,
-    startedAt: task.started_at ? new Date(task.started_at) : undefined,
-    succeededAt: task.succeeded_at ? new Date(task.succeeded_at) : undefined,
-    failedAt: task.failed_at ? new Date(task.failed_at) : undefined,
-    retriedAt: task.retried_at ? new Date(task.retried_at) : undefined,
-    revokedAt: task.revoked_at ? new Date(task.revoked_at) : undefined,
-    rejectedAt: task.rejected_at ? new Date(task.rejected_at) : undefined,
+    sentAt: timestampToDate(task.sent_at),
+    receivedAt: task.received_at ? timestampToDate(task.received_at) : undefined,
+    startedAt: task.started_at ? timestampToDate(task.started_at) : undefined,
+    succeededAt: task.succeeded_at ? timestampToDate(task.succeeded_at) : undefined,
+    failedAt: task.failed_at ? timestampToDate(task.failed_at) : undefined,
+    retriedAt: task.retried_at ? timestampToDate(task.retried_at) : undefined,
+    revokedAt: task.revoked_at ? timestampToDate(task.revoked_at) : undefined,
+    rejectedAt: task.rejected_at ? timestampToDate(task.rejected_at) : undefined,
     runtime: task.runtime,
-    lastUpdated: new Date(task.last_updated),
+    lastUpdated: timestampToDate(task.last_updated),
     args: task.args,
     kwargs: task.kwargs,
     eta: task.eta,
@@ -83,7 +89,7 @@ export const translateWorker = (worker: ServerWorker): StateWorker => ({
     softwareSys: worker.software_sys,
     activeTasks: worker.active_tasks,
     processedTasks: worker.processed_tasks,
-    lastUpdated: new Date(worker.last_updated),
-    heartbeatExpires: worker.heartbeat_expires ? new Date(worker.heartbeat_expires) : undefined,
+    lastUpdated: timestampToDate(worker.last_updated),
+    heartbeatExpires: worker.heartbeat_expires ? timestampToDate(worker.heartbeat_expires) : undefined,
     cpuLoad: worker.cpu_load as [number, number, number],
 })

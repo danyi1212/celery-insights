@@ -1,12 +1,9 @@
-from datetime import datetime
 from enum import Enum
 from typing import Any, Self
 
 from celery import states
 from celery.events.state import Task as CeleryTask
 from pydantic import BaseModel, Field
-
-from tasks.utils import timestamp_to_datetime
 
 
 class TaskState(str, Enum):
@@ -26,21 +23,21 @@ class Task(BaseModel):
     type: str | None = Field(description="Task function name")
     state: TaskState = Field(description="Task last known state")
 
-    sent_at: datetime = Field(description="When task was published by client to queue")
-    received_at: datetime | None = Field(description="When task was received by worker")
-    started_at: datetime | None = Field(description="When task was started to be executed by worker")
-    succeeded_at: datetime | None = Field(description="When task was finished successfully by worker")
-    failed_at: datetime | None = Field(description="When task was finished with failure by worker")
-    retried_at: datetime | None = Field(description="When task was last published for retry")
-    revoked_at: datetime | None = Field(description="When task was revoked last")
-    rejected_at: datetime | None = Field(description="When task was rejected by worker")
+    sent_at: float = Field(description="When task was published by client to queue")
+    received_at: float | None = Field(description="When task was received by worker")
+    started_at: float | None = Field(description="When task was started to be executed by worker")
+    succeeded_at: float | None = Field(description="When task was finished successfully by worker")
+    failed_at: float | None = Field(description="When task was finished with failure by worker")
+    retried_at: float | None = Field(description="When task was last published for retry")
+    revoked_at: float | None = Field(description="When task was revoked last")
+    rejected_at: float | None = Field(description="When task was rejected by worker")
     runtime: float | None = Field(description="How long task executed in seconds")
-    last_updated: datetime = Field(description="When task last event published")
+    last_updated: float = Field(description="When task last event published")
 
     args: str | None = Field(description="Positional arguments provided to task (truncated)")
     kwargs: str | None = Field(description="Keyword arguments provided to task (truncated)")
-    eta: datetime | None = Field(description="Absolute time when task should be executed")
-    expires: datetime | None = Field(description="Absolute time when task should be expired")
+    eta: str | None = Field(description="Absolute time when task should be executed")
+    expires: str | None = Field(description="Absolute time when task should be expired")
     retries: int | None = Field(description="Retry count")
     exchange: str | None = Field(description="Broker exchange name")
     routing_key: str | None = Field(description="Broker routing key")
@@ -59,21 +56,21 @@ class Task(BaseModel):
             type=task.name,
             state=task.state,
 
-            sent_at=timestamp_to_datetime(task.sent or task.timestamp),
-            received_at=timestamp_to_datetime(task.received),
-            started_at=timestamp_to_datetime(task.started),
-            succeeded_at=timestamp_to_datetime(task.succeeded),
-            failed_at=timestamp_to_datetime(task.failed),
-            retried_at=timestamp_to_datetime(task.retried),
-            revoked_at=timestamp_to_datetime(task.revoked),
-            rejected_at=timestamp_to_datetime(task.rejected),
+            sent_at=task.sent or task.timestamp,
+            received_at=task.received,
+            started_at=task.started,
+            succeeded_at=task.succeeded,
+            failed_at=task.failed,
+            retried_at=task.retried,
+            revoked_at=task.revoked,
+            rejected_at=task.rejected,
             runtime=task.runtime,
-            last_updated=timestamp_to_datetime(task.timestamp),
+            last_updated=task.timestamp,
 
             args=task.args,
             kwargs=task.kwargs,
-            eta=timestamp_to_datetime(task.eta),
-            expires=timestamp_to_datetime(task.expires),
+            eta=task.eta,
+            expires=task.expires,
             retries=task.retries,
             exchange=task.exchange,
             routing_key=task.routing_key,
