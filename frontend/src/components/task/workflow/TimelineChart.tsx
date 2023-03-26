@@ -1,3 +1,4 @@
+import { useNow } from "@hooks/useNow"
 import { Theme, useTheme } from "@mui/material"
 import { StateTask } from "@utils/translateServerModels"
 import { ApexOptions } from "apexcharts"
@@ -5,16 +6,15 @@ import { formatDistanceStrict } from "date-fns"
 import React, { useMemo } from "react"
 import Chart from "react-apexcharts"
 
-const getTimestamp = (date: Date | undefined) => date?.getTime() || new Date().getTime()
+const getTimestamp = (date: Date) => date.getTime()
 
-const getSeries = (tasks: StateTask[]): ApexAxisChartSeries => {
+const getSeries = (tasks: StateTask[], now: Date): ApexAxisChartSeries => {
     const data = tasks
         .sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1))
         .map((task) => ({
             x: task.id,
-            y: [getTimestamp(task.startedAt), getTimestamp(task.succeededAt || task.failedAt)],
+            y: [getTimestamp(task.startedAt || now), getTimestamp(task.succeededAt || task.failedAt || now)],
         }))
-    console.log(data[data.length - 1])
     return [
         {
             data,
@@ -27,6 +27,12 @@ const getOptions = (theme: Theme): ApexOptions => ({
         background: theme.palette.background.paper,
         foreColor: theme.palette.text.primary,
         fontFamily: theme.typography.fontFamily,
+        animations: {
+            dynamicAnimation: {
+                enabled: true,
+                speed: 1000,
+            },
+        },
     },
     plotOptions: {
         bar: {
@@ -41,10 +47,15 @@ const getOptions = (theme: Theme): ApexOptions => ({
         enabled: true,
         formatter: (value) => {
             const [first, second] = value as [number, number]
-            return formatDistanceStrict(first, second)
+            return formatDistanceStrict(first, second, { unit: "second" })
         },
     },
-    xaxis: { type: "datetime" },
+    xaxis: {
+        type: "datetime",
+        labels: {
+            datetimeUTC: false,
+        },
+    },
     yaxis: {
         labels: {
             formatter: (value) => value.toString().slice(0, 5),
@@ -60,7 +71,12 @@ interface TimelineChartProps {
 
 const TimelineChart: React.FC<TimelineChartProps> = ({ tasks }) => {
     const theme = useTheme()
-    const series = useMemo(() => getSeries(tasks), [tasks])
+    const isRealtime = useMemo(
+        () => tasks.find((task) => (task.succeededAt || task.failedAt) === undefined) !== undefined,
+        [tasks]
+    )
+    const now = useNow(isRealtime ? 10 : undefined)
+    const series = useMemo(() => getSeries(tasks, now), [tasks, now])
     const options: ApexOptions = useMemo(() => getOptions(theme), [theme])
     return <Chart type="rangeBar" options={options} series={series} height="100%" width="100%" />
 }
