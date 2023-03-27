@@ -1,3 +1,4 @@
+import TaskAvatar from "@components/task/TaskAvatar"
 import TaskStatusIcon from "@components/task/TaskStatusIcon"
 import Link from "@mui/material/Link"
 import { useStateStore } from "@stores/useStateStore"
@@ -12,6 +13,7 @@ function HomePage() {
         <ul>
             {sortedTasks.map((task) => (
                 <li key={task.id}>
+                    <TaskAvatar taskId={task.id} status={task.state} />
                     <TaskStatusIcon status={task.state} />
                     <Link component={RouterLink} to={`/tasks/${task.id}`}>
                         {task.id}

@@ -1,3 +1,4 @@
+import TaskAvatar from "@components/task/TaskAvatar"
 import TaskStatusIcon from "@components/task/TaskStatusIcon"
 import WorkflowGraph, { WorkflowChartType } from "@components/task/WorkflowGraph"
 import useTaskResult from "@hooks/useTaskResult"
@@ -41,6 +42,9 @@ const TaskPage: React.FC = () => {
                 <WorkflowGraph chartType={chartType} rootTaskId={task.rootId || task.id} currentTaskId={task.id} />
             </Box>
             <Toolbar>
+                <Box pr={3}>
+                    <TaskAvatar taskId={task.id} status={task.state} />
+                </Box>
                 <TaskStatusIcon status={task.state} />
                 <Typography variant="h6" mx={2} noWrap>
                     {task.id} | {task.type}
