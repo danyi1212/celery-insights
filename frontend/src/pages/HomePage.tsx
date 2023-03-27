@@ -1,27 +1,26 @@
 import TaskAvatar from "@components/task/TaskAvatar"
-import TaskStatusIcon from "@components/task/TaskStatusIcon"
-import Link from "@mui/material/Link"
+import { ListItemAvatar } from "@mui/material"
+import List from "@mui/material/List"
+import ListItem from "@mui/material/ListItem"
+import ListItemText from "@mui/material/ListItemText"
 import { useStateStore } from "@stores/useStateStore"
 import React, { useMemo } from "react"
-import { Link as RouterLink } from "react-router-dom"
 
 function HomePage() {
     const tasks = useStateStore((state) => state.tasks)
     const sortedTasks = useMemo(() => tasks.map((t) => t).sort((a, b) => (a.sentAt > b.sentAt ? -1 : 1)), [tasks])
 
     return (
-        <ul>
+        <List>
             {sortedTasks.map((task) => (
-                <li key={task.id}>
-                    <TaskAvatar taskId={task.id} status={task.state} />
-                    <TaskStatusIcon status={task.state} />
-                    <Link component={RouterLink} to={`/tasks/${task.id}`}>
-                        {task.id}
-                    </Link>{" "}
-                    | {task.type}
-                </li>
+                <ListItem key={task.id}>
+                    <ListItemAvatar>
+                        <TaskAvatar taskId={task.id} status={task.state} />
+                    </ListItemAvatar>
+                    <ListItemText primary={task.type} secondary={task.worker} />
+                </ListItem>
             ))}
-        </ul>
+        </List>
     )
 }
 
