@@ -35,7 +35,7 @@ function createEdge(sourceId: string, targetId: string): Edge {
         id: `${sourceId}>${targetId}`,
         source: sourceId,
         target: targetId,
-        type: "straight",
+        type: "simplebezier",
         deletable: false,
     }
 }
