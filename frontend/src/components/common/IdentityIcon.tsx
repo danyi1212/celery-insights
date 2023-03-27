@@ -9,7 +9,7 @@ interface IdentityIconProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, "s
 
 const IdentityIcon: React.FC<IdentityIconProps> = ({ username, saturation, lightness, ...props }) => {
     const svgText = useMemo(() => identicon(username, saturation, lightness), [username, saturation, lightness])
-    return <img src={`data:image/svg+xml;utf8,${svgText}`} alt={username} {...props} />
+    return <img src={`data:image/svg+xml;utf8,${encodeURIComponent(svgText)}`} alt={username} {...props} />
 }
 
 export default IdentityIcon
