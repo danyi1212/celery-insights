@@ -24,7 +24,7 @@ import {
 const createNode = (task: StateTask, x: number, y: number, nodeId?: string): Node => ({
     id: nodeId || task.id,
     type: "taskNode",
-    position: { x: x * 300, y: y * 100 },
+    position: { x: x * 180, y: y * 100 },
     data: task,
     connectable: false,
     deletable: false,
