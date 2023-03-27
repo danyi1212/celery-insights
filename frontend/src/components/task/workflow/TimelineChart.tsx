@@ -12,6 +12,7 @@ import { ApexOptions } from "apexcharts"
 import React, { useMemo } from "react"
 import Chart from "react-apexcharts"
 import { renderToString } from "react-dom/server"
+import { useNavigate } from "react-router-dom"
 
 const getTimestamp = (date: Date) => date.getTime()
 
@@ -30,7 +31,7 @@ const getSeries = (tasks: StateTask[], now: Date): ApexAxisChartSeries => {
 }
 
 const REALTIME_INTERVAL = 100
-const getOptions = (theme: Theme): ApexOptions => ({
+const getOptions = (theme: Theme, navigate: ReturnType<useNavigate>): ApexOptions => ({
     chart: {
         background: theme.palette.background.paper,
         foreColor: theme.palette.text.primary,
@@ -60,6 +61,12 @@ const getOptions = (theme: Theme): ApexOptions => ({
         zoom: {
             enabled: true,
             type: "xy",
+        },
+        events: {
+            dataPointSelection: (event, chartContext, config) => {
+                const dataPoint = config.w.config.series[config.seriesIndex].data[config.dataPointIndex]
+                navigate(`/tasks/${dataPoint.x}`)
+            },
         },
     },
     tooltip: {
@@ -118,6 +125,7 @@ interface TimelineChartProps {
 
 const TimelineChart: React.FC<TimelineChartProps> = ({ tasks }) => {
     const theme = useTheme()
+    const navigate = useNavigate()
     const sortedTasks = useMemo(() => tasks.sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1)), [tasks])
     const isRealtime = useMemo(
         () => tasks.find((task) => (task.succeededAt || task.failedAt) === undefined) !== undefined,
@@ -125,7 +133,7 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ tasks }) => {
     )
     const now = useNow(isRealtime ? REALTIME_INTERVAL : undefined)
     const series = useMemo(() => getSeries(sortedTasks, now), [sortedTasks, now])
-    const options: ApexOptions = useMemo(() => getOptions(theme), [theme])
+    const options: ApexOptions = useMemo(() => getOptions(theme, navigate), [theme, navigate])
     const isLarge = useMemo(() => tasks.length > 15, [tasks])
     return (
         <Box sx={{ overflowY: isLarge ? "auto" : "clip", overflowX: "clip" }} height="100%" pt="17px">
