@@ -1,5 +1,4 @@
 import TaskAvatar from "@components/task/TaskAvatar"
-import TaskStatusIcon from "@components/task/TaskStatusIcon"
 import WorkflowGraph, { WorkflowChartType } from "@components/task/WorkflowGraph"
 import useTaskResult from "@hooks/useTaskResult"
 import useTaskState from "@hooks/useTaskState"
@@ -7,6 +6,7 @@ import AccountTreeIcon from "@mui/icons-material/AccountTree"
 import ViewTimelineIcon from "@mui/icons-material/ViewTimeline"
 import Box from "@mui/material/Box"
 import CircularProgress from "@mui/material/CircularProgress"
+import Stack from "@mui/material/Stack"
 import ToggleButton from "@mui/material/ToggleButton"
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup"
 import Toolbar from "@mui/material/Toolbar"
@@ -45,10 +45,10 @@ const TaskPage: React.FC = () => {
                 <Box pr={3}>
                     <TaskAvatar taskId={task.id} type={task.type} status={task.state} />
                 </Box>
-                <TaskStatusIcon status={task.state} />
-                <Typography variant="h6" mx={2} noWrap>
-                    {task.id} | {task.type}
-                </Typography>
+                <Stack height={64} justifyContent="flex-end">
+                    <Typography variant="h5">{task.type}</Typography>
+                    <Typography variant="caption">{task.id}</Typography>
+                </Stack>
                 <Box flexGrow={1} />
                 <ToggleButtonGroup
                     value={chartType}
