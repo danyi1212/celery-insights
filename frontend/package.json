@@ -27,6 +27,7 @@
     "react-router-dom": "^6.9.0",
     "react-use-websocket": "^4.3.1",
     "reactflow": "^11.6.1",
+    "string-to-color": "^2.2.2",
     "zustand": "^4.3.6"
   },
   "devDependencies": {

@@ -4,15 +4,20 @@ import Avatar, { AvatarProps } from "@mui/material/Avatar"
 import Badge from "@mui/material/Badge"
 import Tooltip from "@mui/material/Tooltip"
 import { TaskState } from "@services/server"
-import React from "react"
+import { getBrightness } from "@utils/colorUtils"
+import React, { useMemo } from "react"
 import { Link } from "react-router-dom"
+import stc from "string-to-color"
 
 interface TaskAvatarProps extends AvatarProps {
     taskId: string
+    type: string | undefined
     status?: TaskState
 }
 
-const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, ...props }) => {
+const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, type, ...props }) => {
+    const backgroundColor = useMemo(() => stc(type), [type])
+    const iconBrightness = useMemo(() => 100 - getBrightness(backgroundColor), [backgroundColor])
     return (
         <Link to={`/tasks/${taskId}`}>
             <Badge
@@ -32,9 +37,20 @@ const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, ...props }) => 
                 }
                 invisible={!status}
             >
-                <Tooltip title={taskId} placement="right" arrow>
-                    <Avatar sx={{ backgroundColor: (theme) => theme.palette.common.white }} alt={taskId} {...props}>
-                        <IdentityIcon username={taskId} />
+                <Tooltip
+                    title={
+                        <span>
+                            {taskId}
+                            <br />
+                            {type}
+                        </span>
+                    }
+                    placement="right"
+                    arrow
+                    describeChild
+                >
+                    <Avatar alt={taskId} {...props} sx={{ backgroundColor: backgroundColor, ...props.sx }}>
+                        <IdentityIcon username={taskId} lightness={iconBrightness} />
                     </Avatar>
                 </Tooltip>
             </Badge>

@@ -43,7 +43,7 @@ const TaskPage: React.FC = () => {
             </Box>
             <Toolbar>
                 <Box pr={3}>
-                    <TaskAvatar taskId={task.id} status={task.state} />
+                    <TaskAvatar taskId={task.id} type={task.type} status={task.state} />
                 </Box>
                 <TaskStatusIcon status={task.state} />
                 <Typography variant="h6" mx={2} noWrap>

@@ -1,7 +1,7 @@
 import TaskAvatar from "@components/task/TaskAvatar"
-import { ListItemAvatar } from "@mui/material"
 import List from "@mui/material/List"
 import ListItem from "@mui/material/ListItem"
+import ListItemAvatar from "@mui/material/ListItemAvatar"
 import ListItemText from "@mui/material/ListItemText"
 import { useStateStore } from "@stores/useStateStore"
 import React, { useMemo } from "react"
@@ -15,7 +15,7 @@ function HomePage() {
             {sortedTasks.map((task) => (
                 <ListItem key={task.id}>
                     <ListItemAvatar>
-                        <TaskAvatar taskId={task.id} status={task.state} />
+                        <TaskAvatar taskId={task.id} type={task.type} status={task.state} />
                     </ListItemAvatar>
                     <ListItemText primary={task.type} secondary={task.worker} />
                 </ListItem>
