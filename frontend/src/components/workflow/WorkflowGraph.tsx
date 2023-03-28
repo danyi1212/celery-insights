@@ -1,5 +1,5 @@
-import FlowChart from "@components/task/workflow/FlowChart"
-import TimelineChart from "@components/task/workflow/TimelineChart"
+import FlowChart from "@components/workflow/FlowChart"
+import TimelineChart from "@components/workflow/TimelineChart"
 import { useStateStore } from "@stores/useStateStore"
 import React, { useDeferredValue, useMemo } from "react"
 import { ReactFlowProvider } from "reactflow"

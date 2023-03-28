@@ -1,5 +1,5 @@
 import TaskAvatar from "@components/task/TaskAvatar"
-import { WorkflowChartType } from "@components/task/WorkflowGraph"
+import { WorkflowChartType } from "@components/workflow/WorkflowGraph"
 import AccountTreeIcon from "@mui/icons-material/AccountTree"
 import ViewTimelineIcon from "@mui/icons-material/ViewTimeline"
 import Box from "@mui/material/Box"

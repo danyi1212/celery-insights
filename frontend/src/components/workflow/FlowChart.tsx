@@ -1,4 +1,4 @@
-import TaskNode from "@components/task/workflow/TaskNode"
+import TaskNode from "@components/workflow/TaskNode"
 import CenterFocusStrongIcon from "@mui/icons-material/CenterFocusStrong"
 import ControlCameraIcon from "@mui/icons-material/ControlCamera"
 import CropFreeIcon from "@mui/icons-material/CropFree"
