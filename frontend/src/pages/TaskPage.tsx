@@ -58,12 +58,6 @@ const TaskPage: React.FC = () => {
                 />
                 <ResultCard result={taskResult} loading={isLoading} elevation={3} sx={{ width: 400, minHeight: 300 }} />
             </Stack>
-            <Typography component="pre" overflow="auto">
-                {JSON.stringify(task, null, 2)}
-            </Typography>
-            <Typography component="pre" overflow="auto">
-                {JSON.stringify(taskResult, null, 2)}
-            </Typography>
         </Box>
     )
 }
