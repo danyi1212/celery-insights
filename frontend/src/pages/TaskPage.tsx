@@ -1,3 +1,4 @@
+import ArgumentsCard from "@components/task/ArgumentsCard"
 import ExceptionAlert from "@components/task/ExceptionAlert"
 import RetryAlert from "@components/task/RetryAlert"
 import TaskLifetimeChart from "@components/task/TaskLifetimeChart"
@@ -15,7 +16,7 @@ import { useParams } from "react-router-dom"
 const TaskPage: React.FC = () => {
     const { taskId } = useParams() as { taskId: string }
     const { task, loading } = useTaskState(taskId)
-    const { taskResult } = useTaskResult(taskId)
+    const { taskResult, isLoading } = useTaskResult(taskId)
 
     const [chartType, setChartType] = React.useState<WorkflowChartType>(WorkflowChartType.FLOWCHART)
 
@@ -43,6 +44,16 @@ const TaskPage: React.FC = () => {
             <Stack spacing={2} m={3}>
                 <RetryAlert retries={task.retries || taskResult?.retries} />
                 <ExceptionAlert exception={task.exception} traceback={task.traceback || taskResult?.traceback} />
+            </Stack>
+            <Stack direction="row" spacing={3} justifyContent="space-around">
+                <ArgumentsCard
+                    task={task}
+                    result={taskResult}
+                    loading={isLoading}
+                    elevation={3}
+                    sx={{ width: 600, minHeight: 300 }}
+                />
+                <ResultCard result={taskResult} loading={isLoading} sx={{ width: 600, minHeight: 300 }} />
             </Stack>
             <Typography component="pre" overflow="auto">
                 {JSON.stringify(task, null, 2)}
