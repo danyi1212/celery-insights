@@ -29,7 +29,7 @@ class Worker(BaseModel):
             software_sys=worker.sw_sys,
             active_tasks=worker.active or 0,
             processed_tasks=worker.processed or 0,
-            heartbeat_expires=worker.heartbeat_expires,
+            heartbeat_expires=worker.heartbeat_expires if worker.heartbeats else None,
             cpu_load=tuple(worker.loadavg) if worker.loadavg is not None else None,
         )
 
