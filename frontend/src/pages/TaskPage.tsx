@@ -35,12 +35,15 @@ const TaskPage: React.FC = () => {
                 <WorkflowGraph chartType={chartType} rootTaskId={task.rootId || task.id} currentTaskId={task.id} />
             </Box>
             <TaskPageHeader task={task} chartType={chartType} setChartType={setChartType} />
+            <TaskLifetimeChart task={task} />
             <Typography component="pre" overflow="auto">
                 {JSON.stringify(task, null, 2)}
             </Typography>
             <Typography component="pre" overflow="auto">
                 {JSON.stringify(taskResult, null, 2)}
             </Typography>
+            <RetryAlert retries={task.retries} />
+            <ExceptionAlert exception={task.exception} traceback={task.traceback} />
         </Box>
     )
 }
