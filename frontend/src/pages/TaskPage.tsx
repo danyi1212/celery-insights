@@ -1,4 +1,5 @@
 import ArgumentsCard from "@components/task/ArgumentsCard"
+import { DeliveryInfoCard } from "@components/task/DeliveryInfoCard"
 import ExceptionAlert from "@components/task/ExceptionAlert"
 import ResultCard from "@components/task/ResultCard"
 import RetryAlert from "@components/task/RetryAlert"
@@ -47,14 +48,15 @@ const TaskPage: React.FC = () => {
                 <ExceptionAlert exception={task.exception} traceback={task.traceback || taskResult?.traceback} />
             </Stack>
             <Stack direction="row" spacing={3} justifyContent="space-around">
+                <DeliveryInfoCard task={task} sx={{ width: 400 }} />
                 <ArgumentsCard
                     task={task}
                     result={taskResult}
                     loading={isLoading}
                     elevation={3}
-                    sx={{ width: 600, minHeight: 300 }}
+                    sx={{ width: 400, minHeight: 300 }}
                 />
-                <ResultCard result={taskResult} loading={isLoading} elevation={3} sx={{ width: 600, minHeight: 300 }} />
+                <ResultCard result={taskResult} loading={isLoading} elevation={3} sx={{ width: 400, minHeight: 300 }} />
             </Stack>
             <Typography component="pre" overflow="auto">
                 {JSON.stringify(task, null, 2)}
