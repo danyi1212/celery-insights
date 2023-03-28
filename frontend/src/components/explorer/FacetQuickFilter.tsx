@@ -1,7 +1,8 @@
 import CancelIcon from "@mui/icons-material/Cancel"
 import SearchIcon from "@mui/icons-material/Search"
-import { InputAdornment, TextField } from "@mui/material"
 import IconButton from "@mui/material/IconButton"
+import InputAdornment from "@mui/material/InputAdornment"
+import TextField from "@mui/material/TextField"
 import React from "react"
 
 interface FacetQuickFilterProps {
