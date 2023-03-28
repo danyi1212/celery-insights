@@ -25,6 +25,7 @@
     "react-dom": "^18.2.0",
     "react-query": "^3.39.3",
     "react-router-dom": "^6.9.0",
+    "react-syntax-highlighter": "^15.5.0",
     "react-use-websocket": "^4.3.1",
     "reactflow": "^11.6.1",
     "string-to-color": "^2.2.2",
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@types/react": "^18.0.27",
     "@types/react-dom": "^18.0.10",
+    "@types/react-syntax-highlighter": "^15.5.6",
     "@typescript-eslint/eslint-plugin": "^5.54.1",
     "@typescript-eslint/parser": "^5.54.1",
     "@vitejs/plugin-react-swc": "^3.0.0",

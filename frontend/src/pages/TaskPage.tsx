@@ -1,9 +1,13 @@
+import ExceptionAlert from "@components/task/ExceptionAlert"
+import RetryAlert from "@components/task/RetryAlert"
+import TaskLifetimeChart from "@components/task/TaskLifetimeChart"
 import TaskPageHeader from "@components/task/TaskPageHeader"
 import WorkflowGraph, { WorkflowChartType } from "@components/task/WorkflowGraph"
 import useTaskResult from "@hooks/useTaskResult"
 import useTaskState from "@hooks/useTaskState"
 import Box from "@mui/material/Box"
 import CircularProgress from "@mui/material/CircularProgress"
+import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
 import React from "react"
 import { useParams } from "react-router-dom"
@@ -36,14 +40,16 @@ const TaskPage: React.FC = () => {
             </Box>
             <TaskPageHeader task={task} chartType={chartType} setChartType={setChartType} />
             <TaskLifetimeChart task={task} />
+            <Stack spacing={2} m={3}>
+                <RetryAlert retries={task.retries} />
+                <ExceptionAlert exception={task.exception} traceback={task.traceback} />
+            </Stack>
             <Typography component="pre" overflow="auto">
                 {JSON.stringify(task, null, 2)}
             </Typography>
             <Typography component="pre" overflow="auto">
                 {JSON.stringify(taskResult, null, 2)}
             </Typography>
-            <RetryAlert retries={task.retries} />
-            <ExceptionAlert exception={task.exception} traceback={task.traceback} />
         </Box>
     )
 }
