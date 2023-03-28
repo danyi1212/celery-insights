@@ -1,5 +1,6 @@
 import ArgumentsCard from "@components/task/ArgumentsCard"
 import ExceptionAlert from "@components/task/ExceptionAlert"
+import ResultCard from "@components/task/ResultCard"
 import RetryAlert from "@components/task/RetryAlert"
 import TaskLifetimeChart from "@components/task/TaskLifetimeChart"
 import TaskPageHeader from "@components/task/TaskPageHeader"
@@ -53,7 +54,7 @@ const TaskPage: React.FC = () => {
                     elevation={3}
                     sx={{ width: 600, minHeight: 300 }}
                 />
-                <ResultCard result={taskResult} loading={isLoading} sx={{ width: 600, minHeight: 300 }} />
+                <ResultCard result={taskResult} loading={isLoading} elevation={3} sx={{ width: 600, minHeight: 300 }} />
             </Stack>
             <Typography component="pre" overflow="auto">
                 {JSON.stringify(task, null, 2)}
