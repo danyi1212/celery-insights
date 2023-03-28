@@ -41,8 +41,8 @@ const TaskPage: React.FC = () => {
             <TaskPageHeader task={task} chartType={chartType} setChartType={setChartType} />
             <TaskLifetimeChart task={task} />
             <Stack spacing={2} m={3}>
-                <RetryAlert retries={task.retries} />
-                <ExceptionAlert exception={task.exception} traceback={task.traceback} />
+                <RetryAlert retries={task.retries || taskResult?.retries} />
+                <ExceptionAlert exception={task.exception} traceback={task.traceback || taskResult?.traceback} />
             </Stack>
             <Typography component="pre" overflow="auto">
                 {JSON.stringify(task, null, 2)}
