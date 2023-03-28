@@ -7,6 +7,7 @@ import ZoomOutIcon from "@mui/icons-material/ZoomOut"
 import ZoomOutMapIcon from "@mui/icons-material/ZoomOutMap"
 import { Theme, useTheme } from "@mui/material"
 import Box from "@mui/material/Box"
+import { formatDurationExact } from "@utils/FormatDurationExact"
 import { StateTask } from "@utils/translateServerModels"
 import { ApexOptions } from "apexcharts"
 import React, { useMemo } from "react"
@@ -31,7 +32,7 @@ const getSeries = (tasks: StateTask[], now: Date): ApexAxisChartSeries => {
 }
 
 const REALTIME_INTERVAL = 100
-const getOptions = (theme: Theme, navigate: ReturnType<useNavigate>): ApexOptions => ({
+const getOptions = (theme: Theme, navigate: (to: string) => void): ApexOptions => ({
     chart: {
         background: theme.palette.background.paper,
         foreColor: theme.palette.text.primary,
@@ -95,12 +96,7 @@ const getOptions = (theme: Theme, navigate: ReturnType<useNavigate>): ApexOption
         formatter: (value) => {
             const [first, second] = value as [number, number]
             const duration = second - first
-            const minutes = Math.floor(duration / 60_000)
-            const seconds = Math.floor((duration % 60_000) / 1000)
-            const ms = duration % 1000
-            if (minutes) return `${minutes}min, ${seconds}.${ms}s`
-            else if (seconds) return `${seconds}.${ms}s`
-            else return `${ms}ms`
+            return formatDurationExact(duration)
         },
     },
     xaxis: {
