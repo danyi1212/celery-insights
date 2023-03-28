@@ -26,6 +26,13 @@ const getOptions = (theme: Theme): ApexOptions => ({
         },
         toolbar: {
             show: false,
+            autoSelected: "pan",
+        },
+        selection: {
+            enabled: false,
+        },
+        zoom: {
+            enabled: false,
         },
     },
     grid: {
