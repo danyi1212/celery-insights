@@ -88,6 +88,8 @@ const Menu: React.FC = () => {
                             selected={link.to === location.pathname}
                             component={link.external ? "a" : Link}
                             to={link.to}
+                            target={link.external ? "_blank" : ""}
+                            rel={link.external ? "noopener noreferrer" : ""}
                         >
                             <ListItemIcon>{link.icon}</ListItemIcon>
                             <ListItemText primary={link.label} />
