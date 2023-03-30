@@ -2,6 +2,7 @@ import IdentityIcon from "@components/common/IdentityIcon"
 import TaskStatusIcon from "@components/task/TaskStatusIcon"
 import Avatar, { AvatarProps } from "@mui/material/Avatar"
 import Badge from "@mui/material/Badge"
+import Box from "@mui/material/Box"
 import Tooltip from "@mui/material/Tooltip"
 import { TaskState } from "@services/server"
 import { getBrightness } from "@utils/colorUtils"
@@ -13,13 +14,14 @@ interface TaskAvatarProps extends AvatarProps {
     taskId: string
     type: string | undefined
     status?: TaskState
+    disableLink?: true
 }
 
-const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, type, ...props }) => {
+const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, type, disableLink, ...props }) => {
     const backgroundColor = useMemo(() => stc(type), [type])
     const iconBrightness = useMemo(() => 100 - getBrightness(backgroundColor), [backgroundColor])
     return (
-        <Link to={`/tasks/${taskId}`}>
+        <Box component={!disableLink ? Link : "div"} to={`/tasks/${taskId}`}>
             <Badge
                 overlap="circular"
                 anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
@@ -54,7 +56,7 @@ const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, type, ...props 
                     </Avatar>
                 </Tooltip>
             </Badge>
-        </Link>
+        </Box>
     )
 }
 
