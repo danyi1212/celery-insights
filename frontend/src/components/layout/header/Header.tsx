@@ -1,7 +1,7 @@
 import NotificationBadge from "@components/layout/header/NotificationBadge"
 import SearchBox from "@components/layout/header/SearchBox"
 import WSStatus from "@components/layout/header/WSStatus"
-import { DRAWER_WIDTH } from "@layout/Menu"
+import { DRAWER_WIDTH } from "@components/layout/menu/Menu"
 import AppBar from "@mui/material/AppBar"
 import Box from "@mui/material/Box"
 import Slide from "@mui/material/Slide"
