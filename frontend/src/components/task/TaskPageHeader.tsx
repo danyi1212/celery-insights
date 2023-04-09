@@ -3,6 +3,7 @@ import { WorkflowChartType } from "@components/workflow/WorkflowGraph"
 import AccountTreeIcon from "@mui/icons-material/AccountTree"
 import ViewTimelineIcon from "@mui/icons-material/ViewTimeline"
 import Box from "@mui/material/Box"
+import Paper from "@mui/material/Paper"
 import Stack from "@mui/material/Stack"
 import ToggleButton from "@mui/material/ToggleButton"
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup"
@@ -20,7 +21,7 @@ interface TaskPageHeaderProps {
 
 const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setChartType }) => {
     return (
-        <Toolbar>
+        <Toolbar component={Paper} elevation={3} sx={{ pt: 0.5, pb: 1 }}>
             <Box pr={3}>
                 <TaskAvatar taskId={task.id} type={task.type} status={task.state} />
             </Box>
