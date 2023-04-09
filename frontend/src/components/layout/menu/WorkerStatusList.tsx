@@ -8,7 +8,11 @@ import { useQuery } from "react-query"
 const getWorkerStats = () => new ServerClient().workers.getWorkerStats()
 
 const WorkerStatusList: React.FC = () => {
-    const workersState = useStateStore((state) => state.workers)
+    const workersState = useStateStore((state) =>
+        state.workers
+            .map((worker) => worker)
+            .filter((worker) => worker.heartbeatExpires && worker.heartbeatExpires > new Date())
+    )
     const { data } = useQuery("workers/stats", getWorkerStats)
     return (
         <Box display="flex" flexDirection="column">
