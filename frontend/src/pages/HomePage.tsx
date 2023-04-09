@@ -7,12 +7,12 @@ import React from "react"
 function HomePage() {
     return (
         <Grid container spacing={3} px={3}>
-            <Grid item xs={8}>
+            <Grid item lg={8} xs={12}>
                 <Panel title="Recent Tasks">
                     <RecentTasksList />
                 </Panel>
             </Grid>
-            <Grid item xs={4}>
+            <Grid item lg={4} xs={12}>
                 <Panel title="Error Log">
                     <ErrorsList />
                 </Panel>
