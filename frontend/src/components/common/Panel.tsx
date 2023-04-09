@@ -1,5 +1,5 @@
+import PanelPaper from "@components/common/PanelPaper"
 import { PaperProps, TypographyProps } from "@mui/material"
-import Paper from "@mui/material/Paper"
 import Stack from "@mui/material/Stack"
 import Toolbar from "@mui/material/Toolbar"
 import Typography from "@mui/material/Typography"
@@ -21,18 +21,7 @@ const Panel: React.FC<PanelProps> = ({ title, children, actions, titleProps, ...
                 </Typography>
                 {actions}
             </Toolbar>
-            <Paper
-                {...props}
-                sx={{
-                    padding: 1,
-                    borderRadius: "24px",
-                    ...props.sx,
-                    height: "100%",
-                    overflow: "auto",
-                }}
-            >
-                {children}
-            </Paper>
+            <PanelPaper {...props}>{children}</PanelPaper>
         </Stack>
     )
 }
