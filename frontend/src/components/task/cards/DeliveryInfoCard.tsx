@@ -1,22 +1,19 @@
-import { CardProps } from "@mui/material"
-import Card from "@mui/material/Card"
-import CardHeader from "@mui/material/CardHeader"
+import Panel from "@components/common/Panel"
 import List from "@mui/material/List"
 import ListItem from "@mui/material/ListItem"
 import ListItemText from "@mui/material/ListItemText"
 import { StateTask } from "@utils/translateServerModels"
 import React from "react"
 
-interface DeliveryInfoCardProps extends CardProps {
+interface DeliveryInfoCardProps {
     task: StateTask
 }
 
 const EMPTY_VALUE = "None"
 
-export const DeliveryInfoCard: React.FC<DeliveryInfoCardProps> = ({ task, ...props }) => {
+export const DeliveryInfoCard: React.FC<DeliveryInfoCardProps> = ({ task }) => {
     return (
-        <Card {...props}>
-            <CardHeader title="Delivery Info" />
+        <Panel title="Delivery Info">
             <List dense>
                 <ListItem>
                     <ListItemText
@@ -54,6 +51,6 @@ export const DeliveryInfoCard: React.FC<DeliveryInfoCardProps> = ({ task, ...pro
                     />
                 </ListItem>
             </List>
-        </Card>
+        </Panel>
     )
 }

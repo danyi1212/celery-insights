@@ -10,6 +10,7 @@ import useTaskResult from "@hooks/useTaskResult"
 import useTaskState from "@hooks/useTaskState"
 import Box from "@mui/material/Box"
 import CircularProgress from "@mui/material/CircularProgress"
+import Grid from "@mui/material/Grid"
 import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
 import React from "react"
@@ -47,17 +48,17 @@ const TaskPage: React.FC = () => {
                 <RetryAlert retries={task.retries || taskResult?.retries} />
                 <ExceptionAlert exception={task.exception} traceback={task.traceback || taskResult?.traceback} />
             </Stack>
-            <Stack direction="row" spacing={3} justifyContent="space-around">
-                <DeliveryInfoCard task={task} sx={{ width: 400 }} />
-                <ArgumentsCard
-                    task={task}
-                    result={taskResult}
-                    loading={isLoading}
-                    elevation={3}
-                    sx={{ width: 400, minHeight: 300 }}
-                />
-                <ResultCard result={taskResult} loading={isLoading} elevation={3} sx={{ width: 400, minHeight: 300 }} />
-            </Stack>
+            <Grid container spacing={3} px={3}>
+                <Grid item lg={4} xs={12}>
+                    <DeliveryInfoCard task={task} />
+                </Grid>
+                <Grid item lg={4} xs={12}>
+                    <ArgumentsCard task={task} result={taskResult} loading={isLoading} />
+                </Grid>
+                <Grid item lg={4} xs={12}>
+                    <ResultCard result={taskResult} loading={isLoading} />
+                </Grid>
+            </Grid>
         </Box>
     )
 }

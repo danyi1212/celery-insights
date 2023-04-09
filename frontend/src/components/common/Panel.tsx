@@ -1,20 +1,25 @@
 import { PaperProps } from "@mui/material"
 import Paper from "@mui/material/Paper"
 import Stack from "@mui/material/Stack"
+import Toolbar from "@mui/material/Toolbar"
 import Typography from "@mui/material/Typography"
 import React from "react"
 
 interface PanelProps extends PaperProps {
     title: string
+    actions?: React.ReactNode
     children?: React.ReactNode
 }
 
-const Panel: React.FC<PanelProps> = ({ title, children, ...props }) => {
+const Panel: React.FC<PanelProps> = ({ title, children, actions, ...props }) => {
     return (
         <Stack direction="column" height="100%">
-            <Typography variant="h4" p={2} mx={2} noWrap>
-                {title}
-            </Typography>
+            <Toolbar>
+                <Typography variant="h4" noWrap flexGrow={1}>
+                    {title}
+                </Typography>
+                {actions}
+            </Toolbar>
             <Paper
                 {...props}
                 sx={{

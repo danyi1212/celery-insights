@@ -1,14 +1,13 @@
-import { PaperProps, useTheme } from "@mui/material"
+import Panel from "@components/common/Panel"
+import { useTheme } from "@mui/material"
 import Box from "@mui/material/Box"
 import CircularProgress from "@mui/material/CircularProgress"
-import Paper from "@mui/material/Paper"
-import Toolbar from "@mui/material/Toolbar"
 import Typography from "@mui/material/Typography"
 import { TaskResult } from "@services/server"
 import { JsonViewer } from "@textea/json-viewer"
 import React from "react"
 
-interface ResultCardProps extends PaperProps {
+interface ResultCardProps {
     result?: TaskResult
     loading: boolean
 }
@@ -57,16 +56,11 @@ const CardContent: React.FC<CardContentProps> = ({ result, loading }) => {
     )
 }
 
-const ResultCard: React.FC<ResultCardProps> = ({ result, loading, ...props }) => {
+const ResultCard: React.FC<ResultCardProps> = ({ result, loading }) => {
     return (
-        <Paper {...props}>
-            <Toolbar>
-                <Typography variant="h5">Result</Typography>
-            </Toolbar>
-            <Box height="100%">
-                <CardContent result={result} loading={loading} />
-            </Box>
-        </Paper>
+        <Panel title="Result">
+            <CardContent result={result} loading={loading} />
+        </Panel>
     )
 }
 
