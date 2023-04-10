@@ -1,3 +1,5 @@
+import BrokerDetailsCard from "@components/worker/BrokerDetailsCard"
+import PoolDetailsCard from "@components/worker/PoolDetailsCard"
 import WorkerDetailsCard from "@components/worker/WorkerDetailsCard"
 import Grid from "@mui/material/Grid"
 import Typography from "@mui/material/Typography"
@@ -20,6 +22,12 @@ const WorkerPage: React.FC = () => {
         <Grid container spacing={3} px={3}>
             <Grid item xs={12} lg={6} xl={4}>
                 <WorkerDetailsCard worker={worker} />
+            </Grid>
+            <Grid item xs={12} lg={6} xl={4}>
+                <BrokerDetailsCard worker={worker} />
+            </Grid>
+            <Grid item xs={12} lg={6} xl={4}>
+                <PoolDetailsCard worker={worker} />
             </Grid>
         </Grid>
     )
