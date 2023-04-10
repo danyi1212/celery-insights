@@ -8,7 +8,7 @@ const useWorkerState = (worker: StateWorker, timeout?: number) => {
         () => new ServerClient().workers.getWorkerStats(timeout, worker?.hostname),
         [worker, timeout]
     )
-    const result = useQuery(["workers/stats", worker.hostname], getWorkerStats)
+    const result = useQuery(["workers/stats", worker.hostname], getWorkerStats, { refetchInterval: 30000 })
 
     return { ...result, stats: result.data?.[worker.hostname] }
 }
