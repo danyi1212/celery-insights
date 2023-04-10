@@ -38,7 +38,7 @@ const WorkerPanel: React.FC<WorkerPanelProps> = ({ worker }) => {
                         {worker.hostname}
                     </Typography>
                 </Tooltip>
-                <Button component={Link} to={`worker/${worker.id}`} variant="outlined" color="secondary">
+                <Button component={Link} to={`workers/${worker.id}`} variant="outlined" color="secondary">
                     View
                 </Button>
             </Stack>
