@@ -16,10 +16,18 @@ const PoolDetailsCard: React.FC<PoolDetailsCardProps> = ({ worker }) => {
         <Panel title="Process Pool">
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12} md={6}>
-                    <DetailItem label="Max Concurrency" value={stats?.pool["max-concurrency"]} />
+                    <DetailItem
+                        label="Max Concurrency"
+                        description="Maximum number of child parallelism (processes/threads)"
+                        value={stats?.pool["max-concurrency"]}
+                    />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                    <DetailItem label="Recycle Limit" value={stats?.pool["max-tasks-per-child"]} />
+                    <DetailItem
+                        label="Recycle Limit"
+                        description="Maximum number of tasks to be executed before child recycled"
+                        value={stats?.pool["max-tasks-per-child"]}
+                    />
                 </Grid>
                 <Grid item xs={12} md={6}>
                     <DetailItem label="Soft Timeout" value={formatSecondsDuration(stats?.pool.timeouts[0] || 0)} />
