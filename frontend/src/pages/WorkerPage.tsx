@@ -1,4 +1,5 @@
-import Box from "@mui/material/Box"
+import WorkerDetailsCard from "@components/worker/WorkerDetailsCard"
+import Grid from "@mui/material/Grid"
 import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
 import React, { useCallback } from "react"
@@ -16,11 +17,11 @@ const WorkerPage: React.FC = () => {
         )
 
     return (
-        <Box>
-            <Typography variant="h4" align="center">
-                {worker.hostname}
-            </Typography>
-        </Box>
+        <Grid container spacing={3} px={3}>
+            <Grid item xs={12} lg={6} xl={4}>
+                <WorkerDetailsCard worker={worker} />
+            </Grid>
+        </Grid>
     )
 }
 export default WorkerPage
