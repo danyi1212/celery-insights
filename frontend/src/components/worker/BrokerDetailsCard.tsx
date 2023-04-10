@@ -49,7 +49,7 @@ const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ worker }) => {
                     <DetailItem label="User ID" value={stats?.broker.userid} />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                    <DetailItem label="Connection Timeout" value={stats?.broker.connection_timeout ?? "N/A"} />
+                    <DetailItem label="Timeout" value={stats?.broker.connection_timeout ?? "Unlimited"} />
                 </Grid>
                 <Grid item xs={12} md={6}>
                     <DetailItem
