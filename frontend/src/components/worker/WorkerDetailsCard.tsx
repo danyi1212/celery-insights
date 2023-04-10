@@ -14,10 +14,10 @@ interface WorkerDetailsCardProps {
 }
 
 const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ worker }) => {
-    const { stats } = useWorkerState(worker)
+    const { stats, isLoading, error } = useWorkerState(worker)
 
     return (
-        <Panel title="Worker">
+        <Panel title="Worker" loading={isLoading} error={error}>
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12}>
                     <DetailItem label="Hostname" value={worker.hostname} />

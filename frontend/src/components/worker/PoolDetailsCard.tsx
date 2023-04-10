@@ -14,9 +14,9 @@ interface PoolDetailsCardProps {
 }
 
 const PoolDetailsCard: React.FC<PoolDetailsCardProps> = ({ worker }) => {
-    const { stats } = useWorkerState(worker)
+    const { stats, isLoading, error } = useWorkerState(worker)
     return (
-        <Panel title="Process Pool">
+        <Panel title="Process Pool" loading={isLoading} error={error}>
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12} md={6}>
                     <DetailItem

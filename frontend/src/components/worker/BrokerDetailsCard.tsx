@@ -16,9 +16,9 @@ interface BrokerDetailsCardProps {
 }
 
 const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ worker }) => {
-    const { stats } = useWorkerState(worker)
+    const { stats, isLoading, error } = useWorkerState(worker)
     return (
-        <Panel title="Broker">
+        <Panel title="Broker" loading={isLoading} error={error}>
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12}>
                     <DetailItem
