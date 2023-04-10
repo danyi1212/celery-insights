@@ -7,6 +7,7 @@ interface LinearProgressWithLabelProps extends LinearProgressProps {
     value: number
     max?: number
     min?: number
+    buffer?: number
     percentageLabel?: boolean
 }
 
@@ -14,10 +15,12 @@ const LinearProgressWithLabel: React.FC<LinearProgressWithLabelProps> = ({
     value,
     max = 100,
     min = 0,
+    buffer = 0,
     percentageLabel,
     ...props
 }) => {
-    const percentage = useMemo(() => ((value - min) * 100) / (max - min), [value, min, max])
+    const percentage = useMemo(() => Math.round(((value - min) * 100) / (max - min)), [value, min, max])
+    const bufferPercentage = useMemo(() => Math.round(((buffer - min) * 100) / (max - min)), [buffer, min, max])
     const label = useMemo(
         () => (percentageLabel ? `${Math.round(percentage)}%` : `${value + min}/${max}`),
         [percentageLabel, percentage, min, max, value]
@@ -25,7 +28,12 @@ const LinearProgressWithLabel: React.FC<LinearProgressWithLabelProps> = ({
     return (
         <Box display="flex" alignItems="center">
             <Box width="100%" mr={1}>
-                <LinearProgress variant="determinate" value={percentage} {...props} />
+                <LinearProgress
+                    {...props}
+                    variant={buffer && percentage !== bufferPercentage ? "buffer" : "determinate"}
+                    value={percentage}
+                    valueBuffer={bufferPercentage}
+                />
             </Box>
             <Box minWidth="35">
                 <Typography variant="body2" color="text.secondary">
