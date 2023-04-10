@@ -19,7 +19,7 @@ import { useParams } from "react-router-dom"
 const TaskPage: React.FC = () => {
     const { taskId } = useParams() as { taskId: string }
     const { task, loading } = useTaskState(taskId)
-    const { taskResult, isLoading } = useTaskResult(taskId)
+    const { taskResult, isLoading, error } = useTaskResult(taskId)
 
     const [chartType, setChartType] = React.useState<WorkflowChartType>(WorkflowChartType.FLOWCHART)
 
@@ -53,10 +53,10 @@ const TaskPage: React.FC = () => {
                     <DeliveryInfoCard task={task} />
                 </Grid>
                 <Grid item lg={4} xs={12}>
-                    <ArgumentsCard task={task} result={taskResult} loading={isLoading} />
+                    <ArgumentsCard task={task} result={taskResult} loading={isLoading} error={error} />
                 </Grid>
                 <Grid item lg={4} xs={12}>
-                    <ResultCard result={taskResult} loading={isLoading} />
+                    <ResultCard result={taskResult} loading={isLoading} error={error} />
                 </Grid>
             </Grid>
         </Box>

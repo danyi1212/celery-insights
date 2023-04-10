@@ -1,7 +1,5 @@
 import Panel from "@components/common/Panel"
 import { useTheme } from "@mui/material"
-import Box from "@mui/material/Box"
-import CircularProgress from "@mui/material/CircularProgress"
 import Typography from "@mui/material/Typography"
 import { TaskResult } from "@services/server"
 import { JsonViewer } from "@textea/json-viewer"
@@ -10,22 +8,15 @@ import React from "react"
 interface ResultCardProps {
     result?: TaskResult
     loading: boolean
+    error?: unknown
 }
 
 interface CardContentProps {
     result?: TaskResult
-    loading: boolean
 }
 
-const CardContent: React.FC<CardContentProps> = ({ result, loading }) => {
+const CardContent: React.FC<CardContentProps> = ({ result }) => {
     const theme = useTheme()
-
-    if (loading)
-        return (
-            <Box display="flex" alignItems="center" justifyContent="center" height="100%">
-                <CircularProgress />
-            </Box>
-        )
 
     if (!result) return <Typography>Could not find task result.</Typography>
 
@@ -56,10 +47,10 @@ const CardContent: React.FC<CardContentProps> = ({ result, loading }) => {
     )
 }
 
-const ResultCard: React.FC<ResultCardProps> = ({ result, loading }) => {
+const ResultCard: React.FC<ResultCardProps> = ({ result, loading, error }) => {
     return (
-        <Panel title="Result">
-            <CardContent result={result} loading={loading} />
+        <Panel title="Result" loading={loading} error={error}>
+            <CardContent result={result} />
         </Panel>
     )
 }

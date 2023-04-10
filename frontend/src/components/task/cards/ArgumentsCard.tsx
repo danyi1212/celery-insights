@@ -2,7 +2,6 @@ import Panel from "@components/common/Panel"
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline"
 import { PaperProps, useTheme } from "@mui/material"
 import Box from "@mui/material/Box"
-import CircularProgress from "@mui/material/CircularProgress"
 import IconButton from "@mui/material/IconButton"
 import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
@@ -15,6 +14,7 @@ interface ArgumentsCardProps extends PaperProps {
     task: StateTask
     result?: TaskResult
     loading: boolean
+    error?: unknown
 }
 
 const HelpMessage: React.FC = () => (
@@ -32,7 +32,7 @@ const HelpMessage: React.FC = () => (
     </Typography>
 )
 
-const ArgumentsCard: React.FC<ArgumentsCardProps> = ({ task, result, loading, ...props }) => {
+const ArgumentsCard: React.FC<ArgumentsCardProps> = ({ task, result, loading, error, ...props }) => {
     const theme = useTheme()
     const showHelp = !loading && (!result?.args || !result?.kwargs)
     return (
@@ -47,26 +47,22 @@ const ArgumentsCard: React.FC<ArgumentsCardProps> = ({ task, result, loading, ..
                     </Tooltip>
                 )
             }
+            loading={loading}
+            error={error}
             {...props}
         >
             <Box height="100%">
-                {loading ? (
-                    <Box display="flex" alignItems="center" justifyContent="center" height="100%">
-                        <CircularProgress />
-                    </Box>
-                ) : (
-                    <JsonViewer
-                        theme={theme.palette.mode}
-                        editable={false}
-                        rootName={false}
-                        quotesOnKeys={false}
-                        defaultInspectDepth={2}
-                        value={{
-                            args: result?.args || task.args,
-                            kwargs: result?.kwargs || task.kwargs,
-                        }}
-                    />
-                )}
+                <JsonViewer
+                    theme={theme.palette.mode}
+                    editable={false}
+                    rootName={false}
+                    quotesOnKeys={false}
+                    defaultInspectDepth={2}
+                    value={{
+                        args: result?.args || task.args,
+                        kwargs: result?.kwargs || task.kwargs,
+                    }}
+                />
             </Box>
         </Panel>
     )
