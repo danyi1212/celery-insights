@@ -39,7 +39,7 @@ const DetailItem: React.FC<DetailItemProps> = ({ label, value, color, descriptio
     return (
         <DetailContainer>
             {tooltip}
-            <Typography variant="body1" component="span" noWrap>
+            <Typography variant="body1" component="span" noWrap flexGrow={1}>
                 {value}
             </Typography>
         </DetailContainer>

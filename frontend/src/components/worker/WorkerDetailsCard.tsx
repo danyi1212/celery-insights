@@ -1,6 +1,10 @@
 import DetailItem from "@components/common/DetailItem"
+import LinearProgressWithLabel from "@components/common/LinearProgressWithLabel"
 import Panel from "@components/common/Panel"
+import useWorkerState from "@hooks/useWorkerState"
 import Grid from "@mui/material/Grid"
+import { formatBytes } from "@utils/FormatBytes"
+import { formatSecondsDuration } from "@utils/formatSecondsDuration"
 import { StateWorker } from "@utils/translateServerModels"
 import React from "react"
 
@@ -9,11 +13,34 @@ interface WorkerDetailsCardProps {
 }
 
 const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ worker }) => {
+    const { stats } = useWorkerState(worker)
+
     return (
         <Panel title="Worker">
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12}>
                     <DetailItem label="Hostname" value={worker.hostname} />
+                </Grid>
+                <Grid item xs={12}>
+                    <DetailItem
+                        label="CPU Usage"
+                        description="Percentage of CPU used by worker process"
+                        value={<LinearProgressWithLabel value={worker.cpuLoad?.[0] || 0} percentageLabel />}
+                    />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <DetailItem
+                        label="Uptime"
+                        description="Amount of time the worker process has been running"
+                        value={formatSecondsDuration(stats?.uptime || 0)}
+                    />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <DetailItem
+                        label="Memory"
+                        description="Total memory usage by worker process"
+                        value={formatBytes(stats?.rusage?.maxrss || 0)}
+                    />
                 </Grid>
                 <Grid item xs={12} md={6}>
                     <DetailItem label="Process ID" value={worker.pid} />
