@@ -1,7 +1,29 @@
+import time
+from datetime import datetime, timedelta
 from typing import Any, Self
 
 from celery.events.state import Worker as CeleryWorker
 from pydantic import BaseModel, Extra, Field
+
+
+def convert_to_utc(local_epoch: float) -> float:
+    """Converts a local epoch time to UTC epoch time."""
+
+    # Get the local time as a struct_time object
+    local_time = time.localtime(local_epoch)
+
+    # Calculate the UTC offset of the local timezone at the given epoch time
+    utc_offset = -time.timezone if local_time.tm_isdst == 0 else -time.altzone
+    utc_offset /= 3600
+
+    # Create a datetime object in the local timezone
+    local_dt = datetime.fromtimestamp(local_epoch)
+
+    # Subtract the UTC offset to get the UTC time
+    utc_dt = local_dt - timedelta(hours=utc_offset)
+
+    # Return the UTC epoch time
+    return utc_dt.timestamp()
 
 
 class Worker(BaseModel):
@@ -29,7 +51,7 @@ class Worker(BaseModel):
             software_sys=worker.sw_sys,
             active_tasks=worker.active or 0,
             processed_tasks=worker.processed or 0,
-            heartbeat_expires=worker.heartbeat_expires if worker.heartbeats else None,
+            heartbeat_expires=convert_to_utc(worker.heartbeat_expires) if worker.heartbeats else None,
             cpu_load=tuple(worker.loadavg) if worker.loadavg is not None else None,
         )
 
@@ -49,10 +71,14 @@ class Broker(BaseModel, extra=Extra.allow):
 
 
 class Pool(BaseModel, extra=Extra.allow):
-    max_concurrency: int = Field(description="Maximum number of child parallelism (processes/threads)",
-                                 alias="max-concurrency")
-    max_tasks_per_child: int | str = Field(description="Maximum number of tasks to be executed before child recycled",
-                                           alias="max-tasks-per-child")
+    max_concurrency: int = Field(
+        description="Maximum number of child parallelism (processes/threads)",
+        alias="max-concurrency"
+    )
+    max_tasks_per_child: int | str = Field(
+        description="Maximum number of tasks to be executed before child recycled",
+        alias="max-tasks-per-child"
+    )
     processes: list[int] = Field(description="Child process IDs (or thread IDs)")
     timeouts: tuple[int, int] = Field(description="Soft time limit and hard time limit, in seconds")
 
