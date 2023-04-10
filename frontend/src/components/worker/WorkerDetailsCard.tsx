@@ -2,7 +2,7 @@ import DetailItem from "@components/common/DetailItem"
 import LinearProgressWithLabel from "@components/common/LinearProgressWithLabel"
 import Panel from "@components/common/Panel"
 import WorkerStatus from "@components/worker/WorkerStatus"
-import useWorkerState from "@hooks/useWorkerState"
+import useWorkerStats from "@hooks/useWorkerStats"
 import Grid from "@mui/material/Grid"
 import { formatBytes } from "@utils/FormatBytes"
 import { formatSecondsDuration } from "@utils/formatSecondsDuration"
@@ -14,7 +14,7 @@ interface WorkerDetailsCardProps {
 }
 
 const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ worker }) => {
-    const { stats, isLoading, error } = useWorkerState(worker)
+    const { stats, isLoading, error } = useWorkerStats(worker)
 
     return (
         <Panel title="Worker" loading={isLoading} error={error}>

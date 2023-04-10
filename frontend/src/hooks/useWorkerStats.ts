@@ -3,7 +3,7 @@ import { StateWorker } from "@utils/translateServerModels"
 import { useCallback } from "react"
 import { useQuery } from "react-query"
 
-const useWorkerState = (worker: StateWorker, timeout?: number) => {
+const useWorkerStats = (worker: StateWorker, timeout?: number) => {
     const getWorkerStats = useCallback(
         () => new ServerClient().workers.getWorkerStats(timeout, worker?.hostname),
         [worker, timeout]
@@ -13,4 +13,4 @@ const useWorkerState = (worker: StateWorker, timeout?: number) => {
     return { ...result, stats: result.data?.[worker.hostname] }
 }
 
-export default useWorkerState
+export default useWorkerStats

@@ -1,6 +1,6 @@
 import DetailItem from "@components/common/DetailItem"
 import Panel from "@components/common/Panel"
-import useWorkerState from "@hooks/useWorkerState"
+import useWorkerStats from "@hooks/useWorkerStats"
 import LockIcon from "@mui/icons-material/Lock"
 import LockOpenIcon from "@mui/icons-material/LockOpen"
 import Box from "@mui/material/Box"
@@ -16,7 +16,7 @@ interface BrokerDetailsCardProps {
 }
 
 const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ worker }) => {
-    const { stats, isLoading, error } = useWorkerState(worker)
+    const { stats, isLoading, error } = useWorkerStats(worker)
     return (
         <Panel title="Broker" loading={isLoading} error={error}>
             <Grid container spacing={2} p={2}>

@@ -1,6 +1,6 @@
 import DetailItem from "@components/common/DetailItem"
 import Panel from "@components/common/Panel"
-import useWorkerState from "@hooks/useWorkerState"
+import useWorkerStats from "@hooks/useWorkerStats"
 import MemoryIcon from "@mui/icons-material/Memory"
 import Chip from "@mui/material/Chip"
 import Grid from "@mui/material/Grid"
@@ -14,7 +14,7 @@ interface PoolDetailsCardProps {
 }
 
 const PoolDetailsCard: React.FC<PoolDetailsCardProps> = ({ worker }) => {
-    const { stats, isLoading, error } = useWorkerState(worker)
+    const { stats, isLoading, error } = useWorkerStats(worker)
     return (
         <Panel title="Process Pool" loading={isLoading} error={error}>
             <Grid container spacing={2} p={2}>
