@@ -1,6 +1,7 @@
 import DetailItem from "@components/common/DetailItem"
 import LinearProgressWithLabel from "@components/common/LinearProgressWithLabel"
 import Panel from "@components/common/Panel"
+import WorkerStatus from "@components/worker/WorkerStatus"
 import useWorkerState from "@hooks/useWorkerState"
 import Grid from "@mui/material/Grid"
 import { formatBytes } from "@utils/FormatBytes"
@@ -59,6 +60,18 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ worker }) => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                     <DetailItem label="Software Version" value={worker.softwareVersion} />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <DetailItem
+                        label="Status"
+                        description="Amount of time until the worker is considered offline"
+                        color={worker.heartbeatExpires && worker.heartbeatExpires < new Date() ? "danger" : "primary"}
+                        value={
+                            <div>
+                                <WorkerStatus heartbeatExpires={worker.heartbeatExpires || new Date()} />
+                            </div>
+                        }
+                    />
                 </Grid>
             </Grid>
         </Panel>
