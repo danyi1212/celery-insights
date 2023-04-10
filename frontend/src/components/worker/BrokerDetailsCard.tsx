@@ -29,9 +29,9 @@ const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ worker }) => {
                                 <Tooltip title={stats?.broker.ssl ? "SSL Enabled" : "SSL Disabled"}>
                                     <ListItemIcon sx={{ px: 1 }}>
                                         {stats?.broker.ssl ? (
-                                            <LockIcon fontSize="small" style={{ color: "green" }} />
+                                            <LockIcon fontSize="small" color="success" />
                                         ) : (
-                                            <LockOpenIcon fontSize="small" style={{ color: "red" }} />
+                                            <LockOpenIcon fontSize="small" color="error" />
                                         )}
                                     </ListItemIcon>
                                 </Tooltip>
