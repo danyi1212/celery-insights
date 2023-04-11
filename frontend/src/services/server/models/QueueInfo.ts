@@ -2,7 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type {ExchangeInfo} from "./ExchangeInfo"
+import type { ExchangeInfo } from "./ExchangeInfo"
 
 export type QueueInfo = {
     /**

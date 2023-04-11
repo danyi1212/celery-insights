@@ -2,7 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type {TaskRequest} from "./TaskRequest"
+import type { TaskRequest } from "./TaskRequest"
 
 export type ScheduledTask = {
     /**

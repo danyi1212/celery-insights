@@ -1,13 +1,13 @@
 /* istanbul ignore file */
-import {AxiosHttpRequest} from "./core/AxiosHttpRequest"
+import { AxiosHttpRequest } from "./core/AxiosHttpRequest"
 /* tslint:disable */
 /* eslint-disable */
-import type {BaseHttpRequest} from "./core/BaseHttpRequest"
-import type {OpenAPIConfig} from "./core/OpenAPI"
+import type { BaseHttpRequest } from "./core/BaseHttpRequest"
+import type { OpenAPIConfig } from "./core/OpenAPI"
 
-import {EventsService} from "./services/EventsService"
-import {TasksService} from "./services/TasksService"
-import {WorkersService} from "./services/WorkersService"
+import { EventsService } from "./services/EventsService"
+import { TasksService } from "./services/TasksService"
+import { WorkersService } from "./services/WorkersService"
 
 type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest
 

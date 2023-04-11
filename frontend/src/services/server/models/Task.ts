@@ -2,7 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type {TaskState} from "./TaskState"
+import type { TaskState } from "./TaskState"
 
 export type Task = {
     /**

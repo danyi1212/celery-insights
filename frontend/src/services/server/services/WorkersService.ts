@@ -1,17 +1,18 @@
 /* istanbul ignore file */
-import type {BaseHttpRequest} from "../core/BaseHttpRequest"
+import type { BaseHttpRequest } from "../core/BaseHttpRequest"
 
-import type {CancelablePromise} from "../core/CancelablePromise"
+import type { CancelablePromise } from "../core/CancelablePromise"
 /* tslint:disable */
 /* eslint-disable */
-import type {QueueInfo} from "../models/QueueInfo"
-import type {ScheduledTask} from "../models/ScheduledTask"
-import type {Stats} from "../models/Stats"
-import type {TaskRequest} from "../models/TaskRequest"
-import type {Worker} from "../models/Worker"
+import type { QueueInfo } from "../models/QueueInfo"
+import type { ScheduledTask } from "../models/ScheduledTask"
+import type { Stats } from "../models/Stats"
+import type { TaskRequest } from "../models/TaskRequest"
+import type { Worker } from "../models/Worker"
 
 export class WorkersService {
-    constructor(public readonly httpRequest: BaseHttpRequest) {}
+    constructor(public readonly httpRequest: BaseHttpRequest) {
+    }
 
     /**
      * Get Workers

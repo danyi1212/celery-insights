@@ -2,8 +2,8 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type {EventType} from "./EventType"
-import type {Task} from "./Task"
+import type { EventType } from "./EventType"
+import type { Task } from "./Task"
 
 export type TaskEventMessage = {
     type: EventType

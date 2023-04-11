@@ -2,8 +2,8 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type {Broker} from "./Broker"
-import type {Pool} from "./Pool"
+import type { Broker } from "./Broker"
+import type { Pool } from "./Pool"
 
 export type Stats = {
     /**

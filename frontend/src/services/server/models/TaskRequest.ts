@@ -2,7 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type {DeliveryInfo} from "./DeliveryInfo"
+import type { DeliveryInfo } from "./DeliveryInfo"
 
 export type TaskRequest = {
     /**
