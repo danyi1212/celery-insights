@@ -31,7 +31,7 @@ const TaskTypeListItem: React.FC<TaskTypeListItemProps> = ({ taskType, workerId 
     const backgroundColor = useMemo(() => stc(taskType), [taskType])
     const acronym = useMemo(() => acronymize(taskType), [taskType])
     return (
-        <ListItem>
+        <ListItem disablePadding>
             <ListItemButton
                 component={Link}
                 to={{
@@ -59,7 +59,7 @@ const RegisteredTasksPanel: React.FC<RegisteredTasksPanelProps> = ({ worker }) =
     const { tasks, isLoading, error } = useWorkerRegisteredTasks(worker)
     return (
         <Panel title="Registered Task Types" loading={isLoading} error={error}>
-            <List>
+            <List disablePadding>
                 {tasks?.map((taskType) => (
                     <TaskTypeListItem key={taskType} taskType={taskType} workerId={worker.id} />
                 ))}
