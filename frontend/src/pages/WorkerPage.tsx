@@ -1,6 +1,7 @@
 import BrokerDetailsCard from "@components/worker/BrokerDetailsCard"
 import PoolDetailsCard from "@components/worker/PoolDetailsCard"
 import QueueDetails from "@components/worker/QueueDetails"
+import RegisteredTasksPanel from "@components/worker/RegisteredTasksPanel"
 import WorkerDetailsCard from "@components/worker/WorkerDetailsCard"
 import Grid from "@mui/material/Grid"
 import Typography from "@mui/material/Typography"
@@ -32,6 +33,9 @@ const WorkerPage: React.FC = () => {
             </Grid>
             <Grid item xs={12}>
                 <QueueDetails worker={worker} />
+            </Grid>
+            <Grid item xs={12}>
+                <RegisteredTasksPanel worker={worker} />
             </Grid>
         </Grid>
     )
