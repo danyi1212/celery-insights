@@ -5,7 +5,9 @@ import type {CancelablePromise} from "../core/CancelablePromise"
 /* tslint:disable */
 /* eslint-disable */
 import type {QueueInfo} from "../models/QueueInfo"
+import type {ScheduledTask} from "../models/ScheduledTask"
 import type {Stats} from "../models/Stats"
+import type {TaskRequest} from "../models/TaskRequest"
 import type {Worker} from "../models/Worker"
 
 export class WorkersService {
@@ -104,10 +106,13 @@ export class WorkersService {
      * Worker Scheduled Tasks (eta / countdown)
      * @param timeout
      * @param worker
-     * @returns string Successful Response
+     * @returns ScheduledTask Successful Response
      * @throws ApiError
      */
-    public getWorkerScheduled(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Array<string>>> {
+    public getWorkerScheduled(
+        timeout: number = 10,
+        worker?: string
+    ): CancelablePromise<Record<string, Array<ScheduledTask>>> {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/workers/scheduled",
@@ -126,10 +131,13 @@ export class WorkersService {
      * Worker Prefetched Tasks
      * @param timeout
      * @param worker
-     * @returns string Successful Response
+     * @returns TaskRequest Successful Response
      * @throws ApiError
      */
-    public getWorkerReserved(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Array<string>>> {
+    public getWorkerReserved(
+        timeout: number = 10,
+        worker?: string
+    ): CancelablePromise<Record<string, Array<TaskRequest>>> {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/workers/reserved",
@@ -148,10 +156,13 @@ export class WorkersService {
      * Worker currently executing tasks
      * @param timeout
      * @param worker
-     * @returns string Successful Response
+     * @returns TaskRequest Successful Response
      * @throws ApiError
      */
-    public getWorkerActive(timeout: number = 10, worker?: string): CancelablePromise<Record<string, Array<string>>> {
+    public getWorkerActive(
+        timeout: number = 10,
+        worker?: string
+    ): CancelablePromise<Record<string, Array<TaskRequest>>> {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/workers/active",

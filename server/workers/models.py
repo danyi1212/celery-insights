@@ -114,3 +114,29 @@ class QueueInfo(BaseModel, extra=Extra.allow):
     message_ttl: int | None = Field(description="Message TTL in seconds")
     max_length: int | None = Field(description="Maximum number of task messages allowed in the queue")
     max_priority: int | None = Field(description="Maximum priority for task messages in the queue")
+
+
+class DeliveryInfo(BaseModel, extra=Extra.allow):
+    exchange: str = Field(description="Broker exchange used")
+    priority: int = Field(description="Message priority")
+    redelivered: bool = Field(description="Message sent back to queue")
+    routing_key: str = Field(description="Message routing key used")
+
+
+class TaskRequest(BaseModel, extra=Extra.allow):
+    id: str = Field(description="Task unique id")
+    name: str = Field(description="Task name")
+    type: str = Field(description="Task type")
+    args: list[Any] = Field(description="Task positional arguments")
+    kwargs: dict[str, Any] = Field(description="Task keyword arguments")
+    delivery_info: DeliveryInfo = Field(description="Delivery Information about the task Message")
+    acknowledged: bool = Field(description="Whether the task message acknowledged")
+    time_start: float | None = Field(description="When task has started by the worker")
+    hostname: str = Field(description="Worker hostname")
+    worker_pid: int | None = Field(description="Child worker process ID")
+
+
+class ScheduledTask(BaseModel, extra=Extra.allow):
+    eta: str = Field(description="Absolute time when task should be executed")
+    priority: int = Field(description="Message priority")
+    request: TaskRequest = Field(description="Task Information")

@@ -6,7 +6,7 @@ from fastapi_cache.decorator import cache
 
 from events.consumer import state
 from workers.dependencies import get_inspect
-from workers.models import QueueInfo, Stats, Worker
+from workers.models import QueueInfo, ScheduledTask, Stats, TaskRequest, Worker
 
 workers_router = APIRouter(prefix="/api/workers", tags=["workers"])
 
@@ -41,19 +41,19 @@ async def get_worker_revoked(inspect: Inspect = Depends(get_inspect)) -> dict[st
 
 @workers_router.get("/scheduled", description="Worker Scheduled Tasks (eta / countdown)")
 @cache(expire=1)
-async def get_worker_scheduled(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[str]]:
+async def get_worker_scheduled(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[ScheduledTask]]:
     return await asyncio.to_thread(inspect.scheduled) or {}
 
 
 @workers_router.get("/reserved", description="Worker Prefetched Tasks")
 @cache(expire=1)
-async def get_worker_reserved(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[str]]:
+async def get_worker_reserved(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[TaskRequest]]:
     return await asyncio.to_thread(inspect.reserved) or {}
 
 
 @workers_router.get("/active", description="Worker currently executing tasks")
 @cache(expire=1)
-async def get_worker_active(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[str]]:
+async def get_worker_active(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[TaskRequest]]:
     return await asyncio.to_thread(inspect.active) or {}
 
 
