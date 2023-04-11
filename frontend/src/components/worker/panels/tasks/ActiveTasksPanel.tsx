@@ -1,5 +1,5 @@
 import Panel from "@components/common/Panel"
-import ActiveTaskListItem from "@components/worker/ActiveTaskListItem"
+import ActiveTaskListItem from "@components/worker/panels/tasks/ActiveTaskListItem"
 import useWorkerActiveTasks from "@hooks/useWorkerActiveTasks"
 import Box from "@mui/material/Box"
 import List from "@mui/material/List"

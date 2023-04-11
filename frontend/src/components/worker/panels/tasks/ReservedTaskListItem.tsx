@@ -1,4 +1,4 @@
-import TaskListItem from "@components/worker/TaskListItem"
+import TaskListItem from "@components/worker/panels/tasks/TaskListItem"
 import { TaskRequest } from "@services/server"
 import React from "react"
 

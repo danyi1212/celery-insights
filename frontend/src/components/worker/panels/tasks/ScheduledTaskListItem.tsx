@@ -1,4 +1,4 @@
-import TaskListItem from "@components/worker/TaskListItem"
+import TaskListItem from "@components/worker/panels/tasks/TaskListItem"
 import { useNow } from "@hooks/useNow"
 import { ScheduledTask } from "@services/server"
 import { formatDistanceStrict } from "date-fns"

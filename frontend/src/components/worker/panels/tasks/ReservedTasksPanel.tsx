@@ -1,30 +1,30 @@
 import Panel from "@components/common/Panel"
-import ScheduledTaskListItem from "@components/worker/ScheduledTaskListItem"
-import useWorkerScheduledTasks from "@hooks/useWorkerScheduledTasks"
+import ReservedTaskListItem from "@components/worker/panels/tasks/ReservedTaskListItem"
+import useWorkerReservedTasks from "@hooks/useWorkerReservedTasks"
 import Box from "@mui/material/Box"
 import List from "@mui/material/List"
 import Typography from "@mui/material/Typography"
 import { StateWorker } from "@utils/translateServerModels"
 import React from "react"
 
-interface ScheduledTasksPanelProps {
+interface ReservedTasksPanelProps {
     worker: StateWorker
 }
 
-const ScheduledTasksPanel: React.FC<ScheduledTasksPanelProps> = ({ worker }) => {
-    const { tasks, isLoading, error } = useWorkerScheduledTasks(worker)
+const ReservedTasksPanel: React.FC<ReservedTasksPanelProps> = ({ worker }) => {
+    const { tasks, isLoading, error } = useWorkerReservedTasks(worker)
     return (
-        <Panel title="Scheduled Task" loading={isLoading} error={error}>
+        <Panel title="Reserved Task" loading={isLoading} error={error}>
             {tasks && tasks.length > 0 ? (
                 <List disablePadding>
                     {tasks.map((task) => (
-                        <ScheduledTaskListItem key={task.request.id} task={task} />
+                        <ReservedTaskListItem key={task.id} task={task} />
                     ))}
                 </List>
             ) : (
                 <Box display="flex" justifyContent="center" alignItems="center" p={3}>
                     <Typography variant="h4" align="center">
-                        No scheduled tasks
+                        No reserved tasks
                     </Typography>
                 </Box>
             )}
@@ -32,4 +32,4 @@ const ScheduledTasksPanel: React.FC<ScheduledTasksPanelProps> = ({ worker }) => 
     )
 }
 
-export default ScheduledTasksPanel
+export default ReservedTasksPanel
