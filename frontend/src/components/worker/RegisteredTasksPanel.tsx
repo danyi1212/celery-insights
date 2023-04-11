@@ -1,11 +1,13 @@
 import Panel from "@components/common/Panel"
 import useWorkerRegisteredTasks from "@hooks/useWorkerRegisteredTasks"
 import Avatar from "@mui/material/Avatar"
+import Box from "@mui/material/Box"
 import List from "@mui/material/List"
 import ListItem from "@mui/material/ListItem"
 import ListItemAvatar from "@mui/material/ListItemAvatar"
 import ListItemButton from "@mui/material/ListItemButton"
 import ListItemText from "@mui/material/ListItemText"
+import Typography from "@mui/material/Typography"
 import { StateWorker } from "@utils/translateServerModels"
 import React, { useMemo } from "react"
 import { Link } from "react-router-dom"
@@ -59,11 +61,19 @@ const RegisteredTasksPanel: React.FC<RegisteredTasksPanelProps> = ({ worker }) =
     const { tasks, isLoading, error } = useWorkerRegisteredTasks(worker)
     return (
         <Panel title="Registered Task Types" loading={isLoading} error={error}>
-            <List disablePadding>
-                {tasks?.map((taskType) => (
-                    <TaskTypeListItem key={taskType} taskType={taskType} workerId={worker.id} />
-                ))}
-            </List>
+            {tasks && tasks.length > 0 ? (
+                <List disablePadding>
+                    {tasks.map((taskType) => (
+                        <TaskTypeListItem key={taskType} taskType={taskType} workerId={worker.id} />
+                    ))}
+                </List>
+            ) : (
+                <Box display="flex" justifyContent="center" alignItems="center" p={3}>
+                    <Typography variant="h4" align="center">
+                        No registered tasks found
+                    </Typography>
+                </Box>
+            )}
         </Panel>
     )
 }
