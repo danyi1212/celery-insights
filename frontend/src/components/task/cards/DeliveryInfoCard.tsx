@@ -1,56 +1,64 @@
+import DetailItem from "@components/common/DetailItem"
 import Panel from "@components/common/Panel"
-import List from "@mui/material/List"
-import ListItem from "@mui/material/ListItem"
-import ListItemText from "@mui/material/ListItemText"
+import Grid from "@mui/material/Grid"
+import Link from "@mui/material/Link"
+import { formatSecondsDuration } from "@utils/formatSecondsDuration"
 import { StateTask } from "@utils/translateServerModels"
-import React from "react"
+import { format } from "date-fns"
+import React, { useMemo } from "react"
+import { Link as RouterLink } from "react-router-dom"
 
 interface DeliveryInfoCardProps {
     task: StateTask
 }
 
-const EMPTY_VALUE = "None"
-
 export const DeliveryInfoCard: React.FC<DeliveryInfoCardProps> = ({ task }) => {
+    const eta = useMemo(
+        () =>
+            task.eta &&
+            formatSecondsDuration(Math.round((new Date(task.eta).getTime() - task.sentAt.getTime()) / 1000)),
+        [task.eta, task.sentAt]
+    )
+    const expire = useMemo(() => task.expires && format(new Date(task.expires), "yyyy-MM-dd HH:mm:ss"), [task.expires])
     return (
         <Panel title="Delivery Info">
-            <List dense>
-                <ListItem>
-                    <ListItemText
-                        primary={task.worker || EMPTY_VALUE}
-                        secondary="Worker"
-                        primaryTypographyProps={{ noWrap: true }}
+            <Grid container spacing={2} p={2}>
+                <Grid item xs={12}>
+                    <DetailItem
+                        label="Worker"
+                        description="Worker that consumed this task"
+                        value={
+                            <Link component={RouterLink} to={`/workers/${task.worker}`}>
+                                {task.worker || "Unknown"}
+                            </Link>
+                        }
                     />
-                </ListItem>
-                <ListItem>
-                    <ListItemText
-                        primary={task.exchange || EMPTY_VALUE}
-                        secondary="Exchange"
-                        primaryTypographyProps={{ noWrap: true }}
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <DetailItem
+                        label="Exchange"
+                        value={task.exchange || "---"}
+                        description="Name of the exchange this task was sent to"
                     />
-                </ListItem>
-                <ListItem>
-                    <ListItemText
-                        primary={task.routingKey || EMPTY_VALUE}
-                        secondary="Routing Key"
-                        primaryTypographyProps={{ noWrap: true }}
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <DetailItem
+                        label="Routing Key"
+                        description="Routing key this task was sent with"
+                        value={task.routingKey || "---"}
                     />
-                </ListItem>
-                <ListItem>
-                    <ListItemText
-                        primary={task.eta || EMPTY_VALUE}
-                        secondary="ETA"
-                        primaryTypographyProps={{ noWrap: true }}
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <DetailItem
+                        label="ETA"
+                        description="Expected time of arrival for this task"
+                        value={eta || "ASAP"}
                     />
-                </ListItem>
-                <ListItem>
-                    <ListItemText
-                        primary={task.expires || EMPTY_VALUE}
-                        secondary="Expires"
-                        primaryTypographyProps={{ noWrap: true }}
-                    />
-                </ListItem>
-            </List>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <DetailItem label="Expires" description="Expiration time for this task" value={expire || "Never"} />
+                </Grid>
+            </Grid>
         </Panel>
     )
 }
