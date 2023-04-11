@@ -5,7 +5,7 @@ import WorkerStatus from "@components/worker/WorkerStatus"
 import useWorkerStats from "@hooks/useWorkerStats"
 import Grid from "@mui/material/Grid"
 import { formatBytes } from "@utils/FormatBytes"
-import { formatSecondsDuration } from "@utils/formatSecondsDuration"
+import { formatSecondsDurationLong } from "@utils/FormatSecondsDurationLong"
 import { StateWorker } from "@utils/translateServerModels"
 import React from "react"
 
@@ -39,7 +39,7 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ worker }) => {
                     <DetailItem
                         label="Uptime"
                         description="Amount of time the worker process has been running"
-                        value={formatSecondsDuration(stats?.uptime || 0)}
+                        value={formatSecondsDurationLong(stats?.uptime || 0)}
                     />
                 </Grid>
                 <Grid item xs={12} md={6}>
