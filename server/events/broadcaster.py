@@ -2,8 +2,8 @@ import logging
 from asyncio import Event, Task as AioTask, create_task
 
 from events.connection_manager import ws_manager
-from events.consumer import CeleryEventReceiver, state
 from events.models import EventCategory, EventMessage, TaskEventMessage, WorkerEventMessage
+from events.receiver import CeleryEventReceiver, state
 from tasks.model import Task
 from workers.models import Worker
 

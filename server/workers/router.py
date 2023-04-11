@@ -4,7 +4,7 @@ from celery.app.control import Inspect
 from fastapi import APIRouter, Depends
 from fastapi_cache.decorator import cache
 
-from events.consumer import state
+from events.receiver import state
 from workers.dependencies import get_inspect
 from workers.models import QueueInfo, ScheduledTask, Stats, TaskRequest, Worker
 

@@ -4,7 +4,7 @@ from fastapi_cache.decorator import cache
 from starlette.requests import Request
 
 from celery_app import celery_app
-from events.consumer import state
+from events.receiver import state
 from pagination import Paginated, get_paginated_response
 from tasks.model import Task, TaskResult
 
