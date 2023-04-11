@@ -1,7 +1,10 @@
+import ActiveTasksPanel from "@components/worker/ActiveTasksPanel"
 import BrokerDetailsCard from "@components/worker/BrokerDetailsCard"
 import PoolDetailsCard from "@components/worker/PoolDetailsCard"
 import QueueDetails from "@components/worker/QueueDetails"
 import RegisteredTasksPanel from "@components/worker/RegisteredTasksPanel"
+import ReservedTasksPanel from "@components/worker/ReservedTasksPanel"
+import ScheduledTasksPanel from "@components/worker/ScheduledTasksPanel"
 import WorkerDetailsCard from "@components/worker/WorkerDetailsCard"
 import Grid from "@mui/material/Grid"
 import Typography from "@mui/material/Typography"
@@ -33,6 +36,15 @@ const WorkerPage: React.FC = () => {
             </Grid>
             <Grid item xs={12}>
                 <QueueDetails worker={worker} />
+            </Grid>
+            <Grid item xs={12} lg={6} xl={4}>
+                <ActiveTasksPanel worker={worker} />
+            </Grid>
+            <Grid item xs={12} lg={6} xl={4}>
+                <ReservedTasksPanel worker={worker} />
+            </Grid>
+            <Grid item xs={12} lg={6} xl={4}>
+                <ScheduledTasksPanel worker={worker} />
             </Grid>
             <Grid item xs={12}>
                 <RegisteredTasksPanel worker={worker} />
