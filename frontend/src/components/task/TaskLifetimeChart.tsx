@@ -80,19 +80,19 @@ const getOptions = (theme: Theme): ApexOptions => ({
 
 const getTimestamp = (date: Date) => date.getTime()
 
-const getFinishedAt = (task: StateTask): Date | undefined =>
+const getFinishedAt = (task: StateTask) =>
     task.succeededAt || task.failedAt || task.retriedAt || task.rejectedAt || task.revokedAt
-
-const getStartedAt = (task: StateTask): Date | undefined => task.startedAt || task.revokedAt || task.rejectedAt
+const getStartedAt = (task: StateTask) => task.startedAt || task.revokedAt || task.rejectedAt
+const getReceivedAt = (task: StateTask) => task.receivedAt || task.revokedAt
 
 const getSeries = (task: StateTask, now: Date): ApexAxisChartSeries => [
     {
         name: "Waiting in Queue",
-        data: [{ y: [getTimestamp(task.sentAt), getTimestamp(task.receivedAt || now)], x: task.id }],
+        data: [{ y: [getTimestamp(task.sentAt), getTimestamp(getReceivedAt(task) || now)], x: task.id }],
     },
     {
         name: "Waiting in Worker",
-        data: [{ y: [getTimestamp(task.receivedAt || now), getTimestamp(getStartedAt(task) || now)], x: task.id }],
+        data: [{ y: [getTimestamp(getReceivedAt(task) || now), getTimestamp(getStartedAt(task) || now)], x: task.id }],
     },
     {
         name: "Running",
@@ -103,7 +103,8 @@ const getSeries = (task: StateTask, now: Date): ApexAxisChartSeries => [
 const TaskLifetimeChart: React.FC<TaskLifetimeChart> = ({ task }) => {
     const theme = useTheme()
     const isRealtime = useMemo(
-        () => task.receivedAt === undefined || getStartedAt(task) === undefined || getFinishedAt(task) === undefined,
+        () =>
+            getReceivedAt(task) === undefined || getStartedAt(task) === undefined || getFinishedAt(task) === undefined,
         [task]
     )
     const now = useNow(isRealtime ? REALTIME_INTERVAL : 0)
