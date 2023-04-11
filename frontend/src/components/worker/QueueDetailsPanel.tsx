@@ -11,11 +11,13 @@ interface QueueDetailsPanelProps {
 const QueueDetailsPanel: React.FC<QueueDetailsPanelProps> = ({ queue }) => {
     return (
         <Panel title={queue.name} sx={{ px: 2 }} elevation={10}>
-            <DetailItem
-                label="Exchange"
-                description="The name of the exchange that the queue is bound to"
-                value={queue.exchange.name}
-            />
+            {queue.exchange.name !== queue.routing_key ? (
+                <DetailItem
+                    label="Exchange"
+                    description="The name of the exchange that the queue is bound to"
+                    value={queue.exchange.name}
+                />
+            ) : null}
             <DetailItem
                 label="Routing Key"
                 description="The routing key that the queue is bound to"
