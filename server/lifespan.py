@@ -13,7 +13,7 @@ async def lifespan(_):
     FastAPICache.init(InMemoryBackend())
     event_consumer = CeleryEventReceiver(celery_app)
     event_consumer.start()
-    listener = EventBroadcaster(event_consumer)
+    listener = EventBroadcaster(event_consumer.queue)
     listener.start()
     try:
         yield
