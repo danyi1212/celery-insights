@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "Celery Soup"
+name = "Celery Insights"
 version = "0.1.0"
 description = "Modern Real-Time Monitor for Celery"
 authors = ["Dan Yishai <danyi1212@users.noreply.github.com>"]
