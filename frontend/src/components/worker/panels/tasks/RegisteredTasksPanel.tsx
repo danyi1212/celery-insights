@@ -17,12 +17,12 @@ interface RegisteredTasksPanelProps {
     worker: StateWorker
 }
 
-const acronymize = (str: string): string =>
-    str
-        .split(/\W+/)
-        .map((word) => word.charAt(0).toUpperCase())
-        .join("")
-        .slice(-2)
+const acronymize = (str: string): string => {
+    const words = str.split(/\W+/)
+    const firstLetter = words[0].charAt(0).toUpperCase()
+    const lastLetter = words[words.length - 1].charAt(0).toUpperCase()
+    return firstLetter + lastLetter
+}
 
 interface TaskTypeListItemProps {
     taskType: string
