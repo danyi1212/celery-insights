@@ -26,7 +26,7 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 
 
 app = FastAPI(
-    title="Celery Soup",
+    title="Celery Insights",
     description="Modern Real-Time Monitoring for Celery",
     debug=settings.debug,
     lifespan=lifespan,
