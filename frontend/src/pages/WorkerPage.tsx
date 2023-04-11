@@ -4,6 +4,7 @@ import QueueDetails from "@components/worker/panels/QueueDetails"
 import ActiveTasksPanel from "@components/worker/panels/tasks/ActiveTasksPanel"
 import RegisteredTasksPanel from "@components/worker/panels/tasks/RegisteredTasksPanel"
 import ReservedTasksPanel from "@components/worker/panels/tasks/ReservedTasksPanel"
+import RevokedTasksPanel from "@components/worker/panels/tasks/RevokedTasksPanel"
 import ScheduledTasksPanel from "@components/worker/panels/tasks/ScheduledTasksPanel"
 import WorkerDetailsCard from "@components/worker/panels/WorkerDetailsCard"
 import Grid from "@mui/material/Grid"
@@ -46,8 +47,11 @@ const WorkerPage: React.FC = () => {
             <Grid item xs={12} lg={6} xl={4}>
                 <ScheduledTasksPanel worker={worker} />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} xl={6}>
                 <RegisteredTasksPanel worker={worker} />
+            </Grid>
+            <Grid item xs={12} xl={6}>
+                <RevokedTasksPanel worker={worker} />
             </Grid>
         </Grid>
     )
