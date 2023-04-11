@@ -5,7 +5,6 @@ import LockIcon from "@mui/icons-material/Lock"
 import LockOpenIcon from "@mui/icons-material/LockOpen"
 import Box from "@mui/material/Box"
 import Grid from "@mui/material/Grid"
-import ListItemIcon from "@mui/material/ListItemIcon"
 import Tooltip from "@mui/material/Tooltip"
 import { formatSecondsDuration } from "@utils/formatSecondsDuration"
 import { StateWorker } from "@utils/translateServerModels"
@@ -26,14 +25,12 @@ const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ worker }) => {
                         value={
                             <Box display="flex" alignItems="center">
                                 {stats?.broker.hostname}
-                                <Tooltip title={stats?.broker.ssl ? "SSL Enabled" : "SSL Disabled"}>
-                                    <ListItemIcon sx={{ px: 1 }}>
-                                        {stats?.broker.ssl ? (
-                                            <LockIcon fontSize="small" color="success" />
-                                        ) : (
-                                            <LockOpenIcon fontSize="small" color="error" />
-                                        )}
-                                    </ListItemIcon>
+                                <Tooltip title={stats?.broker.ssl ? "SSL Enabled" : "SSL Disabled"} describeChild>
+                                    {stats?.broker.ssl ? (
+                                        <LockIcon fontSize="small" color="success" sx={{ mx: 1 }} />
+                                    ) : (
+                                        <LockOpenIcon fontSize="small" color="error" sx={{ mx: 1 }} />
+                                    )}
                                 </Tooltip>
                             </Box>
                         }
