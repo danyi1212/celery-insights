@@ -2,7 +2,7 @@ import logging
 from asyncio import Event, Task as AioTask, create_task
 
 from events.connection_manager import ws_manager
-from events.consumer import EventConsumer, state
+from events.consumer import CeleryEventReceiver, state
 from events.models import EventCategory, EventMessage, TaskEventMessage, WorkerEventMessage
 from tasks.model import Task
 from workers.models import Worker
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class EventBroadcaster:
-    def __init__(self, event_consumer: EventConsumer):
+    def __init__(self, event_consumer: CeleryEventReceiver):
         self.event_consumer = event_consumer
         self.stop_signal = Event()
         self._task: AioTask | None = None

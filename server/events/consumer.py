@@ -1,59 +1,61 @@
+import asyncio
 import logging
 import time
-from asyncio import Queue
 from threading import Event, Thread
 
+from celery import Celery
 from celery.events import EventReceiver
 from celery.events.state import State
-
-from celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
 state = State()
 
 
-class EventConsumer(Thread):
-    stop_signal = Event()
-    queue = Queue()
+class CeleryEventReceiver(Thread):
+    """Thread for consuming events from a Celery cluster."""
 
-    def start(self) -> None:
-        logger.info("Starting event consumer...")
-        super().start()
+    def __init__(self, app: Celery):
+        super().__init__()
+        self.app = app
+        self._stop_signal = Event()
+        self.queue = asyncio.Queue()
+        self.receiver: EventReceiver | None = None
 
     def run(self) -> None:
-        while not self.stop_signal.is_set():
+        logger.info("Starting event consumer...")
+        while not self._stop_signal.is_set():
             try:
                 self.consume_events()
             except (KeyboardInterrupt, SystemExit):
-                try:
-                    import _thread as thread
-                except ImportError:
-                    # noinspection PyUnresolvedReferences
-                    import thread
-                thread.interrupt_main()
+                raise
             except Exception as e:
                 logger.exception(f"Failed to capture events: {e}, trying again in 10 seconds.")
-                time.sleep(10)
+                if not self._stop_signal.is_set():
+                    time.sleep(10)
 
     def consume_events(self):
         logger.info("Connecting to celery cluster...")
-        with celery_app.connection() as connection:
-            receiver = EventReceiver(connection, handlers={
-                "*": self.on_event,
-            })
+        with self.app.connection() as connection:
+            self.receiver = EventReceiver(
+                channel=connection,
+                app=self.app,
+                handlers={
+                    "*": self.on_event,
+                },
+            )
             logger.info("Starting to consume events...")
-            for _ in receiver.itercapture():
-                if self.stop_signal.is_set():
-                    break
+            self.receiver.capture(limit=None, timeout=None, wakeup=True)
 
-    # noinspection PyMethodMayBeStatic
     def on_event(self, event: dict) -> None:
         logger.debug(f"Received event: {event}")
         state.event(event)
         self.queue.put_nowait(event)
+        if self._stop_signal.is_set():
+            raise KeyboardInterrupt("Stop signal  received")
 
     def stop(self) -> None:
         logger.info("Stopping event consumer...")
-        self.stop_signal.set()
+        self.receiver.should_stop = True
+        self._stop_signal.set()
         self.join()
