@@ -18,8 +18,8 @@ interface TaskAvatarProps extends AvatarProps {
 }
 
 const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, type, disableLink, ...props }) => {
-    const backgroundColor = useMemo(() => stc(type), [type])
-    const iconBrightness = useMemo(() => 100 - getBrightness(backgroundColor), [backgroundColor])
+    const backgroundColor = useMemo(() => type && stc(type), [type])
+    const iconBrightness = useMemo(() => backgroundColor && 100 - getBrightness(backgroundColor), [backgroundColor])
     return (
         <Box component={!disableLink ? Link : "div"} to={`/tasks/${taskId}`}>
             <Badge
@@ -52,7 +52,7 @@ const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, type, disableLi
                     describeChild
                 >
                     <Avatar alt={taskId} {...props} sx={{ backgroundColor: backgroundColor, ...props.sx }}>
-                        <IdentityIcon username={taskId} lightness={iconBrightness} />
+                        <IdentityIcon username={taskId} lightness={iconBrightness || 0} />
                     </Avatar>
                 </Tooltip>
             </Badge>
