@@ -1,5 +1,5 @@
 import asyncio
-from asyncio import Queue, Task
+from asyncio import Queue
 
 from starlette.websockets import WebSocket
 
@@ -7,7 +7,6 @@ from starlette.websockets import WebSocket
 class ConnectionManager:
     def __init__(self):
         self.queue = Queue()
-        self.listener: Task | None = None
         self.active_connections: list[WebSocket] = []
 
     def subscribe(self, websocket: WebSocket) -> None:
@@ -20,7 +19,7 @@ class ConnectionManager:
         await asyncio.gather(*[
             connection.send_text(message)
             for connection in self.active_connections
-        ])
+        ], return_exceptions=True)
 
 
 ws_manager = ConnectionManager()
