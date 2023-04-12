@@ -1,5 +1,6 @@
 from itertools import islice
-from typing import Generic, Iterable, TypeVar
+from typing import Generic, TypeVar
+from collections.abc import Iterable
 
 from pydantic import Field
 from pydantic.generics import GenericModel
