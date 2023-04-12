@@ -22,6 +22,7 @@ pytest-asyncio = "^0.21.0"
 pytest-env = "^0.8.1"
 pytest-cov = "^4.0.0"
 polyfactory = "^2.0.0a1"
+ruff = "^0.0.261"
 
 [build-system]
 requires = ["poetry-core"]
@@ -32,4 +33,27 @@ pythonpath = "server"
 env = [
     "BROKER=amqp://guest:guest@localhost/",
     "RESULT_BACKEND=redis://localhost",
+]
+
+[tool.ruff]
+line-length = 120
+src = ["server"]
+select = [
+    "E", # pycodestyle
+    "W", # pycodestyle
+    "F", # pyflakes
+    "N", # pep8
+    "BLE", # flake8 blind except
+    "FBT", # flake8 boolean trap
+    "B", # flake8 bug bear
+    "C4", # flake8 comprehensions
+    "PIE", # flake8 pie
+    "T20", # flake8 print
+    "SIM", # flake8 simplify
+    "ARG", # flake8 unused arguments
+    "PTH", # flake8 pathlib
+    "UP", # pyupgrade
+    "ERA", # comment out code
+    "PD", # pandas
+    "RUF", # ruff rules
 ]

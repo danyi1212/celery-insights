@@ -13,15 +13,15 @@ class FakeWebSocket:
 def test_connection_manager_subscribe():
     manager = ConnectionManager()
     ws = FakeWebSocket()
-    manager.subscribe(ws)  # noqa
+    manager.subscribe(ws)  # type: ignore
     assert ws in manager.active_connections
 
 
 def test_connection_manager_unsubscribe():
     manager = ConnectionManager()
     ws = FakeWebSocket()
-    manager.active_connections.append(ws)  # noqa
-    manager.unsubscribe(ws)  # noqa
+    manager.active_connections.append(ws)  # type: ignore
+    manager.unsubscribe(ws)  # type: ignore
     assert ws not in manager.active_connections
 
 

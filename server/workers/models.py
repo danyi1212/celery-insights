@@ -8,7 +8,6 @@ from pydantic import BaseModel, Extra, Field
 
 def convert_to_utc(local_epoch: float) -> float:
     """Converts a local epoch time to UTC epoch time."""
-
     # Get the local time as a struct_time object
     local_time = time.localtime(local_epoch)
 
@@ -28,7 +27,7 @@ def convert_to_utc(local_epoch: float) -> float:
 
 class Worker(BaseModel):
     id: str = Field(description="Worker unique name comprised of hostname and pid")
-    hostname: str = Field(description=f"Worker hostname")
+    hostname: str = Field(description="Worker hostname")
     pid: int = Field(description="Worker OS Process ID")
     software_identity: str = Field(description="Name of worker software (e.g, py-celery)")
     software_version: str = Field(description="Software version")

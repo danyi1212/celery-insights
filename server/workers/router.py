@@ -23,41 +23,41 @@ def get_workers(alive: bool | None = None) -> list[Worker]:
 
 @workers_router.get("/stats", description="Worker Statistics")
 @cache(expire=5)
-async def get_worker_stats(inspect: Inspect = Depends(get_inspect)) -> dict[str, Stats]:
+async def get_worker_stats(inspect: Inspect = Depends(get_inspect)) -> dict[str, Stats]:  # noqa: B008
     return await asyncio.to_thread(inspect.stats) or {}
 
 
 @workers_router.get("/registered", description="Worker Registered Task Types")
 @cache(expire=5)
-async def get_worker_registered(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[str]]:
+async def get_worker_registered(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[str]]:  # noqa: B008
     return await asyncio.to_thread(inspect.registered) or {}
 
 
 @workers_router.get("/revoked", description="Worker Revoked Tasks list")
 @cache(expire=5)
-async def get_worker_revoked(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[str]]:
+async def get_worker_revoked(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[str]]:  # noqa: B008
     return await asyncio.to_thread(inspect.revoked) or {}
 
 
 @workers_router.get("/scheduled", description="Worker Scheduled Tasks (eta / countdown)")
 @cache(expire=1)
-async def get_worker_scheduled(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[ScheduledTask]]:
+async def get_worker_scheduled(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[ScheduledTask]]:  # noqa: B008
     return await asyncio.to_thread(inspect.scheduled) or {}
 
 
 @workers_router.get("/reserved", description="Worker Prefetched Tasks")
 @cache(expire=1)
-async def get_worker_reserved(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[TaskRequest]]:
+async def get_worker_reserved(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[TaskRequest]]:  # noqa: B008
     return await asyncio.to_thread(inspect.reserved) or {}
 
 
 @workers_router.get("/active", description="Worker currently executing tasks")
 @cache(expire=1)
-async def get_worker_active(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[TaskRequest]]:
+async def get_worker_active(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[TaskRequest]]:  # noqa: B008
     return await asyncio.to_thread(inspect.active) or {}
 
 
 @workers_router.get("/queues", description="Worker active consumer queues")
 @cache(expire=5)
-async def get_worker_queues(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[QueueInfo]]:
+async def get_worker_queues(inspect: Inspect = Depends(get_inspect)) -> dict[str, list[QueueInfo]]:  # noqa: B008
     return await asyncio.to_thread(inspect.active_queues) or {}
