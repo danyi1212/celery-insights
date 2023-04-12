@@ -35,7 +35,7 @@ const getErrorMessage = (error: unknown): ErrorMessage => {
 
 const ErrorPage: React.FC = () => {
     const error = useRouteError()
-    console.log(error)
+    console.error(error)
     const message = getErrorMessage(error)
     return (
         <ThemeProvider theme={theme}>

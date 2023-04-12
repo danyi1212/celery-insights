@@ -19,23 +19,24 @@
   },
   "extends": [
     "plugin:react/recommended",
-    "plugin:@typescript-eslint/recommended"
+    "plugin:@typescript-eslint/recommended",
+    "plugin:jsx-a11y/recommended"
   ],
   "plugins": [
     "react",
     "react-hooks",
     "material-ui",
-    "mui-path-imports"
+    "mui-path-imports",
+    "prettier",
+    "jsx-a11y"
   ],
   "rules": {
     "react/react-in-jsx-scope": "off",
     "react-hooks/rules-of-hooks": "error",
-    "react-hooks/exhaustive-deps": [
-      "warn",
-      {
-        "additionalHooks": "(useRecoilCallback|useRecoilTransaction_UNSTABLE)"
-      }
-    ],
-    "mui-path-imports/mui-path-imports": "warn"
+    "react-hooks/exhaustive-deps": "warn",
+    "mui-path-imports/mui-path-imports": "warn",
+    "no-alert": "warn",
+    "no-console": ["warn", {"allow": ["warn", "error"]}],
+    "prettier/prettier": "warn"
   }
 }
