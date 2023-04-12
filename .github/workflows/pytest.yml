@@ -2,8 +2,7 @@ name: Run pytest
 
 on:
   push:
-  pull_request:
-  
+
 permissions:
   contents: read
   issues: read
@@ -15,17 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '3.11'
         cache: 'poetry'
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install poetry
-        poetry install
+      run: poetry install
     - name: Run pytest
       run: poetry run pytest server --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html -n auto
     - name: Publish Test Results
