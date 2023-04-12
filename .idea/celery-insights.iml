@@ -5,7 +5,11 @@
       <sourceFolder url="file://$MODULE_DIR$/frontend" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/server" isTestSource="false" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="Poetry (celery-insights)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+  <component name="PyDocumentationSettings">
+    <option name="format" value="PLAIN" />
+    <option name="myDocStringFormat" value="Plain" />
   </component>
 </module>

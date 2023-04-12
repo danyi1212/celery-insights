@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/../celery-soup/.idea/celery-soup.iml" filepath="$PROJECT_DIR$/../celery-soup/.idea/celery-soup.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/celery-insights.iml" filepath="$PROJECT_DIR$/.idea/celery-insights.iml" />
     </modules>
   </component>
 </project>
