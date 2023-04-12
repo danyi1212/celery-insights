@@ -38,7 +38,7 @@ export class LRUMap<K, V> {
             this.values.set(key, { value, node })
             if (this.values.size > this.capacity) {
                 const removedKey = this.lruList.removeHead()
-                console.log("LRU is too long, clearing key", removedKey)
+                console.warn("Cache eviction: LRU map is full. Removing key: " + removedKey)
                 this.values.delete(removedKey)
             }
         }

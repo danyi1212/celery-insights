@@ -18,7 +18,6 @@ export const useStateStore = create<State>(() => ({
 
 export const loadInitialState = () => {
     new ServerClient().tasks.getTasks().then((response) => {
-        console.log(`Loaded ${response.results.length} tasks`)
         useStateStore.setState((state) => {
             const tasks = new LRUMap(state.tasks)
             response.results.forEach((task) => tasks.set(task.id, translateTask(task)))
@@ -26,7 +25,6 @@ export const loadInitialState = () => {
         })
     })
     new ServerClient().workers.getWorkers().then((response) => {
-        console.log(`Loaded ${response.length} workers`)
         useStateStore.setState((state) => {
             const workers = new LRUMap(state.workers)
             response.forEach((worker) => workers.set(worker.id, translateWorker(worker)))
