@@ -3,6 +3,12 @@ name: Run pytest
 on:
   push:
   pull_request:
+  
+permissions:
+  contents: read
+  issues: read
+  checks: write
+  pull-requests: write
 
 jobs:
   test:
@@ -14,12 +20,16 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.11'
+        cache: 'pip'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install poetry
         poetry install
-    - name: GitHub Action for pytest
-      # You may pin to the exact commit or the version.
-      # uses: cclauss/GitHub-Action-for-pytest@5863d02de95f37516a732802fa6257dfdf93e54c
-      uses: cclauss/GitHub-Action-for-pytest@0.5.0
+    - name: Run pytest
+      run: poetry run pytest server --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html -n auto
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: junit/test-results.xml
