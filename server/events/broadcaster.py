@@ -19,7 +19,10 @@ class EventBroadcaster(QueueSubscriber[dict]):
         else:
             if message is not None:
                 logger.debug(f"Broadcasting event {message.type.value!r}")
-                await ws_manager.broadcast(message.json())
+                try:
+                    await ws_manager.broadcast(message.json())
+                except Exception as e:
+                    logger.exception(f"Failed to broadcast event: {e}")
             else:
                 logger.warning("Ignored event as no message was specified")
 

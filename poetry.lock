@@ -437,6 +437,21 @@ files = [
 testing = ["pre-commit"]
 
 [[package]]
+name = "faker"
+version = "18.4.0"
+description = "Faker is a Python package that generates fake data for you."
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "Faker-18.4.0-py3-none-any.whl", hash = "sha256:170ead9d0d140916168b142df69c44722b8f622ced2070802d0af9c476f0cb84"},
+    {file = "Faker-18.4.0.tar.gz", hash = "sha256:977ad0b7aa7a61ed57287d6a0723a827e9d3dd1f8cc82aaf08707f281b33bacc"},
+]
+
+[package.dependencies]
+python-dateutil = ">=2.4"
+
+[[package]]
 name = "fastapi"
 version = "0.94.1"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
@@ -780,6 +795,27 @@ files = [
 [package.extras]
 dev = ["pre-commit", "tox"]
 testing = ["pytest", "pytest-benchmark"]
+
+[[package]]
+name = "polyfactory"
+version = "2.0.0a1"
+description = "Mock data generation factories"
+category = "dev"
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "polyfactory-2.0.0a1-py3-none-any.whl", hash = "sha256:19312b27d78e63a4b16bfc39eecfa0e11783acfe106d3772c93738fcc1331002"},
+    {file = "polyfactory-2.0.0a1.tar.gz", hash = "sha256:888ab036778cb0d0707368c7bcfd89257317f08565efc00c32d6c55975d41f52"},
+]
+
+[package.dependencies]
+faker = "*"
+typing-extensions = "*"
+
+[package.extras]
+beanie = ["beanie[beanie]", "pydantic[beanie,odmantic,pydantic]"]
+odmantic = ["odmantic[odmantic]", "pydantic[beanie,odmantic,pydantic]"]
+pydantic = ["pydantic[beanie,odmantic,pydantic]"]
 
 [[package]]
 name = "prompt-toolkit"
@@ -1286,4 +1322,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "354e8aaf7126ae55f7a9b8dc91d5b9403ca128e9feb7eb8e31fc5ca2787ac32e"
+content-hash = "fd5c57bde107e15a362dbde2c8e2c2d2e80f904366b482446222760fccdfa812"
