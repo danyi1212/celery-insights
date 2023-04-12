@@ -19,7 +19,14 @@ pytest = "^7.3.0"
 pytest-xdist = "^3.2.1"
 pytest-mock = "^3.10.0"
 pytest-asyncio = "^0.21.0"
+pytest-env = "^0.8.1"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+env = [
+    "BROKER=amqp://guest:guest@localhost/",
+    "RESULT_BACKEND=redis://localhost",
+]

@@ -52,10 +52,11 @@ class CeleryEventReceiver(Thread):
         state.event(event)
         self.queue.put_nowait(event)
         if self._stop_signal.is_set():
-            raise KeyboardInterrupt("Stop signal  received")
+            raise KeyboardInterrupt("Stop signal received")
 
     def stop(self) -> None:
         logger.info("Stopping event consumer...")
-        self.receiver.should_stop = True
+        if self.receiver is not None:
+            self.receiver.should_stop = True
         self._stop_signal.set()
         self.join()
