@@ -3,9 +3,9 @@ import logging
 from events.models import EventCategory, EventMessage, EventType, TaskEventMessage, WorkerEventMessage
 from events.receiver import state
 from events.subscriber import QueueSubscriber
-from events.websocket_manager import ws_manager
 from tasks.model import Task
 from workers.models import Worker
+from ws.managers import events_manager
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class EventBroadcaster(QueueSubscriber[dict]):
             if message is not None:
                 logger.debug(f"Broadcasting event {message.type.value!r}")
                 try:
-                    await ws_manager.broadcast(message.json())
+                    await events_manager.broadcast(message.json())
                 except Exception as e:
                     logger.exception(f"Failed to broadcast event: {e}")
             else:

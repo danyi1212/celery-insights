@@ -1,7 +1,7 @@
 import pytest
 from pytest_mock import MockerFixture
 
-from events.websocket_manager import WebsocketManager
+from ws.websocket_manager import WebsocketManager
 
 
 class FakeWebSocket:

@@ -2,7 +2,7 @@ import asyncio
 import logging
 from asyncio import Queue
 
-from starlette.websockets import WebSocket
+from fastapi import WebSocket
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,3 @@ class WebsocketManager:
         for result, connection in zip(results, self.active_connections):
             if isinstance(result, Exception):
                 logger.exception(f"Failed to send message to client {connection.client!r}: {result}", exc_info=result)
-
-
-ws_manager = WebsocketManager("Events")

@@ -5,15 +5,14 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
-from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
 
 from events.router import events_router
-from events.websocket_manager import ws_manager
 from lifespan import lifespan
 from logging_config import LoggingConfig
 from settings import settings
 from tasks.router import tasks_router
 from workers.router import workers_router
+from ws.router import ws_router
 
 logging.config.dictConfig(LoggingConfig().dict())
 logger = logging.getLogger(__name__)
@@ -51,15 +50,4 @@ if Path("static").exists():
 app.include_router(tasks_router)
 app.include_router(workers_router)
 app.include_router(events_router)
-
-
-@app.websocket("/ws/events")
-async def subscribe_events(websocket: WebSocket):
-    await websocket.accept()
-    ws_manager.subscribe(websocket)
-    while websocket.client_state is WebSocketState.CONNECTED:
-        try:
-            msg = await websocket.receive_text()
-            logger.warning(f"Client {websocket.client!r} sent: {msg}")
-        except WebSocketDisconnect:
-            ws_manager.unsubscribe(websocket)
+app.include_router(ws_router)

@@ -7,9 +7,9 @@ from pytest_mock import MockerFixture
 from events.broadcaster import EventBroadcaster, parse_event, parse_task_event, parse_worker_event
 from events.models import EventCategory, EventType, TaskEventMessage, WorkerEventMessage
 from events.receiver import state
-from events.websocket_manager import ws_manager
 from tasks.model import Task
 from workers.models import Worker
+from ws.managers import events_manager
 
 
 class TaskEventMessageFactory(ModelFactory[TaskEventMessage]):
@@ -33,7 +33,7 @@ def broadcaster():
 async def test_broadcasts_event(broadcaster, mocker: MockerFixture):
     message = TaskEventMessageFactory.build()
     parse_event_mock = mocker.patch("events.broadcaster.parse_event", return_value=message)
-    broadcast_mock = mocker.patch.object(ws_manager, "broadcast")
+    broadcast_mock = mocker.patch.object(events_manager, "broadcast")
     event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
 
     await broadcaster.handle_event(event)
@@ -45,7 +45,7 @@ async def test_broadcasts_event(broadcaster, mocker: MockerFixture):
 @pytest.mark.asyncio
 async def test_event_parsing_failure(broadcaster, mocker: MockerFixture):
     parse_event_mock = mocker.patch("events.broadcaster.parse_event", side_effect=Exception("Parsing failed"))
-    broadcast_mock = mocker.patch.object(ws_manager, "broadcast")
+    broadcast_mock = mocker.patch.object(events_manager, "broadcast")
     event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
 
     await broadcaster.handle_event(event)
@@ -57,7 +57,7 @@ async def test_event_parsing_failure(broadcaster, mocker: MockerFixture):
 @pytest.mark.asyncio
 async def test_no_message_specified(broadcaster, mocker: MockerFixture):
     parse_event_mock = mocker.patch("events.broadcaster.parse_event", return_value=None)
-    broadcast_mock = mocker.patch.object(ws_manager, "broadcast")
+    broadcast_mock = mocker.patch.object(events_manager, "broadcast")
     event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
 
     await broadcaster.handle_event(event)
@@ -70,7 +70,7 @@ async def test_no_message_specified(broadcaster, mocker: MockerFixture):
 async def test_broadcast_failure(broadcaster, mocker: MockerFixture):
     message = TaskEventMessageFactory.build()
     parse_event_mock = mocker.patch("events.broadcaster.parse_event", return_value=message)
-    broadcast_mock = mocker.patch.object(ws_manager, "broadcast", side_effect=Exception("Broadcast failed"))
+    broadcast_mock = mocker.patch.object(events_manager, "broadcast", side_effect=Exception("Broadcast failed"))
     event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
 
     await broadcaster.handle_event(event)
