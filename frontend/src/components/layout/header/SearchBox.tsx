@@ -1,6 +1,7 @@
 import SearchIcon from "@mui/icons-material/Search"
 import InputBase from "@mui/material/InputBase"
 import { alpha, styled } from "@mui/material/styles"
+import Tooltip from "@mui/material/Tooltip"
 import React from "react"
 
 const Search = styled("div")(({ theme }) => ({
@@ -45,12 +46,14 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 
 const SearchBox = () => {
     return (
-        <Search>
-            <SearchIconWrapper>
-                <SearchIcon />
-            </SearchIconWrapper>
-            <StyledInputBase placeholder="Search…" inputProps={{ "aria-label": "search" }} />
-        </Search>
+        <Tooltip title="Coming soon!" arrow>
+            <Search>
+                <SearchIconWrapper>
+                    <SearchIcon />
+                </SearchIconWrapper>
+                <StyledInputBase placeholder="Search…" inputProps={{ "aria-label": "search" }} />
+            </Search>
+        </Tooltip>
     )
 }
 
