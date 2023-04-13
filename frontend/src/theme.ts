@@ -1,8 +1,7 @@
 import darkScrollbar from "@mui/material/darkScrollbar"
 import { createTheme } from "@mui/material/styles"
 
-// A custom theme for this app
-const theme = createTheme({
+export const darkTheme = createTheme({
     palette: {
         mode: "dark",
     },
@@ -15,4 +14,8 @@ const theme = createTheme({
     },
 })
 
-export default theme
+export const lightTheme = createTheme({
+    palette: {
+        mode: ght",
+   },
+})

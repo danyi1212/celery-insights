@@ -1,5 +1,6 @@
 import NotificationBadge from "@components/layout/header/NotificationBadge"
 import SearchBox from "@components/layout/header/SearchBox"
+import ThemeSelector from "@components/layout/header/ThemeSelector"
 import WSStatus from "@components/layout/header/WSStatus"
 import { DRAWER_WIDTH } from "@components/layout/menu/Menu"
 import AppBar from "@mui/material/AppBar"
@@ -20,6 +21,7 @@ const Header: React.FC = () => {
                     <Box flexGrow="1" />
                     <WSStatus />
                     <NotificationBadge />
+                    <ThemeSelector />
                 </Toolbar>
             </AppBar>
         </Slide>

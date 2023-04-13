@@ -1,9 +1,9 @@
+import { usePreferredTheme } from "@hooks/usePreferredTheme"
 import Box from "@mui/material/Box"
 import CssBaseline from "@mui/material/CssBaseline"
 import Link from "@mui/material/Link"
 import { ThemeProvider } from "@mui/material/styles"
 import Typography from "@mui/material/Typography"
-import theme from "@theme"
 import React from "react"
 import { isRouteErrorResponse, Link as RouterLink, useRouteError } from "react-router-dom"
 
@@ -37,6 +37,7 @@ const ErrorPage: React.FC = () => {
     const error = useRouteError()
     console.error(error)
     const message = getErrorMessage(error)
+    const theme = usePreferredTheme()
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />

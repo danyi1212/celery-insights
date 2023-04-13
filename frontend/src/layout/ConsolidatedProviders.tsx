@@ -1,7 +1,7 @@
 import CeleryStateSync from "@components/CeleryStateSync"
+import { usePreferredTheme } from "@hooks/usePreferredTheme"
 import CssBaseline from "@mui/material/CssBaseline"
 import { ThemeProvider } from "@mui/material/styles"
-import theme from "@theme"
 import React from "react"
 import { QueryClient, QueryClientProvider } from "react-query"
 
@@ -12,6 +12,7 @@ interface Props {
 }
 
 const ConsolidatedProviders: React.FC<Props> = ({ children }) => {
+    const theme = usePreferredTheme()
     return (
         <QueryClientProvider client={queryClient}>
             <ThemeProvider theme={theme}>
