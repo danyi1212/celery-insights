@@ -1,13 +1,8 @@
 # Celery Insights
 
-Welcome to Celery Insights, a real-time monitoring tool for Celery!
+Welcome to Celery Insights, the ultimate monitoring tool for your Celery cluster!
 
-## About
-
-Celery Insights is the ultimate monitoring tool for your Celery cluster!
-
-Whether you're a seasoned Celery user or just getting started, Celery Insights is the perfect solution to track your
-Celery cluster in real-time.
+Whether you're just getting started or a seasoned Celery user, Celery Insights lets you track your Celery cluster in real-time.
 With a modern web interface, you can easily view worker status, task information, and workflow graphs all updated using
 websockets.
 
@@ -17,16 +12,16 @@ Our tool monitors events and inspects workers to provide an API and web interfac
 Inspired by Celery Flower, this tool takes Celery monitoring to the next level.
 Try Celery Insights today and see the difference for yourself!
 
-## Installation
+## Getting Started
 
-Please refer to the installation guide for detailed instructions on how to install and run Celery Insights.
+To be continued
 
 ## Contributing
 
-If you'd like to contribute to Celery Insights, please take a look at the contributing guidelines to get started.
+If you'd like to contribute to Celery Insights, please take a look at the [contributing guidelines](CONTRIBUTING.md) to get started.
 
-### License
+## License
 
-Celery Insights is licensed under the BSD 3-clause license. See the LICENSE file for details.
+Celery Insights is licensed under the BSD 3-clause license. See the [LICENSE](LICENSE) file for details.
 
-Thanks for checking out Celery Insights! We hope you find it useful.
+### Thanks for checking out Celery Insights! We hope you find it useful.
