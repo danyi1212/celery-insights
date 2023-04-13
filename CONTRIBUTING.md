@@ -7,7 +7,7 @@ Thank you for your interest in contributing to Celery Insights! This document wi
 > **IMPORTANT**
 >
 > If you have discovered a security vulnerability, please **DO NOT** file a public issue.
-> Instead, please follow the instructions in the SECURITY.md file to report the issue securely.
+> Instead, please follow the instructions in the [SECURITY.md](SECURITY.md) file to report the issue securely.
 
 If you have found a bug, we would like to know, so we can fix it! Before you file a bug report, please make sure that
 the bug
@@ -146,13 +146,13 @@ Integration and end-to-end tests should be written in the tests project folder.
 
 # License
 
-Celery Insights is licensed under the BSD 3-Clause License.
+Celery Insights is licensed under the [BSD 3-Clause License](LICENSE).
 By contributing to this project, you agree to license your contribution under the same license as the project.
 
 # Code of Conduct
 
 Please note that the Celery Insights project is released with a Contributor Code of Conduct. By contributing to this
-project, you agree to abide by its terms. See CODE_OF_CONDUCT.md for more information.
+project, you agree to abide by its terms. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for more information.
 
 # Contact
 
