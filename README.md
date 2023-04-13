@@ -2,14 +2,14 @@
 
 Welcome to Celery Insights, the ultimate monitoring tool for your Celery cluster!
 
-Whether you're just getting started or a seasoned Celery user, Celery Insights lets you track your Celery cluster in real-time.
+Whether you're just getting started or a seasoned Celery user, Celery Insights lets you track your Celery cluster in real-time.  
 With a modern web interface, you can easily view worker status, task information, and workflow graphs all updated using
 websockets.
 
-Plus, our stand-alone Docker container makes installation and integration a breeze.
+Plus, our stand-alone Docker container makes installation and integration a breeze.  
 Our tool monitors events and inspects workers to provide an API and web interface for your Celery cluster.
 
-Inspired by Celery Flower, this tool takes Celery monitoring to the next level.
+Inspired by Celery Flower, this tool takes Celery monitoring to the next level.  
 Try Celery Insights today and see the difference for yourself!
 
 ## Getting Started
