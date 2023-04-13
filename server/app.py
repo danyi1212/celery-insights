@@ -1,6 +1,5 @@
 import logging.config
 from pathlib import Path
-from uuid import uuid4
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
@@ -8,8 +7,8 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
 
-from events.connection_manager import ws_manager
 from events.router import events_router
+from events.websocket_manager import ws_manager
 from lifespan import lifespan
 from logging_config import LoggingConfig
 from settings import settings
@@ -56,14 +55,11 @@ app.include_router(events_router)
 
 @app.websocket("/ws/events")
 async def subscribe_events(websocket: WebSocket):
-    client_id = uuid4()
     await websocket.accept()
-    logger.info(f"Subscriber {client_id} joined")
     ws_manager.subscribe(websocket)
     while websocket.client_state is WebSocketState.CONNECTED:
         try:
             msg = await websocket.receive_text()
-            logger.warning(f"Subscriber {client_id} sent: {msg}")
+            logger.warning(f"Client {websocket.client!r} sent: {msg}")
         except WebSocketDisconnect:
             ws_manager.unsubscribe(websocket)
-            logger.info(f"Subscriber {client_id} left")

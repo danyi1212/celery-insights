@@ -1,9 +1,9 @@
 import logging
 
-from events.connection_manager import ws_manager
 from events.models import EventCategory, EventMessage, EventType, TaskEventMessage, WorkerEventMessage
 from events.receiver import state
 from events.subscriber import QueueSubscriber
+from events.websocket_manager import ws_manager
 from tasks.model import Task
 from workers.models import Worker
 

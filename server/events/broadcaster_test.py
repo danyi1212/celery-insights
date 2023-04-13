@@ -5,9 +5,9 @@ from polyfactory.factories.pydantic_factory import ModelFactory
 from pytest_mock import MockerFixture
 
 from events.broadcaster import EventBroadcaster, parse_event, parse_task_event, parse_worker_event
-from events.connection_manager import ws_manager
 from events.models import EventCategory, EventType, TaskEventMessage, WorkerEventMessage
 from events.receiver import state
+from events.websocket_manager import ws_manager
 from tasks.model import Task
 from workers.models import Worker
 
