@@ -4,10 +4,10 @@ Thank you for your interest in contributing to Celery Insights! This document wi
 
 ## Reporting Bugs
 
-> **IMPORTANT**
->
-> If you have discovered a security vulnerability, please **DO NOT** file a public issue.
-> Instead, please follow the instructions in the [SECURITY.md](SECURITY.md) file to report the issue securely.
+> :warning: **WARNING**
+> 
+> If you have discovered a security vulnerability, please **DO NOT** file a public issue.  
+> Instead, please report them directly to danyi1212@users.noreply.github.com.
 
 If you have found a bug, we would like to know, so we can fix it! Before you file a bug report, please make sure that
 the bug
