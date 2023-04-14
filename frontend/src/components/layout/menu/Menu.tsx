@@ -1,3 +1,4 @@
+import MenuItem, { MenuLink } from "@components/layout/menu/MenuItem"
 import WorkerStatusList from "@components/layout/menu/WorkerStatusList"
 import ApiIcon from "@mui/icons-material/Api"
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos"
@@ -10,17 +11,14 @@ import Box from "@mui/material/Box"
 import Collapse from "@mui/material/Collapse"
 import Divider from "@mui/material/Divider"
 import Drawer from "@mui/material/Drawer"
-import Fade from "@mui/material/Fade"
 import List from "@mui/material/List"
 import ListItem from "@mui/material/ListItem"
 import ListItemButton from "@mui/material/ListItemButton"
-import ListItemIcon from "@mui/material/ListItemIcon"
-import ListItemText from "@mui/material/ListItemText"
 import { styled } from "@mui/material/styles"
 import Tooltip from "@mui/material/Tooltip"
 import useSettingsStore from "@stores/useSettingsStore"
 import React, { useEffect } from "react"
-import { Link, useLocation } from "react-router-dom"
+import { Link } from "react-router-dom"
 
 export const DRAWER_WIDTH = 240
 export const DRAWER_WIDTH_COLLAPSED = 72
@@ -55,13 +53,6 @@ const StyledLogo = styled(Box)({
     borderRadius: "10px",
 })
 
-interface MenuLink {
-    label: string
-    icon: React.ReactElement
-    to: string
-    external: boolean
-}
-
 const menuLinks: MenuLink[] = [
     {
         label: "Home",
@@ -90,7 +81,6 @@ const menuLinks: MenuLink[] = [
 ]
 
 const Menu: React.FC = () => {
-    const location = useLocation()
     const expanded = useSettingsStore((state) => state.menuExpanded)
     const theme = useTheme()
     const smallScreen = useMediaQuery(theme.breakpoints.down("sm"))
@@ -106,38 +96,7 @@ const Menu: React.FC = () => {
             </StyledLogoContainer>
             <List component="nav" sx={{ flexGrow: 1 }}>
                 {menuLinks.map((link, index) => (
-                    <ListItem key={index} disablePadding sx={{ display: "block" }}>
-                        <Tooltip
-                            title={link.label}
-                            placement="right"
-                            disableHoverListener={expanded}
-                            arrow
-                            describeChild
-                        >
-                            <ListItemButton
-                                selected={link.to === location.pathname}
-                                component={link.external ? "a" : Link}
-                                to={link.to}
-                                target={link.external ? "_blank" : ""}
-                                rel={link.external ? "noopener noreferrer" : ""}
-                                sx={{
-                                    justifyContent: expanded ? "initial" : "r",
-                                }}
-                            >
-                                <ListItemIcon
-                                    sx={{
-                                        mr: expanded ? 3 : "auto",
-                                        justifyContent: "r",
-                                    }}
-                                >
-                                    {link.icon}
-                                </ListItemIcon>
-                                <Fade in={expanded}>
-                                    <ListItemText primary={link.label} />
-                                </Fade>
-                            </ListItemButton>
-                        </Tooltip>
-                    </ListItem>
+                    <MenuItem key={index} link={link} expanded={expanded} />
                 ))}
             </List>
             <Collapse in={expanded} unmountOnExit>
