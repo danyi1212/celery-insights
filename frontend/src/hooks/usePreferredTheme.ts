@@ -1,5 +1,5 @@
 import { Theme, useMediaQuery } from "@mui/material"
-import useSettingsStore, { PreferredTheme } from "@stores/useSettings"
+import useSettingsStore, { PreferredTheme } from "@stores/useSettingsStore"
 import { darkTheme, lightTheme } from "@theme"
 
 export const usePreferredTheme = (): Theme => {

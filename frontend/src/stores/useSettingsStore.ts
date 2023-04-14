@@ -9,6 +9,7 @@ export enum PreferredTheme {
 
 interface Settings {
     theme: PreferredTheme
+    menuExpanded: boolean
 }
 
 const useSettingsStore = create<Settings>()(
@@ -16,6 +17,7 @@ const useSettingsStore = create<Settings>()(
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         (set) => ({
             theme: PreferredTheme.SYSTEM,
+            menuExpanded: true,
         }),
         {
             name: "settings",

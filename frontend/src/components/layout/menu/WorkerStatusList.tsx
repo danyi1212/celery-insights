@@ -1,5 +1,7 @@
 import WorkerStatus from "@components/layout/menu/WorkerStatus"
-import Box from "@mui/material/Box"
+import Divider from "@mui/material/Divider"
+import Stack from "@mui/material/Stack"
+import Typography from "@mui/material/Typography"
 import { ServerClient } from "@services/server"
 import { useStateStore } from "@stores/useStateStore"
 import React from "react"
@@ -15,12 +17,16 @@ const WorkerStatusList: React.FC = () => {
     )
     const { data } = useQuery("workers/stats", getWorkerStats)
     return (
-        <Box display="flex" flexDirection="column">
+        <Stack maxHeight="40vh" overflow="auto" rowGap={1}>
+            <Typography variant="h6" align="center">
+                Worker Status
+            </Typography>
+            <Divider />
             {workersState.map((worker) => {
                 const stats = data?.[worker.hostname]
                 return <WorkerStatus key={worker.id} worker={worker} stats={stats} />
             })}
-        </Box>
+        </Stack>
     )
 }
 
