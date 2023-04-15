@@ -1,26 +1,68 @@
 import logging
+import platform
+import time
 from typing import Self
 
+import psutil
 import user_agents
-from pydantic import BaseModel
+from celery.events.state import State
+from pydantic import BaseModel, Field
+from starlette.requests import Request
 from starlette.websockets import WebSocket, WebSocketState
 from user_agents.parsers import UserAgent
 
 logger = logging.getLogger(__name__)
 
 
+class ServerInfo(BaseModel):
+    cpu_usage: float = Field(desciption="CPU Usage")
+    memory_usage: float = Field(description="Memory Usage in KB")
+    memory_percentage: float = Field(description="Memory Usage Percentage")
+    uptime: float = Field(description="Server Uptime in seconds")
+    server_hostname: str = Field(description="Server Hostname")
+    server_port: int = Field(description="Server Port")
+    server_version: str = Field(description="Server Version")
+    server_os: str = Field(description="Server OS")
+    server_name: str = Field(description="Server Device Name")
+    python_version: str = Field(description="Python Version")
+    task_count: int = Field(description="Number of tasks stored in state")
+    tasks_max_count: int = Field(description="Maximum number of tasks to store in state")
+    worker_count: int = Field(description="Number of workers running")
+    worker_max_count: int = Field(description="Maximum number of workers to store in state")
+
+    @classmethod
+    def create(cls, request: Request, state: State) -> Self:
+        virtual_memory = psutil.virtual_memory()
+        return ServerInfo(
+            cpu_usage=psutil.cpu_percent(1),
+            memory_usage=virtual_memory.used,
+            memory_percentage=virtual_memory.percent,
+            uptime=time.time() - psutil.boot_time(),
+            server_hostname=request.url.hostname,
+            server_port=request.url.port,
+            server_version=request.app.version,
+            server_os=platform.system(),
+            server_name=platform.node(),
+            python_version=platform.python_version(),
+            task_count=state.task_count,
+            tasks_max_count=state.max_tasks_in_memory,
+            worker_count=len(state.workers),
+            worker_max_count=state.max_workers_in_memory,
+        )
+
+
 class ClientInfo(BaseModel):
-    host: str
-    port: int
-    state: WebSocketState
-    is_secure: bool
-    os: str | None
-    os_version: str | None
-    device_family: str | None
-    device_brand: str | None
-    device_model: str | None
-    browser: str | None
-    browser_version: str | None
+    host: str = Field(description="Client Hostname")
+    port: int = Field(description="Client Port")
+    state: WebSocketState = Field(description="Connection State")
+    is_secure: bool = Field(description="Connection Secure Scheme WSS")
+    os: str | None = Field(description="Operating System Name")
+    os_version: str | None = Field(description="Operating System Version")
+    device_family: str | None = Field(description="Device Family")
+    device_brand: str | None = Field(description="Device Brand")
+    device_model: str | None = Field(description="Device Model")
+    browser: str | None = Field(description="Browser Name")
+    browser_version: str | None = Field(description="Browser Version")
 
     @classmethod
     def from_websocket(cls, websocket: WebSocket) -> Self:
