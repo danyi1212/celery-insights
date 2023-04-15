@@ -25,5 +25,5 @@ class LoggingConfig(BaseModel):
             "handlers": ["default"],
             "level": settings.log_level,
         }
-        for name in ["app", "tasks", "workers", "events", "websockets"]
+        for name in ["app", "tasks", "workers", "events", "ws", "server_info"]
     }

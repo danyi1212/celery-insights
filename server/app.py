@@ -9,6 +9,7 @@ from starlette.staticfiles import StaticFiles
 from events.router import events_router
 from lifespan import lifespan
 from logging_config import LoggingConfig
+from server_info.router import settings_router
 from settings import settings
 from tasks.router import tasks_router
 from workers.router import workers_router
@@ -51,3 +52,4 @@ app.include_router(tasks_router)
 app.include_router(workers_router)
 app.include_router(events_router)
 app.include_router(ws_router)
+app.include_router(settings_router)
