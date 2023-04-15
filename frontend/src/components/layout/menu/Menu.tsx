@@ -5,6 +5,7 @@ import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos"
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
 import InboxIcon from "@mui/icons-material/Inbox"
 import ManageSearchIcon from "@mui/icons-material/ManageSearch"
+import SettingsIcon from "@mui/icons-material/Settings"
 import SubjectIcon from "@mui/icons-material/Subject"
 import { useMediaQuery, useTheme } from "@mui/material"
 import Box from "@mui/material/Box"
@@ -77,6 +78,12 @@ const menuLinks: MenuLink[] = [
         icon: <SubjectIcon />,
         to: "/redoc",
         external: true,
+    },
+    {
+        label: "Settings",
+        icon: <SettingsIcon />,
+        to: "/settings",
+        external: false,
     },
 ]
 

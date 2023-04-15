@@ -1,6 +1,7 @@
 import RootLayout from "@layout/RootLayout"
 import ErrorPage from "@pages/ErrorPage"
 import ExplorerPage from "@pages/ExplorerPage"
+import SettingsPage from "@pages/SettingsPage"
 import TaskPage from "@pages/TaskPage"
 import WorkerPage from "@pages/WorkerPage"
 import React from "react"
@@ -14,6 +15,7 @@ export const router = createBrowserRouter([
         errorElement: <ErrorPage />,
         children: [
             { index: true, element: <HomePage />, errorElement: <ErrorPage /> },
+            { path: "/settings", element: <SettingsPage /> },
             { path: "/explorer", element: <ExplorerPage /> },
             { path: "tasks/:taskId", element: <TaskPage /> },
             { path: "workers/:workerId", element: <WorkerPage /> },
