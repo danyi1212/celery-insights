@@ -9,6 +9,7 @@ import type { Task } from "../models/Task"
 import type { TaskResult } from "../models/TaskResult"
 
 export class TasksService {
+
     constructor(public readonly httpRequest: BaseHttpRequest) {
     }
 
@@ -19,17 +20,20 @@ export class TasksService {
      * @returns Paginated_Task_ Successful Response
      * @throws ApiError
      */
-    public getTasks(limit: number = 1000, offset?: number): CancelablePromise<Paginated_Task_> {
+    public getTasks(
+        limit: number = 1000,
+        offset?: number
+    ): CancelablePromise<Paginated_Task_> {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/tasks",
             query: {
-                limit: limit,
-                offset: offset,
+                "limit": limit,
+                "offset": offset
             },
             errors: {
-                422: `Validation Error`,
-            },
+                422: `Validation Error`
+            }
         })
     }
 
@@ -39,17 +43,19 @@ export class TasksService {
      * @returns Task Successful Response
      * @throws ApiError
      */
-    public getTaskDetail(taskId: string): CancelablePromise<Task> {
+    public getTaskDetail(
+        taskId: string
+    ): CancelablePromise<Task> {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/tasks/{task_id}",
             path: {
-                task_id: taskId,
+                "task_id": taskId
             },
             errors: {
                 404: `Task not found.`,
-                422: `Validation Error`,
-            },
+                422: `Validation Error`
+            }
         })
     }
 
@@ -59,17 +65,20 @@ export class TasksService {
      * @returns TaskResult Successful Response
      * @throws ApiError
      */
-    public getTaskResult(taskId: string): CancelablePromise<TaskResult> {
+    public getTaskResult(
+        taskId: string
+    ): CancelablePromise<TaskResult> {
         return this.httpRequest.request({
             method: "GET",
             url: "/api/tasks/{task_id}/result",
             path: {
-                task_id: taskId,
+                "task_id": taskId
             },
             errors: {
                 404: `Task not found.`,
-                422: `Validation Error`,
-            },
+                422: `Validation Error`
+            }
         })
     }
+
 }

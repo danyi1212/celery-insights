@@ -8,13 +8,14 @@ export type ScheduledTask = {
     /**
      * Absolute time when task should be executed
      */
-    eta: string
+    eta: string;
     /**
      * Message priority
      */
-    priority: number
+    priority: number;
     /**
      * Task Information
      */
-    request: TaskRequest
-}
+    request: TaskRequest;
+};
+

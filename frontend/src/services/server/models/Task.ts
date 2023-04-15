@@ -8,109 +8,110 @@ export type Task = {
     /**
      * Task UUID
      */
-    id: string
+    id: string;
     /**
      * Task function name
      */
-    type?: string
+    type?: string;
     /**
      * Task last known state
      */
-    state: TaskState
+    state: TaskState;
     /**
      * When task was published by client to queue
      */
-    sent_at: number
+    sent_at: number;
     /**
      * When task was received by worker
      */
-    received_at?: number
+    received_at?: number;
     /**
      * When task was started to be executed by worker
      */
-    started_at?: number
+    started_at?: number;
     /**
      * When task was finished successfully by worker
      */
-    succeeded_at?: number
+    succeeded_at?: number;
     /**
      * When task was finished with failure by worker
      */
-    failed_at?: number
+    failed_at?: number;
     /**
      * When task was last published for retry
      */
-    retried_at?: number
+    retried_at?: number;
     /**
      * When task was revoked last
      */
-    revoked_at?: number
+    revoked_at?: number;
     /**
      * When task was rejected by worker
      */
-    rejected_at?: number
+    rejected_at?: number;
     /**
      * How long task executed in seconds
      */
-    runtime?: number
+    runtime?: number;
     /**
      * When task last event published
      */
-    last_updated: number
+    last_updated: number;
     /**
      * Positional arguments provided to task (truncated)
      */
-    args?: string
+    args?: string;
     /**
      * Keyword arguments provided to task (truncated)
      */
-    kwargs?: string
+    kwargs?: string;
     /**
      * Absolute time when task should be executed
      */
-    eta?: string
+    eta?: string;
     /**
      * Absolute time when task should be expired
      */
-    expires?: string
+    expires?: string;
     /**
      * Retry count
      */
-    retries?: number
+    retries?: number;
     /**
      * Broker exchange name
      */
-    exchange?: string
+    exchange?: string;
     /**
      * Broker routing key
      */
-    routing_key?: string
+    routing_key?: string;
     /**
      * Root Task ID
      */
-    root_id?: string
+    root_id?: string;
     /**
      * Parent Task ID
      */
-    parent_id?: string
+    parent_id?: string;
     /**
      * Children Task IDs
      */
-    children: Array<string>
+    children: Array<string>;
     /**
      * Executing worker hostname
      */
-    worker?: string
+    worker?: string;
     /**
      * Task returned result
      */
-    result?: string
+    result?: string;
     /**
      * Task failure exception message
      */
-    exception?: string
+    exception?: string;
     /**
      * Task failure traceback
      */
-    traceback?: string
-}
+    traceback?: string;
+};
+

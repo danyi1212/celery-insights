@@ -8,45 +8,46 @@ export type TaskResult = {
     /**
      * Task ID
      */
-    id: string
+    id: string;
     /**
      * Task type name
      */
-    type?: string
+    type?: string;
     /**
      * Task current state
      */
-    state: TaskState
+    state: TaskState;
     /**
      * Task queue name
      */
-    queue?: string
+    queue?: string;
     /**
      * Task return value or exception
      */
-    result?: any
+    result?: any;
     /**
      * Task exception traceback
      */
-    traceback?: string
+    traceback?: string;
     /**
      * Task result is ignored
      */
-    ignored: boolean
+    ignored: boolean;
     /**
      * Task positional arguments
      */
-    args: Array<any>
+    args: Array<any>;
     /**
      * Task keyword arguments
      */
-    kwargs: any
+    kwargs: any;
     /**
      * Task retries count
      */
-    retries: number
+    retries: number;
     /**
      * Executing worker id
      */
-    worker?: string
-}
+    worker?: string;
+};
+

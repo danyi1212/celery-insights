@@ -8,41 +8,42 @@ export type TaskRequest = {
     /**
      * Task unique id
      */
-    id: string
+    id: string;
     /**
      * Task name
      */
-    name: string
+    name: string;
     /**
      * Task type
      */
-    type: string
+    type: string;
     /**
      * Task positional arguments
      */
-    args: Array<any>
+    args: Array<any>;
     /**
      * Task keyword arguments
      */
-    kwargs: any
+    kwargs: any;
     /**
      * Delivery Information about the task Message
      */
-    delivery_info: DeliveryInfo
+    delivery_info: DeliveryInfo;
     /**
      * Whether the task message acknowledged
      */
-    acknowledged: boolean
+    acknowledged: boolean;
     /**
      * When task has started by the worker
      */
-    time_start?: number
+    time_start?: number;
     /**
      * Worker hostname
      */
-    hostname: string
+    hostname: string;
     /**
      * Child worker process ID
      */
-    worker_pid?: number
-}
+    worker_pid?: number;
+};
+

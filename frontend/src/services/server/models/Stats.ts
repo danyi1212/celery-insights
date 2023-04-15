@@ -9,33 +9,34 @@ export type Stats = {
     /**
      * Current broker stats
      */
-    broker: Broker
+    broker: Broker;
     /**
      * Current logical clock time
      */
-    clock: number
+    clock: number;
     /**
      * Uptime in seconds
      */
-    uptime: number
+    uptime: number;
     /**
      * Process ID of worker instance (Main process)
      */
-    pid: number
+    pid: number;
     /**
      * Current pool stats
      */
-    pool: Pool
+    pool: Pool;
     /**
      * Current prefetch task queue for consumer
      */
-    prefetch_count: number
+    prefetch_count: number;
     /**
      * Operating System statistics
      */
-    rusage: any
+    rusage: any;
     /**
      * Count of accepted tasks by type
      */
-    total: Record<string, number>
-}
+    total: Record<string, number>;
+};
+

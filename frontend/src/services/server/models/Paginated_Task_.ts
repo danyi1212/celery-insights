@@ -5,8 +5,9 @@
 import type { Task } from "./Task"
 
 export type Paginated_Task_ = {
-    count: number
-    next?: string
-    previous?: string
-    results: Array<Task>
-}
+    count: number;
+    next?: string;
+    previous?: string;
+    results: Array<Task>;
+};
+

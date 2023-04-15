@@ -8,6 +8,7 @@ import type { TaskEventMessage } from "../models/TaskEventMessage"
 import type { WorkerEventMessage } from "../models/WorkerEventMessage"
 
 export class EventsService {
+
     constructor(public readonly httpRequest: BaseHttpRequest) {
     }
 
@@ -16,10 +17,11 @@ export class EventsService {
      * @returns any Successful Response
      * @throws ApiError
      */
-    public getEvents(): CancelablePromise<Array<TaskEventMessage | WorkerEventMessage>> {
+    public getEvents(): CancelablePromise<Array<(TaskEventMessage | WorkerEventMessage)>> {
         return this.httpRequest.request({
             method: "GET",
-            url: "/api/events",
+            url: "/api/events"
         })
     }
+
 }

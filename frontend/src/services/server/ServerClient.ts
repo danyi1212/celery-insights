@@ -6,13 +6,16 @@ import type { BaseHttpRequest } from "./core/BaseHttpRequest"
 import type { OpenAPIConfig } from "./core/OpenAPI"
 
 import { EventsService } from "./services/EventsService"
+import { SettingsService } from "./services/SettingsService"
 import { TasksService } from "./services/TasksService"
 import { WorkersService } from "./services/WorkersService"
 
-type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest
+type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest;
 
 export class ServerClient {
+
     public readonly events: EventsService
+    public readonly settings: SettingsService
     public readonly tasks: TasksService
     public readonly workers: WorkersService
 
@@ -28,11 +31,13 @@ export class ServerClient {
             USERNAME: config?.USERNAME,
             PASSWORD: config?.PASSWORD,
             HEADERS: config?.HEADERS,
-            ENCODE_PATH: config?.ENCODE_PATH,
+            ENCODE_PATH: config?.ENCODE_PATH
         })
 
         this.events = new EventsService(this.request)
+        this.settings = new SettingsService(this.request)
         this.tasks = new TasksService(this.request)
         this.workers = new WorkersService(this.request)
     }
 }
+

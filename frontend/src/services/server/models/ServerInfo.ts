@@ -1,0 +1,60 @@
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+
+export type ServerInfo = {
+    cpu_usage: number;
+    /**
+     * Memory Usage in KB
+     */
+    memory_usage: number;
+    /**
+     * Memory Usage Percentage
+     */
+    memory_percentage: number;
+    /**
+     * Server Uptime in seconds
+     */
+    uptime: number;
+    /**
+     * Server Hostname
+     */
+    server_hostname: string;
+    /**
+     * Server Port
+     */
+    server_port: number;
+    /**
+     * Server Version
+     */
+    server_version: string;
+    /**
+     * Server OS
+     */
+    server_os: string;
+    /**
+     * Server Device Name
+     */
+    server_name: string;
+    /**
+     * Python Version
+     */
+    python_version: string;
+    /**
+     * Number of tasks stored in state
+     */
+    task_count: number;
+    /**
+     * Maximum number of tasks to store in state
+     */
+    tasks_max_count: number;
+    /**
+     * Number of workers running
+     */
+    worker_count: number;
+    /**
+     * Maximum number of workers to store in state
+     */
+    worker_max_count: number;
+};
+

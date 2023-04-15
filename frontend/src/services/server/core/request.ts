@@ -64,7 +64,7 @@ const getQueryString = (params: Record<string, any>): string => {
     const process = (key: string, value: any) => {
         if (isDefined(value)) {
             if (Array.isArray(value)) {
-                value.forEach((v) => {
+                value.forEach(v => {
                     process(key, v)
                 })
             } else if (typeof value === "object") {
@@ -75,7 +75,7 @@ const getQueryString = (params: Record<string, any>): string => {
                 append(key, value)
             }
         }
-    }
+    };
 
     Object.entries(params).forEach(([key, value]) => {
         process(key, value)
@@ -86,7 +86,7 @@ const getQueryString = (params: Record<string, any>): string => {
     }
 
     return ""
-}
+};
 
 const getUrl = (config: OpenAPIConfig, options: ApiRequestOptions): string => {
     const encoder = config.ENCODE_PATH || encodeURI
@@ -105,7 +105,7 @@ const getUrl = (config: OpenAPIConfig, options: ApiRequestOptions): string => {
         return `${url}${getQueryString(options.query)}`
     }
     return url
-}
+};
 
 const getFormData = (options: ApiRequestOptions): FormData | undefined => {
     if (options.formData) {
@@ -123,7 +123,7 @@ const getFormData = (options: ApiRequestOptions): FormData | undefined => {
             .filter(([_, value]) => isDefined(value))
             .forEach(([key, value]) => {
                 if (Array.isArray(value)) {
-                    value.forEach((v) => process(key, v))
+                    value.forEach(v => process(key, v))
                 } else {
                     process(key, value)
                 }
@@ -132,9 +132,9 @@ const getFormData = (options: ApiRequestOptions): FormData | undefined => {
         return formData
     }
     return undefined
-}
+};
 
-type Resolver<T> = (options: ApiRequestOptions) => Promise<T>
+type Resolver<T> = (options: ApiRequestOptions) => Promise<T>;
 
 const resolve = async <T>(options: ApiRequestOptions, resolver?: T | Resolver<T>): Promise<T | undefined> => {
     if (typeof resolver === "function") {
@@ -143,31 +143,24 @@ const resolve = async <T>(options: ApiRequestOptions, resolver?: T | Resolver<T>
     return resolver
 }
 
-const getHeaders = async (
-    config: OpenAPIConfig,
-    options: ApiRequestOptions,
-    formData?: FormData
-): Promise<Record<string, string>> => {
+const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptions, formData?: FormData): Promise<Record<string, string>> => {
     const token = await resolve(options, config.TOKEN)
     const username = await resolve(options, config.USERNAME)
     const password = await resolve(options, config.PASSWORD)
     const additionalHeaders = await resolve(options, config.HEADERS)
-    const formHeaders = (typeof formData?.getHeaders === "function" && formData?.getHeaders()) || {}
+    const formHeaders = typeof formData?.getHeaders === "function" && formData?.getHeaders() || {}
 
     const headers = Object.entries({
         Accept: "application/json",
         ...additionalHeaders,
         ...options.headers,
-        ...formHeaders,
+        ...formHeaders
     })
         .filter(([_, value]) => isDefined(value))
-        .reduce(
-            (headers, [key, value]) => ({
-                ...headers,
-                [key]: String(value),
-            }),
-            {} as Record<string, string>
-        )
+        .reduce((headers, [key, value]) => ({
+            ...headers,
+            [key]: String(value)
+        }), {} as Record<string, string>)
 
     if (isStringWithValue(token)) {
         headers["Authorization"] = `Bearer ${token}`
@@ -191,7 +184,7 @@ const getHeaders = async (
     }
 
     return headers
-}
+};
 
 const getRequestBody = (options: ApiRequestOptions): any => {
     if (options.body) {
@@ -217,7 +210,7 @@ const sendRequest = async <T>(
         data: body ?? formData,
         method: options.method,
         withCredentials: config.WITH_CREDENTIALS,
-        cancelToken: source.token,
+        cancelToken: source.token
     }
 
     onCancel(() => source.cancel("The user aborted a request."))
@@ -231,7 +224,7 @@ const sendRequest = async <T>(
         }
         throw error
     }
-}
+};
 
 const getResponseHeader = (response: AxiosResponse<any>, responseHeader?: string): string | undefined => {
     if (responseHeader) {
@@ -259,7 +252,7 @@ const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): void =>
         500: "Internal Server Error",
         502: "Bad Gateway",
         503: "Service Unavailable",
-        ...options.errors,
+        ...options.errors
     }
 
     const error = errors[result.status]
@@ -270,7 +263,7 @@ const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): void =>
     if (!result.ok) {
         throw new ApiError(options, result, "Generic Error")
     }
-}
+};
 
 /**
  * Request method
@@ -297,7 +290,7 @@ export const request = <T>(config: OpenAPIConfig, options: ApiRequestOptions): C
                     ok: isSuccess(response.status),
                     status: response.status,
                     statusText: response.statusText,
-                    body: responseHeader ?? responseBody,
+                    body: responseHeader ?? responseBody
                 }
 
                 catchErrorCodes(options, result)
@@ -307,5 +300,5 @@ export const request = <T>(config: OpenAPIConfig, options: ApiRequestOptions): C
         } catch (error) {
             reject(error)
         }
-    })
-}
+    });
+};
