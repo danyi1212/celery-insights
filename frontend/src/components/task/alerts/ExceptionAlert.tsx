@@ -38,7 +38,11 @@ const ExceptionTraceback: React.FC<ExceptionTracebackProps> = ({ exception, trac
     const showSimilar = similarTasks.length > 0 && largeScreem
 
     return (
-        <Alert severity="error" sx={{ ".MuiAlert-message": { flexGrow: 1, pt: showSimilar ? 0 : 1 } }} {...props}>
+        <Alert
+            severity="error"
+            {...props}
+            sx={{ ...props.sx, ".MuiAlert-message": { flexGrow: 1, pt: showSimilar ? 0 : 1 } }}
+        >
             <AlertTitle sx={{ display: "flex", alignItems: "center", flexGrow: 1 }}>
                 <Typography flexGrow={1}>Failed Task</Typography>
                 <Collapse in={showSimilar} orientation="horizontal">
