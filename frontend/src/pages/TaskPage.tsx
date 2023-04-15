@@ -46,7 +46,13 @@ const TaskPage: React.FC = () => {
             <TaskLifetimeChart task={task} />
             <Stack spacing={2} m={3}>
                 <RetryAlert retries={task.retries || taskResult?.retries} />
-                <ExceptionAlert exception={task.exception} traceback={task.traceback || taskResult?.traceback} />
+                {task.exception && (
+                    <ExceptionAlert
+                        exception={task.exception}
+                        traceback={task.traceback || taskResult?.traceback}
+                        currentTaskId={task.id}
+                    />
+                )}
             </Stack>
             <Grid container spacing={3} px={3}>
                 <Grid item lg={4} xs={12}>
