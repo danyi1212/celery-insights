@@ -1,6 +1,6 @@
 import Panel from "@components/common/Panel"
 import ScheduledTaskListItem from "@components/worker/panels/tasks/ScheduledTaskListItem"
-import useWorkerScheduledTasks from "@hooks/useWorkerScheduledTasks"
+import useWorkerScheduledTasks from "@hooks/worker/useWorkerScheduledTasks"
 import Box from "@mui/material/Box"
 import List from "@mui/material/List"
 import Typography from "@mui/material/Typography"

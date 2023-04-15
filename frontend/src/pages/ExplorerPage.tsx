@@ -1,6 +1,6 @@
 import ExplorerGrid from "@components/explorer/ExplorerGrid"
 import FacetSet from "@components/explorer/FacetSet"
-import { useExplorerFilter } from "@hooks/useExplorerFilter"
+import { useExplorerFilter } from "@hooks/explorer/useExplorerFilter"
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew"
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
 import Box from "@mui/material/Box"

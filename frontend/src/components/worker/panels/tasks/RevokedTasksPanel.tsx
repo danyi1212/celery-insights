@@ -1,6 +1,6 @@
 import Panel from "@components/common/Panel"
 import TaskAvatar from "@components/task/TaskAvatar"
-import useWorkerRevokedTasks from "@hooks/useWorkerRevokedTasks"
+import useWorkerRevokedTasks from "@hooks/worker/useWorkerRevokedTasks"
 import Box from "@mui/material/Box"
 import List from "@mui/material/List"
 import ListItem from "@mui/material/ListItem"

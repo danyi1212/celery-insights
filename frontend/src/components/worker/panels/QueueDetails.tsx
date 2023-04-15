@@ -1,6 +1,6 @@
 import ErrorAlert from "@components/errors/ErrorAlert"
 import QueueDetailsPanel from "@components/worker/panels/QueueDetailsPanel"
-import useWorkerQueues from "@hooks/useWorkerQueues"
+import useWorkerQueues from "@hooks/worker/useWorkerQueues"
 import Box from "@mui/material/Box"
 import CircularProgress from "@mui/material/CircularProgress"
 import Grid from "@mui/material/Grid"

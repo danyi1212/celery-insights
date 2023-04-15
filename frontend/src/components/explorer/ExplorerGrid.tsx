@@ -1,4 +1,4 @@
-import { TaskFilter } from "@hooks/useExplorerFilter"
+import { TaskFilter } from "@hooks/explorer/useExplorerFilter"
 import { DataGrid, GridColDef } from "@mui/x-data-grid"
 import { useExplorerColumns } from "@stores/useExplorerConfig"
 import { StateTask } from "@utils/translateServerModels"

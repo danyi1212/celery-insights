@@ -1,5 +1,5 @@
 import Facet from "@components/explorer/Facet"
-import { TaskFilter } from "@hooks/useExplorerFilter"
+import { TaskFilter } from "@hooks/explorer/useExplorerFilter"
 import { useExplorerFacets } from "@stores/useExplorerConfig"
 import { countUniqueProperties } from "@utils/CountUniqueProperties"
 import { StateTask } from "@utils/translateServerModels"

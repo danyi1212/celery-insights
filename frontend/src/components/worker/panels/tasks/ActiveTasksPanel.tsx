@@ -1,6 +1,6 @@
 import Panel from "@components/common/Panel"
 import ActiveTaskListItem from "@components/worker/panels/tasks/ActiveTaskListItem"
-import useWorkerActiveTasks from "@hooks/useWorkerActiveTasks"
+import useWorkerActiveTasks from "@hooks/worker/useWorkerActiveTasks"
 import Box from "@mui/material/Box"
 import List from "@mui/material/List"
 import Typography from "@mui/material/Typography"

@@ -1,6 +1,6 @@
 import DetailItem from "@components/common/DetailItem"
 import Panel from "@components/common/Panel"
-import useWorkerStats from "@hooks/useWorkerStats"
+import useWorkerStats from "@hooks/worker/useWorkerStats"
 import LockIcon from "@mui/icons-material/Lock"
 import LockOpenIcon from "@mui/icons-material/LockOpen"
 import Box from "@mui/material/Box"
