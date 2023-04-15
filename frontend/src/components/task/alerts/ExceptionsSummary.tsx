@@ -27,7 +27,7 @@ const ExceptionsSummary: React.FC = () => {
     const errorMessages = useMemo(() => Array.from(errorsMap.keys()), [errorsMap])
 
     return (
-        <Box>
+        <Box mx={2}>
             <Box display="flex" flexWrap="wrap" mt={3}>
                 {errorMessages.map((error) => (
                     <Tooltip key={error} title="Click to show error">

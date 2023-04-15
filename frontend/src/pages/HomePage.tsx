@@ -35,26 +35,26 @@ const HomePage: React.FC = () => {
         )
     }
     return (
-        <Grid container spacing={3} px={3}>
-            <Grid item xs={12}>
-                <ExceptionsSummary />
+        <>
+            <ExceptionsSummary />
+            <Grid container spacing={3} px={3}>
+                <Grid item lg={8} xs={12}>
+                    <Panel
+                        title="Recent Tasks"
+                        actions={
+                            <Button component={RouterLink} to="/explorer" variant="outlined" color="secondary">
+                                View All
+                            </Button>
+                        }
+                    >
+                        <RecentTasksList count={100} />
+                    </Panel>
+                </Grid>
+                <Grid item lg={4} xs={12}>
+                    <WorkersSummaryStack />
+                </Grid>
             </Grid>
-            <Grid item lg={8} xs={12}>
-                <Panel
-                    title="Recent Tasks"
-                    actions={
-                        <Button component={RouterLink} to="/explorer" variant="outlined" color="secondary">
-                            View All
-                        </Button>
-                    }
-                >
-                    <RecentTasksList count={100} />
-                </Panel>
-            </Grid>
-            <Grid item lg={4} xs={12}>
-                <WorkersSummaryStack />
-            </Grid>
-        </Grid>
+        </>
     )
 }
 
