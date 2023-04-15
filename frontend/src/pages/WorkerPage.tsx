@@ -7,6 +7,8 @@ import ReservedTasksPanel from "@components/worker/panels/tasks/ReservedTasksPan
 import RevokedTasksPanel from "@components/worker/panels/tasks/RevokedTasksPanel"
 import ScheduledTasksPanel from "@components/worker/panels/tasks/ScheduledTasksPanel"
 import WorkerDetailsCard from "@components/worker/panels/WorkerDetailsCard"
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline"
+import Box from "@mui/material/Box"
 import Grid from "@mui/material/Grid"
 import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
@@ -19,9 +21,14 @@ const WorkerPage: React.FC = () => {
 
     if (worker === undefined)
         return (
-            <Typography variant="h3" align="center" m={5}>
-                Worker {workerId} is not found.
-            </Typography>
+            <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100%">
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <ErrorOutlineIcon sx={{ fontSize: (theme) => theme.typography.h3.fontSize }} color="warning" />
+                    <Typography variant="h4" color="textPrimary" ml={2}>
+                        Could not find worker {workerId}
+                    </Typography>
+                </Box>
+            </Box>
         )
 
     return (

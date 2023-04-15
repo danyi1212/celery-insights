@@ -3,6 +3,7 @@ import RetryAlert from "@components/task/alerts/RetryAlert"
 import ArgumentsCard from "@components/task/cards/ArgumentsCard"
 import { DeliveryInfoCard } from "@components/task/cards/DeliveryInfoCard"
 import ResultCard from "@components/task/cards/ResultCard"
+import TaskAvatar from "@components/task/TaskAvatar"
 import TaskLifetimeChart from "@components/task/TaskLifetimeChart"
 import TaskPageHeader from "@components/task/TaskPageHeader"
 import WorkflowGraph, { WorkflowChartType } from "@components/workflow/WorkflowGraph"
@@ -32,9 +33,14 @@ const TaskPage: React.FC = () => {
 
     if (task === undefined)
         return (
-            <Typography variant="h3" align="center" m={5}>
-                Task {taskId} is not found.
-            </Typography>
+            <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100%">
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <TaskAvatar taskId={taskId} type={undefined} />
+                    <Typography variant="h4" color="textPrimary" ml={2}>
+                        Could not find this task
+                    </Typography>
+                </Box>
+            </Box>
         )
 
     return (
