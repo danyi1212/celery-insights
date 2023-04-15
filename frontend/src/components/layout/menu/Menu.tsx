@@ -1,5 +1,5 @@
 import MenuItem, { MenuLink } from "@components/layout/menu/MenuItem"
-import WorkerStatusList from "@components/layout/menu/WorkerStatusList"
+import WorkerQuickStatusList from "@components/worker/WorkerQuickStatusList"
 import ApiIcon from "@mui/icons-material/Api"
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos"
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
@@ -100,7 +100,7 @@ const Menu: React.FC = () => {
                 ))}
             </List>
             <Collapse in={expanded} unmountOnExit>
-                <WorkerStatusList />
+                <WorkerQuickStatusList />
             </Collapse>
             <Divider />
             <ListItem disablePadding>

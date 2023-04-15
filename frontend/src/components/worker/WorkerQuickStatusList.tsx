@@ -1,20 +1,16 @@
-import WorkerStatus from "@components/layout/menu/WorkerStatus"
+import WorkerQuickStatus from "@components/worker/WorkerQuickStatus"
+import { useOnlineWorkers } from "@hooks/worker/useOnlineWorkers"
 import Divider from "@mui/material/Divider"
 import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
 import { ServerClient } from "@services/server"
-import { useStateStore } from "@stores/useStateStore"
 import React from "react"
 import { useQuery } from "react-query"
 
 const getWorkerStats = () => new ServerClient().workers.getWorkerStats()
 
-const WorkerStatusList: React.FC = () => {
-    const workersState = useStateStore((state) =>
-        state.workers
-            .map((worker) => worker)
-            .filter((worker) => worker.heartbeatExpires && worker.heartbeatExpires > new Date())
-    )
+const WorkerQuickStatusList: React.FC = () => {
+    const workersState = useOnlineWorkers()
     const { data } = useQuery("workers/stats", getWorkerStats)
     return (
         <Stack maxHeight="40vh" overflow="auto" rowGap={1}>
@@ -22,12 +18,11 @@ const WorkerStatusList: React.FC = () => {
                 Worker Status
             </Typography>
             <Divider />
-            {workersState.map((worker) => {
-                const stats = data?.[worker.hostname]
-                return <WorkerStatus key={worker.id} worker={worker} stats={stats} />
-            })}
+            {workersState.map((worker) => (
+                <WorkerQuickStatus key={worker.id} worker={worker} stats={data?.[worker.hostname]} />
+            ))}
         </Stack>
     )
 }
 
-export default WorkerStatusList
+export default WorkerQuickStatusList

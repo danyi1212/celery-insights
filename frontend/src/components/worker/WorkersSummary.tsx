@@ -1,14 +1,10 @@
 import WorkerPanel from "@components/worker/WorkerPanel"
+import { useOnlineWorkers } from "@hooks/worker/useOnlineWorkers"
 import Grid from "@mui/material/Grid"
-import { useStateStore } from "@stores/useStateStore"
 import React, { useMemo } from "react"
 
 const WorkersSummary: React.FC = () => {
-    const workers = useStateStore((state) =>
-        state.workers
-            .map((worker) => worker)
-            .filter((worker) => worker.heartbeatExpires && worker.heartbeatExpires > new Date())
-    )
+    const workers = useOnlineWorkers()
     const isEven = useMemo(() => workers.length % 2 === 0, [workers])
 
     return (

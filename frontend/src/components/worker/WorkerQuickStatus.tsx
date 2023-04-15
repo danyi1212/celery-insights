@@ -6,12 +6,12 @@ import { Stats } from "@services/server"
 import { StateWorker } from "@utils/translateServerModels"
 import React from "react"
 
-interface WorkerStatusProps {
+interface WorkerQuickStatusProps {
     worker: StateWorker
     stats: Stats | undefined
 }
 
-const WorkerStatus: React.FC<WorkerStatusProps> = ({ worker, stats }) => {
+const WorkerQuickStatus: React.FC<WorkerQuickStatusProps> = ({ worker, stats }) => {
     return (
         <Box m={1}>
             <Tooltip title={worker.hostname}>
@@ -32,4 +32,4 @@ const WorkerStatus: React.FC<WorkerStatusProps> = ({ worker, stats }) => {
         </Box>
     )
 }
-export default WorkerStatus
+export default WorkerQuickStatus
