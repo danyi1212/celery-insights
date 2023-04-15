@@ -73,6 +73,13 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ worker }) => {
                         }
                     />
                 </Grid>
+                <Grid item xs={12} md={6}>
+                    <DetailItem
+                        label="Processed"
+                        description="Number of tasks processed"
+                        value={Object.values(stats?.total || {}).reduce((acc, curr) => acc + curr, 0)}
+                    />
+                </Grid>
             </Grid>
         </Panel>
     )

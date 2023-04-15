@@ -1,12 +1,15 @@
 import Panel from "@components/common/Panel"
 import useWorkerRegisteredTasks from "@hooks/useWorkerRegisteredTasks"
+import useWorkerStats from "@hooks/useWorkerStats"
 import Avatar from "@mui/material/Avatar"
+import Badge from "@mui/material/Badge"
 import Box from "@mui/material/Box"
 import List from "@mui/material/List"
 import ListItem from "@mui/material/ListItem"
 import ListItemAvatar from "@mui/material/ListItemAvatar"
 import ListItemButton from "@mui/material/ListItemButton"
 import ListItemText from "@mui/material/ListItemText"
+import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
 import { StateWorker } from "@utils/translateServerModels"
 import React, { useMemo } from "react"
@@ -27,9 +30,10 @@ const acronymize = (str: string): string => {
 interface TaskTypeListItemProps {
     taskType: string
     workerId: string
+    count?: number
 }
 
-const TaskTypeListItem: React.FC<TaskTypeListItemProps> = ({ taskType, workerId }) => {
+const TaskTypeListItem: React.FC<TaskTypeListItemProps> = ({ taskType, workerId, count }) => {
     const backgroundColor = useMemo(() => stc(taskType), [taskType])
     const acronym = useMemo(() => acronymize(taskType), [taskType])
     return (
@@ -42,14 +46,26 @@ const TaskTypeListItem: React.FC<TaskTypeListItemProps> = ({ taskType, workerId 
                 }}
             >
                 <ListItemAvatar>
-                    <Avatar
-                        sx={{
-                            backgroundColor: backgroundColor,
-                            color: (theme) => theme.palette.getContrastText(backgroundColor),
-                        }}
+                    <Badge
+                        overlap="circular"
+                        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                        badgeContent={
+                            <Tooltip title="Count of this task type processed by worker">
+                                <Typography variant="caption">{count}</Typography>
+                            </Tooltip>
+                        }
+                        invisible={!count}
+                        color="primary"
                     >
-                        {acronym}
-                    </Avatar>
+                        <Avatar
+                            sx={{
+                                backgroundColor: backgroundColor,
+                                color: (theme) => theme.palette.getContrastText(backgroundColor),
+                            }}
+                        >
+                            {acronym}
+                        </Avatar>
+                    </Badge>
                 </ListItemAvatar>
                 <ListItemText primary={taskType} />
             </ListItemButton>
@@ -59,12 +75,18 @@ const TaskTypeListItem: React.FC<TaskTypeListItemProps> = ({ taskType, workerId 
 
 const RegisteredTasksPanel: React.FC<RegisteredTasksPanelProps> = ({ worker }) => {
     const { tasks, isLoading, error } = useWorkerRegisteredTasks(worker)
+    const { stats } = useWorkerStats(worker)
     return (
         <Panel title="Registered Task Types" loading={isLoading} error={error}>
             {tasks && tasks.length > 0 ? (
                 <List disablePadding>
                     {tasks.map((taskType) => (
-                        <TaskTypeListItem key={taskType} taskType={taskType} workerId={worker.id} />
+                        <TaskTypeListItem
+                            key={taskType}
+                            taskType={taskType}
+                            workerId={worker.id}
+                            count={stats?.total[taskType]}
+                        />
                     ))}
                 </List>
             ) : (
