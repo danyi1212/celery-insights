@@ -57,6 +57,12 @@ export class LRUMap<K, V> {
         }
         return result
     }
+
+    *[Symbol.iterator](): IterableIterator<V> {
+        for (const { value } of this.values.values()) {
+            yield value
+        }
+    }
 }
 
 class DoublyLinkedListNode<K> {
