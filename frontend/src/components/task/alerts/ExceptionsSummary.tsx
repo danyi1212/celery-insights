@@ -1,14 +1,17 @@
 import ExceptionAlert from "@components/task/alerts/ExceptionAlert"
 import Box from "@mui/material/Box"
 import { useStateStore } from "@stores/useStateStore"
-import React from "react"
+import React, { useMemo } from "react"
 
 const ExceptionsSummary: React.FC = () => {
-    const errors: Map<string, string | undefined> = useStateStore((state) =>
-        state.tasks
-            .map((task) => task)
-            .filter((task) => task.exception)
-            .reduce((acc, { exception, traceback }) => acc.set(exception, traceback), new Map())
+    const tasks = useStateStore((store) => store.tasks)
+    const errors = useMemo(
+        () =>
+            tasks
+                .map((task) => task)
+                .filter((task) => task.exception)
+                .reduce((acc, { exception, traceback }) => acc.set(exception, traceback), new Map()),
+        [tasks]
     )
     return (
         <Box m={3}>

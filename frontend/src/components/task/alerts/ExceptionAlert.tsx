@@ -12,7 +12,7 @@ import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useStateStore } from "@stores/useStateStore"
-import React, { useCallback, useState } from "react"
+import React, { useMemo, useState } from "react"
 
 interface ExceptionTracebackProps extends AlertProps {
     exception: string
@@ -23,19 +23,13 @@ interface ExceptionTracebackProps extends AlertProps {
 const ExceptionTraceback: React.FC<ExceptionTracebackProps> = ({ exception, traceback, currentTaskId, ...props }) => {
     const [expanded, setExpanded] = useState(false)
     const theme = useTheme()
-    const largeScreem = useMediaQuery(theme.breakpoints.up("sm"))
-    const similarTasks = useStateStore(
-        useCallback(
-            (state) =>
-                largeScreem
-                    ? state.tasks
-                          .map((task) => task)
-                          .filter((task) => task.id !== currentTaskId && task.exception === exception)
-                    : [],
-            [largeScreem, exception, currentTaskId]
-        )
+    const largeScreen = useMediaQuery(theme.breakpoints.up("sm"))
+    const tasks = useStateStore((store) => (largeScreen ? store.tasks : []))
+    const similarTasks = useMemo(
+        () => tasks.map((task) => task).filter((task) => task.id !== currentTaskId && task.exception === exception),
+        [tasks, exception, currentTaskId]
     )
-    const showSimilar = similarTasks.length > 0 && largeScreem
+    const showSimilar = similarTasks.length > 0 && largeScreen
 
     return (
         <Alert
@@ -66,7 +60,7 @@ const ExceptionTraceback: React.FC<ExceptionTracebackProps> = ({ exception, trac
                     >
                         Traceback
                     </Button>
-                    <Collapse in={expanded}>
+                    <Collapse in={expanded} unmountOnExit>
                         <CodeBlock language="python" code={traceback} />
                     </Collapse>
                 </>
