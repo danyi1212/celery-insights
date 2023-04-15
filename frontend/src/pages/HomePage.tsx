@@ -2,12 +2,38 @@ import Panel from "@components/common/Panel"
 import ExceptionsSummary from "@components/task/alerts/ExceptionsSummary"
 import RecentTasksList from "@components/task/RecentTasksList"
 import WorkersSummaryStack from "@components/worker/WorkersSummaryStack"
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline"
+import Box from "@mui/material/Box"
 import Button from "@mui/material/Button"
 import Grid from "@mui/material/Grid"
+import Typography from "@mui/material/Typography"
+import { useStateStore } from "@stores/useStateStore"
 import React from "react"
 import { Link as RouterLink } from "react-router-dom"
 
+import { ReadyState } from "react-use-websocket"
+
 const HomePage: React.FC = () => {
+    const wsStatus = useStateStore((state) => state.status)
+    if (wsStatus === ReadyState.CLOSED) {
+        return (
+            <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100%">
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <ErrorOutlineIcon sx={{ fontSize: (theme) => theme.typography.h3.fontSize, mr: 2 }} color="error" />
+                    <Typography variant="h3" color="textPrimary">
+                        Unable to connect to the server
+                    </Typography>
+                </Box>
+                <Typography variant="h5">
+                    <ul>
+                        <li>Make sure you are connected to the network</li>
+                        <li>Check the server logs for any error messages or issues</li>
+                        <li>Try restarting the server</li>
+                    </ul>
+                </Typography>
+            </Box>
+        )
+    }
     return (
         <Grid container spacing={3} px={3}>
             <Grid item xs={12}>
