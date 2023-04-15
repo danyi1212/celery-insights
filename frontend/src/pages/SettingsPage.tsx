@@ -1,4 +1,5 @@
 import Panel from "@components/common/Panel"
+import OnlineClientsPanel from "@components/settings/OnlineClientsPanel"
 import Grid from "@mui/material/Grid"
 import React from "react"
 
@@ -10,7 +11,7 @@ const SettingsPage: React.FC = () => {
             </Grid>
             <Grid item xs={12} md={6} lg={4}>
                 <Panel title="Server Info"></Panel>
-                <Panel title="Online Clients"></Panel>
+                <OnlineClientsPanel />
             </Grid>
         </Grid>
     )
