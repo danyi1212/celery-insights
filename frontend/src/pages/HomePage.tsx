@@ -1,8 +1,7 @@
 import Panel from "@components/common/Panel"
 import ExceptionAlert from "@components/task/alerts/ExceptionAlert"
-import ErrorsList from "@components/task/ErrorsList"
 import RecentTasksList from "@components/task/RecentTasksList"
-import WorkersSummary from "@components/worker/WorkersSummary"
+import WorkersSummaryStack from "@components/worker/WorkersSummaryStack"
 import Grid from "@mui/material/Grid"
 import Stack from "@mui/material/Stack"
 import { useStateStore } from "@stores/useStateStore"
@@ -17,7 +16,6 @@ const HomePage: React.FC = () => {
     )
     return (
         <>
-            <WorkersSummary />
             <Stack spacing={3} mx={3}>
                 {Array.from(errors.entries()).map(([exception, traceback]) => (
                     <ExceptionAlert key={exception} exception={exception} traceback={traceback} />
@@ -30,9 +28,7 @@ const HomePage: React.FC = () => {
                     </Panel>
                 </Grid>
                 <Grid item lg={4} xs={12}>
-                    <Panel title="Error Log">
-                        <ErrorsList />
-                    </Panel>
+                    <WorkersSummaryStack />
                 </Grid>
             </Grid>
         </>

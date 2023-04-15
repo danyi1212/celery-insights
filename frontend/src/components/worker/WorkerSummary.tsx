@@ -12,11 +12,11 @@ import { StateWorker } from "@utils/translateServerModels"
 import React, { useCallback, useMemo } from "react"
 import { Link } from "react-router-dom"
 
-interface WorkerPanelProps {
+interface WorkerSummaryProps {
     worker: StateWorker
 }
 
-const WorkerPanel: React.FC<WorkerPanelProps> = ({ worker }) => {
+const WorkerSummary: React.FC<WorkerSummaryProps> = ({ worker }) => {
     const tasks = useStateStore(
         useCallback(
             (store) =>
@@ -31,7 +31,7 @@ const WorkerPanel: React.FC<WorkerPanelProps> = ({ worker }) => {
     const receivedTasks = useMemo(() => tasks.filter((task) => task.state == TaskState.RECEIVED), [tasks])
 
     return (
-        <PanelPaper elevation={20} sx={{ px: 2 }}>
+        <PanelPaper sx={{ px: 2 }}>
             <Stack direction="row">
                 <Tooltip title={worker.hostname}>
                     <Typography variant="h6" noWrap flexGrow={1}>
@@ -62,4 +62,4 @@ const WorkerPanel: React.FC<WorkerPanelProps> = ({ worker }) => {
         </PanelPaper>
     )
 }
-export default WorkerPanel
+export default WorkerSummary
