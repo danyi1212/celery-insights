@@ -1,4 +1,5 @@
 import TaskAvatar from "@components/task/TaskAvatar"
+import Zoom from "@mui/material/Zoom"
 import { StateTask } from "@utils/translateServerModels"
 import React from "react"
 import { Handle, NodeProps, Position } from "reactflow"
@@ -11,7 +12,11 @@ const TaskNode: React.FC<TaskNodeProps> = ({ data }) => {
     return (
         <>
             <Handle type="target" position={Position.Left} />
-            <TaskAvatar taskId={data.id} type={data.type} status={data.state} sx={{ width: 60, height: 60 }} />
+            <Zoom in>
+                <div>
+                    <TaskAvatar taskId={data.id} type={data.type} status={data.state} sx={{ width: 60, height: 60 }} />
+                </div>
+            </Zoom>
             <Handle type="source" position={Position.Right} />
         </>
     )
