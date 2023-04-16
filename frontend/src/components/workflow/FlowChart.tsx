@@ -19,6 +19,7 @@ import {
     useEdgesState,
     useNodesState,
     useReactFlow,
+    XYPosition,
 } from "reactflow"
 
 const createNode = (task: StateTask, x: number, y: number, nodeId?: string): Node => ({
@@ -52,7 +53,14 @@ const getChildMap = (tasks: StateTask[]): Map<string, StateTask[]> => {
     return map
 }
 
-const getGraph = (tasks: StateTask[], rootTaskId: string): { nodes: Node[]; edges: Edge[] } => {
+export const getFlowGraph = (
+    tasks: StateTask[],
+    rootTaskId: string,
+    initialPosition?: XYPosition
+): {
+    nodes: Node[]
+    edges: Edge[]
+} => {
     const nodes: Node[] = []
     const edges: Edge[] = []
     const taskMap = new Map<string, StateTask>(tasks.map((task) => [task.id, task]))
@@ -84,7 +92,7 @@ const getGraph = (tasks: StateTask[], rootTaskId: string): { nodes: Node[]; edge
     }
 
     const rootTask = taskMap.get(rootTaskId)
-    if (rootTask) dfs(rootTask, 0, 0)
+    if (rootTask) dfs(rootTask, initialPosition?.x || 0, initialPosition?.y || 0)
 
     return {
         nodes: nodes,
@@ -128,7 +136,7 @@ const FlowChart: React.FC<FlowChartProps> = ({ tasks, rootTaskId, currentTaskId 
     const fitView = useCallback(() => flow.fitView({ duration: ZOOM_ANIMATION_SPEED }), [flow])
 
     useEffect(() => {
-        const graph = getGraph(tasks, rootTaskId)
+        const graph = getFlowGraph(tasks, rootTaskId)
         setNodes(graph.nodes)
         setEdges(graph.edges)
         if (!isInitialized && currentTaskId) {
