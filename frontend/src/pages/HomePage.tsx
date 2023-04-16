@@ -1,12 +1,15 @@
 import Panel from "@components/common/Panel"
 import ExceptionsSummary from "@components/task/alerts/ExceptionsSummary"
 import RecentTasksList from "@components/task/RecentTasksList"
+import WelcomeBanner from "@components/WelcomeBanner"
 import WorkersSummaryStack from "@components/worker/WorkersSummaryStack"
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline"
 import Box from "@mui/material/Box"
 import Button from "@mui/material/Button"
+import Collapse from "@mui/material/Collapse"
 import Grid from "@mui/material/Grid"
 import Typography from "@mui/material/Typography"
+import useSettingsStore from "@stores/useSettingsStore"
 import { useStateStore } from "@stores/useStateStore"
 import React from "react"
 import { Link as RouterLink } from "react-router-dom"
@@ -14,6 +17,7 @@ import { Link as RouterLink } from "react-router-dom"
 import { ReadyState } from "react-use-websocket"
 
 const HomePage: React.FC = () => {
+    const hideWelcomeBanner = useSettingsStore((state) => state.hideWelcomeBanner)
     const wsStatus = useStateStore((state) => state.status)
     if (wsStatus === ReadyState.CLOSED) {
         return (
@@ -36,6 +40,9 @@ const HomePage: React.FC = () => {
     }
     return (
         <>
+            <Collapse in={!hideWelcomeBanner} unmountOnExit>
+                <WelcomeBanner />
+            </Collapse>
             <ExceptionsSummary />
             <Grid container spacing={3} px={3}>
                 <Grid item lg={8} xs={12}>

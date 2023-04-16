@@ -10,6 +10,7 @@ export enum PreferredTheme {
 interface Settings {
     theme: PreferredTheme
     menuExpanded: boolean
+    hideWelcomeBanner: boolean
 }
 
 const useSettingsStore = create<Settings>()(
@@ -18,6 +19,7 @@ const useSettingsStore = create<Settings>()(
         (set) => ({
             theme: PreferredTheme.SYSTEM,
             menuExpanded: true,
+            hideWelcomeBanner: false,
         }),
         {
             name: "settings",
