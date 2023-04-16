@@ -31,10 +31,10 @@ export const lightTheme = createTheme({
     palette: {
         mode: "light",
         primary: {
-            main: PRIARY,
+            main: PRIMARY,
         },
         secondary: {
-            main: SECONARY,
+            main: SECONDARY,
         },
         background: {
             default: "#dee5ce",
@@ -45,7 +45,7 @@ export const lightTheme = createTheme({
         MuiDrawer: {
             styleOverrides: {
                 paper: (themeParams) => ({
-                    backgroundColor: themeParams.theme.palette.primary.lght,
+                    backgroundColor: themeParams.theme.palette.primary.light,
                 }),
             },
         },
