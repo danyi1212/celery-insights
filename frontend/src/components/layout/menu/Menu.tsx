@@ -25,6 +25,7 @@ export const DRAWER_WIDTH = 240
 export const DRAWER_WIDTH_COLLAPSED = 72
 
 const StyledDrawer = styled(Drawer, { shouldForwardProp: (prop) => prop !== "open" })(({ theme, open }) => ({
+    backgroundColor: theme.palette.background.paper,
     "& .MuiDrawer-paper": {
         position: "fixed",
         whiteSpace: "nowrap",

@@ -17,7 +17,7 @@ const Header: React.FC = () => {
 
     return (
         <Slide appear={false} direction="down" in={!trigger}>
-            <AppBar>
+            <AppBar color="default">
                 <Toolbar
                     sx={{
                         marginLeft: menuExpanded ? `${DRAWER_WIDTH}px` : `${DRAWER_WIDTH_COLLAPSED}px`,
