@@ -38,7 +38,7 @@ export const lightTheme = createTheme({
         },
         background: {
             default: "#dee5ce",
-            paper: "#f5fee",
+            paper: "#f5f8ee",
         },
     },
     components: {
