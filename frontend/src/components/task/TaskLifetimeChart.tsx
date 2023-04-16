@@ -13,7 +13,7 @@ interface TaskLifetimeChart {
 const REALTIME_INTERVAL = 10
 const getOptions = (theme: Theme): ApexOptions => ({
     chart: {
-        background: theme.palette.background.paper,
+        background: "#00000000",
         foreColor: theme.palette.text.primary,
         fontFamily: theme.typography.fontFamily,
         parentHeightOffset: 0,
