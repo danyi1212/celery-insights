@@ -1,19 +1,21 @@
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline"
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline"
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline"
+import { CircularProgressProps, SvgIconProps } from "@mui/material"
 import CircularProgress from "@mui/material/CircularProgress"
 import Tooltip from "@mui/material/Tooltip"
 import React, { useCallback } from "react"
 import { useQuery } from "react-query"
 
-interface VersionCheckIconProps {
+interface VersionCheckIconProps extends SvgIconProps {
     currentVersion: string | undefined
+    progressProps?: CircularProgressProps
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const isUpdateAvailable = (currentVersion: string | undefined): boolean => false
 
-const VersionCheckIcon: React.FC<VersionCheckIconProps> = ({ currentVersion }) => {
+const VersionCheckIcon: React.FC<VersionCheckIconProps> = ({ currentVersion, progressProps, ...props }) => {
     const { data, isLoading, error } = useQuery(
         ["version-check", currentVersion],
         useCallback(() => isUpdateAvailable(currentVersion), [currentVersion]),
@@ -22,31 +24,31 @@ const VersionCheckIcon: React.FC<VersionCheckIconProps> = ({ currentVersion }) =
     if (currentVersion === undefined)
         return (
             <Tooltip title="Unable to check for updates">
-                <HelpOutlineIcon fontSize="small" color="disabled" sx={{ mx: 1 }} />
+                <HelpOutlineIcon color="disabled" {...props} />
             </Tooltip>
         )
     else if (isLoading)
         return (
             <Tooltip title="Checking for updates">
-                <CircularProgress size={"1rem"} sx={{ mx: 1 }} />
+                <CircularProgress {...progressProps} />
             </Tooltip>
         )
     else if (error)
         return (
             <Tooltip title="Error while checking for updates">
-                <ErrorOutlineIcon fontSize="small" color="error" sx={{ mx: 1 }} />
+                <ErrorOutlineIcon color="error" {...props} />
             </Tooltip>
         )
     else if (data) {
         return (
             <Tooltip title="Update is available!">
-                <ErrorOutlineIcon fontSize="small" color="warning" sx={{ mx: 1 }} />
+                <ErrorOutlineIcon color="warning" {...props} />
             </Tooltip>
         )
     } else {
         return (
             <Tooltip title="Up to date">
-                <CheckCircleOutlineIcon fontSize="small" color="success" sx={{ mx: 1 }} />
+                <CheckCircleOutlineIcon color="success" {...props} />
             </Tooltip>
         )
     }

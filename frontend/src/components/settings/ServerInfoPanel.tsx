@@ -24,7 +24,15 @@ export const ServerInfoPanel: React.FC = () => {
                         value={
                             <Box display="flex" alignItems="center">
                                 {data?.server_version || "???"}
-                                <VersionCheckIcon currentVersion={data?.server_version} />
+                                <VersionCheckIcon
+                                    currentVersion={data?.server_version}
+                                    progressProps={{
+                                        size: "1rem",
+                                        sx: { mx: 1 },
+                                    }}
+                                    fontSize="small"
+                                    sx={{ mx: 1 }}
+                                />
                             </Box>
                         }
                     />
