@@ -1,4 +1,4 @@
-import MenuItem, { MenuLink } from "@components/layout/menu/MenuItem"
+import MenuItem, { MenuLink } from "@layout/menu/MenuItem"
 import WorkerQuickStatusList from "@components/worker/WorkerQuickStatusList"
 import ApiIcon from "@mui/icons-material/Api"
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos"

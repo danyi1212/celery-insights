@@ -1,5 +1,5 @@
-import Header from "@components/layout/header/Header"
-import Menu, { DRAWER_WIDTH, DRAWER_WIDTH_COLLAPSED } from "@components/layout/menu/Menu"
+import Header from "@layout/header/Header"
+import Menu, { DRAWER_WIDTH, DRAWER_WIDTH_COLLAPSED } from "@layout/menu/Menu"
 import ConsolidatedProviders from "@layout/ConsolidatedProviders"
 import Box from "@mui/material/Box"
 import useSettings from "@stores/useSettingsStore"
