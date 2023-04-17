@@ -4,23 +4,25 @@ import Panel from "@components/common/Panel"
 import WorkerStatus from "@components/worker/WorkerStatus"
 import useWorkerStats from "@hooks/worker/useWorkerStats"
 import Grid from "@mui/material/Grid"
+import { useStateStore } from "@stores/useStateStore"
 import { formatBytes } from "@utils/FormatBytes"
 import { formatSecondsDurationLong } from "@utils/FormatSecondsDurationLong"
-import { StateWorker } from "@utils/translateServerModels"
-import React from "react"
+import React, { useCallback } from "react"
 
 interface WorkerDetailsCardProps {
-    worker: StateWorker
+    workerId: string
+    hostname: string
 }
 
-const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ worker }) => {
-    const { stats, isLoading, error } = useWorkerStats(worker)
+const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, hostname }) => {
+    const worker = useStateStore(useCallback((state) => state.workers.get(workerId), [workerId]))
+    const { stats, isLoading, error } = useWorkerStats(hostname)
 
     return (
         <Panel title="Worker" loading={isLoading} error={error}>
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12}>
-                    <DetailItem label="Hostname" value={worker.hostname} />
+                    <DetailItem label="Hostname" value={worker?.hostname} />
                 </Grid>
                 <Grid item xs={12}>
                     <DetailItem
@@ -28,8 +30,8 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ worker }) => {
                         description="Percentage of CPU used by worker process"
                         value={
                             <LinearProgressWithLabel
-                                value={worker.cpuLoad?.[2] || 0}
-                                buffer={worker.cpuLoad?.[0] || 0}
+                                value={worker?.cpuLoad?.[2] || 0}
+                                buffer={worker?.cpuLoad?.[0] || 0}
                                 percentageLabel
                             />
                         }
@@ -50,25 +52,25 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ worker }) => {
                     />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                    <DetailItem label="Process ID" value={worker.pid} />
+                    <DetailItem label="Process ID" value={worker?.pid} />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                    <DetailItem label="Software Name" value={worker.softwareIdentity} />
+                    <DetailItem label="Software Name" value={worker?.softwareIdentity} />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                    <DetailItem label="Host OS" value={worker.softwareSys} />
+                    <DetailItem label="Host OS" value={worker?.softwareSys} />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                    <DetailItem label="Software Version" value={worker.softwareVersion} />
+                    <DetailItem label="Software Version" value={worker?.softwareVersion} />
                 </Grid>
                 <Grid item xs={12} md={6}>
                     <DetailItem
                         label="Status"
                         description="Amount of time until the worker is considered offline"
-                        color={worker.heartbeatExpires && worker.heartbeatExpires < new Date() ? "danger" : "primary"}
+                        color={worker?.heartbeatExpires && worker?.heartbeatExpires < new Date() ? "danger" : "primary"}
                         value={
                             <div>
-                                <WorkerStatus heartbeatExpires={worker.heartbeatExpires || new Date()} />
+                                <WorkerStatus heartbeatExpires={worker?.heartbeatExpires || new Date()} />
                             </div>
                         }
                     />

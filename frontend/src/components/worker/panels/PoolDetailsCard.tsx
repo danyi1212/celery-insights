@@ -6,26 +6,36 @@ import useWorkerStats from "@hooks/worker/useWorkerStats"
 import Grid from "@mui/material/Grid"
 import { TaskRequest } from "@services/server"
 import { formatSecondsDuration } from "@utils/formatSecondsDuration"
-import { StateWorker } from "@utils/translateServerModels"
-import React, { useMemo } from "react"
+import React, { startTransition, useEffect, useState } from "react"
 
 interface PoolDetailsCardProps {
-    worker: StateWorker
+    hostname: string
 }
 
-const PoolDetailsCard: React.FC<PoolDetailsCardProps> = ({ worker }) => {
-    const { stats, isLoading, error } = useWorkerStats(worker)
-    const { tasks } = useWorkerActiveTasks(worker)
+function useTaskProcessMap(hostname: string): Map<number, TaskRequest> {
+    const { tasks } = useWorkerActiveTasks(hostname)
+    const [map, setMap] = useState<Map<number, TaskRequest>>(new Map())
 
-    const taskProcessMap = useMemo(() => {
-        const map = new Map<number, TaskRequest>()
-        tasks?.forEach((task) => {
-            if (task.worker_pid != null) {
-                map.set(task.worker_pid, task)
-            }
-        })
-        return map
-    }, [tasks])
+    useEffect(
+        () =>
+            startTransition(() => {
+                const map = new Map<number, TaskRequest>()
+                tasks?.forEach((task) => {
+                    if (task.worker_pid != null) {
+                        map.set(task.worker_pid, task)
+                    }
+                })
+                setMap(map)
+            }),
+        [tasks]
+    )
+
+    return map
+}
+
+const PoolDetailsCard: React.FC<PoolDetailsCardProps> = ({ hostname }) => {
+    const { stats, isLoading, error } = useWorkerStats(hostname)
+    const taskProcessMap = useTaskProcessMap(hostname)
 
     return (
         <Panel title="Process Pool" loading={isLoading} error={error}>

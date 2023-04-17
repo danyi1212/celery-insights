@@ -9,12 +9,11 @@ import ListItemButton from "@mui/material/ListItemButton"
 import ListItemText from "@mui/material/ListItemText"
 import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
-import { StateWorker } from "@utils/translateServerModels"
 import React, { useCallback } from "react"
 import { Link } from "react-router-dom"
 
 interface RevokedTasksPanelProps {
-    worker: StateWorker
+    hostname: string
 }
 
 interface RevokedTaskListItemProps {
@@ -35,8 +34,8 @@ const RevokedTaskListItem: React.FC<RevokedTaskListItemProps> = ({ taskId }) => 
     )
 }
 
-const RevokedTasksPanel: React.FC<RevokedTasksPanelProps> = ({ worker }) => {
-    const { tasks, isLoading, error } = useWorkerRevokedTasks(worker)
+const RevokedTasksPanel: React.FC<RevokedTasksPanelProps> = ({ hostname }) => {
+    const { tasks, isLoading, error } = useWorkerRevokedTasks(hostname)
     return (
         <Panel title="Revoked Tasks" loading={isLoading} error={error}>
             {tasks && tasks.length > 0 ? (

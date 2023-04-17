@@ -19,6 +19,10 @@ export class LRUMap<K, V> {
         }
     }
 
+    public has(key: K): boolean {
+        return this.values.has(key)
+    }
+
     public get(key: K): V | undefined {
         const item = this.values.get(key)
         if (item) {

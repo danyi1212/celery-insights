@@ -1,18 +1,17 @@
 import { ServerClient } from "@services/server"
-import { StateWorker } from "@utils/translateServerModels"
 import { useCallback } from "react"
 import { useQuery } from "react-query"
 
-const useWorkerRegisteredTasks = (worker: StateWorker, timeout?: number) => {
+const useWorkerRegisteredTasks = (hostname: string, timeout?: number, interval = 60 * 1000) => {
     const getWorkerRegisteredTasks = useCallback(
-        () => new ServerClient().workers.getWorkerRegistered(timeout, worker?.hostname),
-        [worker, timeout]
+        () => new ServerClient().workers.getWorkerRegistered(timeout, hostname),
+        [hostname, timeout]
     )
-    const result = useQuery(["workers/registered", worker.hostname], getWorkerRegisteredTasks, {
-        refetchInterval: 5000,
+    const result = useQuery(["workers/registered", hostname], getWorkerRegisteredTasks, {
+        refetchInterval: interval,
     })
 
-    return { ...result, tasks: result.data?.[worker.hostname] }
+    return { ...result, tasks: result.data?.[hostname] }
 }
 
 export default useWorkerRegisteredTasks

@@ -1,18 +1,17 @@
 import { ServerClient } from "@services/server"
-import { StateWorker } from "@utils/translateServerModels"
 import { useCallback } from "react"
 import { useQuery } from "react-query"
 
-const useWorkerRevokedTasks = (worker: StateWorker, timeout?: number) => {
+const useWorkerRevokedTasks = (hostname: string, timeout?: number, interval = 3 * 1000) => {
     const getWorkerRevokedTasks = useCallback(
-        () => new ServerClient().workers.getWorkerRevoked(timeout, worker?.hostname),
-        [worker, timeout]
+        () => new ServerClient().workers.getWorkerRevoked(timeout, hostname),
+        [hostname, timeout]
     )
-    const result = useQuery(["workers/revoked", worker.hostname], getWorkerRevokedTasks, {
-        refetchInterval: 5000,
+    const result = useQuery(["workers/revoked", hostname], getWorkerRevokedTasks, {
+        refetchInterval: interval,
     })
 
-    return { ...result, tasks: result.data?.[worker.hostname] }
+    return { ...result, tasks: result.data?.[hostname] }
 }
 
 export default useWorkerRevokedTasks

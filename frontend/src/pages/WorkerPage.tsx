@@ -12,14 +12,15 @@ import Box from "@mui/material/Box"
 import Grid from "@mui/material/Grid"
 import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
-import React, { useCallback } from "react"
+import React, { useCallback, useMemo } from "react"
 import { useParams } from "react-router-dom"
 
 const WorkerPage: React.FC = () => {
     const { workerId } = useParams() as { workerId: string }
-    const worker = useStateStore(useCallback((state) => state.workers.get(workerId), [workerId]))
+    const hostname = useMemo(() => workerId.substring(0, workerId.lastIndexOf("-")), [workerId])
+    const notFound = useStateStore(useCallback((state) => !state.workers.has(workerId), [workerId]))
 
-    if (worker === undefined)
+    if (notFound)
         return (
             <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100%">
                 <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -34,31 +35,31 @@ const WorkerPage: React.FC = () => {
     return (
         <Grid container spacing={3} px={3}>
             <Grid item xs={12} lg={6} xl={4}>
-                <WorkerDetailsCard worker={worker} />
+                <WorkerDetailsCard workerId={workerId} hostname={hostname} />
             </Grid>
             <Grid item xs={12} lg={6} xl={4}>
-                <BrokerDetailsCard worker={worker} />
+                <BrokerDetailsCard hostname={hostname} />
             </Grid>
             <Grid item xs={12} lg={6} xl={4}>
-                <PoolDetailsCard worker={worker} />
+                <PoolDetailsCard hostname={hostname} />
             </Grid>
             <Grid item xs={12}>
-                <QueueDetails worker={worker} />
+                <QueueDetails hostname={hostname} />
             </Grid>
             <Grid item xs={12} lg={6} xl={4}>
-                <ActiveTasksPanel worker={worker} />
+                <ActiveTasksPanel hostname={hostname} />
             </Grid>
             <Grid item xs={12} lg={6} xl={4}>
-                <ReservedTasksPanel worker={worker} />
+                <ReservedTasksPanel hostname={hostname} />
             </Grid>
             <Grid item xs={12} lg={6} xl={4}>
-                <ScheduledTasksPanel worker={worker} />
+                <ScheduledTasksPanel hostname={hostname} />
             </Grid>
             <Grid item xs={12} xl={6}>
-                <RegisteredTasksPanel worker={worker} />
+                <RegisteredTasksPanel workerId={workerId} hostname={hostname} />
             </Grid>
             <Grid item xs={12} xl={6}>
-                <RevokedTasksPanel worker={worker} />
+                <RevokedTasksPanel hostname={hostname} />
             </Grid>
         </Grid>
     )

@@ -3,17 +3,15 @@ import Panel from "@components/common/Panel"
 import ActiveTaskListItem from "@components/worker/panels/tasks/ActiveTaskListItem"
 import useWorkerActiveTasks from "@hooks/worker/useWorkerActiveTasks"
 import Box from "@mui/material/Box"
-import List from "@mui/material/List"
 import Typography from "@mui/material/Typography"
-import { StateWorker } from "@utils/translateServerModels"
 import React from "react"
 
 interface ActiveTasksPanelProps {
-    worker: StateWorker
+    hostname: string
 }
 
-const ActiveTasksPanel: React.FC<ActiveTasksPanelProps> = ({ worker }) => {
-    const { tasks, isLoading, error } = useWorkerActiveTasks(worker)
+const ActiveTasksPanel: React.FC<ActiveTasksPanelProps> = ({ hostname }) => {
+    const { tasks, isLoading, error } = useWorkerActiveTasks(hostname)
     return (
         <Panel title="Active Task" loading={isLoading} error={error}>
             {tasks && tasks.length > 0 ? (

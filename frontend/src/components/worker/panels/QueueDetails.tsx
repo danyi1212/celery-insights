@@ -5,15 +5,14 @@ import Box from "@mui/material/Box"
 import CircularProgress from "@mui/material/CircularProgress"
 import Grid from "@mui/material/Grid"
 import Typography from "@mui/material/Typography"
-import { StateWorker } from "@utils/translateServerModels"
 import React from "react"
 
 interface QueueDetailsProps {
-    worker: StateWorker
+    hostname: string
 }
 
-const QueueDetails: React.FC<QueueDetailsProps> = ({ worker }) => {
-    const { queues, isLoading, error } = useWorkerQueues(worker)
+const QueueDetails: React.FC<QueueDetailsProps> = ({ hostname }) => {
+    const { queues, isLoading, error } = useWorkerQueues(hostname)
     if (isLoading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" height="100%" width="100%">

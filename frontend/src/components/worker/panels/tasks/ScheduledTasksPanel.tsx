@@ -4,15 +4,14 @@ import ScheduledTaskListItem from "@components/worker/panels/tasks/ScheduledTask
 import useWorkerScheduledTasks from "@hooks/worker/useWorkerScheduledTasks"
 import Box from "@mui/material/Box"
 import Typography from "@mui/material/Typography"
-import { StateWorker } from "@utils/translateServerModels"
 import React from "react"
 
 interface ScheduledTasksPanelProps {
-    worker: StateWorker
+    hostname: string
 }
 
-const ScheduledTasksPanel: React.FC<ScheduledTasksPanelProps> = ({ worker }) => {
-    const { tasks, isLoading, error } = useWorkerScheduledTasks(worker)
+const ScheduledTasksPanel: React.FC<ScheduledTasksPanelProps> = ({ hostname }) => {
+    const { tasks, isLoading, error } = useWorkerScheduledTasks(hostname)
     return (
         <Panel title="Scheduled Task" loading={isLoading} error={error}>
             {tasks && tasks.length > 0 ? (

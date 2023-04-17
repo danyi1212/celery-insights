@@ -11,13 +11,13 @@ import ListItemButton from "@mui/material/ListItemButton"
 import ListItemText from "@mui/material/ListItemText"
 import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
-import { StateWorker } from "@utils/translateServerModels"
 import React, { useMemo } from "react"
 import { Link } from "react-router-dom"
 import stc from "string-to-color"
 
 interface RegisteredTasksPanelProps {
-    worker: StateWorker
+    workerId: string
+    hostname: string
 }
 
 const acronymize = (str: string): string => {
@@ -73,9 +73,9 @@ const TaskTypeListItem: React.FC<TaskTypeListItemProps> = ({ taskType, workerId,
     )
 }
 
-const RegisteredTasksPanel: React.FC<RegisteredTasksPanelProps> = ({ worker }) => {
-    const { tasks, isLoading, error } = useWorkerRegisteredTasks(worker)
-    const { stats } = useWorkerStats(worker)
+const RegisteredTasksPanel: React.FC<RegisteredTasksPanelProps> = ({ workerId, hostname }) => {
+    const { tasks, isLoading, error } = useWorkerRegisteredTasks(hostname)
+    const { stats } = useWorkerStats(hostname)
     return (
         <Panel title="Registered Task Types" loading={isLoading} error={error}>
             {tasks && tasks.length > 0 ? (
@@ -84,7 +84,7 @@ const RegisteredTasksPanel: React.FC<RegisteredTasksPanelProps> = ({ worker }) =
                         <TaskTypeListItem
                             key={taskType}
                             taskType={taskType}
-                            workerId={worker.id}
+                            workerId={workerId}
                             count={stats?.total[taskType]}
                         />
                     ))}

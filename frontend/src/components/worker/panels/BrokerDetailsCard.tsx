@@ -7,15 +7,14 @@ import Box from "@mui/material/Box"
 import Grid from "@mui/material/Grid"
 import Tooltip from "@mui/material/Tooltip"
 import { formatSecondsDuration } from "@utils/formatSecondsDuration"
-import { StateWorker } from "@utils/translateServerModels"
 import React from "react"
 
 interface BrokerDetailsCardProps {
-    worker: StateWorker
+    hostname: string
 }
 
-const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ worker }) => {
-    const { stats, isLoading, error } = useWorkerStats(worker)
+const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ hostname }) => {
+    const { stats, isLoading, error } = useWorkerStats(hostname)
     return (
         <Panel title="Broker" loading={isLoading} error={error}>
             <Grid container spacing={2} p={2}>
