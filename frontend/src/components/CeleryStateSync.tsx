@@ -17,6 +17,7 @@ const CeleryStateSync: React.FC = () => {
             const message = JSON.parse(event.data)
             handleEvent(message)
         },
+        filter: () => false, // Reduce re-renders
     })
 
     useEffect(() => {
