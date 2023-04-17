@@ -1,6 +1,6 @@
 import Panel from "@components/common/Panel"
 import ExceptionsSummary from "@components/task/alerts/ExceptionsSummary"
-import RecentTasksList from "@components/task/RecentTasksList"
+import RecentTasksPanel from "@components/task/RecentTasksPanel"
 import WelcomeBanner from "@components/WelcomeBanner"
 import WorkersSummaryStack from "@components/worker/WorkersSummaryStack"
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline"
@@ -46,16 +46,8 @@ const HomePage: React.FC = () => {
             <ExceptionsSummary />
             <Grid container spacing={3} px={3}>
                 <Grid item lg={8} xs={12}>
-                    <Panel
-                        title="Recent Tasks"
-                        actions={
-                            <Button component={RouterLink} to="/explorer" variant="outlined" color="secondary">
-                                View All
-                            </Button>
-                        }
-                    >
-                        <RecentTasksList count={100} />
-                    </Panel>
+
+                    <RecentTasksPanel count={100} />
                 </Grid>
                 <Grid item lg={4} xs={12}>
                     <WorkersSummaryStack />
