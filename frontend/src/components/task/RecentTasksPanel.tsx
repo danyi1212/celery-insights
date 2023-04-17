@@ -34,6 +34,7 @@ const RecentTasksPanel: React.FC<RecentTasksPanelProps> = ({ count }) => {
 
     return (
         <Panel
+            id="recent-tasks"
             title="Recent Tasks"
             loading={sortedTasks === null}
             actions={
