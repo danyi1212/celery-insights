@@ -13,7 +13,7 @@ import { Link } from "react-router-dom"
 
 interface TaskListItemProps {
     task: TaskRequest
-    subtitle?: string
+    subtitle?: string | React.ReactNode
 }
 
 const TaskListItem: React.FC<TaskListItemProps> = ({ task, subtitle }) => {
