@@ -38,7 +38,6 @@ export class LRUMap<K, V> {
             this.values.set(key, { value, node })
             if (this.values.size > this.capacity) {
                 const removedKey = this.lruList.removeHead()
-                console.warn("Cache eviction: LRU map is full. Removing key: " + removedKey)
                 this.values.delete(removedKey)
             }
         }
@@ -119,7 +118,7 @@ class DoublyLinkedList<K> {
 
     removeHead(): K {
         if (!this.head) {
-            throw new Error("List is empty")
+            throw new Error("The list is empty")
         }
         const key = this.head.key
         this.removeNode(this.head)
