@@ -32,16 +32,16 @@ class Worker(BaseModel):
     software_identity: str = Field(description="Name of worker software (e.g, py-celery)")
     software_version: str = Field(description="Software version")
     software_sys: str = Field(description="Software Operating System name (e.g, Linux/Darwin)")
-    active_tasks: int = Field(description="Amount of tasks currently processing by worker")
-    processed_tasks: int = Field(description="Amount of tasks completed by worker")
-    last_updated: int = Field(description="When worker last event published")
+    active_tasks: int = Field(description="Number of tasks currently processed by worker")
+    processed_tasks: int = Field(description="Number of tasks completed by worker")
+    last_updated: int = Field(description="When worker latest event published")
     heartbeat_expires: int | None = Field(description="When worker will be considered offline")
     cpu_load: tuple[float, float, float] | None = Field(description="Host CPU load average in last 1, 5 and 15 minutes")
 
     @classmethod
     def from_celery_worker(cls, worker: CeleryWorker) -> Self:
         return cls(
-            id=worker.id,
+            id=f"{worker.hostname}-{worker.pid}",
             hostname=worker.hostname,
             pid=worker.pid,
             last_updated=worker.timestamp,
@@ -108,7 +108,7 @@ class QueueInfo(BaseModel, extra=Extra.allow):
     durable: bool = Field(description="Queue will survive broker restart")
     exclusive: bool = Field(description="Queue can be used by only one consumer")
     auto_delete: bool = Field(description="Queue will be deleted after last consumer unsubscribes")
-    no_ack: bool = Field(description="Task messages will not be acknowledged by workers")
+    no_ack: bool = Field(description="Workers will not acknowledge task messages")
     alias: str | None = Field(description="Queue alias if used for queue names")
     message_ttl: int | None = Field(description="Message TTL in seconds")
     max_length: int | None = Field(description="Maximum number of task messages allowed in the queue")
@@ -129,13 +129,13 @@ class TaskRequest(BaseModel, extra=Extra.allow):
     args: list[Any] = Field(description="Task positional arguments")
     kwargs: dict[str, Any] = Field(description="Task keyword arguments")
     delivery_info: DeliveryInfo = Field(description="Delivery Information about the task Message")
-    acknowledged: bool = Field(description="Whether the task message acknowledged")
-    time_start: float | None = Field(description="When task has started by the worker")
+    acknowledged: bool = Field(description="Whether the task message is acknowledged")
+    time_start: float | None = Field(description="When the task has started by the worker")
     hostname: str = Field(description="Worker hostname")
     worker_pid: int | None = Field(description="Child worker process ID")
 
 
 class ScheduledTask(BaseModel, extra=Extra.allow):
-    eta: str = Field(description="Absolute time when task should be executed")
+    eta: str = Field(description="Absolute time when the task should be executed")
     priority: int = Field(description="Message priority")
     request: TaskRequest = Field(description="Task Information")
