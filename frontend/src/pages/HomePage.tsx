@@ -1,18 +1,15 @@
-import Panel from "@components/common/Panel"
 import ExceptionsSummary from "@components/task/alerts/ExceptionsSummary"
 import RecentTasksPanel from "@components/task/RecentTasksPanel"
 import WelcomeBanner from "@components/WelcomeBanner"
 import WorkersSummaryStack from "@components/worker/WorkersSummaryStack"
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline"
 import Box from "@mui/material/Box"
-import Button from "@mui/material/Button"
 import Collapse from "@mui/material/Collapse"
 import Grid from "@mui/material/Grid"
 import Typography from "@mui/material/Typography"
 import useSettingsStore from "@stores/useSettingsStore"
 import { useStateStore } from "@stores/useStateStore"
 import React from "react"
-import { Link as RouterLink } from "react-router-dom"
 
 import { ReadyState } from "react-use-websocket"
 
@@ -46,7 +43,6 @@ const HomePage: React.FC = () => {
             <ExceptionsSummary />
             <Grid container spacing={3} px={3}>
                 <Grid item lg={8} xs={12}>
-
                     <RecentTasksPanel count={100} />
                 </Grid>
                 <Grid item lg={4} xs={12}>
