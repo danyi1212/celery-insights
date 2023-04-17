@@ -1,6 +1,6 @@
+import AnimatedList from "@components/common/AnimatedList"
+import AnimatedListItem from "@components/common/AnimatedListItem"
 import TaskAvatar from "@components/task/TaskAvatar"
-import List from "@mui/material/List"
-import ListItem from "@mui/material/ListItem"
 import ListItemAvatar from "@mui/material/ListItemAvatar"
 import ListItemButton from "@mui/material/ListItemButton"
 import ListItemText from "@mui/material/ListItemText"
@@ -24,18 +24,18 @@ const RecentTasksList: React.FC<RecentTasksListProps> = ({ count }) => {
     )
 
     return (
-        <List>
+        <AnimatedList>
             {sortedTasks.map((task) => (
-                <ListItem key={task.id} disablePadding>
+                <AnimatedListItem key={task.id} disablePadding>
                     <ListItemButton component={Link} to={`/tasks/${task.id}`}>
                         <ListItemAvatar>
                             <TaskAvatar taskId={task.id} type={task.type} status={task.state} disableLink />
                         </ListItemAvatar>
                         <ListItemText primary={task.type} secondary={task.worker} />
                     </ListItemButton>
-                </ListItem>
+                </AnimatedListItem>
             ))}
-        </List>
+        </AnimatedList>
     )
 }
 export default RecentTasksList

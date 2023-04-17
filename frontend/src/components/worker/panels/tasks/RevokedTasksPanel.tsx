@@ -1,9 +1,9 @@
+import AnimatedList from "@components/common/AnimatedList"
+import AnimatedListItem from "@components/common/AnimatedListItem"
 import Panel from "@components/common/Panel"
 import TaskAvatar from "@components/task/TaskAvatar"
 import useWorkerRevokedTasks from "@hooks/worker/useWorkerRevokedTasks"
 import Box from "@mui/material/Box"
-import List from "@mui/material/List"
-import ListItem from "@mui/material/ListItem"
 import ListItemAvatar from "@mui/material/ListItemAvatar"
 import ListItemButton from "@mui/material/ListItemButton"
 import ListItemText from "@mui/material/ListItemText"
@@ -24,14 +24,14 @@ interface RevokedTaskListItemProps {
 const RevokedTaskListItem: React.FC<RevokedTaskListItemProps> = ({ taskId }) => {
     const task = useStateStore(useCallback((state) => state.tasks.get(taskId), [taskId]))
     return (
-        <ListItem disablePadding>
+        <AnimatedListItem disablePadding>
             <ListItemButton component={Link} to={`/tasks/${taskId}`}>
                 <ListItemAvatar>
                     <TaskAvatar taskId={taskId} type={task?.type} status={task?.state} disableLink />
                 </ListItemAvatar>
                 <ListItemText primary={task?.type || "Unknown task"} secondary={taskId} />
             </ListItemButton>
-        </ListItem>
+        </AnimatedListItem>
     )
 }
 
@@ -40,11 +40,11 @@ const RevokedTasksPanel: React.FC<RevokedTasksPanelProps> = ({ worker }) => {
     return (
         <Panel title="Revoked Tasks" loading={isLoading} error={error}>
             {tasks && tasks.length > 0 ? (
-                <List disablePadding>
+                <AnimatedList disablePadding>
                     {tasks.map((taskId) => (
                         <RevokedTaskListItem key={taskId} taskId={taskId} />
                     ))}
-                </List>
+                </AnimatedList>
             ) : (
                 <Box display="flex" justifyContent="center" alignItems="center" p={3}>
                     <Typography variant="h4" align="center">

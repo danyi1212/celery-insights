@@ -1,3 +1,4 @@
+import AnimatedList from "@components/common/AnimatedList"
 import Panel from "@components/common/Panel"
 import ActiveTaskListItem from "@components/worker/panels/tasks/ActiveTaskListItem"
 import useWorkerActiveTasks from "@hooks/worker/useWorkerActiveTasks"
@@ -16,11 +17,11 @@ const ActiveTasksPanel: React.FC<ActiveTasksPanelProps> = ({ worker }) => {
     return (
         <Panel title="Active Task" loading={isLoading} error={error}>
             {tasks && tasks.length > 0 ? (
-                <List disablePadding>
+                <AnimatedList disablePadding>
                     {tasks.map((task) => (
                         <ActiveTaskListItem key={task.id} task={task} />
                     ))}
-                </List>
+                </AnimatedList>
             ) : (
                 <Box display="flex" justifyContent="center" alignItems="center" p={3}>
                     <Typography variant="h4" align="center">

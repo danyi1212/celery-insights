@@ -1,7 +1,7 @@
+import AnimatedListItem from "@components/common/AnimatedListItem"
 import TaskAvatar from "@components/task/TaskAvatar"
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline"
 import HighlightOffIcon from "@mui/icons-material/HighlightOff"
-import ListItem from "@mui/material/ListItem"
 import ListItemAvatar from "@mui/material/ListItemAvatar"
 import ListItemButton from "@mui/material/ListItemButton"
 import ListItemSecondaryAction from "@mui/material/ListItemSecondaryAction"
@@ -18,7 +18,7 @@ interface TaskListItemProps {
 
 const TaskListItem: React.FC<TaskListItemProps> = ({ task, subtitle }) => {
     return (
-        <ListItem disablePadding>
+        <AnimatedListItem disablePadding>
             <ListItemButton component={Link} to={`/tasks/${task.id}`}>
                 <ListItemAvatar>
                     <TaskAvatar taskId={task.id} type={task.type} disableLink />
@@ -36,7 +36,7 @@ const TaskListItem: React.FC<TaskListItemProps> = ({ task, subtitle }) => {
                     )}
                 </ListItemSecondaryAction>
             </ListItemButton>
-        </ListItem>
+        </AnimatedListItem>
     )
 }
 export default TaskListItem
