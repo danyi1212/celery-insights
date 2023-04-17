@@ -8,27 +8,29 @@ import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
 import { TaskState } from "@services/server"
 import { useStateStore } from "@stores/useStateStore"
-import { StateWorker } from "@utils/translateServerModels"
 import React, { useCallback, useMemo } from "react"
 import { Link } from "react-router-dom"
 
 interface WorkerSummaryProps {
-    worker: StateWorker
+    workerId: string
 }
 
-const WorkerSummary: React.FC<WorkerSummaryProps> = ({ worker }) => {
+const WorkerSummary: React.FC<WorkerSummaryProps> = ({ workerId }) => {
+    const worker = useStateStore((state) => state.workers.get(workerId))
     const tasks = useStateStore(
         useCallback(
             (store) =>
                 store.tasks
                     .map((task) => task)
-                    .filter((task) => task.worker === worker.id)
+                    .filter((task) => task.worker === workerId)
                     .sort((a, b) => (a.sentAt > b.sentAt ? -1 : 1)),
-            [worker]
+            [workerId]
         )
     )
     const startedTasks = useMemo(() => tasks.filter((task) => task.state == TaskState.STARTED), [tasks])
     const receivedTasks = useMemo(() => tasks.filter((task) => task.state == TaskState.RECEIVED), [tasks])
+
+    if (worker === undefined) return <></>
 
     return (
         <PanelPaper sx={{ px: 2 }}>

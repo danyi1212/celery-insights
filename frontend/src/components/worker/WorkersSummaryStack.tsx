@@ -1,5 +1,5 @@
 import WorkerSummary from "@components/worker/WorkerSummary"
-import { useOnlineWorkers } from "@hooks/worker/useOnlineWorkers"
+import { useOnlineWorkerIds } from "@hooks/worker/useOnlineWorkerIds"
 import Box from "@mui/material/Box"
 import Stack from "@mui/material/Stack"
 import Toolbar from "@mui/material/Toolbar"
@@ -7,7 +7,7 @@ import Typography from "@mui/material/Typography"
 import React from "react"
 
 const WorkersSummaryStack: React.FC = () => {
-    const workers = useOnlineWorkers()
+    const workerIds = useOnlineWorkerIds()
 
     return (
         <Box>
@@ -17,8 +17,8 @@ const WorkersSummaryStack: React.FC = () => {
                 </Typography>
             </Toolbar>
             <Stack spacing={5}>
-                {workers.map((worker) => (
-                    <WorkerSummary key={worker.id} worker={worker} />
+                {workerIds.map((workerId) => (
+                    <WorkerSummary key={workerId} workerId={workerId} />
                 ))}
             </Stack>
         </Box>
