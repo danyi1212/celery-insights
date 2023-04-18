@@ -38,7 +38,7 @@ const PoolDetailsCard: React.FC<PoolDetailsCardProps> = ({ hostname, ...props })
     const taskProcessMap = useTaskProcessMap(hostname)
 
     return (
-        <Panel title="Process Pool" loading={isLoading} error={error} {...props} >
+        <Panel title="Process Pool" loading={isLoading} error={error} {...props}>
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12} md={6}>
                     <DetailItem

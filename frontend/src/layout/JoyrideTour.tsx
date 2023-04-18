@@ -192,8 +192,8 @@ const createSteps = (): Step[] => [
         content: (
             <>
                 <p>
-                    Facets hold all the unique values associated with each task property, as well as a count of
-                    tasks containing that particular value.
+                    Facets hold all the unique values associated with each task property, as well as a count of tasks
+                    containing that particular value.
                 </p>
                 <p>
                     By selecting these values, you can refine your search for specific attributes, and the table will

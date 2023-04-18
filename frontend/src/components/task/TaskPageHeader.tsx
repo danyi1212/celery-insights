@@ -2,7 +2,7 @@ import TaskAvatar from "@components/task/TaskAvatar"
 import { WorkflowChartType } from "@components/workflow/WorkflowGraph"
 import AccountTreeIcon from "@mui/icons-material/AccountTree"
 import ViewTimelineIcon from "@mui/icons-material/ViewTimeline"
-import { Skeleton } from "@mui/material"
+import Skeleton from "@mui/material/Skeleton";
 import Box from "@mui/material/Box"
 import Paper from "@mui/material/Paper"
 import Stack from "@mui/material/Stack"
