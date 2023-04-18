@@ -1,19 +1,19 @@
 import AnimatedList from "@components/common/AnimatedList"
-import Panel from "@components/common/Panel"
+import Panel, { PanelProps } from "@components/common/Panel"
 import ScheduledTaskListItem from "@components/worker/panels/tasks/ScheduledTaskListItem"
 import useWorkerScheduledTasks from "@hooks/worker/useWorkerScheduledTasks"
 import Box from "@mui/material/Box"
 import Typography from "@mui/material/Typography"
 import React from "react"
 
-interface ScheduledTasksPanelProps {
+interface ScheduledTasksPanelProps extends Omit<PanelProps, "title"> {
     hostname: string
 }
 
-const ScheduledTasksPanel: React.FC<ScheduledTasksPanelProps> = ({ hostname }) => {
+const ScheduledTasksPanel: React.FC<ScheduledTasksPanelProps> = ({ hostname, ...props }) => {
     const { tasks, isLoading, error } = useWorkerScheduledTasks(hostname)
     return (
-        <Panel title="Scheduled Task" loading={isLoading} error={error}>
+        <Panel title="Scheduled Task" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (
                 <AnimatedList disablePadding>
                     {tasks.map((task) => (

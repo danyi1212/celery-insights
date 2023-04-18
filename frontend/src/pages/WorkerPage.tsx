@@ -36,14 +36,14 @@ const WorkerPage: React.FC = () => {
 
     return (
         <Grid container spacing={3} px={3}>
-            <Grid item xs={12} lg={6} xl={4} id="worker-details">
-                <WorkerDetailsCard workerId={workerId} hostname={hostname} />
+            <Grid item xs={12} lg={6} xl={4}>
+                <WorkerDetailsCard workerId={workerId} hostname={hostname} id="worker-details" />
             </Grid>
             <Grid item xs={12} lg={6} xl={4}>
                 <BrokerDetailsCard hostname={hostname} />
             </Grid>
-            <Grid item xs={12} lg={6} xl={4} id="worker-pool">
-                <PoolDetailsCard hostname={hostname} />
+            <Grid item xs={12} lg={6} xl={4}>
+                <PoolDetailsCard hostname={hostname} id="worker-pool" />
             </Grid>
             <Grid item xs={12}>
                 <QueueDetails hostname={hostname} />
@@ -57,8 +57,8 @@ const WorkerPage: React.FC = () => {
             <Grid item xs={12} lg={6} xl={4}>
                 <ScheduledTasksPanel hostname={hostname} />
             </Grid>
-            <Grid item xs={12} xl={6} id="registered-tasks">
-                <RegisteredTasksPanel workerId={workerId} hostname={hostname} />
+            <Grid item xs={12} xl={6}>
+                <RegisteredTasksPanel workerId={workerId} hostname={hostname} id="registered-tasks" />
             </Grid>
             <Grid item xs={12} xl={6}>
                 <RevokedTasksPanel hostname={hostname} />
