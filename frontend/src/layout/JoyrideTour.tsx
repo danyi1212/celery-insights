@@ -1,8 +1,7 @@
 import TourTooltip from "@layout/TourTooltip"
-import { backStep, nextStep, setStep, stopTour, useTourStore } from "@stores/useTourStore"
-import React, { useEffect, useMemo } from "react"
+import { backStep, nextStep, stopTour, useTourStore } from "@stores/useTourStore"
+import React, { useMemo } from "react"
 import Joyride, { ACTIONS, CallBackProps, EVENTS, LIFECYCLE, STATUS, Step } from "react-joyride"
-import { useLocation } from "react-router-dom"
 
 const createSteps = (): Step[] => [
     {
@@ -76,14 +75,7 @@ const createSteps = (): Step[] => [
 
 const JoyrideTour: React.FC = () => {
     const state = useTourStore()
-    const location = useLocation()
     const steps = useMemo(() => createSteps(), [])
-
-    useEffect(() => {
-        if (state.run) {
-            if (location.pathname.startsWith("/tasks")) setStep(2)
-        }
-    }, [location, state.run])
 
     /* eslint-disable no-console */
     const handleCallback = (data: CallBackProps) => {
