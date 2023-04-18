@@ -9,7 +9,7 @@ const createSteps = (): Step[] => [
         // step index 0
         target: "body",
         placement: "center",
-        title: "Let's Start",
+        title: "Getting Started",
         content: (
             <span>
                 Open your app and trigger a Celery task or workflow.
@@ -24,12 +24,12 @@ const createSteps = (): Step[] => [
         target: "#recent-tasks",
         placement: "top",
         placementBeacon: "top",
-        title: "Find Your Task",
+        title: "Locate Your Task",
         content: (
             <span>
-                Here you can see a feed of the latest tasks in your Celery cluster.
+                In this feed, you&apos;ll find the latest tasks in your Celery cluster.
                 <br />
-                Look up and click on one of the tasks from the workflow you&apos;ve triggered.
+                Locate and click on one of the tasks from the workflow you&apos;ve triggered.
             </span>
         ),
         isFixed: true,
@@ -43,16 +43,11 @@ const createSteps = (): Step[] => [
         placement: "bottom-start",
         title: "Follow Your Task",
         content: (
-            <>
-                <p>
-                    Every task is assigned a unique Avatar, with a figure generated based on its ID, while the
-                    background color of the Avatar reflects the task type, allowing you to follow it around.
-                </p>
-                <p>
-                    Keep track of task status with the badge icon on the side, which updates in real-time to show
-                    progress.
-                </p>
-            </>
+            <p>
+                Each task has a unique Avatar, generated from its ID. <br />
+                The background color represents the task type, making it easy to track. <br />
+                Monitor the task status with the badge icon, which updates in real-time.
+            </p>
         ),
         isFixed: true,
         disableScrolling: true,
@@ -63,12 +58,13 @@ const createSteps = (): Step[] => [
         // step index 3
         target: "#workflow-chart",
         placement: "bottom",
-        title: "Understand the Context",
+        title: "Understanding Task Relationships",
         content: (
             <span>
-                Here you can see the complete workflow containing this task.
+                This chart presents the entire workflow that includes your task, helping you understand the
+                relationships between tasks.
                 <br />
-                Try clicking on other tasks in the workflow to check them out.
+                Click on other tasks within the workflow to check them out.
             </span>
         ),
         isFixed: true,
@@ -79,14 +75,8 @@ const createSteps = (): Step[] => [
         // step index 4
         target: "#workflow-selector",
         placement: "left",
-        title: "Timeline view",
-        content: (
-            <span>
-                Sometimes it is useful to also see when each task started and finished.
-                <br />
-                Switch to the timeline view.
-            </span>
-        ),
+        title: "Switch to Timeline view",
+        content: "To see when each task started and finished, switch to the timeline view.",
         isFixed: true,
         disableScrolling: true,
         spotlightClicks: true,
@@ -96,16 +86,10 @@ const createSteps = (): Step[] => [
         // step index 5
         target: "#workflow-chart",
         placement: "bottom",
-        title: "Understand the timeline",
-        content: (
-            <>
-                <p>
-                    With the timeline chart view, you can easily see the start and finish time of each task in your
-                    workflow, and get a clear picture of how long each task took to complete. The white line indicates
-                    when it was sent.
-                </p>
-            </>
-        ),
+        title: "Analyze the timeline",
+        content:
+            "The timeline chart view allows you to see the start and finish times of each task, as well as the " +
+            "duration. The white line indicates when the task was sent.",
         isFixed: true,
         disableScrolling: true,
         spotlightClicks: true,
@@ -116,8 +100,8 @@ const createSteps = (): Step[] => [
         placement: "bottom",
         title: "Task Lifetime",
         content:
-            "The lifetime chart visualizes the changes in task status over time, " +
-            "offering a glimpse into the time the task remained in each stage.",
+            "The lifetime chart shows the changes in task status over time, giving you a glimpse of how long " +
+            "the task remained in each stage.",
         isFixed: true,
         spotlightClicks: true,
     },
@@ -125,7 +109,7 @@ const createSteps = (): Step[] => [
         // step index 7
         target: "#task-details",
         placement: "top",
-        title: "Delving into Details",
+        title: "Explore Task Details",
         content: (
             <>
                 <p>
@@ -143,8 +127,8 @@ const createSteps = (): Step[] => [
         // step index 8
         target: "#worker-details",
         placement: "bottom",
-        title: "Worker Details",
-        content: "Here you can see information about the worker",
+        title: "Examine Worker Details",
+        content: "This section provides information about the worker.",
         isFixed: true,
         disableScrolling: true,
         disableBeacon: true,
@@ -155,15 +139,13 @@ const createSteps = (): Step[] => [
         // step index 9
         target: "#worker-pool",
         placement: "bottom",
-        title: "Worker Pool",
+        title: "Inspect Worker Pool",
         content: (
-            <>
-                <p>Every worker has a pool of processes responsible for handling tasks.</p>
-                <p>
-                    In this section, you can observe each active process in the pool, with the icon changing to the
-                    avatar of the task being processed.
-                </p>
-            </>
+            <span>
+                Each worker has a pool of processes that handle tasks. <br />
+                Observe each active process in the pool, with the icon changing to the avatar of the task being
+                processed.
+            </span>
         ),
         isFixed: true,
         disableScrolling: true,
@@ -173,14 +155,14 @@ const createSteps = (): Step[] => [
         // step index 10
         target: "#registered-tasks",
         placement: "top",
-        title: "What it can do",
+        title: "Explore Task Types",
         content: (
             <>
                 <p>
-                    Listed here are the task types this worker is capable of executing. The small badge beside each task
-                    shows the number of tasks this type it has executed
+                    This list shows the task types the worker can execute. The badge next to each task indicates the
+                    number of tasks executed.
                 </p>
-                <p>To explore those tasks, click on any task with a badge.</p>
+                <p>Click on a task with a badge to explore further.</p>
             </>
         ),
         isFixed: true,
@@ -191,8 +173,8 @@ const createSteps = (): Step[] => [
         // step index 11
         target: "body",
         placement: "center",
-        title: "Welcome to the Explorer!",
-        content: "Here you can search for tasks and compare them.",
+        title: "Discover the Explorer",
+        content: "Use the Explorer to search for tasks and compare them.",
         isFixed: true,
         disableBeacon: true,
         hideBackButton: true,
@@ -201,18 +183,13 @@ const createSteps = (): Step[] => [
         // step index 12
         target: "#facets-menu",
         placement: "right-start",
-        title: "Filter what you need",
+        title: "Refine Your Search",
         content: (
-            <>
-                <p>
-                    Facets hold all the unique values associated with each task property, as well as a count of tasks
-                    with that particular value.
-                </p>
-                <p>
-                    By selecting these values, you can refine your search for specific attributes, and the table will
-                    present only tasks that match the selected value.
-                </p>
-            </>
+            <span>
+                Facets display unique values and counts for each task property. <br />
+                Select these values to refine your search, and the table will show only tasks matching the selected
+                criteria.
+            </span>
         ),
         isFixed: true,
         spotlightClicks: true,
@@ -221,8 +198,8 @@ const createSteps = (): Step[] => [
         // step index 13
         target: "body",
         placement: "center",
-        title: "Begin Your Exploration!",
-        content: "You're all set! Thank you for choosing Celery Insights, and we wish you a delightful adventure.",
+        title: "You're all set!!",
+        content: "Thank you for choosing Celery Insights. Enjoy your exploration journey!",
         isFixed: true,
     },
 ]
