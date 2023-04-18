@@ -45,7 +45,7 @@ const TaskPage: React.FC = () => {
 
     return (
         <Box>
-            <Box width="100%" height="450px">
+            <Box width="100%" height="450px" id="worflow-chart">
                 <WorkflowGraph chartType={chartType} rootTaskId={task.rootId || task.id} currentTaskId={task.id} />
             </Box>
             <TaskPageHeader task={task} chartType={chartType} setChartType={setChartType} />

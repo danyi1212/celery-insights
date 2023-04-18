@@ -21,7 +21,7 @@ interface TaskPageHeaderProps {
 
 const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setChartType }) => {
     return (
-        <Toolbar component={Paper} elevation={3} sx={{ pt: 0.5, pb: 1, borderRadius: 0 }}>
+        <Toolbar component={Paper} elevation={3} sx={{ pt: 0.5, pb: 1, borderRadius: 0 }} id="task-header">
             <Box pr={3}>
                 <TaskAvatar taskId={task.id} type={task.type} status={task.state} />
             </Box>
