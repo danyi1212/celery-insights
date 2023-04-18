@@ -61,6 +61,8 @@ const WelcomeBanner: React.FC = () => {
                             size="large"
                             component="a"
                             href="https://github.com/danyi1212/celery-insights"
+                            target="_blank"
+                            rel="noopener noreferrer"
                         >
                             Getting Started <ArrowForwardIcon fontSize="large" sx={{ ml: 0.5 }} />
                         </Button>
