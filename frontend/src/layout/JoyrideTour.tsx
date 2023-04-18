@@ -54,6 +54,7 @@ const createSteps = (): Step[] => [
         isFixed: true,
         disableScrolling: true,
         disableBeacon: true,
+        hideBackButton: true,
     },
     {
         target: "#workflow-chart",
@@ -101,6 +102,7 @@ const createSteps = (): Step[] => [
         ),
         isFixed: true,
         disableScrolling: true,
+        spotlightClicks: true,
     },
     {
         target: "#lifetime-chart",
@@ -110,6 +112,7 @@ const createSteps = (): Step[] => [
             "The lifetime chart visualizes the changes in task status over time, " +
             "offering a glimpse into the length of time the task remained in each stage.",
         isFixed: true,
+        spotlightClicks: true,
     },
     {
         target: "#task-details",
@@ -136,6 +139,8 @@ const createSteps = (): Step[] => [
         isFixed: true,
         disableScrolling: true,
         disableBeacon: true,
+        spotlightClicks: true,
+        hideBackButton: true,
     },
     {
         target: "#worker-pool",
@@ -152,6 +157,7 @@ const createSteps = (): Step[] => [
         ),
         isFixed: true,
         disableScrolling: true,
+        spotlightClicks: true,
     },
     {
         target: "#registered-tasks",
@@ -177,6 +183,7 @@ const createSteps = (): Step[] => [
         content: "Here you can search for tasks and compare them.",
         isFixed: true,
         disableBeacon: true,
+        hideBackButton: true,
     },
     {
         target: "#facets-menu",
@@ -185,7 +192,7 @@ const createSteps = (): Step[] => [
         content: (
             <>
                 <p>
-                    Facets hold all the unique values associated with each task characteristic, as well as a count of
+                    Facets hold all the unique values associated with each task property, as well as a count of
                     tasks containing that particular value.
                 </p>
                 <p>
@@ -195,6 +202,7 @@ const createSteps = (): Step[] => [
             </>
         ),
         isFixed: true,
+        spotlightClicks: true,
     },
     {
         target: "body",
