@@ -9,6 +9,7 @@ import IconButton from "@mui/material/IconButton"
 import Toolbar from "@mui/material/Toolbar"
 import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
+import { useTourChangeStepOnLoad } from "@stores/useTourStore"
 import { StateTask } from "@utils/translateServerModels"
 import React, { useState } from "react"
 
@@ -17,11 +18,13 @@ const ExplorerPage: React.FC = () => {
     const tasks = useStateStore((state) => state.tasks.map((task) => task))
     const [isFacetMenuOpen, setFacetMenuOpen] = useState(true)
     const [filters, setFilter] = useExplorerFilter<StateTask>()
+    useTourChangeStepOnLoad(11)
 
     return (
         <Box>
             <Box display="flex" flexDirection="row">
                 <Box
+                    id="facets-menu"
                     width={isFacetMenuOpen ? FACET_WIDTH : 0}
                     sx={{ transition: (theme) => theme.transitions.create("width"), overflow: "hidden" }}
                 >

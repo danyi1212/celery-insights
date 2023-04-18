@@ -10,6 +10,7 @@ import { styled } from "@mui/material/styles"
 import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
 import useSettingsStore from "@stores/useSettingsStore"
+import { startTour } from "@stores/useTourStore"
 import React from "react"
 import { ReactFlowProvider } from "reactflow"
 
@@ -51,11 +52,9 @@ const WelcomeBanner: React.FC = () => {
                         The ultimate monitoring tool for your cluster.
                     </Typography>
                     <Stack direction="row" spacing={2} sx={{ my: 3 }}>
-                        <Tooltip title="Coming soon!" arrow>
-                            <Button color="secondary" variant="contained" size="large">
-                                Start Tutorial
-                            </Button>
-                        </Tooltip>
+                        <Button color="secondary" variant="contained" size="large" onClick={() => startTour()}>
+                            Start Tour
+                        </Button>
                         <Button
                             color="secondary"
                             variant="text"

@@ -1,6 +1,6 @@
 import DetailItem from "@components/common/DetailItem"
 import LinearProgressWithLabel from "@components/common/LinearProgressWithLabel"
-import Panel from "@components/common/Panel"
+import Panel, { PanelProps } from "@components/common/Panel"
 import WorkerStatus from "@components/worker/WorkerStatus"
 import useWorkerStats from "@hooks/worker/useWorkerStats"
 import Grid from "@mui/material/Grid"
@@ -9,17 +9,17 @@ import { formatBytes } from "@utils/FormatBytes"
 import { formatSecondsDurationLong } from "@utils/FormatSecondsDurationLong"
 import React, { useCallback } from "react"
 
-interface WorkerDetailsCardProps {
+interface WorkerDetailsCardProps extends Omit<PanelProps, "title"> {
     workerId: string
     hostname: string
 }
 
-const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, hostname }) => {
+const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, hostname, ...props }) => {
     const worker = useStateStore(useCallback((state) => state.workers.get(workerId), [workerId]))
     const { stats, isLoading, error } = useWorkerStats(hostname)
 
     return (
-        <Panel title="Worker" loading={isLoading} error={error}>
+        <Panel title="Worker" loading={isLoading} error={error} {...props}>
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12}>
                     <DetailItem label="Hostname" value={worker?.hostname} />

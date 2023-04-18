@@ -1,6 +1,6 @@
 import AnimatedList from "@components/common/AnimatedList"
 import AnimatedListItem from "@components/common/AnimatedListItem"
-import Panel from "@components/common/Panel"
+import Panel, { PanelProps } from "@components/common/Panel"
 import TaskAvatar from "@components/task/TaskAvatar"
 import useWorkerRevokedTasks from "@hooks/worker/useWorkerRevokedTasks"
 import Box from "@mui/material/Box"
@@ -16,7 +16,7 @@ interface RevokedTasksPanelProps {
     hostname: string
 }
 
-interface RevokedTaskListItemProps {
+interface RevokedTaskListItemProps extends Omit<PanelProps, "title"> {
     taskId: string
 }
 
@@ -34,10 +34,10 @@ const RevokedTaskListItem: React.FC<RevokedTaskListItemProps> = ({ taskId }) => 
     )
 }
 
-const RevokedTasksPanel: React.FC<RevokedTasksPanelProps> = ({ hostname }) => {
+const RevokedTasksPanel: React.FC<RevokedTasksPanelProps> = ({ hostname, ...props }) => {
     const { tasks, isLoading, error } = useWorkerRevokedTasks(hostname)
     return (
-        <Panel title="Revoked Tasks" loading={isLoading} error={error}>
+        <Panel title="Revoked Tasks" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (
                 <AnimatedList disablePadding>
                     {tasks.map((taskId) => (

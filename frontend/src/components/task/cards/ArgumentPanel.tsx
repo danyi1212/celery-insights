@@ -1,20 +1,17 @@
 import Panel from "@components/common/Panel"
+import useTaskResult from "@hooks/task/useTaskResult"
+import useTaskState from "@hooks/task/useTaskState"
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline"
 import { PaperProps, useTheme } from "@mui/material"
 import Box from "@mui/material/Box"
 import IconButton from "@mui/material/IconButton"
 import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
-import { TaskResult } from "@services/server"
 import { JsonViewer } from "@textea/json-viewer"
-import { StateTask } from "@utils/translateServerModels"
 import React from "react"
 
-interface ArgumentsCardProps extends PaperProps {
-    task: StateTask
-    result?: TaskResult
-    loading: boolean
-    error?: unknown
+interface ArgumentPanelProps extends PaperProps {
+    taskId: string
 }
 
 const HelpMessage: React.FC = () => (
@@ -32,9 +29,11 @@ const HelpMessage: React.FC = () => (
     </Typography>
 )
 
-const ArgumentsCard: React.FC<ArgumentsCardProps> = ({ task, result, loading, error, ...props }) => {
+const ArgumentPanel: React.FC<ArgumentPanelProps> = ({ taskId, ...props }) => {
     const theme = useTheme()
-    const showHelp = !loading && (!result?.args || !result?.kwargs)
+    const { task } = useTaskState(taskId)
+    const { taskResult, isLoading, error } = useTaskResult(taskId)
+    const showHelp = !isLoading && (!taskResult?.args || !taskResult?.kwargs)
     return (
         <Panel
             title="Arguments"
@@ -47,7 +46,7 @@ const ArgumentsCard: React.FC<ArgumentsCardProps> = ({ task, result, loading, er
                     </Tooltip>
                 )
             }
-            loading={loading}
+            loading={isLoading}
             error={error}
             {...props}
         >
@@ -59,8 +58,8 @@ const ArgumentsCard: React.FC<ArgumentsCardProps> = ({ task, result, loading, er
                     quotesOnKeys={false}
                     defaultInspectDepth={2}
                     value={{
-                        args: result?.args || task.args,
-                        kwargs: result?.kwargs || task.kwargs,
+                        args: taskResult?.args || task?.args || "Unknown",
+                        kwargs: taskResult?.kwargs || task?.kwargs || "Unknown",
                     }}
                 />
             </Box>
@@ -68,4 +67,4 @@ const ArgumentsCard: React.FC<ArgumentsCardProps> = ({ task, result, loading, er
     )
 }
 
-export default ArgumentsCard
+export default ArgumentPanel

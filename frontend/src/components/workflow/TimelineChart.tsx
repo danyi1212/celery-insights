@@ -7,6 +7,7 @@ import ZoomOutIcon from "@mui/icons-material/ZoomOut"
 import ZoomOutMapIcon from "@mui/icons-material/ZoomOutMap"
 import { Theme, useTheme } from "@mui/material"
 import Box from "@mui/material/Box"
+import { useTourChangeStepOnLoad } from "@stores/useTourStore"
 import { formatDurationExact } from "@utils/FormatDurationExact"
 import { StateTask } from "@utils/translateServerModels"
 import { ApexOptions } from "apexcharts"
@@ -120,6 +121,7 @@ interface TimelineChartProps {
 }
 
 const TimelineChart: React.FC<TimelineChartProps> = ({ tasks }) => {
+    useTourChangeStepOnLoad(5)
     const theme = useTheme()
     const navigate = useNavigate()
     const sortedTasks = useMemo(() => tasks.sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1)), [tasks])

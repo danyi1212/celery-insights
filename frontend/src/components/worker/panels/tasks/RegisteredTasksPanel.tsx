@@ -1,4 +1,4 @@
-import Panel from "@components/common/Panel"
+import Panel, { PanelProps } from "@components/common/Panel"
 import useWorkerRegisteredTasks from "@hooks/worker/useWorkerRegisteredTasks"
 import useWorkerStats from "@hooks/worker/useWorkerStats"
 import Avatar from "@mui/material/Avatar"
@@ -15,7 +15,7 @@ import React, { useMemo } from "react"
 import { Link } from "react-router-dom"
 import stc from "string-to-color"
 
-interface RegisteredTasksPanelProps {
+interface RegisteredTasksPanelProps extends Omit<PanelProps, "title"> {
     workerId: string
     hostname: string
 }
@@ -73,11 +73,11 @@ const TaskTypeListItem: React.FC<TaskTypeListItemProps> = ({ taskType, workerId,
     )
 }
 
-const RegisteredTasksPanel: React.FC<RegisteredTasksPanelProps> = ({ workerId, hostname }) => {
+const RegisteredTasksPanel: React.FC<RegisteredTasksPanelProps> = ({ workerId, hostname, ...props }) => {
     const { tasks, isLoading, error } = useWorkerRegisteredTasks(hostname)
     const { stats } = useWorkerStats(hostname)
     return (
-        <Panel title="Registered Task Types" loading={isLoading} error={error}>
+        <Panel title="Registered Task Types" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (
                 <List disablePadding>
                     {tasks.map((taskType) => (

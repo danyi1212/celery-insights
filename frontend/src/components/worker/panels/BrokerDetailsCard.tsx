@@ -1,5 +1,5 @@
 import DetailItem from "@components/common/DetailItem"
-import Panel from "@components/common/Panel"
+import Panel, { PanelProps } from "@components/common/Panel"
 import useWorkerStats from "@hooks/worker/useWorkerStats"
 import LockIcon from "@mui/icons-material/Lock"
 import LockOpenIcon from "@mui/icons-material/LockOpen"
@@ -9,14 +9,14 @@ import Tooltip from "@mui/material/Tooltip"
 import { formatSecondsDuration } from "@utils/formatSecondsDuration"
 import React from "react"
 
-interface BrokerDetailsCardProps {
+interface BrokerDetailsCardProps extends Omit<PanelProps, "title"> {
     hostname: string
 }
 
-const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ hostname }) => {
+const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ hostname, ...props }) => {
     const { stats, isLoading, error } = useWorkerStats(hostname)
     return (
-        <Panel title="Broker" loading={isLoading} error={error}>
+        <Panel title="Broker" loading={isLoading} error={error} {...props}>
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12}>
                     <DetailItem

@@ -1,6 +1,6 @@
 import AnimatedList from "@components/common/AnimatedList"
 import AnimatedListItem from "@components/common/AnimatedListItem"
-import Panel from "@components/common/Panel"
+import Panel, { PanelProps } from "@components/common/Panel"
 import TaskAvatar from "@components/task/TaskAvatar"
 import Button from "@mui/material/Button"
 import ListItemAvatar from "@mui/material/ListItemAvatar"
@@ -11,11 +11,11 @@ import { StateTask } from "@utils/translateServerModels"
 import React, { startTransition, useEffect, useState } from "react"
 import { Link as RouterLink, Link } from "react-router-dom"
 
-interface RecentTasksPanelProps {
+interface RecentTasksPanelProps extends Omit<PanelProps, "title"> {
     count?: number
 }
 
-const RecentTasksPanel: React.FC<RecentTasksPanelProps> = ({ count }) => {
+const RecentTasksPanel: React.FC<RecentTasksPanelProps> = ({ count, ...props }) => {
     const tasks = useStateStore((state) => state.tasks)
     const [sortedTasks, setSortedTasks] = useState<StateTask[] | null>(null)
 
@@ -41,6 +41,7 @@ const RecentTasksPanel: React.FC<RecentTasksPanelProps> = ({ count }) => {
                     View All
                 </Button>
             }
+            {...props}
         >
             <AnimatedList>
                 {sortedTasks?.map((task) => (

@@ -8,7 +8,7 @@ import Toolbar from "@mui/material/Toolbar"
 import Typography from "@mui/material/Typography"
 import React, { useMemo } from "react"
 
-interface PanelProps extends PaperProps {
+export interface PanelProps extends PaperProps {
     title: string
     titleProps?: TypographyProps
     actions?: React.ReactNode

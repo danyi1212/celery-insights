@@ -1,19 +1,19 @@
 import AnimatedList from "@components/common/AnimatedList"
-import Panel from "@components/common/Panel"
+import Panel, { PanelProps } from "@components/common/Panel"
 import ReservedTaskListItem from "@components/worker/panels/tasks/ReservedTaskListItem"
 import useWorkerReservedTasks from "@hooks/worker/useWorkerReservedTasks"
 import Box from "@mui/material/Box"
 import Typography from "@mui/material/Typography"
 import React from "react"
 
-interface ReservedTasksPanelProps {
+interface ReservedTasksPanelProps extends Omit<PanelProps, "title"> {
     hostname: string
 }
 
-const ReservedTasksPanel: React.FC<ReservedTasksPanelProps> = ({ hostname }) => {
+const ReservedTasksPanel: React.FC<ReservedTasksPanelProps> = ({ hostname, ...props }) => {
     const { tasks, isLoading, error } = useWorkerReservedTasks(hostname)
     return (
-        <Panel title="Reserved Task" loading={isLoading} error={error}>
+        <Panel title="Reserved Task" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (
                 <AnimatedList disablePadding>
                     {tasks.map((task) => (

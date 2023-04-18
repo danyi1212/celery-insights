@@ -1,19 +1,19 @@
 import AnimatedList from "@components/common/AnimatedList"
-import Panel from "@components/common/Panel"
+import Panel, { PanelProps } from "@components/common/Panel"
 import ActiveTaskListItem from "@components/worker/panels/tasks/ActiveTaskListItem"
 import useWorkerActiveTasks from "@hooks/worker/useWorkerActiveTasks"
 import Box from "@mui/material/Box"
 import Typography from "@mui/material/Typography"
 import React from "react"
 
-interface ActiveTasksPanelProps {
+interface ActiveTasksPanelProps extends Omit<PanelProps, "title"> {
     hostname: string
 }
 
-const ActiveTasksPanel: React.FC<ActiveTasksPanelProps> = ({ hostname }) => {
+const ActiveTasksPanel: React.FC<ActiveTasksPanelProps> = ({ hostname, ...props }) => {
     const { tasks, isLoading, error } = useWorkerActiveTasks(hostname)
     return (
-        <Panel title="Active Task" loading={isLoading} error={error}>
+        <Panel title="Active Task" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (
                 <AnimatedList disablePadding>
                     {tasks.map((task) => (

@@ -1,5 +1,5 @@
 import DetailItem from "@components/common/DetailItem"
-import Panel from "@components/common/Panel"
+import Panel, { PanelProps } from "@components/common/Panel"
 import ProcessChip from "@components/worker/panels/ProcessChip"
 import useWorkerActiveTasks from "@hooks/worker/useWorkerActiveTasks"
 import useWorkerStats from "@hooks/worker/useWorkerStats"
@@ -8,7 +8,7 @@ import { TaskRequest } from "@services/server"
 import { formatSecondsDuration } from "@utils/formatSecondsDuration"
 import React, { startTransition, useEffect, useState } from "react"
 
-interface PoolDetailsCardProps {
+interface PoolDetailsCardProps extends Omit<PanelProps, "title"> {
     hostname: string
 }
 
@@ -33,12 +33,12 @@ function useTaskProcessMap(hostname: string): Map<number, TaskRequest> {
     return map
 }
 
-const PoolDetailsCard: React.FC<PoolDetailsCardProps> = ({ hostname }) => {
+const PoolDetailsCard: React.FC<PoolDetailsCardProps> = ({ hostname, ...props }) => {
     const { stats, isLoading, error } = useWorkerStats(hostname)
     const taskProcessMap = useTaskProcessMap(hostname)
 
     return (
-        <Panel title="Process Pool" loading={isLoading} error={error}>
+        <Panel title="Process Pool" loading={isLoading} error={error} {...props}>
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12} md={6}>
                     <DetailItem
