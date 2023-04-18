@@ -18,7 +18,7 @@ export const stopTour = () => useTourStore.setState({ tourActive: false, run: fa
 export const nextStep = () => useTourStore.setState((state) => ({ run: true, stepIndex: state.stepIndex + 1 }))
 export const backStep = () => useTourStore.setState((state) => ({ run: true, stepIndex: state.stepIndex - 1 }))
 export const setStep = (stepIndex: number) => useTourStore.setState({ run: true, stepIndex })
-export const useTourChangeStepOnLoad = (stepIndex: number, condition?: boolean) => {
+export const useTourChangeStepOnLoad = (stepIndex: number, condition = true) => {
     const tour = useTourStore()
 
     useEffect(() => {

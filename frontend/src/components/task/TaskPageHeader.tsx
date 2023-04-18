@@ -48,6 +48,7 @@ const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setCha
                 onChange={(_, newValue) => newValue && setChartType(newValue)}
                 exclusive
                 size="small"
+                id="workflow-selector"
             >
                 <ToggleButton value={WorkflowChartType.FLOWCHART}>
                     <Tooltip title="Flowchart">

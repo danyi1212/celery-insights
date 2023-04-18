@@ -73,6 +73,44 @@ const createSteps = (): Step[] => [
         disableBeacon: true,
         spotlightPadding: 0,
     },
+    {
+        target: "#workflow-selector",
+        placement: "left",
+        title: "Timeline view",
+        content: (
+            <span>
+                Sometimes it is useful to see also when each task started and finished.
+                <br />
+                Switch to the timeline view.
+            </span>
+        ),
+        isFixed: true,
+        disableScrolling: true,
+        spotlightClicks: true,
+        disableBeacon: true,
+        spotlightPadding: 0,
+        hideFooter: true,
+    },
+    {
+        target: "#workflow-chart",
+        placement: "bottom",
+        title: "Understand the timeline",
+        content: (
+            <>
+                <p>
+                    With the timeline chart view, you can easily see the start and finish time of each task in your
+                    workflow, and get a clear picture of how long each task took to complete.
+                    The white line indicates when it was sent.
+                </p>
+            </>
+        ),
+        isFixed: true,
+        disableScrolling: true,
+        spotlightClicks: true,
+        disableBeacon: true,
+        spotlightPadding: 0,
+        hideFooter: true,
+    },
 ]
 
 const JoyrideTour: React.FC = () => {
