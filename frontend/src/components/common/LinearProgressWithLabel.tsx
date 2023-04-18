@@ -30,7 +30,7 @@ const LinearProgressWithLabel: React.FC<LinearProgressWithLabelProps> = ({
             <Box width="100%" mr={1}>
                 <LinearProgress
                     {...props}
-                    variant={buffer && percentage !== bufferPercentage ? "buffer" : "determinate"}
+                    variant={buffer && percentage < bufferPercentage ? "buffer" : "determinate"}
                     value={percentage}
                     valueBuffer={bufferPercentage}
                 />

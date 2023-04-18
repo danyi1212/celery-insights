@@ -46,7 +46,11 @@ const WorkerSummary: React.FC<WorkerSummaryProps> = ({ workerId }) => {
             </Stack>
             <Tooltip title="CPU Utilization" placement="right" arrow>
                 <div>
-                    <LinearProgressWithLabel value={worker.cpuLoad?.[0] || 0} percentageLabel />
+                    <LinearProgressWithLabel
+                        value={worker?.cpuLoad?.[2] || 0}
+                        buffer={worker?.cpuLoad?.[0] || 0}
+                        percentageLabel
+                    />
                 </div>
             </Tooltip>
             <Typography align="right">Received</Typography>
