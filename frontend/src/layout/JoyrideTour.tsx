@@ -6,6 +6,7 @@ import Joyride, { ACTIONS, CallBackProps, EVENTS, LIFECYCLE, STATUS, Step } from
 
 const createSteps = (): Step[] => [
     {
+        // step index 0
         target: "body",
         placement: "center",
         title: "Let's Start",
@@ -13,16 +14,17 @@ const createSteps = (): Step[] => [
             <span>
                 Open your app and trigger a Celery task or workflow.
                 <br />
-                We will use it to get some insights
+                We will use it to get some insights.
             </span>
         ),
         disableBeacon: true,
     },
     {
+        // step index 1
         target: "#recent-tasks",
         placement: "top",
         placementBeacon: "top",
-        title: "Find your task",
+        title: "Find Your Task",
         content: (
             <span>
                 Here you can see a feed of the latest tasks in your Celery cluster.
@@ -36,9 +38,10 @@ const createSteps = (): Step[] => [
         hideFooter: true, // Disable the next button (automatic on navigation)
     },
     {
+        // step index 2
         target: "#task-header",
         placement: "bottom-start",
-        title: "Follow your task",
+        title: "Follow Your Task",
         content: (
             <>
                 <p>
@@ -57,9 +60,10 @@ const createSteps = (): Step[] => [
         hideBackButton: true,
     },
     {
+        // step index 3
         target: "#workflow-chart",
         placement: "bottom",
-        title: "Understand the context",
+        title: "Understand the Context",
         content: (
             <span>
                 Here you can see the complete workflow containing this task.
@@ -72,12 +76,13 @@ const createSteps = (): Step[] => [
         spotlightClicks: true,
     },
     {
+        // step index 4
         target: "#workflow-selector",
         placement: "left",
         title: "Timeline view",
         content: (
             <span>
-                Sometimes it is useful to see also when each task started and finished.
+                Sometimes it is useful to also see when each task started and finished.
                 <br />
                 Switch to the timeline view.
             </span>
@@ -88,6 +93,7 @@ const createSteps = (): Step[] => [
         hideFooter: true,
     },
     {
+        // step index 5
         target: "#workflow-chart",
         placement: "bottom",
         title: "Understand the timeline",
@@ -105,16 +111,18 @@ const createSteps = (): Step[] => [
         spotlightClicks: true,
     },
     {
+        // step index 6
         target: "#lifetime-chart",
         placement: "bottom",
         title: "Task Lifetime",
         content:
             "The lifetime chart visualizes the changes in task status over time, " +
-            "offering a glimpse into the length of time the task remained in each stage.",
+            "offering a glimpse into the time the task remained in each stage.",
         isFixed: true,
         spotlightClicks: true,
     },
     {
+        // step index 7
         target: "#task-details",
         placement: "top",
         title: "Delving into Details",
@@ -122,9 +130,9 @@ const createSteps = (): Step[] => [
             <>
                 <p>
                     In this part, you can explore more about the task, with delivery information, the arguments, and the
-                    task&apos;s result
+                    task&apos;s result.
                 </p>
-                <p>Lets dive deeper, click on the worker name</p>
+                <p>Let&apos;s dive deeper, click on the worker name.</p>
             </>
         ),
         isFixed: true,
@@ -132,6 +140,7 @@ const createSteps = (): Step[] => [
         hideFooter: true,
     },
     {
+        // step index 8
         target: "#worker-details",
         placement: "bottom",
         title: "Worker Details",
@@ -143,6 +152,7 @@ const createSteps = (): Step[] => [
         hideBackButton: true,
     },
     {
+        // step index 9
         target: "#worker-pool",
         placement: "bottom",
         title: "Worker Pool",
@@ -160,13 +170,14 @@ const createSteps = (): Step[] => [
         spotlightClicks: true,
     },
     {
+        // step index 10
         target: "#registered-tasks",
         placement: "top",
         title: "What it can do",
         content: (
             <>
                 <p>
-                    Listed here are the task types this worker is capable executing. The small badge beside each task
+                    Listed here are the task types this worker is capable of executing. The small badge beside each task
                     shows the number of tasks this type it has executed
                 </p>
                 <p>To explore those tasks, click on any task with a badge.</p>
@@ -177,6 +188,7 @@ const createSteps = (): Step[] => [
         hideFooter: true,
     },
     {
+        // step index 11
         target: "body",
         placement: "center",
         title: "Welcome to the Explorer!",
@@ -186,6 +198,7 @@ const createSteps = (): Step[] => [
         hideBackButton: true,
     },
     {
+        // step index 12
         target: "#facets-menu",
         placement: "right-start",
         title: "Filter what you need",
@@ -193,7 +206,7 @@ const createSteps = (): Step[] => [
             <>
                 <p>
                     Facets hold all the unique values associated with each task property, as well as a count of tasks
-                    containing that particular value.
+                    with that particular value.
                 </p>
                 <p>
                     By selecting these values, you can refine your search for specific attributes, and the table will
@@ -205,10 +218,11 @@ const createSteps = (): Step[] => [
         spotlightClicks: true,
     },
     {
+        // step index 13
         target: "body",
         placement: "center",
         title: "Begin Your Exploration!",
-        content: "You're all set! Thank you for choosing Celery Insights, and wish you a delightful adventure.",
+        content: "You're all set! Thank you for choosing Celery Insights, and we wish you a delightful adventure.",
         isFixed: true,
     },
 ]
