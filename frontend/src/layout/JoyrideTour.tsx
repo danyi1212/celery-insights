@@ -54,7 +54,7 @@ const createSteps = (): Step[] => [
         disableScrolling: true,
         spotlightClicks: true,
         disableBeacon: true,
-        spotlightPadding: ,
+        spotlightPadding: 0,
     },
     {
         target: "#workflow-chart",
@@ -71,8 +71,8 @@ const createSteps = (): Step[] => [
         disableScrolling: true,
         spotlightClicks: true,
         disableBeacon: true,
-        spotlightPadding: 0
-    }
+        spotlightPadding: 0,
+    },
 ]
 
 const JoyrideTour: React.FC = () => {
