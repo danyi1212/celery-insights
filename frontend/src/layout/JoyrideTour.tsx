@@ -1,4 +1,5 @@
 import TourTooltip from "@layout/TourTooltip"
+import { useTheme } from "@mui/material"
 import { backStep, nextStep, stopTour, useTourStore } from "@stores/useTourStore"
 import React, { useMemo } from "react"
 import Joyride, { ACTIONS, CallBackProps, EVENTS, LIFECYCLE, STATUS, Step } from "react-joyride"
@@ -150,6 +151,7 @@ const createSteps = (): Step[] => [
             </>
         ),
         isFixed: true,
+        disableScrolling: true,
     },
     {
         target: "#registered-tasks",
@@ -204,6 +206,7 @@ const createSteps = (): Step[] => [
 ]
 
 const JoyrideTour: React.FC = () => {
+    const theme = useTheme()
     const state = useTourStore()
     const steps = useMemo(() => createSteps(), [])
 
@@ -240,6 +243,15 @@ const JoyrideTour: React.FC = () => {
             disableOverlayClose
             tooltipComponent={TourTooltip}
             spotlightPadding={0}
+            styles={{
+                options: {
+                    arrowColor: theme.palette.background.paper,
+                    backgroundColor: theme.palette.background.paper,
+                    primaryColor: theme.palette.primary.main,
+                    textColor: theme.palette.text.primary,
+                    zIndex: theme.zIndex.tooltip,
+                },
+            }}
         />
     )
 }
