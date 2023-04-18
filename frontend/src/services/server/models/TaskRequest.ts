@@ -2,7 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { DeliveryInfo } from "./DeliveryInfo"
+import type { DeliveryInfo } from './DeliveryInfo';
 
 export type TaskRequest = {
     /**
@@ -30,11 +30,11 @@ export type TaskRequest = {
      */
     delivery_info: DeliveryInfo;
     /**
-     * Whether the task message acknowledged
+     * Whether the task message is acknowledged
      */
     acknowledged: boolean;
     /**
-     * When task has started by the worker
+     * When the task has started by the worker
      */
     time_start?: number;
     /**

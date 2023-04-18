@@ -2,8 +2,8 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { EventType } from "./EventType"
-import type { Worker } from "./Worker"
+import type { EventType } from './EventType';
+import type { Worker } from './Worker';
 
 export type WorkerEventMessage = {
     type: EventType;
@@ -14,7 +14,7 @@ export type WorkerEventMessage = {
 export namespace WorkerEventMessage {
 
     export enum category {
-        WORKER = "worker",
+        WORKER = 'worker',
     }
 
 

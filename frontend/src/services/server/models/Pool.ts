@@ -6,11 +6,11 @@ export type Pool = {
     /**
      * Maximum number of child parallelism (processes/threads)
      */
-    "max-concurrency": number;
+    'max-concurrency': number;
     /**
      * Maximum number of tasks to be executed before child recycled
      */
-    "max-tasks-per-child": (number | string);
+    'max-tasks-per-child': (number | string);
     /**
      * Child process IDs (or thread IDs)
      */

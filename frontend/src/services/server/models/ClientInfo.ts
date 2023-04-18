@@ -2,7 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { WebSocketState } from "./WebSocketState"
+import type { WebSocketState } from './WebSocketState';
 
 export type ClientInfo = {
     /**

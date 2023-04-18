@@ -2,7 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { ExchangeInfo } from "./ExchangeInfo"
+import type { ExchangeInfo } from './ExchangeInfo';
 
 export type QueueInfo = {
     /**
@@ -42,7 +42,7 @@ export type QueueInfo = {
      */
     auto_delete: boolean;
     /**
-     * Task messages will not be acknowledged by workers
+     * Workers will not acknowledge task messages
      */
     no_ack: boolean;
     /**

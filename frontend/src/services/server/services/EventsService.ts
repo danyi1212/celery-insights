@@ -1,16 +1,15 @@
 /* istanbul ignore file */
-import type { BaseHttpRequest } from "../core/BaseHttpRequest"
-
-import type { CancelablePromise } from "../core/CancelablePromise"
 /* tslint:disable */
 /* eslint-disable */
-import type { TaskEventMessage } from "../models/TaskEventMessage"
-import type { WorkerEventMessage } from "../models/WorkerEventMessage"
+import type { TaskEventMessage } from '../models/TaskEventMessage';
+import type { WorkerEventMessage } from '../models/WorkerEventMessage';
+
+import type { CancelablePromise } from '../core/CancelablePromise';
+import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 
 export class EventsService {
 
-    constructor(public readonly httpRequest: BaseHttpRequest) {
-    }
+    constructor(public readonly httpRequest: BaseHttpRequest) {}
 
     /**
      * Get Events
@@ -19,9 +18,9 @@ export class EventsService {
      */
     public getEvents(): CancelablePromise<Array<(TaskEventMessage | WorkerEventMessage)>> {
         return this.httpRequest.request({
-            method: "GET",
-            url: "/api/events"
-        })
+            method: 'GET',
+            url: '/api/events',
+        });
     }
 
 }

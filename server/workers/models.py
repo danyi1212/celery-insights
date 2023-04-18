@@ -117,7 +117,7 @@ class QueueInfo(BaseModel, extra=Extra.allow):
 
 class DeliveryInfo(BaseModel, extra=Extra.allow):
     exchange: str = Field(description="Broker exchange used")
-    priority: int = Field(description="Message priority")
+    priority: int | None = Field(description="Message priority")
     redelivered: bool = Field(description="Message sent back to queue")
     routing_key: str = Field(description="Message routing key used")
 

@@ -10,7 +10,7 @@ export type DeliveryInfo = {
     /**
      * Message priority
      */
-    priority: number;
+    priority?: number;
     /**
      * Message sent back to queue
      */

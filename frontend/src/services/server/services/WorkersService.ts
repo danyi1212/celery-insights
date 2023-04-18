@@ -1,19 +1,18 @@
 /* istanbul ignore file */
-import type { BaseHttpRequest } from "../core/BaseHttpRequest"
-
-import type { CancelablePromise } from "../core/CancelablePromise"
 /* tslint:disable */
 /* eslint-disable */
-import type { QueueInfo } from "../models/QueueInfo"
-import type { ScheduledTask } from "../models/ScheduledTask"
-import type { Stats } from "../models/Stats"
-import type { TaskRequest } from "../models/TaskRequest"
-import type { Worker } from "../models/Worker"
+import type { QueueInfo } from '../models/QueueInfo';
+import type { ScheduledTask } from '../models/ScheduledTask';
+import type { Stats } from '../models/Stats';
+import type { TaskRequest } from '../models/TaskRequest';
+import type { Worker } from '../models/Worker';
+
+import type { CancelablePromise } from '../core/CancelablePromise';
+import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 
 export class WorkersService {
 
-    constructor(public readonly httpRequest: BaseHttpRequest) {
-    }
+    constructor(public readonly httpRequest: BaseHttpRequest) {}
 
     /**
      * Get Workers
@@ -22,18 +21,18 @@ export class WorkersService {
      * @throws ApiError
      */
     public getWorkers(
-        alive?: boolean
+        alive?: boolean,
     ): CancelablePromise<Array<Worker>> {
         return this.httpRequest.request({
-            method: "GET",
-            url: "/api/workers",
+            method: 'GET',
+            url: '/api/workers',
             query: {
-                "alive": alive
+                'alive': alive,
             },
             errors: {
-                422: `Validation Error`
-            }
-        })
+                422: `Validation Error`,
+            },
+        });
     }
 
     /**
@@ -46,19 +45,19 @@ export class WorkersService {
      */
     public getWorkerStats(
         timeout: number = 10,
-        worker?: string
+        worker?: string,
     ): CancelablePromise<Record<string, Stats>> {
         return this.httpRequest.request({
-            method: "GET",
-            url: "/api/workers/stats",
+            method: 'GET',
+            url: '/api/workers/stats',
             query: {
-                "timeout": timeout,
-                "worker": worker
+                'timeout': timeout,
+                'worker': worker,
             },
             errors: {
-                422: `Validation Error`
-            }
-        })
+                422: `Validation Error`,
+            },
+        });
     }
 
     /**
@@ -71,19 +70,19 @@ export class WorkersService {
      */
     public getWorkerRegistered(
         timeout: number = 10,
-        worker?: string
+        worker?: string,
     ): CancelablePromise<Record<string, Array<string>>> {
         return this.httpRequest.request({
-            method: "GET",
-            url: "/api/workers/registered",
+            method: 'GET',
+            url: '/api/workers/registered',
             query: {
-                "timeout": timeout,
-                "worker": worker
+                'timeout': timeout,
+                'worker': worker,
             },
             errors: {
-                422: `Validation Error`
-            }
-        })
+                422: `Validation Error`,
+            },
+        });
     }
 
     /**
@@ -96,19 +95,19 @@ export class WorkersService {
      */
     public getWorkerRevoked(
         timeout: number = 10,
-        worker?: string
+        worker?: string,
     ): CancelablePromise<Record<string, Array<string>>> {
         return this.httpRequest.request({
-            method: "GET",
-            url: "/api/workers/revoked",
+            method: 'GET',
+            url: '/api/workers/revoked',
             query: {
-                "timeout": timeout,
-                "worker": worker
+                'timeout': timeout,
+                'worker': worker,
             },
             errors: {
-                422: `Validation Error`
-            }
-        })
+                422: `Validation Error`,
+            },
+        });
     }
 
     /**
@@ -121,19 +120,19 @@ export class WorkersService {
      */
     public getWorkerScheduled(
         timeout: number = 10,
-        worker?: string
+        worker?: string,
     ): CancelablePromise<Record<string, Array<ScheduledTask>>> {
         return this.httpRequest.request({
-            method: "GET",
-            url: "/api/workers/scheduled",
+            method: 'GET',
+            url: '/api/workers/scheduled',
             query: {
-                "timeout": timeout,
-                "worker": worker
+                'timeout': timeout,
+                'worker': worker,
             },
             errors: {
-                422: `Validation Error`
-            }
-        })
+                422: `Validation Error`,
+            },
+        });
     }
 
     /**
@@ -146,19 +145,19 @@ export class WorkersService {
      */
     public getWorkerReserved(
         timeout: number = 10,
-        worker?: string
+        worker?: string,
     ): CancelablePromise<Record<string, Array<TaskRequest>>> {
         return this.httpRequest.request({
-            method: "GET",
-            url: "/api/workers/reserved",
+            method: 'GET',
+            url: '/api/workers/reserved',
             query: {
-                "timeout": timeout,
-                "worker": worker
+                'timeout': timeout,
+                'worker': worker,
             },
             errors: {
-                422: `Validation Error`
-            }
-        })
+                422: `Validation Error`,
+            },
+        });
     }
 
     /**
@@ -171,19 +170,19 @@ export class WorkersService {
      */
     public getWorkerActive(
         timeout: number = 10,
-        worker?: string
+        worker?: string,
     ): CancelablePromise<Record<string, Array<TaskRequest>>> {
         return this.httpRequest.request({
-            method: "GET",
-            url: "/api/workers/active",
+            method: 'GET',
+            url: '/api/workers/active',
             query: {
-                "timeout": timeout,
-                "worker": worker
+                'timeout': timeout,
+                'worker': worker,
             },
             errors: {
-                422: `Validation Error`
-            }
-        })
+                422: `Validation Error`,
+            },
+        });
     }
 
     /**
@@ -196,19 +195,19 @@ export class WorkersService {
      */
     public getWorkerQueues(
         timeout: number = 10,
-        worker?: string
+        worker?: string,
     ): CancelablePromise<Record<string, Array<QueueInfo>>> {
         return this.httpRequest.request({
-            method: "GET",
-            url: "/api/workers/queues",
+            method: 'GET',
+            url: '/api/workers/queues',
             query: {
-                "timeout": timeout,
-                "worker": worker
+                'timeout': timeout,
+                'worker': worker,
             },
             errors: {
-                422: `Validation Error`
-            }
-        })
+                422: `Validation Error`,
+            },
+        });
     }
 
 }

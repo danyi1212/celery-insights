@@ -28,15 +28,15 @@ export type Worker = {
      */
     software_sys: string;
     /**
-     * Amount of tasks currently processing by worker
+     * Number of tasks currently processed by worker
      */
     active_tasks: number;
     /**
-     * Amount of tasks completed by worker
+     * Number of tasks completed by worker
      */
     processed_tasks: number;
     /**
-     * When worker last event published
+     * When worker latest event published
      */
     last_updated: number;
     /**

@@ -2,11 +2,11 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { TaskRequest } from "./TaskRequest"
+import type { TaskRequest } from './TaskRequest';
 
 export type ScheduledTask = {
     /**
-     * Absolute time when task should be executed
+     * Absolute time when the task should be executed
      */
     eta: string;
     /**

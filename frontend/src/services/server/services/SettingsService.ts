@@ -1,16 +1,15 @@
 /* istanbul ignore file */
-import type { BaseHttpRequest } from "../core/BaseHttpRequest"
-
-import type { CancelablePromise } from "../core/CancelablePromise"
 /* tslint:disable */
 /* eslint-disable */
-import type { ClientInfo } from "../models/ClientInfo"
-import type { ServerInfo } from "../models/ServerInfo"
+import type { ClientInfo } from '../models/ClientInfo';
+import type { ServerInfo } from '../models/ServerInfo';
+
+import type { CancelablePromise } from '../core/CancelablePromise';
+import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 
 export class SettingsService {
 
-    constructor(public readonly httpRequest: BaseHttpRequest) {
-    }
+    constructor(public readonly httpRequest: BaseHttpRequest) {}
 
     /**
      * Get Server Info
@@ -19,9 +18,9 @@ export class SettingsService {
      */
     public getServerInfo(): CancelablePromise<ServerInfo> {
         return this.httpRequest.request({
-            method: "GET",
-            url: "/api/settings/info"
-        })
+            method: 'GET',
+            url: '/api/settings/info',
+        });
     }
 
     /**
@@ -31,9 +30,9 @@ export class SettingsService {
      */
     public getClients(): CancelablePromise<Array<ClientInfo>> {
         return this.httpRequest.request({
-            method: "GET",
-            url: "/api/settings/clients"
-        })
+            method: 'GET',
+            url: '/api/settings/clients',
+        });
     }
 
 }
