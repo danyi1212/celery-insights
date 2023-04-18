@@ -3,10 +3,13 @@ import AnimatedListItem from "@components/common/AnimatedListItem"
 import Panel, { PanelProps } from "@components/common/Panel"
 import TaskAvatar from "@components/task/TaskAvatar"
 import useWorkerRevokedTasks from "@hooks/worker/useWorkerRevokedTasks"
+import ReadMoreIcon from "@mui/icons-material/ReadMore"
 import Box from "@mui/material/Box"
 import ListItemAvatar from "@mui/material/ListItemAvatar"
 import ListItemButton from "@mui/material/ListItemButton"
+import ListItemSecondaryAction from "@mui/material/ListItemSecondaryAction"
 import ListItemText from "@mui/material/ListItemText"
+import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
 import React, { useCallback } from "react"
@@ -29,6 +32,11 @@ const RevokedTaskListItem: React.FC<RevokedTaskListItemProps> = ({ taskId }) => 
                     <TaskAvatar taskId={taskId} type={task?.type} status={task?.state} disableLink />
                 </ListItemAvatar>
                 <ListItemText primary={task?.type || "Unknown task"} secondary={taskId} />
+                <ListItemSecondaryAction>
+                    <Tooltip title="View task...">
+                        <ReadMoreIcon />
+                    </Tooltip>
+                </ListItemSecondaryAction>
             </ListItemButton>
         </AnimatedListItem>
     )

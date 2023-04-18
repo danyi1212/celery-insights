@@ -2,6 +2,7 @@ import AnimatedListItem from "@components/common/AnimatedListItem"
 import TaskAvatar from "@components/task/TaskAvatar"
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline"
 import HighlightOffIcon from "@mui/icons-material/HighlightOff"
+import ReadMoreIcon from "@mui/icons-material/ReadMore"
 import ListItemAvatar from "@mui/material/ListItemAvatar"
 import ListItemButton from "@mui/material/ListItemButton"
 import ListItemSecondaryAction from "@mui/material/ListItemSecondaryAction"
@@ -34,6 +35,9 @@ const TaskListItem: React.FC<TaskListItemProps> = ({ task, subtitle }) => {
                             <HighlightOffIcon color="warning" />
                         </Tooltip>
                     )}
+                    <Tooltip title="View task...">
+                        <ReadMoreIcon />
+                    </Tooltip>
                 </ListItemSecondaryAction>
             </ListItemButton>
         </AnimatedListItem>

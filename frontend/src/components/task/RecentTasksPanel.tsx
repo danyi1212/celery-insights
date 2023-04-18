@@ -2,10 +2,13 @@ import AnimatedList from "@components/common/AnimatedList"
 import AnimatedListItem from "@components/common/AnimatedListItem"
 import Panel, { PanelProps } from "@components/common/Panel"
 import TaskAvatar from "@components/task/TaskAvatar"
+import ReadMoreIcon from "@mui/icons-material/ReadMore"
 import Button from "@mui/material/Button"
 import ListItemAvatar from "@mui/material/ListItemAvatar"
 import ListItemButton from "@mui/material/ListItemButton"
+import ListItemSecondaryAction from "@mui/material/ListItemSecondaryAction"
 import ListItemText from "@mui/material/ListItemText"
+import Tooltip from "@mui/material/Tooltip"
 import { useStateStore } from "@stores/useStateStore"
 import { StateTask } from "@utils/translateServerModels"
 import React, { startTransition, useEffect, useState } from "react"
@@ -51,6 +54,11 @@ const RecentTasksPanel: React.FC<RecentTasksPanelProps> = ({ count, ...props }) 
                                 <TaskAvatar taskId={task.id} type={task.type} status={task.state} disableLink />
                             </ListItemAvatar>
                             <ListItemText primary={task.type} secondary={task.worker} />
+                            <ListItemSecondaryAction>
+                                <Tooltip title="View task...">
+                                    <ReadMoreIcon />
+                                </Tooltip>
+                            </ListItemSecondaryAction>
                         </ListItemButton>
                     </AnimatedListItem>
                 ))}
