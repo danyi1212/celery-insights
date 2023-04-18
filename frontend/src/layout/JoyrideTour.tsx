@@ -32,7 +32,7 @@ const createSteps = (): Step[] => [
         isFixed: true,
         disableScrolling: true,
         spotlightClicks: true,
-        hideFooter: true,
+        hideFooter: true, // Disable the next button (automatic on navigation)
     },
     {
         target: "#task-header",
@@ -54,10 +54,11 @@ const createSteps = (): Step[] => [
         disableScrolling: true,
         spotlightClicks: true,
         disableBeacon: true,
+        spotlightPadding: ,
     },
     {
         target: "#workflow-chart",
-        placement: "center",
+        placement: "bottom",
         title: "Understand the context",
         content: (
             <span>
@@ -70,7 +71,8 @@ const createSteps = (): Step[] => [
         disableScrolling: true,
         spotlightClicks: true,
         disableBeacon: true,
-    },
+        spotlightPadding: 0
+    }
 ]
 
 const JoyrideTour: React.FC = () => {
@@ -83,10 +85,11 @@ const JoyrideTour: React.FC = () => {
         console.log(data)
         console.log(state)
 
-        if (data.type == EVENTS.STEP_AFTER || data.type == EVENTS.TARGET_NOT_FOUND) {
+        if (data.type == EVENTS.STEP_AFTER) {
             if (data.action === ACTIONS.PREV) backStep()
-            else nextStep()
+            else if (!data.step.hideFooter) nextStep() // Don't increment on steps with next disabled
         } else if (
+            data.type == EVENTS.TARGET_NOT_FOUND ||
             data.lifecycle === LIFECYCLE.COMPLETE ||
             data.action === ACTIONS.RESET ||
             data.status === STATUS.SKIPPED

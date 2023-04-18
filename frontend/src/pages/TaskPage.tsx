@@ -19,9 +19,11 @@ const TaskPage: React.FC = () => {
     const { taskId } = useParams() as { taskId: string }
     const { task, loading } = useTaskState(taskId)
     const [chartType, setChartType] = React.useState<WorkflowChartType>(WorkflowChartType.FLOWCHART)
-    const tourRunning = useTourStore((state) => state.run)
+    const tour = useTourStore()
 
-    useEffect(() => setStep(2), [tourRunning])
+    useEffect(() => {
+        if (task && tour.run && tour.stepIndex === 1) setStep(2)
+    }, [tour, task])
 
     if (!loading && task === undefined)
         return (
@@ -37,7 +39,7 @@ const TaskPage: React.FC = () => {
 
     return (
         <Box>
-            <Box width="100%" height="450px" id="worflow-chart">
+            <Box width="100%" height="450px" id="workflow-chart">
                 {task ? (
                     <WorkflowGraph chartType={chartType} rootTaskId={task.rootId || task.id} currentTaskId={task.id} />
                 ) : (
