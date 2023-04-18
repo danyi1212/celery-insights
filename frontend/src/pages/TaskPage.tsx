@@ -11,19 +11,15 @@ import Box from "@mui/material/Box"
 import Grid from "@mui/material/Grid"
 import Skeleton from "@mui/material/Skeleton"
 import Typography from "@mui/material/Typography"
-import { setStep, useTourStore } from "@stores/useTourStore"
-import React, { useEffect } from "react"
+import { useTourChangeStepOnLoad } from "@stores/useTourStore"
+import React from "react"
 import { useParams } from "react-router-dom"
 
 const TaskPage: React.FC = () => {
     const { taskId } = useParams() as { taskId: string }
     const { task, loading } = useTaskState(taskId)
     const [chartType, setChartType] = React.useState<WorkflowChartType>(WorkflowChartType.FLOWCHART)
-    const tour = useTourStore()
-
-    useEffect(() => {
-        if (task && tour.run && tour.stepIndex === 1) setStep(2)
-    }, [tour, task])
+    useTourChangeStepOnLoad(2, task !== undefined)
 
     if (!loading && task === undefined)
         return (

@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { create } from "zustand"
 
 interface TourStore {
@@ -17,3 +18,12 @@ export const stopTour = () => useTourStore.setState({ tourActive: false, run: fa
 export const nextStep = () => useTourStore.setState((state) => ({ run: true, stepIndex: state.stepIndex + 1 }))
 export const backStep = () => useTourStore.setState((state) => ({ run: true, stepIndex: state.stepIndex - 1 }))
 export const setStep = (stepIndex: number) => useTourStore.setState({ run: true, stepIndex })
+export const useTourChangeStepOnLoad = (stepIndex: number, condition?: boolean) => {
+    const tour = useTourStore()
+
+    useEffect(() => {
+        if (condition && tour.run && tour.stepIndex === stepIndex - 1) {
+            setStep(stepIndex)
+        }
+    }, [tour, condition, stepIndex])
+}
