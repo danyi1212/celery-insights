@@ -78,7 +78,7 @@ class Task(BaseModel):
             parent_id=task.parent_id,
             children=[child.id for child in task.children],
             client=task.client,
-            worker=task.worker.id if task.worker is not None else None,
+            worker=f"{task.worker.hostname}-{task.worker.pid}" if task.worker is not None else None,
             result=task.result,
             exception=task.exception,
             traceback=task.traceback,
