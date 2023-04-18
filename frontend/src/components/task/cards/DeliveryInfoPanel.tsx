@@ -1,35 +1,39 @@
 import DetailItem from "@components/common/DetailItem"
 import Panel from "@components/common/Panel"
+import useTaskState from "@hooks/task/useTaskState"
 import Grid from "@mui/material/Grid"
 import Link from "@mui/material/Link"
 import { formatSecondsDuration } from "@utils/formatSecondsDuration"
-import { StateTask } from "@utils/translateServerModels"
 import { format } from "date-fns"
 import React, { useMemo } from "react"
 import { Link as RouterLink } from "react-router-dom"
 
-interface DeliveryInfoCardProps {
-    task: StateTask
+interface DeliveryInfoPanelProps {
+    taskId: string
 }
 
-export const DeliveryInfoCard: React.FC<DeliveryInfoCardProps> = ({ task }) => {
+const DeliveryInfoPanel: React.FC<DeliveryInfoPanelProps> = ({ taskId }) => {
+    const { task, loading, error } = useTaskState(taskId)
     const eta = useMemo(
         () =>
-            task.eta &&
-            formatSecondsDuration(Math.round((new Date(task.eta).getTime() - task.sentAt.getTime()) / 1000)),
-        [task.eta, task.sentAt]
+            task?.eta &&
+            formatSecondsDuration(Math.round((new Date(task?.eta).getTime() - task.sentAt.getTime()) / 1000)),
+        [task?.eta, task?.sentAt]
     )
-    const expire = useMemo(() => task.expires && format(new Date(task.expires), "yyyy-MM-dd HH:mm:ss"), [task.expires])
+    const expire = useMemo(
+        () => task?.expires && format(new Date(task.expires), "yyyy-MM-dd HH:mm:ss"),
+        [task?.expires]
+    )
     return (
-        <Panel title="Delivery Info">
+        <Panel title="Delivery Info" loading={loading} error={error}>
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12}>
                     <DetailItem
                         label="Worker"
                         description="Worker that consumed this task"
                         value={
-                            <Link component={RouterLink} to={`/workers/${task.worker}`}>
-                                {task.worker || "Unknown"}
+                            <Link component={RouterLink} to={`/workers/${task?.worker}`}>
+                                {task?.worker || "Unknown"}
                             </Link>
                         }
                     />
@@ -37,7 +41,7 @@ export const DeliveryInfoCard: React.FC<DeliveryInfoCardProps> = ({ task }) => {
                 <Grid item xs={12} md={6}>
                     <DetailItem
                         label="Exchange"
-                        value={task.exchange || "---"}
+                        value={task?.exchange || "---"}
                         description="Name of the exchange this task was sent to"
                     />
                 </Grid>
@@ -45,7 +49,7 @@ export const DeliveryInfoCard: React.FC<DeliveryInfoCardProps> = ({ task }) => {
                     <DetailItem
                         label="Routing Key"
                         description="Routing key this task was sent with"
-                        value={task.routingKey || "---"}
+                        value={task?.routingKey || "---"}
                     />
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -62,3 +66,4 @@ export const DeliveryInfoCard: React.FC<DeliveryInfoCardProps> = ({ task }) => {
         </Panel>
     )
 }
+export default DeliveryInfoPanel

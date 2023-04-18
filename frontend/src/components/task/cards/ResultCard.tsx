@@ -1,4 +1,5 @@
 import Panel from "@components/common/Panel"
+import useTaskResult from "@hooks/task/useTaskResult"
 import { useTheme } from "@mui/material"
 import Typography from "@mui/material/Typography"
 import { TaskResult } from "@services/server"
@@ -6,9 +7,7 @@ import { JsonViewer } from "@textea/json-viewer"
 import React from "react"
 
 interface ResultCardProps {
-    result?: TaskResult
-    loading: boolean
-    error?: unknown
+    taskId: string
 }
 
 interface CardContentProps {
@@ -47,10 +46,11 @@ const CardContent: React.FC<CardContentProps> = ({ result }) => {
     )
 }
 
-const ResultCard: React.FC<ResultCardProps> = ({ result, loading, error }) => {
+const ResultCard: React.FC<ResultCardProps> = ({ taskId }) => {
+    const { taskResult, isLoading, error } = useTaskResult(taskId)
     return (
-        <Panel title="Result" loading={loading} error={error}>
-            <CardContent result={result} />
+        <Panel title="Result" loading={isLoading} error={error}>
+            <CardContent result={taskResult} />
         </Panel>
     )
 }

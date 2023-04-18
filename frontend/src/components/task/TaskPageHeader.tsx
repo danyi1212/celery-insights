@@ -2,6 +2,7 @@ import TaskAvatar from "@components/task/TaskAvatar"
 import { WorkflowChartType } from "@components/workflow/WorkflowGraph"
 import AccountTreeIcon from "@mui/icons-material/AccountTree"
 import ViewTimelineIcon from "@mui/icons-material/ViewTimeline"
+import { Skeleton } from "@mui/material"
 import Box from "@mui/material/Box"
 import Paper from "@mui/material/Paper"
 import Stack from "@mui/material/Stack"
@@ -14,7 +15,7 @@ import { StateTask } from "@utils/translateServerModels"
 import React from "react"
 
 interface TaskPageHeaderProps {
-    task: StateTask
+    task: StateTask | undefined
     chartType: WorkflowChartType
     setChartType: (type: WorkflowChartType) => void
 }
@@ -23,11 +24,23 @@ const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setCha
     return (
         <Toolbar component={Paper} elevation={3} sx={{ pt: 0.5, pb: 1, borderRadius: 0 }} id="task-header">
             <Box pr={3}>
-                <TaskAvatar taskId={task.id} type={task.type} status={task.state} />
+                {task === undefined ? (
+                    <Skeleton variant="circular" width={40} height={40} />
+                ) : (
+                    <TaskAvatar taskId={task.id} type={task.type} status={task.state} />
+                )}
             </Box>
             <Stack height={64} justifyContent="flex-end">
-                <Typography variant="h5">{task.type}</Typography>
-                <Typography variant="caption">{task.id}</Typography>
+                {task ? (
+                    <Typography variant="h5">{task.type}</Typography>
+                ) : (
+                    <Skeleton variant="rectangular" animation="wave" />
+                )}
+                {task ? (
+                    <Typography variant="caption">{task.id}</Typography>
+                ) : (
+                    <Skeleton variant="rectangular" animation="wave" />
+                )}
             </Stack>
             <Box flexGrow={1} />
             <ToggleButtonGroup
