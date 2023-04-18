@@ -52,9 +52,7 @@ const createSteps = (): Step[] => [
         ),
         isFixed: true,
         disableScrolling: true,
-        spotlightClicks: true,
         disableBeacon: true,
-        spotlightPadding: 0,
     },
     {
         target: "#workflow-chart",
@@ -70,8 +68,6 @@ const createSteps = (): Step[] => [
         isFixed: true,
         disableScrolling: true,
         spotlightClicks: true,
-        disableBeacon: true,
-        spotlightPadding: 0,
     },
     {
         target: "#workflow-selector",
@@ -87,8 +83,6 @@ const createSteps = (): Step[] => [
         isFixed: true,
         disableScrolling: true,
         spotlightClicks: true,
-        disableBeacon: true,
-        spotlightPadding: 0,
         hideFooter: true,
     },
     {
@@ -99,17 +93,113 @@ const createSteps = (): Step[] => [
             <>
                 <p>
                     With the timeline chart view, you can easily see the start and finish time of each task in your
-                    workflow, and get a clear picture of how long each task took to complete.
-                    The white line indicates when it was sent.
+                    workflow, and get a clear picture of how long each task took to complete. The white line indicates
+                    when it was sent.
                 </p>
             </>
         ),
         isFixed: true,
         disableScrolling: true,
+    },
+    {
+        target: "#lifetime-chart",
+        placement: "bottom",
+        title: "Task Lifetime",
+        content:
+            "The lifetime chart visualizes the changes in task status over time, " +
+            "offering a glimpse into the length of time the task remained in each stage.",
+        isFixed: true,
+    },
+    {
+        target: "#task-details",
+        placement: "top",
+        title: "Delving into Details",
+        content: (
+            <>
+                <p>
+                    In this part, you can explore more about the task, with delivery information, the arguments, and the
+                    task&apos;s result
+                </p>
+                <p>Lets dive deeper, click on the worker name</p>
+            </>
+        ),
+        isFixed: true,
         spotlightClicks: true,
-        disableBeacon: true,
-        spotlightPadding: 0,
         hideFooter: true,
+    },
+    {
+        target: "#worker-details",
+        placement: "bottom",
+        title: "Worker Details",
+        content: "Here you can see information about the worker",
+        isFixed: true,
+        disableScrolling: true,
+        disableBeacon: true,
+    },
+    {
+        target: "#worker-pool",
+        placement: "bottom",
+        title: "Worker Pool",
+        content: (
+            <>
+                <p>Every worker has a pool of processes responsible for handling tasks.</p>
+                <p>
+                    In this section, you can observe each active process in the pool, with the icon changing to the
+                    avatar of the task being processed.
+                </p>
+            </>
+        ),
+        isFixed: true,
+    },
+    {
+        target: "#registered-tasks",
+        placement: "top",
+        title: "What it can do",
+        content: (
+            <>
+                <p>
+                    Listed here are the task types this worker is capable executing. The small badge beside each task
+                    shows the number of tasks this type it has executed
+                </p>
+                <p>To explore those tasks, click on any task with a badge.</p>
+            </>
+        ),
+        isFixed: true,
+        spotlightClicks: true,
+        hideFooter: true,
+    },
+    {
+        target: "body",
+        placement: "center",
+        title: "Welcome to the Explorer!",
+        content: "Here you can search for tasks and compare them.",
+        isFixed: true,
+        disableBeacon: true,
+    },
+    {
+        target: "#facets-menu",
+        placement: "right-start",
+        title: "Filter what you need",
+        content: (
+            <>
+                <p>
+                    Facets hold all the unique values associated with each task characteristic, as well as a count of
+                    tasks containing that particular value.
+                </p>
+                <p>
+                    By selecting these values, you can refine your search for specific attributes, and the table will
+                    present only tasks that match the selected value.
+                </p>
+            </>
+        ),
+        isFixed: true,
+    },
+    {
+        target: "body",
+        placement: "center",
+        title: "Begin Your Exploration!",
+        content: "You're all set! Thank you for choosing Celery Insights, and wish you a delightful adventure.",
+        isFixed: true,
     },
 ]
 
@@ -149,6 +239,7 @@ const JoyrideTour: React.FC = () => {
             scrollToFirstStep
             disableOverlayClose
             tooltipComponent={TourTooltip}
+            spotlightPadding={0}
         />
     )
 }

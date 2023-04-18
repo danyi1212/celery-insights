@@ -43,11 +43,11 @@ const TaskPage: React.FC = () => {
                 )}
             </Box>
             <TaskPageHeader task={task} chartType={chartType} setChartType={setChartType} />
-            <Box my={2}>
+            <Box my={2} id="lifetime-chart">
                 {task ? <TaskLifetimeChart task={task} /> : <Skeleton variant="rounded" animation="wave" />}
             </Box>
             <TaskAlerts taskId={taskId} />
-            <Grid container spacing={3} px={3}>
+            <Grid container spacing={3} px={3} id="task-details">
                 <Grid item lg={4} xs={12}>
                     <DeliveryInfoPanel taskId={taskId} />
                 </Grid>

@@ -12,6 +12,7 @@ import Box from "@mui/material/Box"
 import Grid from "@mui/material/Grid"
 import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
+import { useTourChangeStepOnLoad } from "@stores/useTourStore"
 import React, { useCallback, useMemo } from "react"
 import { useParams } from "react-router-dom"
 
@@ -19,6 +20,7 @@ const WorkerPage: React.FC = () => {
     const { workerId } = useParams() as { workerId: string }
     const hostname = useMemo(() => workerId.substring(0, workerId.lastIndexOf("-")), [workerId])
     const notFound = useStateStore(useCallback((state) => !state.workers.has(workerId), [workerId]))
+    useTourChangeStepOnLoad(8, !notFound)
 
     if (notFound)
         return (
@@ -34,13 +36,13 @@ const WorkerPage: React.FC = () => {
 
     return (
         <Grid container spacing={3} px={3}>
-            <Grid item xs={12} lg={6} xl={4}>
+            <Grid item xs={12} lg={6} xl={4} id="worker-details">
                 <WorkerDetailsCard workerId={workerId} hostname={hostname} />
             </Grid>
             <Grid item xs={12} lg={6} xl={4}>
                 <BrokerDetailsCard hostname={hostname} />
             </Grid>
-            <Grid item xs={12} lg={6} xl={4}>
+            <Grid item xs={12} lg={6} xl={4} id="worker-pool">
                 <PoolDetailsCard hostname={hostname} />
             </Grid>
             <Grid item xs={12}>
@@ -55,7 +57,7 @@ const WorkerPage: React.FC = () => {
             <Grid item xs={12} lg={6} xl={4}>
                 <ScheduledTasksPanel hostname={hostname} />
             </Grid>
-            <Grid item xs={12} xl={6}>
+            <Grid item xs={12} xl={6} id="registered-tasks">
                 <RegisteredTasksPanel workerId={workerId} hostname={hostname} />
             </Grid>
             <Grid item xs={12} xl={6}>
