@@ -1,7 +1,9 @@
 import ChangeCircleIcon from "@mui/icons-material/ChangeCircle"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
 import ErrorIcon from "@mui/icons-material/Error"
+import Box from "@mui/material/Box"
 import Slide from "@mui/material/Slide"
+import Stack from "@mui/material/Stack"
 import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
@@ -48,14 +50,14 @@ const WSStatus: React.FC = () => {
         return () => clearTimeout(token)
     }, [status])
     return (
-        <>
-            <div style={{ overflow: "hidden" }}>
+        <Stack direction="row" alignItems="center" p={1}>
+            <Box overflow="hidden">
                 <Slide appear={false} direction="left" in={isOpen}>
                     <Typography p="10px">{meta.description}</Typography>
                 </Slide>
-            </div>
+            </Box>
             <Tooltip title={meta.description}>{meta.icon}</Tooltip>
-        </>
+        </Stack>
     )
 }
 export default WSStatus

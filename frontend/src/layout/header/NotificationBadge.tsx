@@ -7,7 +7,7 @@ import React from "react"
 const NotificationBadge: React.FC = () => {
     return (
         <Tooltip title="Coming soon!" arrow>
-            <IconButton size="large">
+            <IconButton>
                 <Badge badgeContent={0} color="error">
                     <NotificationsOffIcon />
                 </Badge>
