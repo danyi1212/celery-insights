@@ -1,3 +1,4 @@
+import CopyLinkButton from "@components/common/CopyLinkButton"
 import TaskAvatar from "@components/task/TaskAvatar"
 import { WorkflowChartType } from "@components/workflow/WorkflowGraph"
 import AccountTreeIcon from "@mui/icons-material/AccountTree"
@@ -12,8 +13,9 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup"
 import Toolbar from "@mui/material/Toolbar"
 import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
+import Zoom from "@mui/material/Zoom"
 import { StateTask } from "@utils/translateServerModels"
-import React from "react"
+import React, { useState } from "react"
 import { Link } from "react-router-dom"
 
 interface TaskPageHeaderProps {
@@ -23,8 +25,16 @@ interface TaskPageHeaderProps {
 }
 
 const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setChartType }) => {
+    const [isHover, setHover] = useState(false)
     return (
-        <Toolbar component={Paper} elevation={3} sx={{ pt: 0.5, pb: 1, borderRadius: 0 }} id="task-header">
+        <Toolbar
+            id="task-header"
+            component={Paper}
+            elevation={3}
+            sx={{ pt: 0.5, pb: 1, borderRadius: 0 }}
+            onPointerEnter={() => setHover(true)}
+            onPointerLeave={() => setHover(false)}
+        >
             <Box pr={3}>
                 {task === undefined ? (
                     <Skeleton variant="circular" width={40} height={40} />
@@ -44,6 +54,11 @@ const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setCha
                     <Skeleton variant="rectangular" animation="wave" />
                 )}
             </Stack>
+            <Zoom in={isHover}>
+                <div>
+                    <CopyLinkButton sx={{ mx: 2 }} />
+                </div>
+            </Zoom>
             <Box flexGrow={1} />
             <Stack direction="row" justifyContent="space-between" spacing={1} sx={{ justifyContent: "center" }}>
                 <Button

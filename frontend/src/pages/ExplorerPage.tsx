@@ -1,3 +1,4 @@
+import CopyLinkButton from "@components/common/CopyLinkButton"
 import ExplorerGrid from "@components/explorer/ExplorerGrid"
 import FacetSet from "@components/explorer/FacetSet"
 import { useExplorerFilter } from "@hooks/explorer/useExplorerFilter"
@@ -6,6 +7,7 @@ import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
 import Box from "@mui/material/Box"
 import Divider from "@mui/material/Divider"
 import IconButton from "@mui/material/IconButton"
+import Stack from "@mui/material/Stack"
 import Toolbar from "@mui/material/Toolbar"
 import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
@@ -40,7 +42,15 @@ const ExplorerPage: React.FC = () => {
                             {isFacetMenuOpen ? <ArrowBackIosNewIcon /> : <ArrowForwardIosIcon />}
                         </IconButton>
                         <Box flexGrow={1} />
-                        <Typography variant="subtitle2">{tasks.length} Tasks found</Typography>
+                        <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            spacing={1}
+                            sx={{ justifyContent: "space-between", alignItems: "center" }}
+                        >
+                            <CopyLinkButton />
+                            <Typography variant="subtitle2">{tasks.length} Tasks found</Typography>
+                        </Stack>
                     </Toolbar>
                     <ExplorerGrid tasks={tasks} filters={filters} />
                 </Box>

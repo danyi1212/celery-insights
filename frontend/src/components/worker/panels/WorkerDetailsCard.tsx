@@ -1,3 +1,4 @@
+import CopyLinkButton from "@components/common/CopyLinkButton"
 import DetailItem from "@components/common/DetailItem"
 import LinearProgressWithLabel from "@components/common/LinearProgressWithLabel"
 import Panel, { PanelProps } from "@components/common/Panel"
@@ -19,7 +20,7 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, hostnam
     const { stats, isLoading, error } = useWorkerStats(hostname)
 
     return (
-        <Panel title="Worker" loading={isLoading} error={error} {...props}>
+        <Panel title="Worker" loading={isLoading} error={error} actions={<CopyLinkButton />} {...props}>
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12}>
                     <DetailItem label="Hostname" value={worker?.hostname} />
