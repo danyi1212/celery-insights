@@ -11,6 +11,7 @@ import ListItemText from "@mui/material/ListItemText"
 import Tooltip from "@mui/material/Tooltip"
 import { useStateStore } from "@stores/useStateStore"
 import { StateTask } from "@utils/translateServerModels"
+import { format } from "date-fns"
 import React, { startTransition, useEffect, useState } from "react"
 import { Link as RouterLink, Link } from "react-router-dom"
 
@@ -53,7 +54,10 @@ const RecentTasksPanel: React.FC<RecentTasksPanelProps> = ({ count, ...props }) 
                             <ListItemAvatar>
                                 <TaskAvatar taskId={task.id} type={task.type} status={task.state} disableLink />
                             </ListItemAvatar>
-                            <ListItemText primary={task.type} secondary={task.worker} />
+                            <ListItemText
+                                primary={task.type}
+                                secondary={"Sent at " + format(task.sentAt, "HH:mm:ss")}
+                            />
                             <ListItemSecondaryAction>
                                 <Tooltip title="View task...">
                                     <ReadMoreIcon />
