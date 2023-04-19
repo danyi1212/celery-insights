@@ -2,9 +2,10 @@ import TaskAvatar from "@components/task/TaskAvatar"
 import { WorkflowChartType } from "@components/workflow/WorkflowGraph"
 import AccountTreeIcon from "@mui/icons-material/AccountTree"
 import ViewTimelineIcon from "@mui/icons-material/ViewTimeline"
-import Skeleton from "@mui/material/Skeleton"
 import Box from "@mui/material/Box"
+import Button from "@mui/material/Button"
 import Paper from "@mui/material/Paper"
+import Skeleton from "@mui/material/Skeleton"
 import Stack from "@mui/material/Stack"
 import ToggleButton from "@mui/material/ToggleButton"
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup"
@@ -13,6 +14,7 @@ import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
 import { StateTask } from "@utils/translateServerModels"
 import React from "react"
+import { Link } from "react-router-dom"
 
 interface TaskPageHeaderProps {
     task: StateTask | undefined
@@ -43,24 +45,39 @@ const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setCha
                 )}
             </Stack>
             <Box flexGrow={1} />
-            <ToggleButtonGroup
-                value={chartType}
-                onChange={(_, newValue) => newValue && setChartType(newValue)}
-                exclusive
-                size="small"
-                id="workflow-selector"
-            >
-                <ToggleButton value={WorkflowChartType.FLOWCHART}>
-                    <Tooltip title="Flowchart">
-                        <AccountTreeIcon />
-                    </Tooltip>
-                </ToggleButton>
-                <ToggleButton value={WorkflowChartType.TIMELINE}>
-                    <Tooltip title="Timeline">
-                        <ViewTimelineIcon />
-                    </Tooltip>
-                </ToggleButton>
-            </ToggleButtonGroup>
+            <Stack direction="row" justifyContent="space-between" spacing={1} sx={{ justifyContent: "center" }}>
+                <Button
+                    variant="text"
+                    color="secondary"
+                    sx={{ px: 1, textTransform: "none" }}
+                    disabled={!task?.type}
+                    component={Link}
+                    to={{
+                        pathname: "/explorer",
+                        search: new URLSearchParams({ type: task?.type || "" }).toString(),
+                    }}
+                >
+                    Find similar tasks
+                </Button>
+                <ToggleButtonGroup
+                    value={chartType}
+                    onChange={(_, newValue) => newValue && setChartType(newValue)}
+                    exclusive
+                    size="small"
+                    id="workflow-selector"
+                >
+                    <ToggleButton value={WorkflowChartType.FLOWCHART}>
+                        <Tooltip title="Flowchart">
+                            <AccountTreeIcon />
+                        </Tooltip>
+                    </ToggleButton>
+                    <ToggleButton value={WorkflowChartType.TIMELINE}>
+                        <Tooltip title="Timeline">
+                            <ViewTimelineIcon />
+                        </Tooltip>
+                    </ToggleButton>
+                </ToggleButtonGroup>
+            </Stack>
         </Toolbar>
     )
 }
