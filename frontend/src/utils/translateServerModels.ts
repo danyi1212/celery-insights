@@ -31,8 +31,9 @@ export interface StateTask {
 }
 
 const timestampToDate = (timestamp: number): Date => {
-    const date_utc = new Date(Date.UTC(1970, 0, 1, 0, 0, 0, timestamp * 1000))
-    return new Date(date_utc.getTime() - date_utc.getTimezoneOffset() * 60 * 1000)
+    const date_utc = new Date(timestamp * 1000)
+    const localOffset = date_utc.getTimezoneOffset() * 60 * 1000
+    return new Date(date_utc.getTime() - localOffset)
 }
 
 export const translateTask = (task: ServerTask): StateTask => ({
