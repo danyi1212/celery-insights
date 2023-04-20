@@ -8,8 +8,9 @@ export const useOnlineWorkerIds = (): string[] =>
             if (
                 worker.heartbeatExpires &&
                 worker.heartbeatExpires.getTime() - new Date().getTime() < GRACE_SECONDS * 1000
-            )
+            ) {
                 workers.push(worker.id)
+            }
         })
-        return workers
+        return workers.sort((a, b) => a.localeCompare(b))
     })
