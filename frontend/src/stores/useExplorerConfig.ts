@@ -39,14 +39,14 @@ export const useExplorerConfig = create<ExplorerConfig>(() => ({
             property: "state",
             label: "Status",
             columnWidth: 100,
-            showColumn: true,
+            showColumn: false,
             showFacet: true,
         },
         id: {
             property: "id",
             label: "Task ID",
             columnWidth: 100,
-            showColumn: true,
+            showColumn: false,
         },
         type: {
             property: "type",
