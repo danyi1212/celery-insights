@@ -23,7 +23,6 @@ const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
     return (
         <Panel
             title="Recent Tasks"
-            loading={recentTasks === null}
             actions={
                 <Button component={RouterLink} to="/explorer" variant="outlined" color="secondary">
                     View All
@@ -32,8 +31,8 @@ const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
             {...props}
         >
             <AnimatedList>
-                {recentTasks?.map((task) => (
-                    <AnimatedListItem key={task.id} disablePadding>
+                {recentTasks.map((task, index) => (
+                    <AnimatedListItem key={index} disablePadding>
                         <ListItemButton component={Link} to={`/tasks/${task.id}`}>
                             <ListItemAvatar>
                                 <TaskAvatar taskId={task.id} type={task.type} status={task.state} disableLink />
