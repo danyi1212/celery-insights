@@ -43,7 +43,7 @@ const HomePage: React.FC = () => {
             <ExceptionsSummary />
             <Grid container spacing={3} px={3}>
                 <Grid item lg={8} xs={12}>
-                    <RecentTasksPanel id="recent-tasks" count={100} />
+                    <RecentTasksPanel id="recent-tasks" />
                 </Grid>
                 <Grid item lg={4} xs={12}>
                     <WorkersSummaryStack />

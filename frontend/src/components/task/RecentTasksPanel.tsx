@@ -12,34 +12,18 @@ import Tooltip from "@mui/material/Tooltip"
 import { useStateStore } from "@stores/useStateStore"
 import { StateTask } from "@utils/translateServerModels"
 import { format } from "date-fns"
-import React, { startTransition, useEffect, useState } from "react"
+import React from "react"
 import { Link as RouterLink, Link } from "react-router-dom"
 
-interface RecentTasksPanelProps extends Omit<PanelProps, "title"> {
-    count?: number
-}
-
-const RecentTasksPanel: React.FC<RecentTasksPanelProps> = ({ count, ...props }) => {
-    const tasks = useStateStore((state) => state.tasks)
-    const [sortedTasks, setSortedTasks] = useState<StateTask[] | null>(null)
-
-    useEffect(
-        () =>
-            startTransition(() =>
-                setSortedTasks(
-                    tasks
-                        .map((t) => t)
-                        .sort((a, b) => (a.sentAt > b.sentAt ? -1 : 1))
-                        .slice(0, count || 10)
-                )
-            ),
-        [tasks, count]
+const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
+    const recentTasks = useStateStore(
+        (state) => state.recentTaskIds.map((taskId) => state.tasks.get(taskId)).filter((task) => task) as StateTask[]
     )
 
     return (
         <Panel
             title="Recent Tasks"
-            loading={sortedTasks === null}
+            loading={recentTasks === null}
             actions={
                 <Button component={RouterLink} to="/explorer" variant="outlined" color="secondary">
                     View All
@@ -48,7 +32,7 @@ const RecentTasksPanel: React.FC<RecentTasksPanelProps> = ({ count, ...props }) 
             {...props}
         >
             <AnimatedList>
-                {sortedTasks?.map((task) => (
+                {recentTasks?.map((task) => (
                     <AnimatedListItem key={task.id} disablePadding>
                         <ListItemButton component={Link} to={`/tasks/${task.id}`}>
                             <ListItemAvatar>
