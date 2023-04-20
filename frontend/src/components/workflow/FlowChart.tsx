@@ -78,17 +78,19 @@ export const getFlowGraph = (
         const startY = y - (children.length - 1) / 2
         const childX = x + 1
 
-        children.forEach((child, index) => {
-            const childY = startY + index
-            if (visited.has(child.id)) {
-                const replacedId = child.id + "-replaced"
-                nodes.push(createNode(child, childX, childY, replacedId))
-                edges.push(createEdge(task.id, replacedId))
-            } else {
-                edges.push(createEdge(task.id, child.id))
-                dfs(child, childX, childY)
-            }
-        })
+        children
+            .sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1))
+            .forEach((child, index) => {
+                const childY = startY + index
+                if (visited.has(child.id)) {
+                    const replacedId = child.id + "-replaced"
+                    nodes.push(createNode(child, childX, childY, replacedId))
+                    edges.push(createEdge(task.id, replacedId))
+                } else {
+                    edges.push(createEdge(task.id, child.id))
+                    dfs(child, childX, childY)
+                }
+            })
     }
 
     const rootTask = taskMap.get(rootTaskId)
