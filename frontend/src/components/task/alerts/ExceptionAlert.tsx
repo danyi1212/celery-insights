@@ -12,7 +12,8 @@ import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useStateStore } from "@stores/useStateStore"
-import React, { useMemo, useState } from "react"
+import { StateTask } from "@utils/translateServerModels"
+import React, { useCallback, useState } from "react"
 
 interface ExceptionTracebackProps extends AlertProps {
     exception: string
@@ -24,10 +25,18 @@ const ExceptionTraceback: React.FC<ExceptionTracebackProps> = ({ exception, trac
     const [expanded, setExpanded] = useState(false)
     const theme = useTheme()
     const largeScreen = useMediaQuery(theme.breakpoints.up("sm"))
-    const tasks = useStateStore((store) => (largeScreen ? store.tasks : []))
-    const similarTasks = useMemo(
-        () => tasks.map((task) => task).filter((task) => task.id !== currentTaskId && task.exception === exception),
-        [tasks, exception, currentTaskId]
+    const similarTasks = useStateStore(
+        useCallback(
+            (state) => {
+                const similar: StateTask[] = []
+                if (largeScreen)
+                    state.tasks.forEach((task) => {
+                        if (task.id !== currentTaskId && task.exception === exception) similar.push(task)
+                    })
+                return similar
+            },
+            [largeScreen, currentTaskId, exception]
+        )
     )
     const showSimilar = similarTasks.length > 0 && largeScreen
 

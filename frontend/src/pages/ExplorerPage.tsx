@@ -17,7 +17,11 @@ import React, { useState } from "react"
 
 const FACET_WIDTH = 300
 const ExplorerPage: React.FC = () => {
-    const tasks = useStateStore((state) => state.tasks.map((task) => task))
+    const tasks = useStateStore((state) => {
+        const tasks: StateTask[] = []
+        state.tasks.forEach((task) => tasks.push(task))
+        return tasks
+    })
     const [isFacetMenuOpen, setFacetMenuOpen] = useState(true)
     const [filters, setFilter] = useExplorerFilter<StateTask>()
     useTourChangeStepOnLoad(11)

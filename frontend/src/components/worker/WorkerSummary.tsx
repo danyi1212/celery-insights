@@ -8,6 +8,7 @@ import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
 import { TaskState } from "@services/server"
 import { useStateStore } from "@stores/useStateStore"
+import { StateTask } from "@utils/translateServerModels"
 import React, { useCallback, useMemo } from "react"
 import { Link } from "react-router-dom"
 
@@ -19,11 +20,13 @@ const WorkerSummary: React.FC<WorkerSummaryProps> = ({ workerId }) => {
     const worker = useStateStore((state) => state.workers.get(workerId))
     const tasks = useStateStore(
         useCallback(
-            (store) =>
-                store.tasks
-                    .map((task) => task)
-                    .filter((task) => task.worker === workerId)
-                    .sort((a, b) => (a.sentAt > b.sentAt ? -1 : 1)),
+            (store) => {
+                const related: StateTask[] = []
+                store.tasks.forEach((task) => {
+                    if (task.worker === workerId) related.push(task)
+                })
+                return related.sort((a, b) => (a.sentAt > b.sentAt ? -1 : 1))
+            },
             [workerId]
         )
     )

@@ -8,10 +8,9 @@ import { useStateStore } from "@stores/useStateStore"
 import React, { useMemo, useState } from "react"
 
 const ExceptionsSummary: React.FC = () => {
-    const tasks = useStateStore((store) => store.tasks)
-    const errorsMap = useMemo(() => {
+    const errorsMap = useStateStore((state) => {
         const map = new Map<string, { count: number; traceback: string | undefined }>()
-        for (const task of tasks) {
+        state.tasks.forEach((task) => {
             if (task.exception) {
                 const entry = map.get(task.exception)
                 if (entry) {
@@ -20,9 +19,9 @@ const ExceptionsSummary: React.FC = () => {
                     map.set(task.exception, { count: 1, traceback: task.traceback })
                 }
             }
-        }
+        })
         return map
-    }, [tasks])
+    })
     const [selectedError, setSelectedError] = useState<string | null>(null)
     const errorMessages = useMemo(() => Array.from(errorsMap.keys()), [errorsMap])
 

@@ -1,9 +1,11 @@
 import FlowChart from "@components/workflow/FlowChart"
 import TimelineChart from "@components/workflow/TimelineChart"
 import { useStateStore } from "@stores/useStateStore"
+import { StateTask } from "@utils/translateServerModels"
 import React, { useDeferredValue, useMemo } from "react"
 import { ReactFlowProvider } from "reactflow"
 import "reactflow/dist/style.css"
+import { shallow } from "zustand/shallow"
 
 export enum WorkflowChartType {
     FLOWCHART = "flowchart",
@@ -17,11 +19,13 @@ interface WorkflowGraphProps {
 }
 
 const WorkflowGraph: React.FC<WorkflowGraphProps> = ({ chartType, rootTaskId, currentTaskId }) => {
-    const tasks = useStateStore((state) => state.tasks)
-    const workflowTasks = useMemo(
-        () => tasks.map((task) => task).filter((task) => task.rootId === rootTaskId || task.id === rootTaskId),
-        [tasks, rootTaskId]
-    )
+    const workflowTasks = useStateStore((state) => {
+        const workflow: StateTask[] = []
+        state.tasks.forEach((task) => {
+            if (task.rootId === rootTaskId || task.id === rootTaskId) workflow.push(task)
+        })
+        return workflow
+    }, shallow)
 
     const deferredTasks = useDeferredValue(workflowTasks)
     switch (chartType) {

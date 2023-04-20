@@ -1,38 +1,39 @@
 import { ServerClient, Task, TaskEventMessage, WorkerEventMessage } from "@services/server"
-import { LRUMap } from "@utils/LRUMap"
 import { StateTask, StateWorker, translateTask, translateWorker } from "@utils/translateServerModels"
+import { LRUCache } from "lru-cache"
 import { ReadyState } from "react-use-websocket"
 import { create } from "zustand"
 
 interface State {
-    tasks: LRUMap<string, StateTask>
+    tasks: LRUCache<string, StateTask>
     recentTaskIds: string[]
     recentTasksCapacity: number
-    workers: LRUMap<string, StateWorker>
+    workers: LRUCache<string, StateWorker>
     status: ReadyState
 }
 
 export const useStateStore = create<State>(() => ({
-    tasks: new LRUMap(1000),
+    tasks: new LRUCache({ max: 1000 }),
     recentTaskIds: [],
     recentTasksCapacity: 30,
-    workers: new LRUMap(100),
+    workers: new LRUCache({ max: 100 }),
     status: ReadyState.UNINSTANTIATED,
 }))
 
 export const loadInitialState = () => {
     new ServerClient().tasks.getTasks().then((response) => {
         useStateStore.setState((state) => {
-            const tasks = new LRUMap(state.tasks)
-            response.results.forEach((task) => tasks.set(task.id, translateTask(task)))
-            return { tasks, recentTaskIds: response.results.slice(0, state.recentTasksCapacity).map((task) => task.id) }
+            response.results.forEach((task) => state.tasks.set(task.id, translateTask(task)))
+            return {
+                tasks: state.tasks,
+                recentTaskIds: response.results.slice(0, state.recentTasksCapacity).map((task) => task.id),
+            }
         })
     })
     new ServerClient().workers.getWorkers().then((response) => {
         useStateStore.setState((state) => {
-            const workers = new LRUMap(state.workers)
-            response.forEach((worker) => workers.set(worker.id, translateWorker(worker)))
-            return { workers }
+            response.forEach((worker) => state.workers.set(worker.id, translateWorker(worker)))
+            return { workers: state.workers }
         })
     })
 }
@@ -44,7 +45,7 @@ const addTask = (task: Task) =>
             ? state.recentTaskIds
             : [task.id, ...state.recentTaskIds.slice(0, state.recentTasksCapacity - 1)]
         return {
-            tasks: state.tasks.iset(task.id, stateTask),
+            tasks: state.tasks.set(task.id, stateTask),
             recentTaskIds: recentTaskIds,
         }
     })
@@ -56,7 +57,7 @@ export const handleEvent = (message: TaskEventMessage | WorkerEventMessage) => {
         }
         case WorkerEventMessage.category.WORKER: {
             return useStateStore.setState((state) => ({
-                workers: state.workers.iset(message.worker.id, translateWorker(message.worker)),
+                workers: state.workers.set(message.worker.id, translateWorker(message.worker)),
             }))
         }
     }
