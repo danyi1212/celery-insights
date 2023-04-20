@@ -17,11 +17,11 @@ import { useParams } from "react-router-dom"
 
 const TaskPage: React.FC = () => {
     const { taskId } = useParams() as { taskId: string }
-    const { task, loading } = useTaskState(taskId)
+    const { task } = useTaskState(taskId)
     const [chartType, setChartType] = React.useState<WorkflowChartType>(WorkflowChartType.FLOWCHART)
     useTourChangeStepOnLoad(2, task !== undefined)
 
-    if (!loading && task === undefined)
+    if (task === undefined)
         return (
             <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100%">
                 <Box sx={{ display: "flex", alignItems: "center" }}>
