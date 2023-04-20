@@ -10,15 +10,34 @@ import ListItemSecondaryAction from "@mui/material/ListItemSecondaryAction"
 import ListItemText from "@mui/material/ListItemText"
 import Tooltip from "@mui/material/Tooltip"
 import { useStateStore } from "@stores/useStateStore"
-import { StateTask } from "@utils/translateServerModels"
 import { format } from "date-fns"
-import React from "react"
+import React, { useCallback } from "react"
 import { Link as RouterLink, Link } from "react-router-dom"
 
-const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
-    const recentTasks = useStateStore(
-        (state) => state.recentTaskIds.map((taskId) => state.tasks.get(taskId)).filter((task) => task) as StateTask[]
+const RecentTaskListItem: React.FC<{ taskId: string }> = ({ taskId }) => {
+    const task = useStateStore(useCallback((store) => store.tasks.get(taskId), [taskId]))
+    return (
+        <AnimatedListItem disablePadding>
+            <ListItemButton component={Link} to={`/tasks/${taskId}`}>
+                <ListItemAvatar>
+                    <TaskAvatar taskId={taskId} type={task?.type} status={task?.state} disableLink />
+                </ListItemAvatar>
+                <ListItemText
+                    primary={task?.type || "Unknown"}
+                    secondary={task?.sentAt && "Sent at " + format(task?.sentAt, "HH:mm:ss")}
+                />
+                <ListItemSecondaryAction>
+                    <Tooltip title="View task...">
+                        <ReadMoreIcon />
+                    </Tooltip>
+                </ListItemSecondaryAction>
+            </ListItemButton>
+        </AnimatedListItem>
     )
+}
+
+const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
+    const recentTaskIds = useStateStore((state) => state.recentTaskIds)
 
     return (
         <Panel
@@ -31,23 +50,8 @@ const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
             {...props}
         >
             <AnimatedList>
-                {recentTasks.map((task, index) => (
-                    <AnimatedListItem key={index} disablePadding>
-                        <ListItemButton component={Link} to={`/tasks/${task.id}`}>
-                            <ListItemAvatar>
-                                <TaskAvatar taskId={task.id} type={task.type} status={task.state} disableLink />
-                            </ListItemAvatar>
-                            <ListItemText
-                                primary={task.type}
-                                secondary={"Sent at " + format(task.sentAt, "HH:mm:ss")}
-                            />
-                            <ListItemSecondaryAction>
-                                <Tooltip title="View task...">
-                                    <ReadMoreIcon />
-                                </Tooltip>
-                            </ListItemSecondaryAction>
-                        </ListItemButton>
-                    </AnimatedListItem>
+                {recentTaskIds.map((taskId, index) => (
+                    <RecentTaskListItem key={index} taskId={taskId} />
                 ))}
             </AnimatedList>
         </Panel>
