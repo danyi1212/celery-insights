@@ -35,7 +35,7 @@ const TaskPage: React.FC = () => {
 
     return (
         <Box>
-            <Box width="100%" height="450px" id="workflow-chart">
+            <Box width="100%" height="50vh" id="workflow-chart">
                 {task ? (
                     <WorkflowGraph chartType={chartType} rootTaskId={task.rootId || task.id} currentTaskId={task.id} />
                 ) : (
