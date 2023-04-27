@@ -1,13 +1,20 @@
-
 import pytest
 
 from celery_app import get_celery_app
+import celery_app
 from settings import Settings
 
 fake_config = """
 broker_url = "amqp://guest:guest@module/"
 result_backend = "redis://module"
 """
+
+
+@pytest.fixture(autouse=True)
+def clear_app_cache():
+    yield
+    # noinspection PyShadowingNames
+    celery_app._celery_app_cache = None
 
 
 @pytest.mark.asyncio()
