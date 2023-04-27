@@ -25,5 +25,5 @@ class LoggingConfig(BaseModel):
             "handlers": ["default"],
             "level": Settings().log_level,
         }
-        for name in ["app", "tasks", "workers", "events", "ws", "server_info"]
+        for name in ["app", "tasks", "workers", "events", "ws", "server_info", "celery_app"]
     }

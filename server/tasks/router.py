@@ -31,8 +31,8 @@ def get_task_detail(task_id: str) -> Task:
 
 @tasks_router.get("/{task_id}/result", responses={404: {"model": str, "description": "Task not found."}})
 @cache(expire=5)
-def get_task_result(task_id: str) -> TaskResult:
-    celery_app = get_celery_app()
+async def get_task_result(task_id: str) -> TaskResult:
+    celery_app = await get_celery_app()
     result = AsyncResult(task_id, app=celery_app)
     return TaskResult(
         id=result.id,

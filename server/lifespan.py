@@ -11,7 +11,7 @@ from events.receiver import CeleryEventReceiver
 @asynccontextmanager
 async def lifespan(_):
     FastAPICache.init(InMemoryBackend())
-    celery_app = get_celery_app()
+    celery_app = await get_celery_app()
     event_consumer = CeleryEventReceiver(celery_app)
     event_consumer.start()
     listener = EventBroadcaster(event_consumer.queue)
