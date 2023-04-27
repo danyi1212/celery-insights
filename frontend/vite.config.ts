@@ -10,7 +10,8 @@ export default defineConfig({
     define: {
         // react-joyrider uses the global object, even though it doesn't exist in the browser.
         // https://github.com/vitejs/vite/discussions/5912
-        global: {},
+        // https://github.com/bevacqua/dragula/issues/602#issuecomment-1296313369
+        global: "window",
     },
     server: {
         proxy: {
