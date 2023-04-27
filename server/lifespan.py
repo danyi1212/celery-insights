@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 
-from celery_app import celery_app
+from celery_app import get_celery_app
 from events.broadcaster import EventBroadcaster
 from events.receiver import CeleryEventReceiver
 
@@ -11,6 +11,7 @@ from events.receiver import CeleryEventReceiver
 @asynccontextmanager
 async def lifespan(_):
     FastAPICache.init(InMemoryBackend())
+    celery_app = get_celery_app()
     event_consumer = CeleryEventReceiver(celery_app)
     event_consumer.start()
     listener = EventBroadcaster(event_consumer.queue)

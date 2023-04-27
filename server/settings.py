@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8555
 
-    broker: str
-    result_backend: str
+    broker_url: str = "amqp://guest:guest@localhost/"
+    result_backend: str = 'redis://localhost:6379/0'
 
     class Config(BaseSettings.Config):
         env_file = ".env"

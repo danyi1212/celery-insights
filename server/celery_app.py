@@ -1,8 +1,11 @@
 from celery import Celery
 
-from settings import settings
+from settings import Settings
 
-celery_app = Celery(
-    broker=settings.broker,
-    backend=settings.result_backend,
-)
+
+def get_celery_app():
+    settings = Settings()
+    return Celery(
+        broker=settings.broker_url,
+        backend=settings.result_backend,
+    )

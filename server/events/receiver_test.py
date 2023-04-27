@@ -1,12 +1,13 @@
 import pytest
 from pytest_mock import MockerFixture
 
-from celery_app import celery_app
+from celery_app import get_celery_app
 from events.receiver import CeleryEventReceiver, state
 
 
 @pytest.fixture
 def receiver():
+    celery_app = get_celery_app()
     return CeleryEventReceiver(celery_app)
 
 

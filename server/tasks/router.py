@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi_cache.decorator import cache
 from starlette.requests import Request
 
-from celery_app import celery_app
+from celery_app import get_celery_app
 from events.receiver import state
 from pagination import Paginated, get_paginated_response
 from tasks.model import Task, TaskResult
@@ -32,6 +32,7 @@ def get_task_detail(task_id: str) -> Task:
 @tasks_router.get("/{task_id}/result", responses={404: {"model": str, "description": "Task not found."}})
 @cache(expire=5)
 def get_task_result(task_id: str) -> TaskResult:
+    celery_app = get_celery_app()
     result = AsyncResult(task_id, app=celery_app)
     return TaskResult(
         id=result.id,
