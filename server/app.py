@@ -44,11 +44,11 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-if Path("static").exists():
-    app.mount("/", StaticFiles(directory="static", html=True), name="static")
-
+app.include_router(ws_router)
 app.include_router(tasks_router)
 app.include_router(workers_router)
 app.include_router(events_router)
-app.include_router(ws_router)
 app.include_router(settings_router)
+
+if Path("static").exists():
+    app.mount("/", StaticFiles(directory="static", html=True), name="static")
