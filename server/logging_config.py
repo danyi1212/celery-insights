@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from settings import settings
+from settings import Settings
 
 
 class LoggingConfig(BaseModel):
@@ -23,7 +23,7 @@ class LoggingConfig(BaseModel):
     loggers = {
         name: {
             "handlers": ["default"],
-            "level": settings.log_level,
+            "level": Settings().log_level,
         }
         for name in ["app", "tasks", "workers", "events", "ws", "server_info"]
     }

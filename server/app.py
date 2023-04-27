@@ -10,7 +10,7 @@ from events.router import events_router
 from lifespan import lifespan
 from logging_config import LoggingConfig
 from server_info.router import settings_router
-from settings import settings
+from settings import Settings
 from tasks.router import tasks_router
 from workers.router import workers_router
 from ws.router import ws_router
@@ -27,7 +27,7 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 app = FastAPI(
     title="Celery Insights",
     description="Modern Real-Time Monitoring for Celery",
-    debug=settings.debug,
+    debug=Settings().debug,
     lifespan=lifespan,  # type: ignore
     generate_unique_id_function=custom_generate_unique_id,
 )
