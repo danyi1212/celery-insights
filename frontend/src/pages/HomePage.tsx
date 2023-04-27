@@ -4,6 +4,7 @@ import WelcomeBanner from "@components/WelcomeBanner"
 import WorkersSummaryStack from "@components/worker/WorkersSummaryStack"
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline"
 import Box from "@mui/material/Box"
+import CircularProgress from "@mui/material/CircularProgress"
 import Collapse from "@mui/material/Collapse"
 import Grid from "@mui/material/Grid"
 import Typography from "@mui/material/Typography"
@@ -16,22 +17,31 @@ import { ReadyState } from "react-use-websocket"
 const HomePage: React.FC = () => {
     const hideWelcomeBanner = useSettingsStore((state) => state.hideWelcomeBanner)
     const wsStatus = useStateStore((state) => state.status)
-    if (wsStatus === ReadyState.CLOSED) {
+    if (wsStatus !== ReadyState.OPEN) {
         return (
             <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100%">
-                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                    <ErrorOutlineIcon sx={{ fontSize: (theme) => theme.typography.h3.fontSize, mr: 2 }} color="error" />
-                    <Typography variant="h3" color="textPrimary">
-                        Unable to connect to the server
-                    </Typography>
-                </Box>
-                <Typography variant="h5">
-                    <ul>
-                        <li>Make sure you are connected to the network</li>
-                        <li>Check the server logs for any error messages or issues</li>
-                        <li>Try restarting the server</li>
-                    </ul>
-                </Typography>
+                {wsStatus === ReadyState.CONNECTING || wsStatus === ReadyState.UNINSTANTIATED ? (
+                    <CircularProgress />
+                ) : (
+                    <>
+                        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                            <ErrorOutlineIcon
+                                sx={{ fontSize: (theme) => theme.typography.h3.fontSize, mr: 2 }}
+                                color="error"
+                            />
+                            <Typography variant="h3" color="textPrimary">
+                                Unable to connect to the server
+                            </Typography>
+                        </Box>
+                        <Typography variant="h5">
+                            <ul>
+                                <li>Make sure you are connected to the network</li>
+                                <li>Check the server logs for any error messages or issues</li>
+                                <li>Try restarting the server</li>
+                            </ul>
+                        </Typography>
+                    </>
+                )}
             </Box>
         )
     }
