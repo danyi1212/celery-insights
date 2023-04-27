@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     port: int = 8555
 
     config_path: str = "/app/config.py"
-    broker_url: str = "amqp://guest:guest@localhost/"
-    result_backend: str = "redis://localhost:6379/0"
+    broker_url: str = "amqp://guest:guest@host.docker.internal/"
+    result_backend: str = "redis://host.docker.internal:6379/0"
 
     class Config(BaseSettings.Config):
         env_file = ".env"

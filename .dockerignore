@@ -1,0 +1,6 @@
+**/*test.py
+**/.env*
+/frontend/node_modules
+/frontend/dist
+**/.mypy_cache
+**/.pytest_cache
