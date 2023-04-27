@@ -30,11 +30,7 @@ export interface StateTask {
     traceback?: string
 }
 
-const timestampToDate = (timestamp: number): Date => {
-    const date_utc = new Date(timestamp * 1000)
-    const localOffset = date_utc.getTimezoneOffset() * 60 * 1000
-    return new Date(date_utc.getTime() - localOffset)
-}
+const timestampToDate = (timestamp: number): Date => new Date(timestamp * 1000)
 
 export const translateTask = (task: ServerTask): StateTask => ({
     id: task.id,
