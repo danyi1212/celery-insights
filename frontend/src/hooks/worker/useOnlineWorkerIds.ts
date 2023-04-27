@@ -7,7 +7,7 @@ export const useOnlineWorkerIds = (): string[] =>
         state.workers.forEach((worker) => {
             if (
                 worker.heartbeatExpires &&
-                worker.heartbeatExpires.getTime() - new Date().getTime() < GRACE_SECONDS * 1000
+                new Date().getTime() - worker.heartbeatExpires.getTime() < GRACE_SECONDS * 1000
             ) {
                 workers.push(worker.id)
             }
