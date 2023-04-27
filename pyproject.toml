@@ -14,7 +14,6 @@ celery = { extras = ["redis"], version = "^5.2.7" }
 websockets = "^11.0"
 fastapi-cache2 = "^0.2.1"
 user-agents = "^2.2.0"
-psutil = "^5.9.4"
 aiopath = "^0.6.11"
 
 [tool.poetry.group.dev.dependencies]

@@ -3,15 +3,11 @@
 /* eslint-disable */
 
 export type ServerInfo = {
-    cpu_usage: number;
+    cpu_usage: Array<any>;
     /**
      * Memory Usage in KB
      */
     memory_usage: number;
-    /**
-     * Memory Usage Percentage
-     */
-    memory_percentage: number;
     /**
      * Server Uptime in seconds
      */

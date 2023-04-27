@@ -1,9 +1,10 @@
 import logging
+import os
 import platform
+import resource
 import time
 from typing import Self
 
-import psutil
 import user_agents
 from celery.events.state import State
 from pydantic import BaseModel, Field
@@ -12,12 +13,12 @@ from starlette.websockets import WebSocket, WebSocketState
 from user_agents.parsers import UserAgent
 
 logger = logging.getLogger(__name__)
+start_time = time.perf_counter()
 
 
 class ServerInfo(BaseModel):
-    cpu_usage: float = Field(desciption="CPU Usage")
+    cpu_usage: tuple[float, float, float] = Field(desciption="CPU load average in last 1, 5 and 15 minutes")
     memory_usage: float = Field(description="Memory Usage in KB")
-    memory_percentage: float = Field(description="Memory Usage Percentage")
     uptime: float = Field(description="Server Uptime in seconds")
     server_hostname: str = Field(description="Server Hostname")
     server_port: int = Field(description="Server Port")
@@ -32,12 +33,11 @@ class ServerInfo(BaseModel):
 
     @classmethod
     def create(cls, request: Request, state: State) -> Self:
-        virtual_memory = psutil.virtual_memory()
+        rusage = resource.getrusage(resource.RUSAGE_SELF)
         return ServerInfo(
-            cpu_usage=psutil.cpu_percent(1),
-            memory_usage=virtual_memory.used,
-            memory_percentage=virtual_memory.percent,
-            uptime=time.time() - psutil.boot_time(),
+            cpu_usage=os.getloadavg(),
+            memory_usage=rusage.ru_maxrss,
+            uptime=time.perf_counter() - start_time,
             server_hostname=request.url.hostname,
             server_port=request.url.port,
             server_version=request.app.version,

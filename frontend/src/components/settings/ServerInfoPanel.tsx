@@ -40,15 +40,21 @@ export const ServerInfoPanel: React.FC = () => {
                 <Grid item xs={12}>
                     <DetailItem
                         label="CPU Usage"
-                        description="Percentage of CPU used by the server"
-                        value={<LinearProgressWithLabel value={data?.cpu_usage || 0} percentageLabel />}
+                        description="CPU usage by the server process"
+                        value={
+                            <LinearProgressWithLabel
+                                value={data?.cpu_usage[2] || 0}
+                                buffer={data?.cpu_usage[0] || 0}
+                                percentageLabel
+                            />
+                        }
                     />
                 </Grid>
                 <Grid item xs={12} md={6}>
                     <DetailItem
                         label="Memory"
-                        description="Total memory usage by the server OS"
-                        value={`${formatBytes(data?.memory_usage || 0)} (${Math.round(data?.memory_percentage || 0)}%)`}
+                        description="Total memory usage by the server process"
+                        value={formatBytes(data?.memory_usage || 0)}
                     />
                 </Grid>
                 <Grid item xs={12} md={6}>

@@ -24,9 +24,6 @@ FROM python:3.11-alpine
 
 WORKDIR /app
 
-# Required for psutil
-RUN apk add build-base linux-headers
-
 # Setup python
 RUN pip install --upgrade pip
 COPY --from=requirements-stage /tmp/requirements.txt ./requirements.txt
