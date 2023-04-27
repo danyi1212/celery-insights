@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from asyncio import Event, Queue, Task as AioTask, create_task
+from asyncio import CancelledError, Event, Queue, Task as AioTask, create_task
 from typing import Generic, TypeVar
 
 logger = logging.getLogger(__name__)
@@ -20,12 +20,16 @@ class QueueSubscriber(Generic[T], ABC):
     async def _listen(self) -> None:
         logger.info(f"Subscribing to events from {self.name!r}...")
         while not self._stop_signal.is_set():
-            event = await self.queue.get()
-            logger.debug(f"Received event from {self.name!r}: {event}")
             try:
-                await self.handle_event(event)
-            except Exception as e:
-                logger.exception(f"Failed to handle event: {e}")
+                event = await self.queue.get()
+            except CancelledError:
+                break
+            else:
+                logger.debug(f"Received event from {self.name!r}: {event}")
+                try:
+                    await self.handle_event(event)
+                except Exception as e:
+                    logger.exception(f"Failed to handle event: {e}")
 
     @abstractmethod
     async def handle_event(self, event: T) -> None:
@@ -37,5 +41,4 @@ class QueueSubscriber(Generic[T], ABC):
         if self._task.done():
             self._task.result()
         else:
-            logger.warning("")
             self._task.cancel()

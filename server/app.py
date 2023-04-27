@@ -17,7 +17,6 @@ from ws.router import ws_router
 
 logging.config.dictConfig(LoggingConfig().dict())
 logger = logging.getLogger(__name__)
-logger.info("Welcome!")
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
