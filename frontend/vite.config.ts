@@ -1,12 +1,13 @@
 import react from "@vitejs/plugin-react-swc"
 import { defineConfig } from "vite"
+import viteCompression from "vite-plugin-compression"
 import eslint from "vite-plugin-eslint"
 import tsconfigPaths from "vite-tsconfig-paths"
 
 // https://vitejs.dev/config/
 // noinspection JSUnusedGlobalSymbols
 export default defineConfig({
-    plugins: [eslint(), tsconfigPaths(), react()],
+    plugins: [eslint(), tsconfigPaths(), react(), viteCompression()],
     define: {
         // react-joyrider uses the global object, even though it doesn't exist in the browser.
         // https://github.com/vitejs/vite/discussions/5912
