@@ -7,7 +7,7 @@ Our modern web interface enables you to conveniently view worker status,
 task information, and workflow graphs, all updated using websockets.
 
 Inspired by Celery Flower, this tool takes Celery monitoring to the next level.  
-Try Celery Insights today and see the difference for yourself!
+Try Celery Insights and transform the way you monitor your Celery cluster!
 
 ## Getting Started
 
