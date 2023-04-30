@@ -125,6 +125,46 @@ Then mount it inside Celery Insights container, for example:
 ```shell
 docker run -v ./config.py:/app/config.py -p 8555:8555 --name celery-insights ghcr.io/danyi1212/celery-insights:latest
 ```
+### Support chart
+
+:white_check_mark: - Supported and tested <br />
+:heavy_check_mark: - Supported <br />
+:ballot_box_with_check: - Missing features <br />
+:x: - Not supported <br />
+
+#### Serializers
+* :heavy_check_mark: auth
+* :heavy_check_mark: msgpack
+* :heavy_check_mark: yaml
+
+#### Brokers
+* :white_check_mark: RabbitMQ
+* :white_check_mark: Redis
+* :x: Amazon SQS
+* :heavy_check_mark: Zookeeper
+
+#### Result Backends
+* :white_check_mark: Redis
+* :ballot_box_with_check: RPC
+* :heavy_check_mark: Memcache
+* :heavy_check_mark: SQLAlchemy
+* :heavy_check_mark: MongoDB
+* :x: Casandra
+* :x: IronCache
+* :heavy_check_mark: S3
+* :heavy_check_mark: Azure Block Blob
+* :heavy_check_mark: ElasticSearch
+* :heavy_check_mark: AWS DynamoDB
+* :x: Couchbase
+* :heavy_check_mark: CouchDB
+* :heavy_check_mark: ArangoDB
+* :heavy_check_mark: CosmoDB
+* :ballot_box_with_check: File-System
+* :heavy_check_mark: Consul
+* :heavy_check_mark: Riak
+* :x: Django ORM
+
+Feel free to [submit a feature request](CONTRIBUTING.md) to support more setups.
 
 ## Contributing
 

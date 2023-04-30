@@ -9,8 +9,27 @@ readme = "README.md"
 python = "^3.11"
 fastapi = "^0.95.1"
 python-dotenv = "^1.0.0"
-uvicorn = "^0.21.0"
-celery = { extras = ["redis"], version = "^5.2.7" }
+uvicorn = "^0.22.0"
+celery = { version = "^5.2.7", extras = [
+    "arangodb",
+    "auth",
+    "couchdb",
+    "consul",
+    "dynamodb",
+    "elasticsearch",
+    "eventlet",
+    "gevent",
+    "msgpack",
+    "pymemcache",
+    "pyro",
+    "redis",
+    "riak",
+    "s3",
+    "slmq",
+    "sqlalchemy",
+    "tblib",
+    "zookeeper",
+] }
 websockets = "^11.0"
 fastapi-cache2 = "^0.2.1"
 user-agents = "^2.2.0"
