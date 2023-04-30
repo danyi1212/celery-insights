@@ -127,10 +127,10 @@ docker run -v ./config.py:/app/config.py -p 8555:8555 --name celery-insights ghc
 ```
 ### Support chart
 
-:white_check_mark: - Supported and tested <br />
-:heavy_check_mark: - Supported <br />
-:ballot_box_with_check: - Missing features <br />
-:x: - Not supported <br />
+:white_check_mark: - Supported and tested
+:heavy_check_mark: - Supported
+:ballot_box_with_check: - Limited features
+:x: - Not supported
 
 #### Serializers
 * :heavy_check_mark: auth
