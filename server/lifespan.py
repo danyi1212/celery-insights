@@ -21,7 +21,7 @@ async def lifespan(_):
     settings = Settings()
 
     # Update timezone
-    os.environ["TZ"] = settings.tz
+    os.environ["TZ"] = settings.timezone
     time.tzset()
 
     # Setup cache

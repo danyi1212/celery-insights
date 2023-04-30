@@ -23,6 +23,7 @@ async def get_celery_app(settings: Settings | None = None):
         app = Celery(
             broker=settings.broker_url,
             backend=settings.result_backend,
+            timezone=settings.timezone,
         )
         _celery_app_cache = app
         return app
