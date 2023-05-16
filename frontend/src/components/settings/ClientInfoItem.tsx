@@ -23,6 +23,7 @@ const ClientInfoItem: React.FC<ClientInfoItemProps> = ({ client }) => {
             </ListItemAvatar>
             <ListItemText
                 primary={`${client.host}:${client.port}`}
+                secondaryTypographyProps={{ component: "div" }}
                 secondary={
                     client.browser ? (
                         <Grid container justifyContent="space-between" width="100%">
