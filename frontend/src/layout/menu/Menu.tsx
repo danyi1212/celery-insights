@@ -105,8 +105,8 @@ const Menu: React.FC = () => {
                     }
                     alt="logo"
                     style={{
-                        width: expanded ? '128px' : '32px',
-                        height: 'auto',
+                        width: expanded ? "128px" : "32px",
+                        height: "auto",
                         transition: theme.transitions.create("width"),
                     }}
                 />
