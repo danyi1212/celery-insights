@@ -1,11 +1,9 @@
 import logging.config
 from pathlib import Path
 
-from aiopath import AsyncPath
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 
 from events.router import events_router
@@ -54,9 +52,4 @@ app.include_router(events_router)
 app.include_router(settings_router)
 
 if Path("static").exists():
-    @app.get("/{full_path:path}")
-    async def serve_app():
-        return HTMLResponse(await AsyncPath("static/index.html").read_text())
-
-
     app.mount("/", StaticFiles(directory="static", html=True), name="static")
