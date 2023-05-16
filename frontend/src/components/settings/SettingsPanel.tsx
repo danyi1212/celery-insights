@@ -6,10 +6,17 @@ import Grid from "@mui/material/Grid"
 import Switch from "@mui/material/Switch"
 import Tooltip from "@mui/material/Tooltip"
 import useSettingsStore, { resetSettings } from "@stores/useSettingsStore"
+import { useStateStore } from "@stores/useStateStore"
 import React from "react"
 
 const SettingsPanel = () => {
     const hideWelcomeBanner = useSettingsStore((state) => state.hideWelcomeBanner)
+    const [taskCount, taskMax, workerCount, workerMax] = useStateStore((state) => [
+        state.tasks.size,
+        state.tasks.max,
+        state.workers.size,
+        state.workers.max,
+    ])
 
     return (
         <Panel
@@ -37,6 +44,20 @@ const SettingsPanel = () => {
                                 />
                             </Tooltip>
                         }
+                    />
+                </Grid>
+                <Grid item xs={12}>
+                    <DetailItem
+                        label="Tasks Memory"
+                        description="Number of tasks keeped in the browser memory."
+                        value={`${taskCount} / ${taskMax}`}
+                    />
+                </Grid>
+                <Grid item xs={12}>
+                    <DetailItem
+                        label="Workers Memory"
+                        description="Number of workers keeped in the browser memory."
+                        value={`${workerCount} / ${workerMax}`}
                     />
                 </Grid>
             </Grid>
