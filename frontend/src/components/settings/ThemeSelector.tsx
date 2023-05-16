@@ -11,18 +11,18 @@ const meta = [
     {
         theme: PreferredTheme.SYSTEM,
         icon: <BrightnessAutoIcon />,
-        tooltip: "System Default"
+        tooltip: "System Default",
     },
     {
         theme: PreferredTheme.DARK,
         icon: <Brightness2Icon />,
-        tooltip: "Dark Theme"
+        tooltip: "Dark Theme",
     },
     {
         theme: PreferredTheme.LIGHT,
         icon: <BrightnessHighIcon />,
-        tooltip: "Light Theme"
-    }
+        tooltip: "Light Theme",
+    },
 ]
 const ThemeSelector: React.FC = () => {
     const theme = useSettingsStore((state) => state.theme)
@@ -37,9 +37,7 @@ const ThemeSelector: React.FC = () => {
         >
             {meta.map((item, index) => (
                 <ToggleButton key={index} value={item.theme} aria-label={item.tooltip}>
-                    <Tooltip title={item.tooltip}>
-                        {item.icon}
-                    </Tooltip>
+                    <Tooltip title={item.tooltip}>{item.icon}</Tooltip>
                 </ToggleButton>
             ))}
         </ToggleButtonGroup>
