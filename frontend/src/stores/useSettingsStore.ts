@@ -13,19 +13,22 @@ interface Settings {
     hideWelcomeBanner: boolean
 }
 
+const defaultSettings = {
+    theme: PreferredTheme.SYSTEM,
+    menuExpanded: true,
+    hideWelcomeBanner: false,
+}
 const useSettingsStore = create<Settings>()(
     persist(
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        (set) => ({
-            theme: PreferredTheme.SYSTEM,
-            menuExpanded: true,
-            hideWelcomeBanner: false,
-        }),
+        (set) => defaultSettings,
         {
             name: "settings",
             storage: createJSONStorage(() => localStorage),
         }
     )
 )
+
+export const resetSettings = () => useSettingsStore.setState(defaultSettings)
 
 export default useSettingsStore
