@@ -7,9 +7,14 @@ from celery import Celery
 from celery.events import EventReceiver
 from celery.events.state import State
 
+from settings import Settings
+
 logger = logging.getLogger(__name__)
 
-state = State()
+state = State(
+    max_tasks_in_memory=Settings().max_tasks,
+    max_workers_in_memory=Settings().max_workers,
+)
 
 
 class CeleryEventReceiver(Thread):

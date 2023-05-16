@@ -74,6 +74,16 @@ Default: `/app/config.py`
 Specify the path where the Config File should be located for Celery Insights. 
 For instructions on how to set it up, refer to the [Setup with Config File](#setup-with-config-file) section.
 
+#### MAX_TASKS
+Default `10000`
+
+Specify how many tasks can be stored in memory.
+
+#### MAX_WORKERS
+Default `5000`
+
+Specify how many workers can be stored in memory.
+
 #### HOST
 Default: `0.0.0.0`
 

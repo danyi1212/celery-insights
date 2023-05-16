@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8555
 
+    max_workers: int = 5000
+    max_tasks: int = 10_000
+
     config_path: str = "/app/config.py"
     broker_url: str = "amqp://guest:guest@host.docker.internal/"
     result_backend: str = "redis://host.docker.internal:6379/0"
