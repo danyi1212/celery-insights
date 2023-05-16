@@ -1,5 +1,6 @@
 import DetailItem from "@components/common/DetailItem"
 import Panel from "@components/common/Panel"
+import ThemeSelector from "@components/settings/ThemeSelector"
 import Button from "@mui/material/Button"
 import Grid from "@mui/material/Grid"
 import Switch from "@mui/material/Switch"
@@ -20,7 +21,10 @@ const SettingsPanel = () => {
             }
         >
             <Grid container spacing={2} p={2}>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12}>
+                    <DetailItem label="Theme" value={<ThemeSelector />} />
+                </Grid>
+                <Grid item xs={12}>
                     <DetailItem
                         label="Show welcome banner"
                         value={
