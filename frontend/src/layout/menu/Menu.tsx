@@ -1,5 +1,5 @@
-import MenuItem, { MenuLink } from "@layout/menu/MenuItem"
 import WorkerQuickStatusList from "@components/worker/WorkerQuickStatusList"
+import MenuItem, { MenuLink } from "@layout/menu/MenuItem"
 import ApiIcon from "@mui/icons-material/Api"
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos"
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
@@ -8,7 +8,6 @@ import ManageSearchIcon from "@mui/icons-material/ManageSearch"
 import SettingsIcon from "@mui/icons-material/Settings"
 import SubjectIcon from "@mui/icons-material/Subject"
 import { useMediaQuery, useTheme } from "@mui/material"
-import Box from "@mui/material/Box"
 import Collapse from "@mui/material/Collapse"
 import Divider from "@mui/material/Divider"
 import Drawer from "@mui/material/Drawer"
@@ -46,13 +45,7 @@ const StyledLogoContainer = styled(Link)({
     justifyContent: "center",
     margin: "20px",
     textDecoration: "none",
-})
-
-const StyledLogo = styled(Box)({
-    width: "70px",
-    height: "70px",
-    backgroundColor: "white",
-    borderRadius: "10px",
+    background: "transparent",
 })
 
 const menuLinks: MenuLink[] = [
@@ -100,7 +93,23 @@ const Menu: React.FC = () => {
     return (
         <StyledDrawer variant="permanent" open={expanded}>
             <StyledLogoContainer to="/">
-                <StyledLogo />
+                <img
+                    src={
+                        theme.palette.mode === "dark"
+                            ? expanded
+                                ? "./LogoTextGreen.svg"
+                                : "./LogoGreen.svg"
+                            : expanded
+                            ? "./LogoTextDark.svg"
+                            : "./LogoDark.svg"
+                    }
+                    alt="logo"
+                    style={{
+                        width: expanded ? '128px' : '32px',
+                        height: 'auto',
+                        transition: theme.transitions.create("width"),
+                    }}
+                />
             </StyledLogoContainer>
             <List component="nav" sx={{ flexGrow: 1 }}>
                 {menuLinks.map((link, index) => (
