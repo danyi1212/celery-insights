@@ -22,14 +22,21 @@ const ORDER_WORKFLOW: SimulatorTaskOptions = {
 const USER_REGISTRATION_WORKFLOW: SimulatorTaskOptions = {
     name: "register_user",
     children: [
-        { name: "validate_user_data", errorRate: 25 },
         {
-            name: "create_user_account",
+            name: "validate_user_data",
+            errorRate: 25,
             children: [
-                { name: "store_user_data" },
-                { name: "generate_user_credentials" },
-                { name: "send_welcome_email" },
-                { name: "generate_sales_report" },
+                {
+                    name: "create_user_account",
+                    children: [
+                        { name: "store_user_data" },
+                        {
+                            name: "generate_user_credentials",
+                            children: [{ name: "send_welcome_email" }],
+                        },
+                        { name: "generate_sales_report" },
+                    ],
+                },
             ],
         },
         { name: "log_user_registration" },
@@ -39,12 +46,17 @@ const USER_REGISTRATION_WORKFLOW: SimulatorTaskOptions = {
 const PRODUCT_UPLOAD_WORKFLOW: SimulatorTaskOptions = {
     name: "upload_product",
     children: [
-        { name: "validate_product_data", errorRate: 40 },
         {
-            name: "store_product_data",
-            children: [{ name: "generate_product_id" }, { name: "store_product_images" }],
+            name: "validate_product_data",
+            errorRate: 40,
+            children: [
+                {
+                    name: "store_product_data",
+                    children: [{ name: "generate_product_id" }, { name: "store_product_images" }],
+                },
+                { name: "update_product_catalogue" },
+            ],
         },
-        { name: "update_product_catalogue" },
     ],
 }
 
