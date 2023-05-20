@@ -16,8 +16,9 @@ import { ReadyState } from "react-use-websocket"
 
 const HomePage: React.FC = () => {
     const hideWelcomeBanner = useSettingsStore((state) => state.hideWelcomeBanner)
+    const isDemo = useSettingsStore((state) => state.demo)
     const wsStatus = useStateStore((state) => state.status)
-    if (wsStatus !== ReadyState.OPEN) {
+    if (!isDemo && wsStatus !== ReadyState.OPEN) {
         return (
             <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100%">
                 {wsStatus === ReadyState.CONNECTING || wsStatus === ReadyState.UNINSTANTIATED ? (
