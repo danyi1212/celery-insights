@@ -1,3 +1,4 @@
+import { resetState } from "@stores/useStateStore"
 import { simulateWorkflow, SimulatorTaskOptions } from "@utils/simulator/taskSimulator"
 import { simulateWorker } from "@utils/simulator/workerSimulator"
 import React, { useEffect } from "react"
@@ -68,6 +69,9 @@ const PAYMENT_PROCESSING_WORKFLOW: SimulatorTaskOptions = {
 
 const DemoSimulator: React.FC = () => {
     useEffect(() => {
+        // eslint-disable-next-line no-console
+        console.log("Starting simulator...")
+        resetState()
         const tokens = [
             simulateWorker("worker@1", 123),
             simulateWorker("worker@2", 123),
@@ -79,7 +83,10 @@ const DemoSimulator: React.FC = () => {
         ]
 
         return () => {
+            // eslint-disable-next-line no-console
+            console.log("Stopping simulator...")
             tokens.forEach(clearInterval)
+            resetState()
         }
     }, [])
     return <></>

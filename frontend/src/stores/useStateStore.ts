@@ -62,3 +62,12 @@ export const handleEvent = (message: TaskEventMessage | WorkerEventMessage) => {
         }
     }
 }
+
+export const resetState = () =>
+    useStateStore.setState((state) => {
+        state.tasks.clear()
+        state.workers.clear()
+        return {
+            recentTaskIds: [],
+        }
+    })
