@@ -1,9 +1,17 @@
 import { EventType, Task, TaskEventMessage, TaskState } from "@services/server"
 import { handleEvent } from "@stores/useStateStore"
+import { CancellationToken } from "@utils/simulator/cancellationToken"
 import { getRandomException } from "@utils/simulator/exceptionSimulator"
 import { v4 as uuidv4 } from "uuid"
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+const delay = (ms: number, cancellationToken: CancellationToken) =>
+    new Promise((resolve, reject) => {
+        const token = setTimeout(resolve, ms)
+        cancellationToken.register(() => {
+            clearTimeout(token)
+            reject(new Error("Cancelled"))
+        })
+    })
 
 const getRandomDelay = (min: number, max: number) => Math.floor(Math.random() * (max - min) + min)
 
@@ -41,9 +49,9 @@ const startTask = (task: Task) => {
 }
 
 const finishTask = (task: Task) => {
-    task.last_updated = new Date().getTime()
     task.state = TaskState.SUCCESS
     task.succeeded_at = new Date().getTime()
+    task.last_updated = new Date().getTime()
     task.runtime = task.started_at ? task.started_at - task.succeeded_at : 0
     handleEvent({
         type: EventType.TASK_SUCCEEDED,
@@ -52,9 +60,9 @@ const finishTask = (task: Task) => {
     })
 }
 const errorTask = (task: Task) => {
-    task.last_updated = new Date().getTime()
     task.state = TaskState.FAILURE
     task.failed_at = new Date().getTime()
+    task.last_updated = new Date().getTime()
     const { exception, traceback } = getRandomException()
     task.exception = exception
     task.traceback = traceback
@@ -85,7 +93,11 @@ const createTask = (options: SimulatorTaskOptions): Task => ({
     children: [],
 })
 
-export const simulateTask = async (options: SimulatorTaskOptions, context?: SimulatorContext) => {
+export const simulateTask = async (
+    options: SimulatorTaskOptions,
+    cancellationToken: CancellationToken,
+    context?: SimulatorContext
+) => {
     const task = createTask(options)
     if (context) {
         task.root_id = context.rootId
@@ -105,15 +117,15 @@ export const simulateTask = async (options: SimulatorTaskOptions, context?: Simu
     sendTask(task)
 
     // Simulate task being received
-    await delay(getRandomDelay(0, 1_000))
+    await delay(getRandomDelay(0, 1_000), cancellationToken)
     receiveTask(task)
 
     // Simulate task starting
-    await delay(getRandomDelay(0, 3_000))
+    await delay(getRandomDelay(0, 3_000), cancellationToken)
     startTask(task)
 
     // Simulate task finishing or failing
-    await delay(getRandomDelay(5_000, 30_000))
+    await delay(getRandomDelay(5_000, 30_000), cancellationToken)
     const isError = Math.random() < (options.errorRate || 5) / 100
     if (isError) {
         errorTask(task)
@@ -123,11 +135,23 @@ export const simulateTask = async (options: SimulatorTaskOptions, context?: Simu
     finishTask(task)
 
     if (options.children)
-        await Promise.all(options.children?.map((childOptions) => simulateTask(childOptions, context)))
+        await Promise.all(
+            options.children?.map((childOptions) => simulateTask(childOptions, cancellationToken, context))
+        )
 }
 
 export const simulateWorkflow = (options: SimulatorTaskOptions, interval: number) => {
-    simulateTask(options).then()
-    const token = setInterval(async () => simulateTask(options), interval)
-    return () => clearInterval(token)
+    const cancellationToken = new CancellationToken()
+    simulateTask(options, cancellationToken).catch((error) =>
+        console.error("Error while simulating task", options, error)
+    )
+    const token = setInterval(() => {
+        simulateTask(options, cancellationToken).catch((error) =>
+            console.error("Error while simulating task", options, error)
+        )
+    }, interval)
+    return () => {
+        clearInterval(token)
+        cancellationToken.cancel()
+    }
 }
