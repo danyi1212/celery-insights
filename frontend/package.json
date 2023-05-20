@@ -33,12 +33,14 @@
     "reactflow": "^11.6.1",
     "semver": "^7.4.0",
     "string-to-color": "^2.2.2",
+    "uuid": "^9.0.0",
     "zustand": "^4.3.6"
   },
   "devDependencies": {
     "@types/react": "^18.0.27",
     "@types/react-dom": "^18.0.10",
     "@types/react-syntax-highlighter": "^15.5.6",
+    "@types/uuid": "^9.0.1",
     "@typescript-eslint/eslint-plugin": "^5.54.1",
     "@typescript-eslint/parser": "^5.54.1",
     "@vitejs/plugin-react-swc": "^3.0.0",
