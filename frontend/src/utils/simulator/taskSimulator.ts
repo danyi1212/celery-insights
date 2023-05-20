@@ -7,6 +7,8 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const getRandomDelay = (min: number, max: number) => Math.floor(Math.random() * (max - min) + min)
 
+const workers = ["worker@1-123", "worker@2-123", "worker@3-123"]
+
 const createTask = (type: string): Task => ({
     id: uuidv4(),
     type: type,
@@ -28,6 +30,7 @@ const receiveTask = (task: Task) => {
     task.state = TaskState.RECEIVED
     task.received_at = new Date().getTime()
     task.last_updated = new Date().getTime()
+    task.worker = workers[Math.floor(Math.random() * workers.length)]
     handleEvent({
         type: EventType.TASK_RECEIVED,
         category: TaskEventMessage.category.TASK,
