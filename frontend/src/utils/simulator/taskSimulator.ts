@@ -90,7 +90,10 @@ export const simulateTask = async (options: SimulatorTaskOptions, context?: Simu
     if (context) {
         task.root_id = context.rootId
         task.parent_id = context.parentId
-        context.parentId = task.id
+        context = {
+            rootId: context.rootId,
+            parentId: task.id,
+        }
     } else {
         context = {
             rootId: task.id,
