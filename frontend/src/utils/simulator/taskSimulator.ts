@@ -15,6 +15,8 @@ const delay = (ms: number, cancellationToken: CancellationToken) =>
 
 const getRandomDelay = (min: number, max: number) => Math.floor(Math.random() * (max - min) + min)
 
+const getNowTimestamp = () => Date.now() / 1000
+
 const workers = ["worker@1-123", "worker@2-123", "worker@3-123"]
 
 const sendTask = (task: Task) => {
@@ -27,8 +29,8 @@ const sendTask = (task: Task) => {
 
 const receiveTask = (task: Task) => {
     task.state = TaskState.RECEIVED
-    task.received_at = new Date().getTime()
-    task.last_updated = new Date().getTime()
+    task.received_at = getNowTimestamp()
+    task.last_updated = getNowTimestamp()
     task.worker = workers[Math.floor(Math.random() * workers.length)]
     handleEvent({
         type: EventType.TASK_RECEIVED,
@@ -39,8 +41,8 @@ const receiveTask = (task: Task) => {
 
 const startTask = (task: Task) => {
     task.state = TaskState.STARTED
-    task.started_at = new Date().getTime()
-    task.last_updated = new Date().getTime()
+    task.started_at = getNowTimestamp()
+    task.last_updated = getNowTimestamp()
     handleEvent({
         type: EventType.TASK_STARTED,
         category: TaskEventMessage.category.TASK,
@@ -50,8 +52,8 @@ const startTask = (task: Task) => {
 
 const finishTask = (task: Task) => {
     task.state = TaskState.SUCCESS
-    task.succeeded_at = new Date().getTime()
-    task.last_updated = new Date().getTime()
+    task.succeeded_at = getNowTimestamp()
+    task.last_updated = getNowTimestamp()
     task.runtime = task.started_at ? task.started_at - task.succeeded_at : 0
     handleEvent({
         type: EventType.TASK_SUCCEEDED,
@@ -61,8 +63,8 @@ const finishTask = (task: Task) => {
 }
 const errorTask = (task: Task) => {
     task.state = TaskState.FAILURE
-    task.failed_at = new Date().getTime()
-    task.last_updated = new Date().getTime()
+    task.failed_at = getNowTimestamp()
+    task.last_updated = getNowTimestamp()
     const { exception, traceback } = getRandomException()
     task.exception = exception
     task.traceback = traceback
@@ -88,8 +90,8 @@ const createTask = (options: SimulatorTaskOptions): Task => ({
     id: uuidv4(),
     type: options.name,
     state: TaskState.PENDING,
-    sent_at: new Date().getTime(),
-    last_updated: new Date().getTime(),
+    sent_at: getNowTimestamp(),
+    last_updated: getNowTimestamp(),
     children: [],
 })
 
