@@ -9,15 +9,6 @@ const getRandomDelay = (min: number, max: number) => Math.floor(Math.random() * 
 
 const workers = ["worker@1-123", "worker@2-123", "worker@3-123"]
 
-const createTask = (type: string): Task => ({
-    id: uuidv4(),
-    type: type,
-    state: TaskState.PENDING,
-    sent_at: new Date().getTime(),
-    last_updated: new Date().getTime(),
-    children: [],
-})
-
 const sendTask = (task: Task) => {
     handleEvent({
         type: EventType.TASK_SENT,
@@ -75,21 +66,58 @@ const finishTask = (task: Task) => {
     }
 }
 
-export const simulateTask = async (type: string) => {
-    const task = createTask(type)
+export interface SimulatorTaskOptions {
+    name: string
+    children?: SimulatorTaskOptions[]
+}
+
+interface SimulatorContext {
+    rootId: string
+    parentId: string
+}
+
+const createTask = (options: SimulatorTaskOptions): Task => ({
+    id: uuidv4(),
+    type: options.name,
+    state: TaskState.PENDING,
+    sent_at: new Date().getTime(),
+    last_updated: new Date().getTime(),
+    children: [],
+})
+
+export const simulateTask = async (options: SimulatorTaskOptions, context?: SimulatorContext) => {
+    const task = createTask(options)
+    if (context) {
+        task.root_id = context.rootId
+        task.parent_id = context.parentId
+        context.parentId = task.id
+    } else {
+        context = {
+            rootId: task.id,
+            parentId: task.id,
+        }
+    }
 
     // Simulate task being sent
     sendTask(task)
 
     // Simulate task being received
-    await delay(getRandomDelay(0, 1000))
+    await delay(getRandomDelay(0, 1_000))
     receiveTask(task)
 
     // Simulate task starting
-    await delay(getRandomDelay(0, 1000))
+    await delay(getRandomDelay(0, 3_000))
     startTask(task)
 
     // Simulate task finishing or failing
-    await delay(getRandomDelay(0, 30000))
+    await delay(getRandomDelay(5_000, 30_000))
     finishTask(task)
+
+    if (options.children)
+        await Promise.all(options.children?.map((childOptions) => simulateTask(childOptions, context)))
+}
+
+export const simulateWorkflow = (options: SimulatorTaskOptions, interval: number) => {
+    simulateTask(options).then()
+    return setInterval(async () => simulateTask(options), interval)
 }
