@@ -72,7 +72,7 @@ const DemoSimulator: React.FC = () => {
         // eslint-disable-next-line no-console
         console.log("Starting simulator...")
         resetState()
-        const tokens = [
+        const cancelCallbacks = [
             simulateWorker("worker@1", 123),
             simulateWorker("worker@2", 123),
             simulateWorker("worker@3", 123),
@@ -85,7 +85,7 @@ const DemoSimulator: React.FC = () => {
         return () => {
             // eslint-disable-next-line no-console
             console.log("Stopping simulator...")
-            tokens.forEach(clearInterval)
+            cancelCallbacks.forEach((callback) => callback())
             resetState()
         }
     }, [])

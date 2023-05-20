@@ -128,5 +128,6 @@ export const simulateTask = async (options: SimulatorTaskOptions, context?: Simu
 
 export const simulateWorkflow = (options: SimulatorTaskOptions, interval: number) => {
     simulateTask(options).then()
-    return setInterval(async () => simulateTask(options), interval)
+    const token = setInterval(async () => simulateTask(options), interval)
+    return () => clearInterval(token)
 }

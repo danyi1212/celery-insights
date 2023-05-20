@@ -22,7 +22,7 @@ const updateCPULoad = (cpuLoad: number[]): number[] => [
     ...cpuLoad.slice(0, 2),
 ]
 
-export const simulateWorker = (name: string, pid: number): number => {
+export const simulateWorker = (name: string, pid: number) => {
     const worker = getNewWorker(name, pid)
 
     // Add new worker
@@ -33,7 +33,7 @@ export const simulateWorker = (name: string, pid: number): number => {
     })
 
     // Update worker's heartbeat every 2 seconds
-    return setInterval(() => {
+    const token = setInterval(() => {
         worker.last_updated = new Date().getTime()
         worker.heartbeat_expires = new Date().getTime() + HEARTBEAT_INTERVAL
         worker.cpu_load = updateCPULoad(worker.cpu_load || [])
@@ -44,4 +44,6 @@ export const simulateWorker = (name: string, pid: number): number => {
             worker: worker,
         })
     }, HEARTBEAT_INTERVAL)
+
+    return () => clearInterval(token)
 }
