@@ -21,7 +21,7 @@ const ORDER_WORKFLOW: SimulatorTaskOptions = {
 const USER_REGISTRATION_WORKFLOW: SimulatorTaskOptions = {
     name: "register_user",
     children: [
-        { name: "validate_user_data" },
+        { name: "validate_user_data", errorRate: 25 },
         {
             name: "create_user_account",
             children: [
@@ -38,7 +38,7 @@ const USER_REGISTRATION_WORKFLOW: SimulatorTaskOptions = {
 const PRODUCT_UPLOAD_WORKFLOW: SimulatorTaskOptions = {
     name: "upload_product",
     children: [
-        { name: "validate_product_data" },
+        { name: "validate_product_data", errorRate: 40 },
         {
             name: "store_product_data",
             children: [{ name: "generate_product_id" }, { name: "store_product_images" }],
@@ -52,6 +52,7 @@ const PAYMENT_PROCESSING_WORKFLOW: SimulatorTaskOptions = {
     children: [
         {
             name: "validate_payment_method",
+            errorRate: 60,
             children: [
                 {
                     name: "execute_transaction",

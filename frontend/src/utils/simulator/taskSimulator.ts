@@ -40,35 +40,35 @@ const startTask = (task: Task) => {
     })
 }
 
-const ERROR_RATE = 0.05
 const finishTask = (task: Task) => {
-    const success = Math.random() < 1 - ERROR_RATE
     task.last_updated = new Date().getTime()
-    if (success) {
-        task.state = TaskState.SUCCESS
-        task.succeeded_at = new Date().getTime()
-        handleEvent({
-            type: EventType.TASK_SUCCEEDED,
-            category: TaskEventMessage.category.TASK,
-            task: task,
-        })
-    } else {
-        task.state = TaskState.FAILURE
-        task.failed_at = new Date().getTime()
-        const { exception, traceback } = getRandomException()
-        task.exception = exception
-        task.traceback = traceback
-        handleEvent({
-            type: EventType.TASK_FAILED,
-            category: TaskEventMessage.category.TASK,
-            task: task,
-        })
-    }
+    task.state = TaskState.SUCCESS
+    task.succeeded_at = new Date().getTime()
+    task.runtime = task.started_at ? task.started_at - task.succeeded_at : 0
+    handleEvent({
+        type: EventType.TASK_SUCCEEDED,
+        category: TaskEventMessage.category.TASK,
+        task: task,
+    })
+}
+const errorTask = (task: Task) => {
+    task.last_updated = new Date().getTime()
+    task.state = TaskState.FAILURE
+    task.failed_at = new Date().getTime()
+    const { exception, traceback } = getRandomException()
+    task.exception = exception
+    task.traceback = traceback
+    handleEvent({
+        type: EventType.TASK_FAILED,
+        category: TaskEventMessage.category.TASK,
+        task: task,
+    })
 }
 
 export interface SimulatorTaskOptions {
     name: string
     children?: SimulatorTaskOptions[]
+    errorRate?: number
 }
 
 interface SimulatorContext {
@@ -111,6 +111,12 @@ export const simulateTask = async (options: SimulatorTaskOptions, context?: Simu
 
     // Simulate task finishing or failing
     await delay(getRandomDelay(5_000, 30_000))
+    const isError = Math.random() < (options.errorRate || 5) / 100
+    if (isError) {
+        errorTask(task)
+        return
+    }
+
     finishTask(task)
 
     if (options.children)
