@@ -54,9 +54,7 @@ const SettingsPanel = () => {
                             <Tooltip title={isDemo ? "Simulator" : "Real Server"} placement="right">
                                 <Switch
                                     checked={isDemo}
-                                    onChange={(event) =>
-                                        useSettingsStore.setState({ demo: event.target.checked })
-                                    }
+                                    onChange={(event) => useSettingsStore.setState({ demo: event.target.checked })}
                                 />
                             </Tooltip>
                         }
