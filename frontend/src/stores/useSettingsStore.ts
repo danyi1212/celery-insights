@@ -11,12 +11,14 @@ interface Settings {
     theme: PreferredTheme
     menuExpanded: boolean
     hideWelcomeBanner: boolean
+    demo: boolean
 }
 
 const defaultSettings = {
     theme: PreferredTheme.SYSTEM,
     menuExpanded: true,
     hideWelcomeBanner: false,
+    demo: false,
 }
 const useSettingsStore = create<Settings>()(
     persist(

@@ -11,6 +11,7 @@ import React from "react"
 
 const SettingsPanel = () => {
     const hideWelcomeBanner = useSettingsStore((state) => state.hideWelcomeBanner)
+    const isDemo = useSettingsStore((state) => state.demo)
     const [taskCount, taskMax, workerCount, workerMax] = useStateStore((state) => [
         state.tasks.size,
         state.tasks.max,
@@ -40,6 +41,21 @@ const SettingsPanel = () => {
                                     checked={!hideWelcomeBanner}
                                     onChange={(event) =>
                                         useSettingsStore.setState({ hideWelcomeBanner: !event.target.checked })
+                                    }
+                                />
+                            </Tooltip>
+                        }
+                    />
+                </Grid>
+                <Grid item xs={12}>
+                    <DetailItem
+                        label="Demo mode"
+                        value={
+                            <Tooltip title={isDemo ? "Simulator" : "Real Server"} placement="right">
+                                <Switch
+                                    checked={isDemo}
+                                    onChange={(event) =>
+                                        useSettingsStore.setState({ demo: event.target.checked })
                                     }
                                 />
                             </Tooltip>
