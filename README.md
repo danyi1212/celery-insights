@@ -9,14 +9,18 @@ task information, and workflow graphs, all updated using websockets.
 Inspired by Celery Flower, this tool takes Celery monitoring to the next level.  
 Try Celery Insights and transform the way you monitor your Celery cluster!
 
-## Getting Started
+<p align="center">
+  <a href="https://celery-insights.vercel.app/" rel="noopener" target="_blank"><img height="40" src="/assets/ViewDemo.svg" alt="View Demo"></a>
+</p>
+
+## Installation
 
 Celery Insights is provided as a Docker image and can be launched using a single command:
 ```shell
 docker run -p 8555:8555 --name celery-insights ghcr.io/danyi1212/celery-insights:latest
 ```
 
-Next, navigate to `http://localhost:8555/` and begin the welcome tour.
+Next, navigate to http://localhost:8555/ and begin the welcome tour.
 
 ### Advanced setup
 Celery Insights comes pre-configured for localhost Redis as Result Backend and RabbitMQ as Broker.
