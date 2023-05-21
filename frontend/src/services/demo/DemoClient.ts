@@ -82,7 +82,47 @@ class DemoWorkersService {
     }
 
     getWorkerStats(timeout = 10, worker?: string): Promise<Record<string, Stats>> {
-        return Promise.resolve({})
+        if (worker)
+            return Promise.resolve({
+                [worker]: {
+                    clock: new Date().getTime() / 1000,
+                    uptime: 0,
+                    pid: 123,
+                    prefetch_count: 1,
+                    broker: {
+                        hostname: "127.0.0.1",
+                        heartbeat: 120,
+                        ssl: true,
+                        port: 5672,
+                        transport: "amqp",
+                        transport_options: {},
+                        login_method: "PLAIN",
+                        userid: "guest",
+                        virtual_host: "/",
+                    },
+                    pool: {
+                        "max-concurrency": 1,
+                        "max-tasks-per-child": "N/A",
+                        processes: [98827],
+                        timeouts: [1740, 1800],
+                        "put-guarded-by-semaphore": false,
+                        writes: {
+                            total: 9,
+                            avg: "1.00",
+                            all: "1.00",
+                            raw: "9",
+                            strategy: "fair",
+                            inqueues: {
+                                total: 1,
+                                active: 0,
+                            },
+                        },
+                    },
+                    rusage: {},
+                    total: {},
+                },
+            })
+        else return Promise.resolve({})
     }
 
     getWorkerRegistered(timeout = 10, worker?: string): Promise<Record<string, Array<string>>> {
