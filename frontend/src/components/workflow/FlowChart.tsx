@@ -79,7 +79,7 @@ export const getFlowGraph = (
         const childX = x + 1
 
         children
-            .sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1))
+            .sort((a, b) => (a.id.localeCompare(b.id)))
             .forEach((child, index) => {
                 const childY = startY + index
                 if (visited.has(child.id)) {
