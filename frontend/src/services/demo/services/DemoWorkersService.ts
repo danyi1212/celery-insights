@@ -5,6 +5,18 @@ import { TaskRequest } from "@services/server/models/TaskRequest"
 import { TaskState } from "@services/server/models/TaskState"
 import { useStateStore } from "@stores/useStateStore"
 
+const fakePIDs = [
+    12345, 67890, 23456, 78901, 34567, 89012, 45678, 90123, 56789, 12390, 23401, 34512, 45623, 56734, 67845, 78956,
+]
+
+const getStringHash = (input: string): number => {
+    let sum = 0
+    for (let i = 0; i < input.length; i++) {
+        sum += input.charCodeAt(i)
+    }
+    return sum % 17
+}
+
 export class DemoWorkersService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     getWorkers(alive?: boolean): Promise<Array<Worker>> {
@@ -37,9 +49,9 @@ export class DemoWorkersService {
                         virtual_host: "/",
                     },
                     pool: {
-                        "max-concurrency": 1,
+                        "max-concurrency": 16,
                         "max-tasks-per-child": "N/A",
-                        processes: [98827],
+                        processes: fakePIDs,
                         timeouts: [1740, 1800],
                         "put-guarded-by-semaphore": false,
                         writes: {
@@ -167,6 +179,7 @@ export class DemoWorkersService {
                         acknowledged: true,
                         time_start: task.startedAt && task.startedAt?.getTime() / 1000,
                         hostname: worker,
+                        worker_pid: fakePIDs[getStringHash(task.id)],
                     })
             })
             return Promise.resolve({
