@@ -10,6 +10,7 @@ import { TaskRequest } from "@services/server/models/TaskRequest"
 import { TaskResult } from "@services/server/models/TaskResult"
 import { TaskState } from "@services/server/models/TaskState"
 import { WebSocketState } from "@services/server/models/WebSocketState"
+import { useStateStore } from "@stores/useStateStore"
 
 class DemoTasksService {
     getTasks(limit = 1000, offset?: number): Promise<Paginated_Task_> {
@@ -82,7 +83,12 @@ class DemoWorkersService {
     }
 
     getWorkerStats(timeout = 10, worker?: string): Promise<Record<string, Stats>> {
-        if (worker)
+        if (worker) {
+            const totals: Record<string, number> = {}
+            useStateStore.getState().tasks.forEach((task) => {
+                if (task.worker?.split("-", 1)[0] === worker && task.type)
+                    totals[task.type] = (totals?.[task.type] || 0) + 1
+            })
             return Promise.resolve({
                 [worker]: {
                     clock: new Date().getTime() / 1000,
@@ -119,30 +125,119 @@ class DemoWorkersService {
                         },
                     },
                     rusage: {},
-                    total: {},
+                    total: totals,
                 },
             })
-        else return Promise.resolve({})
+        } else return Promise.resolve({})
     }
 
     getWorkerRegistered(timeout = 10, worker?: string): Promise<Record<string, Array<string>>> {
-        return Promise.resolve({})
+        if (worker) {
+            const tasks: Set<string> = new Set()
+            useStateStore.getState().tasks.forEach((task) => {
+                if (task.type) tasks.add(task.type)
+            })
+            return Promise.resolve({
+                [worker]: Array.from(tasks),
+            })
+        } else return Promise.resolve({})
     }
 
     getWorkerRevoked(timeout = 10, worker?: string): Promise<Record<string, Array<string>>> {
-        return Promise.resolve({})
+        if (worker) {
+            const tasks: string[] = []
+            useStateStore.getState().tasks.forEach((task) => {
+                if (task.state === TaskState.REVOKED) tasks.push(task.id)
+            })
+            return Promise.resolve({
+                [worker]: tasks,
+            })
+        } else return Promise.resolve({})
     }
 
     getWorkerScheduled(timeout = 10, worker?: string): Promise<Record<string, Array<ScheduledTask>>> {
-        return Promise.resolve({})
+        if (worker) {
+            const tasks: ScheduledTask[] = []
+            useStateStore.getState().tasks.forEach((task) => {
+                if (task.state === TaskState.RECEIVED && task.eta && task.worker?.split("-", 1)[0] === worker)
+                    tasks.push({
+                        eta: task.eta,
+                        priority: 0,
+                        request: {
+                            id: task.id,
+                            name: task.type || "Unknown",
+                            type: task.type || "Unknown",
+                            args: [],
+                            kwargs: {},
+                            delivery_info: {
+                                exchange: "default",
+                                redelivered: Boolean(task.retries),
+                                routing_key: "default",
+                            },
+                            acknowledged: false,
+                            time_start: task.startedAt && task.startedAt?.getTime() / 1000,
+                            hostname: worker,
+                        },
+                    })
+            })
+            return Promise.resolve({
+                [worker]: tasks,
+            })
+        } else return Promise.resolve({})
     }
 
     getWorkerReserved(timeout = 10, worker?: string): Promise<Record<string, Array<TaskRequest>>> {
-        return Promise.resolve({})
+        if (worker) {
+            const tasks: TaskRequest[] = []
+            useStateStore.getState().tasks.forEach((task) => {
+                if (task.state === TaskState.RECEIVED && task.worker?.split("-", 1)[0] === worker)
+                    tasks.push({
+                        id: task.id,
+                        name: task.type || "Unknown",
+                        type: task.type || "Unknown",
+                        args: [],
+                        kwargs: {},
+                        delivery_info: {
+                            exchange: "default",
+                            redelivered: Boolean(task.retries),
+                            routing_key: "default",
+                        },
+                        acknowledged: false,
+                        time_start: task.startedAt && task.startedAt?.getTime() / 1000,
+                        hostname: worker,
+                    })
+            })
+            return Promise.resolve({
+                [worker]: tasks,
+            })
+        } else return Promise.resolve({})
     }
 
     getWorkerActive(timeout = 10, worker?: string): Promise<Record<string, Array<TaskRequest>>> {
-        return Promise.resolve({})
+        if (worker) {
+            const tasks: TaskRequest[] = []
+            useStateStore.getState().tasks.forEach((task) => {
+                if (task.state === TaskState.STARTED && task.worker?.split("-", 1)[0] === worker)
+                    tasks.push({
+                        id: task.id,
+                        name: task.type || "Unknown",
+                        type: task.type || "Unknown",
+                        args: [],
+                        kwargs: {},
+                        delivery_info: {
+                            exchange: "default",
+                            redelivered: Boolean(task.retries),
+                            routing_key: "default",
+                        },
+                        acknowledged: true,
+                        time_start: task.startedAt && task.startedAt?.getTime() / 1000,
+                        hostname: worker,
+                    })
+            })
+            return Promise.resolve({
+                [worker]: tasks,
+            })
+        } else return Promise.resolve({})
     }
 
     getWorkerQueues(timeout = 10, worker?: string): Promise<Record<string, Array<QueueInfo>>> {
