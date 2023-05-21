@@ -7,7 +7,7 @@
 # To get a newer version, you will need to update the SHA.
 # You can also reference a tag or branch, but the action may change without warning.
 
-name: Create and publish a Docker image
+name: Deploy docker image and demo site
 
 on:
   workflow_dispatch:
@@ -96,7 +96,7 @@ jobs:
         - name: Upload artifact
           uses: actions/upload-pages-artifact@v1
           with:
-            path: 'frontend/dist/*'
+            path: './frontend/dist/*'
 
         - name: Deploy to GitHub Pages
           id: deployment
