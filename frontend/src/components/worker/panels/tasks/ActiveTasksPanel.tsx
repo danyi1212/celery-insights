@@ -16,8 +16,8 @@ const ActiveTasksPanel: React.FC<ActiveTasksPanelProps> = ({ hostname, ...props 
         <Panel title="Active Task" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (
                 <AnimatedList disablePadding>
-                    {tasks.map((task) => (
-                        <ActiveTaskListItem key={task.id} task={task} />
+                    {tasks.map((task, index) => (
+                        <ActiveTaskListItem key={index} task={task} />
                     ))}
                 </AnimatedList>
             ) : (

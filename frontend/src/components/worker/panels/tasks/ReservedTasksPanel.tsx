@@ -16,8 +16,8 @@ const ReservedTasksPanel: React.FC<ReservedTasksPanelProps> = ({ hostname, ...pr
         <Panel title="Reserved Task" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (
                 <AnimatedList disablePadding>
-                    {tasks.map((task) => (
-                        <ReservedTaskListItem key={task.id} task={task} />
+                    {tasks.map((task, index) => (
+                        <ReservedTaskListItem key={index} task={task} />
                     ))}
                 </AnimatedList>
             ) : (

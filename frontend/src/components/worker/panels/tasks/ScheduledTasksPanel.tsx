@@ -16,8 +16,8 @@ const ScheduledTasksPanel: React.FC<ScheduledTasksPanelProps> = ({ hostname, ...
         <Panel title="Scheduled Task" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (
                 <AnimatedList disablePadding>
-                    {tasks.map((task) => (
-                        <ScheduledTaskListItem key={task.request.id} task={task} />
+                    {tasks.map((task, index) => (
+                        <ScheduledTaskListItem key={index} task={task} />
                     ))}
                 </AnimatedList>
             ) : (
