@@ -97,11 +97,11 @@ const Menu: React.FC = () => {
                     src={
                         theme.palette.mode === "dark"
                             ? expanded
-                                ? "./LogoTextGreen.svg"
-                                : "./LogoGreen.svg"
+                                ? "/LogoTextGreen.svg"
+                                : "/LogoGreen.svg"
                             : expanded
-                            ? "./LogoTextDark.svg"
-                            : "./LogoDark.svg"
+                            ? "/LogoTextDark.svg"
+                            : "/LogoDark.svg"
                     }
                     alt="logo"
                     style={{
