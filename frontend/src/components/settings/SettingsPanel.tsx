@@ -54,6 +54,7 @@ const SettingsPanel = () => {
                             <Tooltip title={isDemo ? "Simulator" : "Real Server"} placement="right">
                                 <Switch
                                     checked={isDemo}
+                                    disabled={Boolean(import.meta.env.VITE_DEMO_MODE)}
                                     onChange={(event) => useSettingsStore.setState({ demo: event.target.checked })}
                                 />
                             </Tooltip>

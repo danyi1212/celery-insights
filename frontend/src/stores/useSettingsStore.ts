@@ -14,11 +14,11 @@ interface Settings {
     demo: boolean
 }
 
-const defaultSettings = {
+const defaultSettings: Settings = {
     theme: PreferredTheme.SYSTEM,
     menuExpanded: true,
     hideWelcomeBanner: false,
-    demo: false,
+    demo: Boolean(import.meta.env.VITE_DEMO_MODE),
 }
 const useSettingsStore = create<Settings>()(
     persist(
