@@ -146,7 +146,24 @@ class DemoWorkersService {
     }
 
     getWorkerQueues(timeout = 10, worker?: string): Promise<Record<string, Array<QueueInfo>>> {
-        return Promise.resolve({})
+        if (worker)
+            return Promise.resolve({
+                [worker]: [
+                    {
+                        name: "default",
+                        routing_key: "default",
+                        exchange: {
+                            name: "default",
+                            type: "direct",
+                        },
+                        durable: true,
+                        exclusive: false,
+                        auto_delete: false,
+                        no_ack: false,
+                    },
+                ],
+            })
+        else return Promise.resolve({})
     }
 }
 
