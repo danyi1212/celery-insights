@@ -4,12 +4,14 @@ import { CancellationToken } from "@utils/simulator/cancellationToken"
 import { getRandomException } from "@utils/simulator/exceptionSimulator"
 import { v4 as uuidv4 } from "uuid"
 
+class CancelError extends Error {}
+
 const delay = (ms: number, cancellationToken: CancellationToken) =>
     new Promise((resolve, reject) => {
         const token = setTimeout(resolve, ms)
         cancellationToken.register(() => {
             clearTimeout(token)
-            reject(new Error("Cancelled"))
+            reject(new CancelError("Cancelled"))
         })
     })
 
@@ -144,13 +146,12 @@ export const simulateTask = async (
 
 export const simulateWorkflow = (options: SimulatorTaskOptions, interval: number) => {
     const cancellationToken = new CancellationToken()
-    simulateTask(options, cancellationToken).catch((error) =>
-        console.error("Error while simulating task", options, error)
-    )
+    const handleError = (error: unknown) => {
+        if (!(error instanceof CancelError)) console.warn("Error while simulating task", options, error)
+    }
+    simulateTask(options, cancellationToken).catch(handleError)
     const token = setInterval(() => {
-        simulateTask(options, cancellationToken).catch((error) =>
-            console.error("Error while simulating task", options, error)
-        )
+        simulateTask(options, cancellationToken).catch(handleError)
     }, interval)
     return () => {
         clearInterval(token)
