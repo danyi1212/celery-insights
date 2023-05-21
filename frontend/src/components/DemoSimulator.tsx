@@ -2,6 +2,7 @@ import { resetState } from "@stores/useStateStore"
 import { simulateWorkflow, SimulatorTaskOptions } from "@utils/simulator/taskSimulator"
 import { simulateWorker } from "@utils/simulator/workerSimulator"
 import React, { useEffect } from "react"
+import { useQueryClient } from "react-query"
 
 const ORDER_WORKFLOW: SimulatorTaskOptions = {
     name: "submit_order",
@@ -80,10 +81,13 @@ const PAYMENT_PROCESSING_WORKFLOW: SimulatorTaskOptions = {
 }
 
 const DemoSimulator: React.FC = () => {
+    const queryClient = useQueryClient()
+
     useEffect(() => {
         // eslint-disable-next-line no-console
         console.log("Starting simulator...")
         resetState()
+        queryClient.invalidateQueries().then()
         const cancelCallbacks = [
             simulateWorker("worker@1", 123),
             simulateWorker("worker@2", 123),
@@ -99,7 +103,9 @@ const DemoSimulator: React.FC = () => {
             console.log("Stopping simulator...")
             cancelCallbacks.forEach((callback) => callback())
             resetState()
+            queryClient.invalidateQueries().then()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
     return <></>
 }

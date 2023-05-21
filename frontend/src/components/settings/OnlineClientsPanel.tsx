@@ -1,17 +1,19 @@
 import Panel from "@components/common/Panel"
 import ClientInfoItem from "@components/settings/ClientInfoItem"
+import { useClient } from "@hooks/useClient"
 import List from "@mui/material/List"
-import { ServerClient } from "@services/server"
-import React from "react"
+import React, { useCallback } from "react"
 import { useQuery } from "react-query"
 
 const OnlineClientsPanel: React.FC = () => {
-    const { data, isLoading, error } = useQuery("online-clients", () => new ServerClient().settings.getClients())
+    const client = useClient()
+    const getOnlineClients = useCallback(() => client.settings.getClients(), [client])
+    const { data, isLoading, error } = useQuery("online-clients", getOnlineClients)
     return (
         <Panel title="Online Clients" loading={isLoading} error={error}>
             <List>
-                {data?.map((client) => (
-                    <ClientInfoItem key={`${client.host}:${client.port}`} client={client} />
+                {data?.map((onlineClient) => (
+                    <ClientInfoItem key={`${onlineClient.host}:${onlineClient.port}`} client={onlineClient} />
                 ))}
             </List>
         </Panel>

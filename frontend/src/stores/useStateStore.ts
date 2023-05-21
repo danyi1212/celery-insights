@@ -21,7 +21,8 @@ export const useStateStore = create<State>(() => ({
 }))
 
 export const loadInitialState = () => {
-    new ServerClient().tasks.getTasks().then((response) => {
+    const client = new ServerClient()
+    client.tasks.getTasks().then((response) => {
         useStateStore.setState((state) => {
             response.results.forEach((task) => state.tasks.set(task.id, translateTask(task)))
             return {
@@ -30,7 +31,7 @@ export const loadInitialState = () => {
             }
         })
     })
-    new ServerClient().workers.getWorkers().then((response) => {
+    client.workers.getWorkers().then((response) => {
         useStateStore.setState((state) => {
             response.forEach((worker) => state.workers.set(worker.id, translateWorker(worker)))
             return { workers: state.workers }
