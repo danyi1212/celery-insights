@@ -5,8 +5,12 @@ import CardActions from "@mui/material/CardActions"
 import CardContent from "@mui/material/CardContent"
 import IconButton from "@mui/material/IconButton"
 import { styled } from "@mui/material/styles"
+import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
 import Zoom from "@mui/material/Zoom"
+import useSettingsStore from "@stores/useSettingsStore"
+import { useStateStore } from "@stores/useStateStore"
+import { useTourStore } from "@stores/useTourStore"
 import React from "react"
 import { TooltipRenderProps } from "react-joyride"
 
@@ -28,6 +32,8 @@ const TourTooltip: React.FC<TooltipRenderProps> = ({
     closeProps,
     isLastStep,
 }) => {
+    const hasTasks = useStateStore((store) => store.tasks.size > 0)
+    const isDemo = useSettingsStore((state) => state.demo)
     return (
         <Zoom in>
             <StyledCard {...tooltipProps}>
@@ -55,17 +61,36 @@ const TourTooltip: React.FC<TooltipRenderProps> = ({
                             Back
                         </Button>
                     ) : (
-                        <Button color="secondary" variant="text" {...skipProps}>
-                            Skip
-                        </Button>
+                        <>
+                            <Button color="secondary" variant="text" {...skipProps}>
+                                Close
+                            </Button>
+                            <Tooltip title={isDemo ? "Demo Mode is active" : "Start tour with Demo Mode"}>
+                                <span>
+                                    <Button
+                                        color="primary"
+                                        variant="outlined"
+                                        disabled={isDemo}
+                                        {...primaryProps}
+                                        onClick={(event) => {
+                                            useSettingsStore.setState({ demo: true })
+                                            useTourStore.setState({ demoMode: true })
+                                            primaryProps.onClick(event)
+                                        }}
+                                    >
+                                        Demo
+                                    </Button>
+                                </span>
+                            </Tooltip>
+                        </>
                     )}
                     <Button
                         color={isLastStep ? "secondary" : "primary"}
                         variant="contained"
-                        disabled={step.hideFooter}
+                        disabled={step.hideFooter || !hasTasks}
                         {...primaryProps}
                     >
-                        {isLastStep ? "Finish" : "Next"}
+                        {index > 0 ? (isLastStep ? "Finish" : "Next") : "Start"}
                     </Button>
                 </CardActions>
             </StyledCard>

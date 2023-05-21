@@ -1,8 +1,9 @@
 import TourTooltip from "@layout/TourTooltip"
 import { useTheme } from "@mui/material"
+import useSettingsStore from "@stores/useSettingsStore"
 import { backStep, nextStep, stopTour, useTourStore } from "@stores/useTourStore"
 import React, { useMemo } from "react"
-import Joyride, { ACTIONS, CallBackProps, EVENTS, LIFECYCLE, STATUS, Step } from "react-joyride"
+import Joyride, { ACTIONS, CallBackProps, EVENTS, STATUS, Step } from "react-joyride"
 
 const createSteps = (): Step[] => [
     {
@@ -209,27 +210,27 @@ const JoyrideTour: React.FC = () => {
     const state = useTourStore()
     const steps = useMemo(() => createSteps(), [])
 
-    /* eslint-disable no-console */
     const handleCallback = (data: CallBackProps) => {
-        console.groupCollapsed(data.type, data.action, data.lifecycle)
-        console.log(data)
-        console.log(state)
+        /* eslint-disable no-console */
+        if (data.action === ACTIONS.START) console.log("Starting tour...")
+        else if (data.status === STATUS.FINISHED) console.log("Tour finished")
+        else if (data.type === EVENTS.STEP_AFTER) console.log("Tour step ", data.step.title)
+        /* eslint-enable no-console */
 
-        if (data.type == EVENTS.STEP_AFTER) {
+        if (
+            data.type == EVENTS.TARGET_NOT_FOUND ||
+            data.action === ACTIONS.RESET ||
+            data.status === STATUS.SKIPPED ||
+            data.status === STATUS.ERROR ||
+            data.status === STATUS.FINISHED
+        ) {
+            if (state.demoMode) useSettingsStore.setState({ demo: false })
+            stopTour()
+        } else if (data.type === EVENTS.STEP_AFTER) {
             if (data.action === ACTIONS.PREV) backStep()
             else if (!data.step.hideFooter) nextStep() // Don't increment on steps with next disabled
-        } else if (
-            data.type == EVENTS.TARGET_NOT_FOUND ||
-            data.lifecycle === LIFECYCLE.COMPLETE ||
-            data.action === ACTIONS.RESET ||
-            data.status === STATUS.SKIPPED
-        ) {
-            stopTour()
         }
-        console.log(useTourStore.getState())
-        console.groupEnd()
     }
-    /* eslint-enable no-console */
 
     return (
         <Joyride
