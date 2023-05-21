@@ -16,11 +16,17 @@ const WorkersSummaryStack: React.FC = () => {
                     Online Workers
                 </Typography>
             </Toolbar>
-            <Stack spacing={5}>
-                {workerIds.map((workerId) => (
-                    <WorkerSummary key={workerId} workerId={workerId} />
-                ))}
-            </Stack>
+            {workerIds.length ? (
+                <Stack spacing={5}>
+                    {workerIds.map((workerId) => (
+                        <WorkerSummary key={workerId} workerId={workerId} />
+                    ))}
+                </Stack>
+            ) : (
+                <Typography variant="h4" align="center" my={5}>
+                    No online workers
+                </Typography>
+            )}
         </Box>
     )
 }

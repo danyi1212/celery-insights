@@ -2,16 +2,18 @@ import DetailItem from "@components/common/DetailItem"
 import LinearProgressWithLabel from "@components/common/LinearProgressWithLabel"
 import Panel from "@components/common/Panel"
 import VersionCheckIcon from "@components/settings/VersionCheckIcon"
+import { useClient } from "@hooks/useClient"
 import Box from "@mui/material/Box"
 import Grid from "@mui/material/Grid"
-import { ServerClient } from "@services/server"
 import { formatBytes } from "@utils/FormatBytes"
 import { formatSecondsDurationLong } from "@utils/FormatSecondsDurationLong"
-import React from "react"
+import React, { useCallback } from "react"
 import { useQuery } from "react-query"
 
 export const ServerInfoPanel: React.FC = () => {
-    const { data, isLoading, error } = useQuery("server-info", () => new ServerClient().settings.getServerInfo())
+    const client = useClient()
+    const getServerInfo = useCallback(() => client.settings.getServerInfo(), [client])
+    const { data, isLoading, error } = useQuery("server-info", getServerInfo)
     return (
         <Panel title="Server Info" loading={isLoading} error={error}>
             <Grid container spacing={2} p={2}>

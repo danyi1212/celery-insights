@@ -9,6 +9,7 @@ import ListItemButton from "@mui/material/ListItemButton"
 import ListItemSecondaryAction from "@mui/material/ListItemSecondaryAction"
 import ListItemText from "@mui/material/ListItemText"
 import Tooltip from "@mui/material/Tooltip"
+import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
 import { format } from "date-fns"
 import React, { useCallback } from "react"
@@ -49,11 +50,17 @@ const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
             }
             {...props}
         >
-            <AnimatedList>
-                {recentTaskIds.map((taskId, index) => (
-                    <RecentTaskListItem key={index} taskId={taskId} />
-                ))}
-            </AnimatedList>
+            {recentTaskIds.length ? (
+                <AnimatedList>
+                    {recentTaskIds.map((taskId, index) => (
+                        <RecentTaskListItem key={index} taskId={taskId} />
+                    ))}
+                </AnimatedList>
+            ) : (
+                <Typography variant="h3" align="center" my={5}>
+                    No recent tasks
+                </Typography>
+            )}
         </Panel>
     )
 }

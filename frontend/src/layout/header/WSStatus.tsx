@@ -1,11 +1,13 @@
 import ChangeCircleIcon from "@mui/icons-material/ChangeCircle"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
 import ErrorIcon from "@mui/icons-material/Error"
+import OfflineBoltIcon from "@mui/icons-material/OfflineBolt"
 import Box from "@mui/material/Box"
 import Slide from "@mui/material/Slide"
 import Stack from "@mui/material/Stack"
 import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
+import useSettingsStore from "@stores/useSettingsStore"
 import { useStateStore } from "@stores/useStateStore"
 import React, { useEffect, useState } from "react"
 import { ReadyState } from "react-use-websocket"
@@ -39,8 +41,14 @@ const statusMeta: Record<ReadyState, Meta> = {
 }
 
 const WSStatus: React.FC = () => {
+    const isDemo = useSettingsStore((state) => state.demo)
     const status = useStateStore((store) => store.status)
-    const meta = statusMeta[status]
+    const meta: Meta = isDemo
+        ? {
+              description: "Demo Mode",
+              icon: <OfflineBoltIcon color="primary" />,
+          }
+        : statusMeta[status]
 
     const [isOpen, setOpen] = useState(true)
 
@@ -48,7 +56,7 @@ const WSStatus: React.FC = () => {
         setOpen(true)
         const token = setTimeout(() => setOpen(false), 1000 * 5)
         return () => clearTimeout(token)
-    }, [status])
+    }, [status, isDemo])
     return (
         <Stack direction="row" alignItems="center" p={1}>
             <Box overflow="hidden">
