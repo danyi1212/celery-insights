@@ -27,6 +27,7 @@ const MenuItem: React.FC<MenuItemProps> = ({ link, expanded }) => {
                     selected={link.to === location.pathname}
                     component={link.external ? "a" : Link}
                     to={link.to}
+                    disabled={Boolean(import.meta.env.VITE_DEMO_MODE) && link.external}
                     target={link.external ? "_blank" : ""}
                     rel={link.external ? "noopener noreferrer" : ""}
                     sx={{
