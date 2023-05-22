@@ -65,23 +65,24 @@ const TourTooltip: React.FC<TooltipRenderProps> = ({
                             <Button color="secondary" variant="text" {...skipProps}>
                                 Close
                             </Button>
-                            <Tooltip title={isDemo ? "Demo Mode is active" : "Start tour with Demo Mode"}>
-                                <span>
-                                    <Button
-                                        color="primary"
-                                        variant="outlined"
-                                        disabled={isDemo}
-                                        {...primaryProps}
-                                        onClick={(event) => {
-                                            useSettingsStore.setState({ demo: true })
-                                            useTourStore.setState({ demoMode: true })
-                                            primaryProps.onClick(event)
-                                        }}
-                                    >
-                                        Demo
-                                    </Button>
-                                </span>
-                            </Tooltip>
+                            {!isDemo && (
+                                <Tooltip title="Start tour with Demo Mode">
+                                    <span>
+                                        <Button
+                                            color="primary"
+                                            variant="outlined"
+                                            {...primaryProps}
+                                            onClick={(event) => {
+                                                useSettingsStore.setState({ demo: true })
+                                                useTourStore.setState({ demoMode: true })
+                                                primaryProps.onClick(event)
+                                            }}
+                                        >
+                                            Demo
+                                        </Button>
+                                    </span>
+                                </Tooltip>
+                            )}
                         </>
                     )}
                     <Button
