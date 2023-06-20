@@ -24,6 +24,9 @@ FROM python:3.11-alpine
 
 WORKDIR /app
 
+# For health check
+RUN apk --no-cache add curl
+
 # Setup python
 RUN pip install --upgrade pip
 COPY --from=requirements-stage /tmp/requirements.txt ./requirements.txt
@@ -35,3 +38,5 @@ COPY --from=front-build /frontend/dist ./static
 
 EXPOSE 8555/tcp
 CMD ["python", "run.py"]
+
+HEALTHCHECK --timeout=3s CMD curl --fail http://localhost:8555/health || exit 1
