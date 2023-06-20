@@ -44,6 +44,7 @@ pytest-env = "^0.8.1"
 pytest-cov = "^4.0.0"
 polyfactory = "^2.0.0a1"
 ruff = "^0.0.261"
+ipython = "^8.14.0"
 
 [build-system]
 requires = ["poetry-core"]
