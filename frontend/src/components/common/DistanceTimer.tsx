@@ -27,7 +27,16 @@ const TimeSince: React.FC<TimeSinceProps> = ({ time, addSuffix, unit, roundingMe
 
     const now = useNow(interval)
 
-    const text = useMemo(() => formatDistanceStrict(time, now, { addSuffix, unit, roundingMethod, locale }), [now])
+    const text = useMemo(
+        () =>
+            formatDistanceStrict(time, now, {
+                addSuffix,
+                unit,
+                roundingMethod,
+                locale,
+            }),
+        [time, now, addSuffix, unit, roundingMethod, locale]
+    )
     return <Typography component="span">{text}</Typography>
 }
 

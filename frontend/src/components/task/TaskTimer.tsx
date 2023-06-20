@@ -1,9 +1,11 @@
 import TimeSince from "@components/common/DistanceTimer"
 import { useNow } from "@hooks/useNow"
-import { SvgIconComponent } from "@mui/icons-material"
+import { SvgIconComponent } from "@mui/icons-material" // eslint-disable-line mui-path-imports/mui-path-imports
 import AlarmIcon from "@mui/icons-material/Alarm"
 import ScheduleIcon from "@mui/icons-material/Schedule"
-import { Tooltip, Typography, TypographyProps } from "@mui/material"
+import { TypographyProps } from "@mui/material"
+import Tooltip from "@mui/material/Tooltip"
+import Typography from "@mui/material/Typography"
 import { StateTask } from "@utils/translateServerModels"
 import { differenceInMinutes, format } from "date-fns"
 import React, { useMemo } from "react"
