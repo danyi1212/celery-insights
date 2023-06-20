@@ -45,6 +45,12 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
+
 app.include_router(ws_router)
 app.include_router(tasks_router)
 app.include_router(workers_router)
