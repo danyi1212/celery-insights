@@ -19,6 +19,7 @@ export type { Paginated_Task_ } from './models/Paginated_Task_';
 export type { Pool } from './models/Pool';
 export type { QueueInfo } from './models/QueueInfo';
 export type { ScheduledTask } from './models/ScheduledTask';
+export type { SearchResults } from './models/SearchResults';
 export type { ServerInfo } from './models/ServerInfo';
 export type { Stats } from './models/Stats';
 export type { Task } from './models/Task';
@@ -32,6 +33,7 @@ export type { Worker } from './models/Worker';
 export { WorkerEventMessage } from './models/WorkerEventMessage';
 
 export { EventsService } from './services/EventsService';
+export { SearchService } from './services/SearchService';
 export { SettingsService } from './services/SettingsService';
 export { TasksService } from './services/TasksService';
 export { WorkersService } from './services/WorkersService';

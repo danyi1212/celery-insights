@@ -6,6 +6,7 @@ import type { OpenAPIConfig } from './core/OpenAPI';
 import { AxiosHttpRequest } from './core/AxiosHttpRequest';
 
 import { EventsService } from './services/EventsService';
+import { SearchService } from './services/SearchService';
 import { SettingsService } from './services/SettingsService';
 import { TasksService } from './services/TasksService';
 import { WorkersService } from './services/WorkersService';
@@ -15,6 +16,7 @@ type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest;
 export class ServerClient {
 
     public readonly events: EventsService;
+    public readonly search: SearchService;
     public readonly settings: SettingsService;
     public readonly tasks: TasksService;
     public readonly workers: WorkersService;
@@ -35,6 +37,7 @@ export class ServerClient {
         });
 
         this.events = new EventsService(this.request);
+        this.search = new SearchService(this.request);
         this.settings = new SettingsService(this.request);
         this.tasks = new TasksService(this.request);
         this.workers = new WorkersService(this.request);
