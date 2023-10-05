@@ -3,9 +3,10 @@ import MenuItem, { MenuLink } from "@layout/menu/MenuItem"
 import ApiIcon from "@mui/icons-material/Api"
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos"
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
-import InboxIcon from "@mui/icons-material/Inbox"
 import ManageSearchIcon from "@mui/icons-material/ManageSearch"
+import RssFeedIcon from "@mui/icons-material/RssFeed"
 import SettingsIcon from "@mui/icons-material/Settings"
+import SpaceDashboardOutlinedIcon from "@mui/icons-material/SpaceDashboardOutlined"
 import SubjectIcon from "@mui/icons-material/Subject"
 import { useMediaQuery, useTheme } from "@mui/material"
 import Collapse from "@mui/material/Collapse"
@@ -50,8 +51,8 @@ const StyledLogoContainer = styled(Link)({
 
 const menuLinks: MenuLink[] = [
     {
-        label: "Home",
-        icon: <InboxIcon />,
+        label: "Dashboard",
+        icon: <SpaceDashboardOutlinedIcon />,
         to: "/",
         external: false,
     },
@@ -59,6 +60,12 @@ const menuLinks: MenuLink[] = [
         label: "Tasks Explorer",
         icon: <ManageSearchIcon />,
         to: "/explorer",
+        external: false,
+    },
+    {
+        label: "Live Events",
+        icon: <RssFeedIcon />,
+        to: "/raw_events",
         external: false,
     },
     {
