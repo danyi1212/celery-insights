@@ -56,13 +56,13 @@ class ClientInfo(BaseModel):
     port: int = Field(description="Client Port")
     state: WebSocketState = Field(description="Connection State")
     is_secure: bool = Field(description="Connection Secure Scheme WSS")
-    os: str | None = Field(description="Operating System Name")
-    os_version: str | None = Field(description="Operating System Version")
-    device_family: str | None = Field(description="Device Family")
-    device_brand: str | None = Field(description="Device Brand")
-    device_model: str | None = Field(description="Device Model")
-    browser: str | None = Field(description="Browser Name")
-    browser_version: str | None = Field(description="Browser Version")
+    os: str | None = Field(None, description="Operating System Name")
+    os_version: str | None = Field(None, description="Operating System Version")
+    device_family: str | None = Field(None, description="Device Family")
+    device_brand: str | None = Field(None, description="Device Brand")
+    device_model: str | None = Field(None, description="Device Model")
+    browser: str | None = Field(None, description="Browser Name")
+    browser_version: str | None = Field(None, description="Browser Version")
 
     @classmethod
     def from_websocket(cls, websocket: WebSocket) -> Self:

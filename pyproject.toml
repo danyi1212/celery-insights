@@ -34,6 +34,8 @@ websockets = "^11.0.3"
 fastapi-cache2 = "^0.2.1"
 user-agents = "^2.2.0"
 aiopath = "^0.6.11"
+pydantic = "^2.4.2"
+pydantic-settings = "^2.0.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.0"
