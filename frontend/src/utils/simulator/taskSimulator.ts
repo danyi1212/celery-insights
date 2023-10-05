@@ -100,7 +100,7 @@ const createTask = (options: SimulatorTaskOptions): Task => ({
 export const simulateTask = async (
     options: SimulatorTaskOptions,
     cancellationToken: CancellationToken,
-    context?: SimulatorContext
+    context?: SimulatorContext,
 ) => {
     const task = createTask(options)
     if (context) {
@@ -140,7 +140,7 @@ export const simulateTask = async (
 
     if (options.children)
         await Promise.all(
-            options.children?.map((childOptions) => simulateTask(childOptions, cancellationToken, context))
+            options.children?.map((childOptions) => simulateTask(childOptions, cancellationToken, context)),
         )
 }
 

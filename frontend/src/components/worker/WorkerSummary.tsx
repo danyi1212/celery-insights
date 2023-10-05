@@ -27,8 +27,8 @@ const WorkerSummary: React.FC<WorkerSummaryProps> = ({ workerId }) => {
                 })
                 return related.sort((a, b) => (a.sentAt > b.sentAt ? -1 : 1))
             },
-            [workerId]
-        )
+            [workerId],
+        ),
     )
     const startedTasks = useMemo(() => tasks.filter((task) => task.state == TaskState.STARTED), [tasks])
     const receivedTasks = useMemo(() => tasks.filter((task) => task.state == TaskState.RECEIVED), [tasks])

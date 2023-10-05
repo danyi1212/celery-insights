@@ -35,8 +35,8 @@ const ExceptionTraceback: React.FC<ExceptionTracebackProps> = ({ exception, trac
                     })
                 return similar
             },
-            [largeScreen, currentTaskId, exception]
-        )
+            [largeScreen, currentTaskId, exception],
+        ),
     )
     const showSimilar = similarTasks.length > 0 && largeScreen
 

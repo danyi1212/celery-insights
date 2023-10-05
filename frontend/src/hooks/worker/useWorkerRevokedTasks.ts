@@ -6,7 +6,7 @@ const useWorkerRevokedTasks = (hostname: string, timeout?: number, interval = 3 
     const client = useClient()
     const getWorkerRevokedTasks = useCallback(
         () => client.workers.getWorkerRevoked(timeout, hostname),
-        [client, hostname, timeout]
+        [client, hostname, timeout],
     )
     const result = useQuery(["workers/revoked", hostname], getWorkerRevokedTasks, {
         refetchInterval: interval,

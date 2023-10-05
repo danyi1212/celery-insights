@@ -19,7 +19,7 @@ const SubtitleText: React.FC<{ startTime: Date }> = ({ startTime }) => {
 const ActiveTaskListItem: React.FC<ActiveTaskListItemProps> = ({ task }) => {
     const startTime = useMemo(
         () => (task.time_start ? timestampToDate(task.time_start) : new Date()),
-        [task.time_start]
+        [task.time_start],
     )
 
     return <TaskListItem task={task} subtitle={<SubtitleText startTime={startTime} />} />

@@ -6,7 +6,7 @@ const useWorkerQueues = (hostname: string, timeout?: number, interval = 15 * 100
     const client = useClient()
     const getWorkerQueues = useCallback(
         () => client.workers.getWorkerQueues(timeout, hostname),
-        [client, hostname, timeout]
+        [client, hostname, timeout],
     )
     const result = useQuery(["workers/queues", hostname], getWorkerQueues, { refetchInterval: interval })
 

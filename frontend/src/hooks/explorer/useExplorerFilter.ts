@@ -26,7 +26,7 @@ export const useExplorerFilter = <T>(): [TaskFilter<T>, (key: keyof T, values: S
 
     const setFilter = useCallback(
         (key: keyof T, values: Set<string>) => setFilters((filters) => new Map(filters).set(key, values)),
-        [setFilters]
+        [setFilters],
     )
 
     return [filters, setFilter]

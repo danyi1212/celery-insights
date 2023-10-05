@@ -127,7 +127,7 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ tasks }) => {
     const sortedTasks = useMemo(() => tasks.sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1)), [tasks])
     const isRealtime = useMemo(
         () => tasks.find((task) => (task.succeededAt || task.failedAt) === undefined) !== undefined,
-        [tasks]
+        [tasks],
     )
     const now = useNow(isRealtime ? REALTIME_INTERVAL : undefined)
     const series = useMemo(() => getSeries(sortedTasks, now), [sortedTasks, now])

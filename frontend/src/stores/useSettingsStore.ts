@@ -27,8 +27,8 @@ const useSettingsStore = create<Settings>()(
         {
             name: "settings",
             storage: createJSONStorage(() => localStorage),
-        }
-    )
+        },
+    ),
 )
 
 export const resetSettings = () => useSettingsStore.setState(defaultSettings)
