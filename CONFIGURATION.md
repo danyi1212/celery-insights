@@ -67,12 +67,6 @@ Specify the time zone for your cluster.
 For correct timestamps, it should be the same as your Celery nodes.
 All timestamps shown on the app are translated to the client's local timezone.
 
-### LOG_LEVEL
-
-Default: `INFO`
-
-Specify Celery Insights log level.
-
 ### DEBUG
 
 Default: `False`
