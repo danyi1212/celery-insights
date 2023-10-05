@@ -1,5 +1,3 @@
-from typing import Literal
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,7 +10,6 @@ class Settings(BaseSettings):
     )
 
     debug: bool = False
-    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     timezone: str = "UTC"
 
     host: str = "0.0.0.0"

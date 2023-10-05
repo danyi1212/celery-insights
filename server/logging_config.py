@@ -20,7 +20,7 @@ LOGGING_CONFIG = {
     "loggers": {
         name: {
             "handlers": ["default"],
-            "level": Settings().log_level,
+            "level": "INFO",
         }
         for name in ["app", "tasks", "workers", "events", "ws", "server_info", "celery_app", "lifespan"]
     },
