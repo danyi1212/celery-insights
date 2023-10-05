@@ -18,6 +18,7 @@ class TaskEventMessageFactory(ModelFactory[TaskEventMessage]):
 
 class WorkerFactory(ModelFactory[Worker]):
     __model__ = Worker
+    cpu_load: tuple[float, float, float]
 
 
 class TaskFactory(ModelFactory[Task]):
