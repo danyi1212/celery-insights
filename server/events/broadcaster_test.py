@@ -1,24 +1,25 @@
 from asyncio import Queue
 
 import pytest
+from polyfactory import Ignore
 from polyfactory.factories.pydantic_factory import ModelFactory
 from pytest_mock import MockerFixture
 
 from events.broadcaster import EventBroadcaster, parse_event, parse_task_event, parse_worker_event
-from events.models import EventCategory, EventType, TaskEventMessage, WorkerEventMessage
+from events.models import EventCategory, EventMessage, EventType
 from events.receiver import state
 from tasks.model import Task
 from workers.models import Worker
 from ws.managers import events_manager
 
 
-class TaskEventMessageFactory(ModelFactory[TaskEventMessage]):
-    __model__ = TaskEventMessage
+class EventMessageFactory(ModelFactory[EventMessage]):
+    __model__ = EventMessage
 
 
 class WorkerFactory(ModelFactory[Worker]):
     __model__ = Worker
-    cpu_load: tuple[float, float, float]
+    cpu_load = Ignore()
 
 
 class TaskFactory(ModelFactory[Task]):
@@ -32,7 +33,7 @@ def broadcaster():
 
 @pytest.mark.asyncio
 async def test_broadcasts_event(broadcaster, mocker: MockerFixture):
-    message = TaskEventMessageFactory.build()
+    message = EventMessageFactory.build()
     parse_event_mock = mocker.patch("events.broadcaster.parse_event", return_value=message)
     broadcast_mock = mocker.patch.object(events_manager, "broadcast")
     event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
@@ -69,7 +70,7 @@ async def test_no_message_specified(broadcaster, mocker: MockerFixture):
 
 @pytest.mark.asyncio
 async def test_broadcast_failure(broadcaster, mocker: MockerFixture):
-    message = TaskEventMessageFactory.build()
+    message = EventMessageFactory.build()
     parse_event_mock = mocker.patch("events.broadcaster.parse_event", return_value=message)
     broadcast_mock = mocker.patch.object(events_manager, "broadcast", side_effect=Exception("Broadcast failed"))
     event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
@@ -127,10 +128,10 @@ def test_parse_worker_event(mocker: MockerFixture):
 
     state_mock.assert_called_once_with("test")
     cast_mock.assert_called_once_with(state_worker)
-    assert actual == WorkerEventMessage(
+    assert actual == EventMessage(
         type=EventType.WORKER_ONLINE,
         category=EventCategory.WORKER,
-        worker=worker,
+        data=worker,
     )
 
 
@@ -146,9 +147,8 @@ def test_parse_task_event(mocker: MockerFixture):
 
     state_mock.assert_called_once_with("test")
     cast_mock.assert_called_once_with(state_task)
-    assert actual == TaskEventMessage(
+    assert actual == EventMessage(
         type=EventType.TASK_STARTED,
         category=EventCategory.TASK,
-        task=task,
+        data=task,
     )
-

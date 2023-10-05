@@ -8,6 +8,8 @@ export class DemoTasksService {
     getTasks(limit = 1000, offset?: number): Promise<Paginated_Task_> {
         return Promise.resolve({
             count: 0,
+            next: null,
+            previous: null,
             results: [],
         })
     }

@@ -1,4 +1,4 @@
-import { EventType, Task, TaskEventMessage, TaskState } from "@services/server"
+import { EventType, Task, TaskState, EventCategory } from "@services/server"
 import { handleEvent } from "@stores/useStateStore"
 import { CancellationToken } from "@utils/simulator/cancellationToken"
 import { getRandomException } from "@utils/simulator/exceptionSimulator"
@@ -24,8 +24,8 @@ const workers = ["worker@1-123", "worker@2-123", "worker@3-123"]
 const sendTask = (task: Task) => {
     handleEvent({
         type: EventType.TASK_SENT,
-        category: TaskEventMessage.category.TASK,
-        task: task,
+        category: EventCategory.TASK,
+        data: task,
     })
 }
 
@@ -36,8 +36,8 @@ const receiveTask = (task: Task) => {
     task.worker = workers[Math.floor(Math.random() * workers.length)]
     handleEvent({
         type: EventType.TASK_RECEIVED,
-        category: TaskEventMessage.category.TASK,
-        task: task,
+        category: EventCategory.TASK,
+        data: task,
     })
 }
 
@@ -47,8 +47,8 @@ const startTask = (task: Task) => {
     task.last_updated = getNowTimestamp()
     handleEvent({
         type: EventType.TASK_STARTED,
-        category: TaskEventMessage.category.TASK,
-        task: task,
+        category: EventCategory.TASK,
+        data: task,
     })
 }
 
@@ -59,8 +59,8 @@ const finishTask = (task: Task) => {
     task.runtime = task.started_at ? task.started_at - task.succeeded_at : 0
     handleEvent({
         type: EventType.TASK_SUCCEEDED,
-        category: TaskEventMessage.category.TASK,
-        task: task,
+        category: EventCategory.TASK,
+        data: task,
     })
 }
 const errorTask = (task: Task) => {
@@ -72,8 +72,8 @@ const errorTask = (task: Task) => {
     task.traceback = traceback
     handleEvent({
         type: EventType.TASK_FAILED,
-        category: TaskEventMessage.category.TASK,
-        task: task,
+        category: EventCategory.TASK,
+        data: task,
     })
 }
 

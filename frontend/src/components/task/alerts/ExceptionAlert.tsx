@@ -17,7 +17,7 @@ import React, { useCallback, useState } from "react"
 
 interface ExceptionTracebackProps extends AlertProps {
     exception: string
-    traceback?: string
+    traceback?: string | null
     currentTaskId?: string
 }
 

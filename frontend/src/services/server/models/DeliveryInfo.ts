@@ -1,3 +1,4 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -10,7 +11,7 @@ export type DeliveryInfo = {
     /**
      * Message priority
      */
-    priority?: number;
+    priority?: (number | null);
     /**
      * Message sent back to queue
      */

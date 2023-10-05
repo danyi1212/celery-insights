@@ -5,6 +5,7 @@ from pydantic import BaseModel, Extra, Field
 
 from common.types import EpochTimestamp
 
+
 class CPULoad(NamedTuple):
     avg_1min: float
     avg_5min: float
@@ -41,7 +42,7 @@ class Worker(BaseModel):
         )
 
 
-class Broker(BaseModel, extra=Extra.allow):
+class Broker(BaseModel, extra=Extra.ignore):
     connection_timeout: int | None = Field(None, description="How many seconds before failing to connect to broker")
     heartbeat: int = Field(description="Heartbeat interval in seconds")
     hostname: str = Field(description="Node name of remote broker")
@@ -55,7 +56,7 @@ class Broker(BaseModel, extra=Extra.allow):
     virtual_host: str = Field(description="Virtual host used")
 
 
-class Pool(BaseModel, extra=Extra.allow):
+class Pool(BaseModel, extra=Extra.ignore):
     max_concurrency: int = Field(
         description="Maximum number of child parallelism (processes/threads)",
         alias="max-concurrency"
@@ -68,7 +69,7 @@ class Pool(BaseModel, extra=Extra.allow):
     timeouts: tuple[int, int] = Field(description="Soft time limit and hard time limit, in seconds")
 
 
-class Stats(BaseModel, extra=Extra.allow):
+class Stats(BaseModel, extra=Extra.ignore):
     broker: Broker = Field(description="Current broker stats")
     clock: int = Field(description="Current logical clock time")
     uptime: int = Field(description="Uptime in seconds")
@@ -79,12 +80,12 @@ class Stats(BaseModel, extra=Extra.allow):
     total: dict[str, int] = Field(description="Count of accepted tasks by type")
 
 
-class ExchangeInfo(BaseModel, extra=Extra.allow):
+class ExchangeInfo(BaseModel, extra=Extra.ignore):
     name: str = Field(description="Name of exchange")
     type: str = Field(description="Exchange routing type")
 
 
-class QueueInfo(BaseModel, extra=Extra.allow):
+class QueueInfo(BaseModel, extra=Extra.ignore):
     name: str = Field(description="Name of the queue")
     exchange: ExchangeInfo = Field(description="Exchange information")
     routing_key: str = Field(description="Routing key for the queue")
@@ -101,14 +102,14 @@ class QueueInfo(BaseModel, extra=Extra.allow):
     max_priority: int | None = Field(None, description="Maximum priority for task messages in the queue")
 
 
-class DeliveryInfo(BaseModel, extra=Extra.allow):
+class DeliveryInfo(BaseModel, extra=Extra.ignore):
     exchange: str = Field(description="Broker exchange used")
     priority: int | None = Field(None, description="Message priority")
     redelivered: bool = Field(description="Message sent back to queue")
     routing_key: str = Field(description="Message routing key used")
 
 
-class TaskRequest(BaseModel, extra=Extra.allow):
+class TaskRequest(BaseModel, extra=Extra.ignore):
     id: str = Field(description="Task unique id")
     name: str = Field(description="Task name")
     type: str = Field(description="Task type")
@@ -121,7 +122,7 @@ class TaskRequest(BaseModel, extra=Extra.allow):
     worker_pid: int | None = Field(None, description="Child worker process ID")
 
 
-class ScheduledTask(BaseModel, extra=Extra.allow):
+class ScheduledTask(BaseModel, extra=Extra.ignore):
     eta: str = Field(description="Absolute time when the task should be executed")
     priority: int = Field(description="Message priority")
     request: TaskRequest = Field(description="Task Information")

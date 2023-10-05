@@ -1,6 +1,6 @@
 import logging
 
-from events.models import EventCategory, EventMessage, EventType, TaskEventMessage, WorkerEventMessage
+from events.models import EventCategory, EventMessage, EventType
 from events.receiver import state
 from events.subscriber import QueueSubscriber
 from tasks.model import Task
@@ -44,7 +44,7 @@ def parse_event(event: dict) -> EventMessage | None:
         return None
 
 
-def parse_worker_event(event: dict, event_type: str) -> WorkerEventMessage | None:
+def parse_worker_event(event: dict, event_type: str) -> EventMessage | None:
     worker_hostname = event.get("hostname")
     if worker_hostname is None:
         logger.warning(f"Worker event {event_type!r} is missing hostname: {event}")
@@ -54,14 +54,14 @@ def parse_worker_event(event: dict, event_type: str) -> WorkerEventMessage | Non
         logger.warning(f"Could not find worker {worker_hostname!r} in state")
         return None
     worker = Worker.from_celery_worker(state_worker)
-    return WorkerEventMessage(
+    return EventMessage(
         type=EventType(event_type),
         category=EventCategory.WORKER,
-        worker=worker,
+        data=worker,
     )
 
 
-def parse_task_event(event: dict, event_type: str) -> TaskEventMessage | None:
+def parse_task_event(event: dict, event_type: str) -> EventMessage | None:
     task_id = event.get("uuid")
     if task_id is None:
         logger.warning(f"Task event {event_type!r} is missing uuid: {event}")
@@ -71,8 +71,8 @@ def parse_task_event(event: dict, event_type: str) -> TaskEventMessage | None:
         logger.warning(f"Could not find task {task_id!r} in state")
         return None
     task = Task.from_celery_task(state_task)
-    return TaskEventMessage(
+    return EventMessage(
         type=EventType(event_type),
         category=EventCategory.TASK,
-        task=task,
+        data=task,
     )

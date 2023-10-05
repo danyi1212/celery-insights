@@ -1,4 +1,4 @@
-import { EventType, Worker, WorkerEventMessage } from "@services/server"
+import { EventType, Worker, EventCategory } from "@services/server"
 import { handleEvent } from "@stores/useStateStore"
 
 const HEARTBEAT_INTERVAL = 2 * 1000 // 2 seconds
@@ -28,8 +28,8 @@ export const simulateWorker = (name: string, pid: number) => {
     // Add new worker
     handleEvent({
         type: EventType.WORKER_ONLINE,
-        category: WorkerEventMessage.category.WORKER,
-        worker: worker,
+        category: EventCategory.WORKER,
+        data: worker,
     })
 
     // Update worker's heartbeat every 2 seconds
@@ -40,8 +40,8 @@ export const simulateWorker = (name: string, pid: number) => {
 
         handleEvent({
             type: EventType.WORKER_HEARTBEAT,
-            category: WorkerEventMessage.category.WORKER,
-            worker: worker,
+            category: EventCategory.WORKER,
+            data: worker,
         })
     }, HEARTBEAT_INTERVAL)
 
