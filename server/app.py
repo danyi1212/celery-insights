@@ -30,7 +30,7 @@ app = FastAPI(
     debug=Settings().debug,
     lifespan=lifespan,  # type: ignore
     generate_unique_id_function=custom_generate_unique_id,
-    version="v0.1.0",
+    version="v0.2.0",
 )
 
 app.add_middleware(
