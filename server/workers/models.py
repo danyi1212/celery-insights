@@ -1,9 +1,14 @@
-from typing import Any, Self
+from typing import Any, NamedTuple, Self
 
 from celery.events.state import Worker as CeleryWorker
 from pydantic import BaseModel, Extra, Field
 
 from common.types import EpochTimestamp
+
+class CPULoad(NamedTuple):
+    avg_1min: float
+    avg_5min: float
+    avg_15min: float
 
 
 class Worker(BaseModel):
@@ -17,7 +22,7 @@ class Worker(BaseModel):
     processed_tasks: int = Field(description="Number of tasks completed by worker")
     last_updated: EpochTimestamp = Field(description="When worker latest event published")
     heartbeat_expires: EpochTimestamp | None = Field(None, description="When worker will be considered offline")
-    cpu_load: tuple[float, float, float] | None = Field(None, description="Host CPU load average in last 1, 5 and 15 minutes")
+    cpu_load: CPULoad | None = Field(None, description="Host CPU load average in last 1, 5 and 15 minutes")
 
     @classmethod
     def from_celery_worker(cls, worker: CeleryWorker) -> Self:
@@ -32,7 +37,7 @@ class Worker(BaseModel):
             active_tasks=worker.active or 0,
             processed_tasks=worker.processed or 0,
             heartbeat_expires=worker.heartbeat_expires if worker.heartbeats else None,
-            cpu_load=tuple(worker.loadavg) if worker.loadavg is not None else None,
+            cpu_load=CPULoad(*worker.loadavg) if worker.loadavg is not None else None,
         )
 
 

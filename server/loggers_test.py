@@ -4,10 +4,10 @@ from logging_config import LOGGING_CONFIG
 
 
 def test_all_loggers_are_configured():
-    from app import app
+    from app import app  # noqa: F401
 
     available_root_loggers = {
-        logger_name for logger_name in logging.root.manager.loggerDict.keys()
+        logger_name for logger_name in logging.root.manager.loggerDict
         if "." not in logger_name
     }
     configured_loggers = LOGGING_CONFIG["loggers"].keys()
