@@ -1,3 +1,5 @@
+from settings import Settings
+
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": True,
@@ -33,6 +35,7 @@ LOGGING_CONFIG = {
         "tasks": {"level": "INFO"},
         "workers": {"level": "INFO"},
         "events": {"level": "INFO"},
+        "events.subscriber": {"level": "DEBUG" if Settings().debug else "INFO"},
         "ws": {"level": "INFO"},
         "server_info": {"level": "INFO"},
         "celery_app": {"level": "INFO"},

@@ -71,7 +71,7 @@ All timestamps shown on the app are translated to the client's local timezone.
 
 Default: `False`
 
-Enables Celery Insights to run in debug mode.
+Enables Celery Insights to run in debug mode, that includes hot-reload, response tracebacks and Celery event logs.
 
 # Setup with Config File
 
