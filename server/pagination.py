@@ -2,14 +2,13 @@ from itertools import islice
 from typing import Generic, TypeVar
 from collections.abc import Iterable
 
-from pydantic import Field
-from pydantic.generics import GenericModel
+from pydantic import BaseModel, Field
 from starlette.requests import Request
 
 T = TypeVar("T")
 
 
-class Paginated(GenericModel, Generic[T]):
+class Paginated(BaseModel, Generic[T]):
     count: int
     next: str | None
     previous: str | None
