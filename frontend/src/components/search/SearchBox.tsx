@@ -87,7 +87,7 @@ const SearchBox = () => {
                 }}
                 disableAutoFocus
             >
-                <Box minWidth={450} minHeight={250} display="flex" alignItems="center" justifyContent="center">
+                <Box width="450px" display="flex" alignItems="center" justifyContent="center">
                     <SearchResultList query={query} />
                 </Box>
             </Popover>
