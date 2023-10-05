@@ -8,12 +8,12 @@ import Grid from "@mui/material/Grid"
 import { formatBytes } from "@utils/FormatBytes"
 import { formatSecondsDurationLong } from "@utils/FormatSecondsDurationLong"
 import React, { useCallback } from "react"
-import { useQuery } from "react-query"
+import { useQuery } from "@tanstack/react-query"
 
 export const ServerInfoPanel: React.FC = () => {
     const client = useClient()
     const getServerInfo = useCallback(() => client.settings.getServerInfo(), [client])
-    const { data, isLoading, error } = useQuery("server-info", getServerInfo)
+    const { data, isLoading, error } = useQuery(["server-info"], getServerInfo)
     return (
         <Panel title="Server Info" loading={isLoading} error={error}>
             <Grid container spacing={2} p={2}>

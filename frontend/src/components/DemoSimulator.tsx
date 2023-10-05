@@ -2,7 +2,7 @@ import { resetState } from "@stores/useStateStore"
 import { simulateWorkflow, SimulatorTaskOptions } from "@utils/simulator/taskSimulator"
 import { simulateWorker } from "@utils/simulator/workerSimulator"
 import React, { useEffect } from "react"
-import { useQueryClient } from "react-query"
+import { useQueryClient } from "@tanstack/react-query"
 
 const ORDER_WORKFLOW: SimulatorTaskOptions = {
     name: "submit_order",

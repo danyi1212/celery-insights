@@ -1,6 +1,6 @@
 import { useClient } from "@hooks/useClient"
 import { useCallback } from "react"
-import { useQuery } from "react-query"
+import { useQuery } from "@tanstack/react-query"
 
 const useWorkerRevokedTasks = (hostname: string, timeout?: number, interval = 3 * 1000) => {
     const client = useClient()
