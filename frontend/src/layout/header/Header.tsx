@@ -1,5 +1,5 @@
+import SearchBox from "@components/search/SearchBox"
 import NotificationBadge from "@layout/header/NotificationBadge"
-import SearchBox from "@layout/header/SearchBox"
 import ThemeSelector from "@layout/header/ThemeSelector"
 import WSStatus from "@layout/header/WSStatus"
 import { DRAWER_WIDTH, DRAWER_WIDTH_COLLAPSED } from "@layout/menu/Menu"

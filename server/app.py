@@ -9,6 +9,7 @@ from starlette.staticfiles import StaticFiles
 from events.router import events_router
 from lifespan import lifespan
 from logging_config import LoggingConfig
+from search.router import search_router
 from server_info.router import settings_router
 from settings import Settings
 from tasks.router import tasks_router
@@ -54,6 +55,7 @@ async def health_check():
 app.include_router(ws_router)
 app.include_router(tasks_router)
 app.include_router(workers_router)
+app.include_router(search_router)
 app.include_router(events_router)
 app.include_router(settings_router)
 
