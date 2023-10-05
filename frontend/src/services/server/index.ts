@@ -1,3 +1,4 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -11,7 +12,10 @@ export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { Broker } from './models/Broker';
 export type { ClientInfo } from './models/ClientInfo';
+export type { CPULoad } from './models/CPULoad';
 export type { DeliveryInfo } from './models/DeliveryInfo';
+export { EventCategory } from './models/EventCategory';
+export type { EventMessage } from './models/EventMessage';
 export { EventType } from './models/EventType';
 export type { ExchangeInfo } from './models/ExchangeInfo';
 export type { HTTPValidationError } from './models/HTTPValidationError';
@@ -23,15 +27,14 @@ export type { SearchResults } from './models/SearchResults';
 export type { ServerInfo } from './models/ServerInfo';
 export type { Stats } from './models/Stats';
 export type { Task } from './models/Task';
-export { TaskEventMessage } from './models/TaskEventMessage';
 export type { TaskRequest } from './models/TaskRequest';
 export type { TaskResult } from './models/TaskResult';
 export { TaskState } from './models/TaskState';
 export type { ValidationError } from './models/ValidationError';
 export { WebSocketState } from './models/WebSocketState';
 export type { Worker } from './models/Worker';
-export { WorkerEventMessage } from './models/WorkerEventMessage';
 
+export { DefaultService } from './services/DefaultService';
 export { EventsService } from './services/EventsService';
 export { SearchService } from './services/SearchService';
 export { SettingsService } from './services/SettingsService';

@@ -1,3 +1,4 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -33,7 +34,7 @@ export type Stats = {
     /**
      * Operating System statistics
      */
-    rusage: any;
+    rusage: Record<string, any>;
     /**
      * Count of accepted tasks by type
      */

@@ -1,4 +1,4 @@
-import { ServerClient, Task, TaskEventMessage, WorkerEventMessage } from "@services/server"
+import { EventCategory, EventMessage, ServerClient, Task, Worker } from "@services/server"
 import { StateTask, StateWorker, translateTask, translateWorker } from "@utils/translateServerModels"
 import { LRUCache } from "lru-cache"
 import { ReadyState } from "react-use-websocket"
@@ -51,14 +51,14 @@ const addTask = (task: Task) =>
         }
     })
 
-export const handleEvent = (message: TaskEventMessage | WorkerEventMessage) => {
+export const handleEvent = (message: EventMessage) => {
     switch (message.category) {
-        case TaskEventMessage.category.TASK: {
-            return addTask(message.task)
+        case EventCategory.TASK: {
+            return addTask(message.data as Task)
         }
-        case WorkerEventMessage.category.WORKER: {
+        case EventCategory.WORKER: {
             return useStateStore.setState((state) => ({
-                workers: state.workers.set(message.worker.id, translateWorker(message.worker)),
+                workers: state.workers.set(message.data.id, translateWorker(message.data as Worker)),
             }))
         }
     }

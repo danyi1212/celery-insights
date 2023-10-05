@@ -1,3 +1,4 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -12,7 +13,7 @@ export type Task = {
     /**
      * Task function name
      */
-    type?: string;
+    type?: (string | null);
     /**
      * Task last known state
      */
@@ -24,35 +25,35 @@ export type Task = {
     /**
      * When task was received by worker
      */
-    received_at?: number;
+    received_at?: (number | null);
     /**
      * When task was started to be executed by worker
      */
-    started_at?: number;
+    started_at?: (number | null);
     /**
      * When task was finished successfully by worker
      */
-    succeeded_at?: number;
+    succeeded_at?: (number | null);
     /**
      * When task was finished with failure by worker
      */
-    failed_at?: number;
+    failed_at?: (number | null);
     /**
      * When task was last published for retry
      */
-    retried_at?: number;
+    retried_at?: (number | null);
     /**
      * When task was revoked last
      */
-    revoked_at?: number;
+    revoked_at?: (number | null);
     /**
      * When task was rejected by worker
      */
-    rejected_at?: number;
+    rejected_at?: (number | null);
     /**
      * How long task executed in seconds
      */
-    runtime?: number;
+    runtime?: (number | null);
     /**
      * When task last event published
      */
@@ -60,39 +61,39 @@ export type Task = {
     /**
      * Positional arguments provided to task (truncated)
      */
-    args?: string;
+    args?: (string | null);
     /**
      * Keyword arguments provided to task (truncated)
      */
-    kwargs?: string;
+    kwargs?: (string | null);
     /**
      * Absolute time when task should be executed
      */
-    eta?: string;
+    eta?: (string | null);
     /**
      * Absolute time when task should be expired
      */
-    expires?: string;
+    expires?: (string | null);
     /**
      * Retry count
      */
-    retries?: number;
+    retries?: (number | null);
     /**
      * Broker exchange name
      */
-    exchange?: string;
+    exchange?: (string | null);
     /**
      * Broker routing key
      */
-    routing_key?: string;
+    routing_key?: (string | null);
     /**
      * Root Task ID
      */
-    root_id?: string;
+    root_id?: (string | null);
     /**
      * Parent Task ID
      */
-    parent_id?: string;
+    parent_id?: (string | null);
     /**
      * Children Task IDs
      */
@@ -100,18 +101,18 @@ export type Task = {
     /**
      * Executing worker hostname
      */
-    worker?: string;
+    worker?: (string | null);
     /**
      * Task returned result
      */
-    result?: string;
+    result?: (string | null);
     /**
      * Task failure exception message
      */
-    exception?: string;
+    exception?: (string | null);
     /**
      * Task failure traceback
      */
-    traceback?: string;
+    traceback?: (string | null);
 };
 

@@ -1,3 +1,4 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -24,7 +25,7 @@ export type TaskRequest = {
     /**
      * Task keyword arguments
      */
-    kwargs: any;
+    kwargs: Record<string, any>;
     /**
      * Delivery Information about the task Message
      */
@@ -36,7 +37,7 @@ export type TaskRequest = {
     /**
      * When the task has started by the worker
      */
-    time_start?: number;
+    time_start?: (number | null);
     /**
      * Worker hostname
      */
@@ -44,6 +45,6 @@ export type TaskRequest = {
     /**
      * Child worker process ID
      */
-    worker_pid?: number;
+    worker_pid?: (number | null);
 };
 

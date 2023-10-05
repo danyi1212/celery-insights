@@ -1,3 +1,4 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -20,15 +21,15 @@ export type QueueInfo = {
     /**
      * Arguments for the queue
      */
-    queue_arguments?: any;
+    queue_arguments?: (Record<string, any> | null);
     /**
      * Arguments for bindings
      */
-    binding_arguments?: any;
+    binding_arguments?: (Record<string, any> | null);
     /**
      * Arguments for consumers
      */
-    consumer_arguments?: any;
+    consumer_arguments?: (Record<string, any> | null);
     /**
      * Queue will survive broker restart
      */
@@ -48,18 +49,18 @@ export type QueueInfo = {
     /**
      * Queue alias if used for queue names
      */
-    alias?: string;
+    alias?: (string | null);
     /**
      * Message TTL in seconds
      */
-    message_ttl?: number;
+    message_ttl?: (number | null);
     /**
      * Maximum number of task messages allowed in the queue
      */
-    max_length?: number;
+    max_length?: (number | null);
     /**
      * Maximum priority for task messages in the queue
      */
-    max_priority?: number;
+    max_priority?: (number | null);
 };
 

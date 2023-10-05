@@ -1,3 +1,4 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -24,30 +25,30 @@ export type ClientInfo = {
     /**
      * Operating System Name
      */
-    os?: string;
+    os?: (string | null);
     /**
      * Operating System Version
      */
-    os_version?: string;
+    os_version?: (string | null);
     /**
      * Device Family
      */
-    device_family?: string;
+    device_family?: (string | null);
     /**
      * Device Brand
      */
-    device_brand?: string;
+    device_brand?: (string | null);
     /**
      * Device Model
      */
-    device_model?: string;
+    device_model?: (string | null);
     /**
      * Browser Name
      */
-    browser?: string;
+    browser?: (string | null);
     /**
      * Browser Version
      */
-    browser_version?: string;
+    browser_version?: (string | null);
 };
 
