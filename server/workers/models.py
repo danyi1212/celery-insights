@@ -3,6 +3,8 @@ from typing import Any, Self
 from celery.events.state import Worker as CeleryWorker
 from pydantic import BaseModel, Extra, Field
 
+from common.types import EpochTimestamp
+
 
 class Worker(BaseModel):
     id: str = Field(description="Worker unique name comprised of hostname and pid")
@@ -13,8 +15,8 @@ class Worker(BaseModel):
     software_sys: str = Field(description="Software Operating System name (e.g, Linux/Darwin)")
     active_tasks: int = Field(description="Number of tasks currently processed by worker")
     processed_tasks: int = Field(description="Number of tasks completed by worker")
-    last_updated: int = Field(description="When worker latest event published")
-    heartbeat_expires: int | None = Field(None, description="When worker will be considered offline")
+    last_updated: EpochTimestamp = Field(description="When worker latest event published")
+    heartbeat_expires: EpochTimestamp | None = Field(None, description="When worker will be considered offline")
     cpu_load: tuple[float, float, float] | None = Field(None, description="Host CPU load average in last 1, 5 and 15 minutes")
 
     @classmethod
@@ -109,7 +111,7 @@ class TaskRequest(BaseModel, extra=Extra.allow):
     kwargs: dict[str, Any] = Field(description="Task keyword arguments")
     delivery_info: DeliveryInfo = Field(description="Delivery Information about the task Message")
     acknowledged: bool = Field(description="Whether the task message is acknowledged")
-    time_start: float | None = Field(None, description="When the task has started by the worker")
+    time_start: EpochTimestamp | None = Field(None, description="When the task has started by the worker")
     hostname: str = Field(description="Worker hostname")
     worker_pid: int | None = Field(None, description="Child worker process ID")
 

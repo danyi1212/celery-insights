@@ -5,6 +5,8 @@ from celery import states
 from celery.events.state import Task as CeleryTask
 from pydantic import BaseModel, Field
 
+from common.types import EpochTimestamp
+
 
 class TaskState(str, Enum):
     PENDING = states.PENDING
@@ -23,16 +25,16 @@ class Task(BaseModel):
     type: str | None = Field(None, description="Task function name")
     state: TaskState = Field(description="Task last known state")
 
-    sent_at: float = Field(description="When task was published by client to queue")
-    received_at: float | None = Field(None, description="When task was received by worker")
-    started_at: float | None = Field(None, description="When task was started to be executed by worker")
-    succeeded_at: float | None = Field(None, description="When task was finished successfully by worker")
-    failed_at: float | None = Field(None, description="When task was finished with failure by worker")
-    retried_at: float | None = Field(None, description="When task was last published for retry")
-    revoked_at: float | None = Field(None, description="When task was revoked last")
-    rejected_at: float | None = Field(None, description="When task was rejected by worker")
+    sent_at: EpochTimestamp = Field(description="When task was published by client to queue")
+    received_at: EpochTimestamp | None = Field(None, description="When task was received by worker")
+    started_at: EpochTimestamp | None = Field(None, description="When task was started to be executed by worker")
+    succeeded_at: EpochTimestamp | None = Field(None, description="When task was finished successfully by worker")
+    failed_at: EpochTimestamp | None = Field(None, description="When task was finished with failure by worker")
+    retried_at: EpochTimestamp | None = Field(None, description="When task was last published for retry")
+    revoked_at: EpochTimestamp | None = Field(None, description="When task was revoked last")
+    rejected_at: EpochTimestamp | None = Field(None, description="When task was rejected by worker")
     runtime: float | None = Field(None, description="How long task executed in seconds")
-    last_updated: float = Field(description="When task last event published")
+    last_updated: EpochTimestamp = Field(description="When task last event published")
 
     args: str | None = Field(None, description="Positional arguments provided to task (truncated)")
     kwargs: str | None = Field(None, description="Keyword arguments provided to task (truncated)")
