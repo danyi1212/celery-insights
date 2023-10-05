@@ -67,9 +67,9 @@ const BannerFlowchart: React.FC = () => {
                 : getFlowGraph(
                       demoTasks,
                       demoTasks[0].id,
-                      isLargeScreen ? { x: 5, y: 2.3 } : isMediumScreen ? { x: 3.8, y: 1.3 } : { x: 3.5, y: 2.8 }
+                      isLargeScreen ? { x: 5, y: 2.3 } : isMediumScreen ? { x: 3.8, y: 1.3 } : { x: 3.5, y: 2.8 },
                   ),
-        [isSmallScreen, isMediumScreen, isLargeScreen]
+        [isSmallScreen, isMediumScreen, isLargeScreen],
     )
 
     return (

@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint --max-warnings=0 src",
+    "lint-fix": "eslint --max-warnings=0 src --fix",
     "generate-client": "openapi --input http://localhost:8555/openapi.json --output ./src/services/server --client axios --name ServerClient"
   },
   "dependencies": {

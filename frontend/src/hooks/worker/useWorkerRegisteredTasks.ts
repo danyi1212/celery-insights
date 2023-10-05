@@ -6,7 +6,7 @@ const useWorkerRegisteredTasks = (hostname: string, timeout?: number, interval =
     const client = useClient()
     const getWorkerRegisteredTasks = useCallback(
         () => client.workers.getWorkerRegistered(timeout, hostname),
-        [client, hostname, timeout]
+        [client, hostname, timeout],
     )
     const result = useQuery(["workers/registered", hostname], getWorkerRegisteredTasks, {
         refetchInterval: interval,

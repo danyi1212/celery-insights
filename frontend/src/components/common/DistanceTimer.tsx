@@ -35,7 +35,7 @@ const TimeSince: React.FC<TimeSinceProps> = ({ time, addSuffix, unit, roundingMe
                 roundingMethod,
                 locale,
             }),
-        [time, now, addSuffix, unit, roundingMethod, locale]
+        [time, now, addSuffix, unit, roundingMethod, locale],
     )
     return <Typography component="span">{text}</Typography>
 }

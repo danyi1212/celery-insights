@@ -27,7 +27,7 @@ function useTaskProcessMap(hostname: string): Map<number, TaskRequest> {
                 })
                 setMap(map)
             }),
-        [tasks]
+        [tasks],
     )
 
     return map
