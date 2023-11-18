@@ -14,10 +14,6 @@ from workers.models import CPULoad, Worker
 from ws.managers import events_manager
 
 
-class EventMessageFactory(ModelFactory[EventMessage]):
-    __model__ = EventMessage
-
-
 class WorkerFactory(ModelFactory[Worker]):
     __model__ = Worker
     cpu_load = CPULoad(0, 0, 0)
@@ -25,6 +21,11 @@ class WorkerFactory(ModelFactory[Worker]):
 
 class TaskFactory(ModelFactory[Task]):
     __model__ = Task
+
+
+class EventMessageFactory(ModelFactory[EventMessage]):
+    __model__ = EventMessage
+    data = TaskFactory
 
 
 @pytest.fixture()
