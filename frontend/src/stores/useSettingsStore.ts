@@ -12,6 +12,7 @@ interface Settings {
     menuExpanded: boolean
     hideWelcomeBanner: boolean
     demo: boolean
+    rawEventsLimit: number
 }
 
 const defaultSettings: Settings = {
@@ -19,6 +20,7 @@ const defaultSettings: Settings = {
     menuExpanded: true,
     hideWelcomeBanner: false,
     demo: Boolean(import.meta.env.VITE_DEMO_MODE),
+    rawEventsLimit: 100,
 }
 const useSettingsStore = create<Settings>()(
     persist(

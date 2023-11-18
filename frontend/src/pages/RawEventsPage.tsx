@@ -26,7 +26,7 @@ const Placeholder: React.FC<PlaceholderProps> = ({ text, progress }) => {
 
 const RawEventsPage: React.FC = () => {
     const isDemo = useSettingsStore((state) => state.demo)
-    const [limit, setLimit] = useState(100)
+    const limit = useSettingsStore((state) => state.rawEventsLimit)
     const [connect, setConnect] = useState(!isDemo)
     const { events, readyState } = useRawEvents(connect, limit)
 
@@ -39,8 +39,11 @@ const RawEventsPage: React.FC = () => {
                         <Typography variant="subtitle2" noWrap>
                             {events.length} Events
                         </Typography>
-                        <LimitSelect limit={limit} setLimit={setLimit} />
                         <ToggleConnect connect={connect} setConnect={setConnect} disabled={isDemo} />
+                        <LimitSelect
+                            limit={limit}
+                            setLimit={(newLimit) => useSettingsStore.setState({ rawEventsLimit: newLimit })}
+                        />
                     </>
                 }
             >
