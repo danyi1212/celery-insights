@@ -9,7 +9,6 @@ import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
 import useSettingsStore from "@stores/useSettingsStore"
 import React, { useState } from "react"
-import { ReadyState } from "react-use-websocket"
 
 interface PlaceholderProps {
     text: React.ReactNode
@@ -47,8 +46,6 @@ const RawEventsPage: React.FC = () => {
             >
                 {isDemo ? (
                     <Placeholder text="Live Events are not available in Demo Mode." />
-                ) : readyState != ReadyState.OPEN ? (
-                    <Placeholder progress text="Connecting..." />
                 ) : events.length === 0 ? (
                     <Placeholder progress text="Waiting for events..." />
                 ) : (
