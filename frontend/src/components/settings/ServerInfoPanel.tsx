@@ -4,21 +4,58 @@ import Panel from "@components/common/Panel"
 import VersionCheckIcon from "@components/settings/VersionCheckIcon"
 import { useClient } from "@hooks/useClient"
 import Box from "@mui/material/Box"
+import Button from "@mui/material/Button"
 import Grid from "@mui/material/Grid"
+import Tooltip from "@mui/material/Tooltip"
+import { resetState } from "@stores/useStateStore"
 import { useQuery } from "@tanstack/react-query"
 import { formatBytes } from "@utils/FormatBytes"
 import { formatSecondsDurationLong } from "@utils/FormatSecondsDurationLong"
-import React, { useCallback } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 
 export const ServerInfoPanel: React.FC = () => {
     const client = useClient()
     const getServerInfo = useCallback(() => client.settings.getServerInfo(), [client])
-    const { data, isLoading, error } = useQuery({
+    const { data, isLoading, error, refetch } = useQuery({
         queryKey: ["server-info"],
         queryFn: getServerInfo,
     })
+
+    const [isReset, setIsReset] = useState<boolean | null>(null)
+    const handleResetState = () =>
+        client.settings
+            .clearState(isReset === true)
+            .then((res) => {
+                setIsReset(res)
+                if (res) {
+                    resetState()
+                    refetch().then()
+                }
+            })
+            .catch(() => setIsReset(false))
+
+    useEffect(() => {
+        const token = setTimeout(() => setIsReset(null), 1000 * 10)
+        return () => clearTimeout(token)
+    }, [isReset])
+
     return (
-        <Panel title="Server Info" loading={isLoading} error={error}>
+        <Panel
+            title="Server Info"
+            loading={isLoading}
+            error={error}
+            actions={
+                <Tooltip title={isReset ? "Clear all server state, including running tasks" : "Clear all server state"}>
+                    <Button
+                        variant="outlined"
+                        color={isReset === false ? "error" : "secondary"}
+                        onClick={handleResetState}
+                    >
+                        {isReset === null ? "Reset" : isReset ? "Force Reset" : "Error"}
+                    </Button>
+                </Tooltip>
+            }
+        >
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12} md={6}>
                     <DetailItem label="Name" value={data?.server_name || "???"} />

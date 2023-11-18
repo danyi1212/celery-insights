@@ -22,3 +22,9 @@ def get_clients() -> list[ClientInfo]:
         ClientInfo.from_websocket(client)
         for client in events_manager.active_connections
     ]
+
+
+@settings_router.post("/clear")
+def clear_state(force: bool = False) -> bool:
+    state.clear(ready=not force)
+    return True

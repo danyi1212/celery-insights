@@ -38,4 +38,8 @@ export class DemoSettingsService {
             },
         ])
     }
+
+    clearState(force: boolean = false): Promise<boolean> {
+        return force ? Promise.resolve(true) : Promise.reject(false)
+    }
 }
