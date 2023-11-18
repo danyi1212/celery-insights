@@ -1,14 +1,16 @@
 import WsStateIcon from "@components/common/WsStateIcon"
+import Facet from "@components/explorer/Facet"
 import { LimitSelect } from "@components/raw_events/LimitSelect"
 import { RawEventsTable } from "@components/raw_events/RawEventsTable"
 import { ToggleConnect } from "@components/raw_events/ToggleConnect"
-import { useRawEvents } from "@hooks/useRawEvents"
+import { CeleryEvent, useRawEvents } from "@hooks/useRawEvents"
 import { ExplorerLayout } from "@layout/explorer/ExplorerLayout"
 import CircularProgress from "@mui/material/CircularProgress"
 import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
 import useSettingsStore from "@stores/useSettingsStore"
-import React, { useState } from "react"
+import { countUniqueProperties } from "@utils/CountUniqueProperties"
+import React, { useMemo, useState } from "react"
 
 interface PlaceholderProps {
     text: React.ReactNode
@@ -24,11 +26,20 @@ const Placeholder: React.FC<PlaceholderProps> = ({ text, progress }) => {
     )
 }
 
+const filterEventTypes = (event: CeleryEvent, selectedTypes: string[]) =>
+    selectedTypes.length == 0 || (event?.type && selectedTypes.includes(event?.type as string))
+
 const RawEventsPage: React.FC = () => {
     const isDemo = useSettingsStore((state) => state.demo)
     const limit = useSettingsStore((state) => state.rawEventsLimit)
     const [connect, setConnect] = useState(!isDemo)
     const { events, readyState } = useRawEvents(connect, limit)
+    const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+    const groups = useMemo(() => countUniqueProperties(events, ["type"]), [events])
+    const filteredEvents = useMemo(
+        () => events.filter((event) => filterEventTypes(event, selectedTypes)),
+        [events, selectedTypes],
+    )
 
     return (
         <>
@@ -46,13 +57,21 @@ const RawEventsPage: React.FC = () => {
                         />
                     </>
                 }
+                facets={
+                    <Facet
+                        title="Event types"
+                        counts={groups.get("type") || new Map()}
+                        selected={new Set(selectedTypes)}
+                        setSelected={(values) => setSelectedTypes([...values.values()])}
+                    />
+                }
             >
                 {isDemo ? (
                     <Placeholder text="Live Events are not available in Demo Mode." />
                 ) : events.length === 0 ? (
                     <Placeholder progress text="Waiting for events..." />
                 ) : (
-                    <RawEventsTable events={events} />
+                    <RawEventsTable events={filteredEvents} />
                 )}
             </ExplorerLayout>
         </>
