@@ -107,8 +107,8 @@ const Menu: React.FC = () => {
                                 ? "/LogoTextGreen.svg"
                                 : "/LogoGreen.svg"
                             : expanded
-                            ? "/LogoTextDark.svg"
-                            : "/LogoDark.svg"
+                              ? "/LogoTextDark.svg"
+                              : "/LogoDark.svg"
                     }
                     alt="logo"
                     style={{
