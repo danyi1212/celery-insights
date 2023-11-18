@@ -2,7 +2,7 @@ import { toWebSocketUri } from "@utils/webSocketUtils"
 import { useState } from "react"
 import useWebSocket from "react-use-websocket"
 
-type CeleryEvent = Record<string, unknown>
+export type CeleryEvent = Record<string, unknown>
 
 export const useRawEvents = (limit: number) => {
     const [events, setEvents] = useState<CeleryEvent[]>([])

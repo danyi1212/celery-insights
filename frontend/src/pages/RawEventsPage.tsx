@@ -1,8 +1,21 @@
 import WsStateIcon from "@components/common/WsStateIcon"
-import { useRawEvents } from "@hooks/useRawEvents"
+import { CeleryEvent, useRawEvents } from "@hooks/useRawEvents"
 import { ExplorerLayout } from "@layout/explorer/ExplorerLayout"
+import { useTheme } from "@mui/material"
 import Typography from "@mui/material/Typography"
+import { JsonViewer } from "@textea/json-viewer"
 import React from "react"
+
+interface RawEventRowProps {
+    event: CeleryEvent
+}
+
+const RawEventRow: React.FC<RawEventRowProps> = ({ event }) => {
+    const theme = useTheme()
+    return (
+        <JsonViewer theme={theme.palette.mode} editable={false} rootName={false} quotesOnKeys={false} value={event} />
+    )
+}
 
 const RawEventsPage: React.FC = () => {
     const { events, readyState } = useRawEvents(100)
@@ -16,11 +29,9 @@ const RawEventsPage: React.FC = () => {
                     </>
                 }
             >
-                <ul>
-                    {events.map((event, index) => (
-                        <li key={index}>{JSON.stringify(event)}</li>
-                    ))}
-                </ul>
+                {events.map((event, index) => (
+                    <RawEventRow key={index} event={event} />
+                ))}
             </ExplorerLayout>
         </>
     )
