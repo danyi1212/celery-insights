@@ -1,5 +1,5 @@
-import axios from "axios"
 import { useQuery } from "@tanstack/react-query"
+import axios from "axios"
 
 interface GitHubRelease {
     url: string
@@ -99,6 +99,8 @@ interface GitHubRelease {
 const getLatestRelease = () =>
     axios.get<GitHubRelease>("https://api.github.com/repos/danyi1212/celery-insights/releases/latest")
 export const useGithubLatestRelease = () =>
-    useQuery(["latest-release"], getLatestRelease, {
+    useQuery({
+        queryKey: ["latest-release"],
+        queryFn: getLatestRelease,
         refetchInterval: 1000 * 60 * 15, // Every 15 minutes
     })

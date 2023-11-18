@@ -1,6 +1,6 @@
 import { useClient } from "@hooks/useClient"
-import { useCallback } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { useCallback } from "react"
 
 const useWorkerQueues = (hostname: string, timeout?: number, interval = 15 * 1000) => {
     const client = useClient()
@@ -8,7 +8,11 @@ const useWorkerQueues = (hostname: string, timeout?: number, interval = 15 * 100
         () => client.workers.getWorkerQueues(timeout, hostname),
         [client, hostname, timeout],
     )
-    const result = useQuery(["workers/queues", hostname], getWorkerQueues, { refetchInterval: interval })
+    const result = useQuery({
+        queryKey: ["workers/queues", hostname],
+        queryFn: getWorkerQueues,
+        refetchInterval: interval,
+    })
 
     return { ...result, queues: result.data?.[hostname] }
 }
