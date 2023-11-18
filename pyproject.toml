@@ -7,10 +7,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-fastapi = "^0.103.2"
+fastapi = "^0.104.1"
 python-dotenv = "^1.0.0"
-uvicorn = "^0.23.2"
-celery = { version = "^5.3.4", extras = [
+uvicorn = "^0.24.0"
+celery = { version = "^5.3.5", extras = [
     "arangodb",
     "auth",
     "couchdb",
@@ -30,12 +30,12 @@ celery = { version = "^5.3.4", extras = [
     "tblib",
     "zookeeper",
 ] }
-websockets = "^11.0.3"
+websockets = "^12.0"
 fastapi-cache2 = "^0.2.1"
 user-agents = "^2.2.0"
 aiopath = "^0.6.11"
-pydantic = "^2.4.2"
-pydantic-settings = "^2.0.3"
+pydantic = "^2.5.1"
+pydantic-settings = "^2.1.0"
 colorlog = "^6.7.0"
 
 [tool.poetry.group.dev.dependencies]
