@@ -36,4 +36,25 @@ export class SettingsService {
         });
     }
 
+    /**
+     * Clear State
+     * @param force
+     * @returns boolean Successful Response
+     * @throws ApiError
+     */
+    public clearState(
+        force: boolean = false,
+    ): CancelablePromise<boolean> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/settings/clear',
+            query: {
+                'force': force,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
 }

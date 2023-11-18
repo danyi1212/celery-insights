@@ -5,7 +5,7 @@ import Button from "@mui/material/Button"
 import Grid from "@mui/material/Grid"
 import Switch from "@mui/material/Switch"
 import Tooltip from "@mui/material/Tooltip"
-import useSettingsStore, { resetSettings } from "@stores/useSettingsStore"
+import useSettingsStore, { resetSettings, useIsDefaultSettings } from "@stores/useSettingsStore"
 import { useStateStore } from "@stores/useStateStore"
 import React from "react"
 
@@ -18,14 +18,22 @@ const SettingsPanel = () => {
         state.workers.size,
         state.workers.max,
     ])
+    const isDefaultSettings = useIsDefaultSettings()
 
     return (
         <Panel
             title="Settings"
             actions={
-                <Button variant="outlined" color="secondary" onClick={() => resetSettings()}>
-                    Reset
-                </Button>
+                <Tooltip title="Reset to default settings">
+                    <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => resetSettings()}
+                        disabled={isDefaultSettings}
+                    >
+                        Set Default
+                    </Button>
+                </Tooltip>
             }
         >
             <Grid container spacing={2} p={2}>

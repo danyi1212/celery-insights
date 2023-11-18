@@ -34,5 +34,7 @@ const useSettingsStore = create<Settings>()(
 )
 
 export const resetSettings = () => useSettingsStore.setState(defaultSettings)
+export const useIsDefaultSettings = () =>
+    useSettingsStore((state) => JSON.stringify(state) === JSON.stringify(defaultSettings))
 
 export default useSettingsStore
