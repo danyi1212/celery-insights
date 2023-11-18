@@ -1,11 +1,14 @@
 import { useClient } from "@hooks/useClient"
-import { useCallback } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { useCallback } from "react"
 
 const useTaskResult = (taskId: string) => {
     const client = useClient()
     const getTaskResult = useCallback(() => client.tasks.getTaskResult(taskId), [client, taskId])
-    const query = useQuery(["results", taskId], getTaskResult)
+    const query = useQuery({
+        queryKey: ["results", taskId],
+        queryFn: getTaskResult,
+    })
     return {
         ...query,
         taskResult: query.data,
