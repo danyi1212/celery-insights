@@ -25,7 +25,7 @@ def get_clients() -> list[ClientInfo]:
 
 
 @settings_router.post("/clear")
-def clear_state(force: bool = False) -> bool:
+def clear_state(*, force: bool = False) -> bool:
     state.clear(ready=not force)
     return True
 

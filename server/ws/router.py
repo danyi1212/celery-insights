@@ -27,5 +27,5 @@ async def subscribe_events(websocket: WebSocket):
 
 
 @ws_router.websocket("/raw_events")
-async def subscribe_events(websocket: WebSocket):
+async def subscribe_raw_events(websocket: WebSocket):
     await connect_to_manager(websocket, raw_events_manager)
