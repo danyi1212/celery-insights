@@ -57,4 +57,16 @@ export class SettingsService {
         });
     }
 
+    /**
+     * Download Debug Bundle
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public downloadDebugBundle(): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/settings/download-debug-bundle',
+        });
+    }
+
 }
