@@ -49,6 +49,7 @@ LOGGING_CONFIG = {
         "celery": {"level": "INFO"},
         "dotenv": {"level": "INFO"},
         "fastapi": {"level": "INFO"},
+        "uvicorn": {"level": "INFO"},
         "fastapi_cache": {"level": "INFO"},
         "kombu": {"level": "INFO"},
     },
