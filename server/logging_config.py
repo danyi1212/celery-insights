@@ -1,5 +1,6 @@
 from settings import Settings
 
+LOG_FILE_PATH = "app.log"
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": True,
@@ -16,6 +17,10 @@ LOGGING_CONFIG = {
                 "CRITICAL": "red,bg_white",
             },
         },
+        "file": {
+            "format": "[%(asctime)s.%(msecs)03d] %(levelname)s - %(name)s.%(funcName)s::%(lineno)d | %(message)s",
+            'datefmt': "%Y-%m-%d %H:%M:%S",
+        },
     },
     "handlers": {
         "console": {
@@ -23,9 +28,15 @@ LOGGING_CONFIG = {
             "formatter": "color",
             "stream": "ext://sys.stdout",
         },
+        "file": {
+            "class": "logging.FileHandler",
+            "formatter": "file",
+            "filename": LOG_FILE_PATH,
+            "encoding": "utf-8",
+        },
     },
     "root": {
-        "handlers": ["console"],
+        "handlers": ["console", "file"],
         "level": "INFO",
         "propagate": False,
     },
