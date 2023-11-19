@@ -1,13 +1,11 @@
 import WorkerQuickStatusList from "@components/worker/WorkerQuickStatusList"
 import MenuItem, { MenuLink } from "@layout/menu/MenuItem"
-import ApiIcon from "@mui/icons-material/Api"
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos"
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
 import ManageSearchIcon from "@mui/icons-material/ManageSearch"
 import RssFeedIcon from "@mui/icons-material/RssFeed"
 import SettingsIcon from "@mui/icons-material/Settings"
 import SpaceDashboardOutlinedIcon from "@mui/icons-material/SpaceDashboardOutlined"
-import SubjectIcon from "@mui/icons-material/Subject"
 import { useMediaQuery, useTheme } from "@mui/material"
 import Collapse from "@mui/material/Collapse"
 import Divider from "@mui/material/Divider"
@@ -68,24 +66,6 @@ const menuLinks: MenuLink[] = [
         to: "/raw_events",
         external: false,
     },
-    {
-        label: "API Explorer",
-        icon: <ApiIcon />,
-        to: "/docs",
-        external: true,
-    },
-    {
-        label: "API Docs",
-        icon: <SubjectIcon />,
-        to: "/redoc",
-        external: true,
-    },
-    {
-        label: "Settings",
-        icon: <SettingsIcon />,
-        to: "/settings",
-        external: false,
-    },
 ]
 
 const Menu: React.FC = () => {
@@ -126,6 +106,16 @@ const Menu: React.FC = () => {
             <Collapse in={expanded} unmountOnExit>
                 <WorkerQuickStatusList />
             </Collapse>
+            <Divider />
+            <MenuItem
+                link={{
+                    label: "Settings",
+                    icon: <SettingsIcon />,
+                    to: "/settings",
+                    external: false,
+                }}
+                expanded={expanded}
+            />
             <Divider />
             <ListItem disablePadding>
                 <Tooltip title={expanded ? "Collapse menu" : "Expand menu"} placement="right" arrow>
