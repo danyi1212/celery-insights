@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from fastapi import APIRouter, Body, Request
 from fastapi_cache.decorator import cache
@@ -6,9 +7,12 @@ from starlette.responses import StreamingResponse
 
 from events.receiver import state
 from server_info.debug_bundle import create_debug_bundle
-from server_info.models import ClientDebugInfo, ClientInfo, ServerInfo, UserAgentInfo
+from server_info.models import ClientDebugInfo, ServerInfo
 from settings import Settings
 from ws.managers import events_manager
+from ws.models import ClientInfo, UserAgentInfo
+
+logger = logging.getLogger(__name__)
 
 settings_router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -21,10 +25,7 @@ async def get_server_info(request: Request) -> ServerInfo:
 
 @settings_router.get("/clients")
 def get_clients() -> list[ClientInfo]:
-    return [
-        ClientInfo.from_websocket(client)
-        for client in events_manager.active_connections
-    ]
+    return list(events_manager.get_clients())
 
 
 @settings_router.post("/clear")
@@ -37,7 +38,8 @@ def clear_state(force: bool = False) -> bool:
 async def download_debug_bundle(request: Request, client_info: ClientDebugInfo = Body(...)):
     settings = Settings()
     browser = get_user_agent(request)
-    buffer = await create_debug_bundle(settings, browser, client_info)
+    connections = list(events_manager.get_clients())
+    buffer = await create_debug_bundle(settings, browser, client_info, connections)
     return StreamingResponse(
         buffer,
         media_type="application/zip",
