@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from asyncio import Queue
-from typing import Iterable
+from collections.abc import Iterable
 
 from fastapi import WebSocket
 

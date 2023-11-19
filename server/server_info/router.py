@@ -31,7 +31,7 @@ def clear_state(*, force: bool = False) -> bool:
 
 
 @settings_router.post("/download-debug-bundle")
-async def download_debug_bundle(request: Request, client_info: ClientDebugInfo = Body(...)):
+async def download_debug_bundle(request: Request, client_info: ClientDebugInfo = Body(...)):  # noqa B008
     buffer = await create_debug_bundle(request, client_info)
     return StreamingResponse(
         buffer,
