@@ -45,7 +45,12 @@ async def download_debug_bundle(request: Request, client_info: ClientDebugInfo =
     )
 
 
-def get_user_agent(request: Request) -> UserAgentInfo:
+def get_user_agent(request: Request) -> UserAgentInfo | None:
     user_agent_string = request.headers.get("User-Agent")
-    browser = UserAgentInfo.parse(user_agent_string)
-    return browser
+    if user_agent_string:
+        return
+    try:
+        return UserAgentInfo.parse(user_agent_string)
+    except Exception as e:
+        logger.exception(f"Failed to parse user agent header {user_agent_string!r}: {e}")
+        return
