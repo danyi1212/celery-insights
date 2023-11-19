@@ -6,6 +6,7 @@ import { useClient } from "@hooks/useClient"
 import Box from "@mui/material/Box"
 import Button from "@mui/material/Button"
 import Grid from "@mui/material/Grid"
+import Stack from "@mui/material/Stack"
 import Tooltip from "@mui/material/Tooltip"
 import { resetState } from "@stores/useStateStore"
 import { useQuery } from "@tanstack/react-query"
@@ -131,6 +132,16 @@ export const ServerInfoPanel: React.FC = () => {
                         description="Number of workers stored in state / limit"
                         value={`${data?.worker_count || 0} / ${data?.worker_max_count || "Unknown"}`}
                     />
+                </Grid>
+                <Grid item xs={12}>
+                    <Stack direction="row" justifyContent="space-around">
+                        <Button component="a" href="/docs" variant="outlined" color="secondary">
+                            API Explorer
+                        </Button>
+                        <Button component="a" href="/redoc" variant="outlined" color="secondary">
+                            API Docs
+                        </Button>
+                    </Stack>
                 </Grid>
             </Grid>
         </Panel>
