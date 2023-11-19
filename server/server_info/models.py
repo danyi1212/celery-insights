@@ -17,7 +17,7 @@ start_time = time.perf_counter()
 
 
 class ServerInfo(BaseModel):
-    cpu_usage: tuple[float, float, float] = Field(desciption="CPU load average in last 1, 5 and 15 minutes")
+    cpu_usage: tuple[float, float, float] = Field(description="CPU load average in last 1, 5 and 15 minutes")
     memory_usage: float = Field(description="Memory Usage in KB")
     uptime: float = Field(description="Server Uptime in seconds")
     server_hostname: str = Field(description="Server Hostname")
