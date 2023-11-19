@@ -2,7 +2,7 @@ import asyncio
 import logging
 import zipfile
 from io import BytesIO
-from typing import Any
+from typing import Any, NamedTuple
 
 from aiopath import AsyncPath
 from pydantic_core import to_json
@@ -34,20 +34,28 @@ async def dump_file(file: zipfile.ZipFile, filename: str, path: AsyncPath) -> No
     file.writestr(filename, content)
 
 
-async def generate_bundle_file(settings: Settings, browser: UserAgentInfo | None,
-                               client_info: ClientDebugInfo, connections: list[ClientInfo],
-                               state_dump: StateDump, server_info: ServerInfo) -> BytesIO:
+class DebugBundleData(NamedTuple):
+    settings: Settings
+    log_path: str
+    browser: UserAgentInfo | None
+    client_info: ClientDebugInfo
+    connections: list[ClientInfo]
+    state_dump: StateDump
+    server_info: ServerInfo
+
+
+async def generate_bundle_file(data: DebugBundleData) -> BytesIO:
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as file:
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(dump_file(file, "config.py", AsyncPath(settings.config_path)))
-            tg.create_task(dump_file(file, "app.log", AsyncPath(LOG_FILE_PATH)))
-            dump_model(file, "settings.json", settings)
-            dump_model(file, "browser.json", browser)
-            dump_model(file, "client_info.json", client_info)
-            dump_model(file, "connections.json", connections)
-            dump_model(file, "state.json", state_dump)
-            dump_model(file, "server_info.json", server_info)
+            tg.create_task(dump_file(file, "config.py", AsyncPath(data.settings.config_path)))
+            tg.create_task(dump_file(file, "app.log", AsyncPath(data.log_path)))
+            dump_model(file, "settings.json", data.settings)
+            dump_model(file, "browser.json", data.browser)
+            dump_model(file, "client_info.json", data.client_info)
+            dump_model(file, "connections.json", data.connections)
+            dump_model(file, "state.json", data.state_dump)
+            dump_model(file, "server_info.json", data.server_info)
 
     buffer.seek(0)
     return buffer
@@ -72,9 +80,14 @@ def get_state_dump() -> StateDump:
 
 
 async def create_debug_bundle(request: Request, client_info: ClientDebugInfo) -> BytesIO:
-    settings = Settings()
-    browser = get_user_agent(request)
-    connections = list(events_manager.get_clients())
-    state_dump = get_state_dump()
-    server_info = ServerInfo.create(request, state)
-    return await generate_bundle_file(settings, browser, client_info, connections, state_dump, server_info)
+    return await generate_bundle_file(
+        DebugBundleData(
+            settings=Settings(),
+            log_path=LOG_FILE_PATH,
+            browser=get_user_agent(request),
+            client_info=client_info,
+            connections=list(events_manager.get_clients()),
+            state_dump=get_state_dump(),
+            server_info=ServerInfo.create(request, state),
+        )
+    )
