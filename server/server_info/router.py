@@ -6,9 +6,11 @@ from fastapi_cache.decorator import cache
 from starlette.responses import StreamingResponse
 
 from events.receiver import state
-from server_info.debug_bundle import create_debug_bundle
-from server_info.models import ClientDebugInfo, ServerInfo
+from server_info.debug_bundle import create_debug_bundle_file
+from server_info.models import ClientDebugInfo, ServerInfo, StateDump
 from settings import Settings
+from tasks.model import Task
+from workers.models import Worker
 from ws.managers import events_manager
 from ws.models import ClientInfo, UserAgentInfo
 
@@ -39,7 +41,8 @@ async def download_debug_bundle(request: Request, client_info: ClientDebugInfo =
     settings = Settings()
     browser = get_user_agent(request)
     connections = list(events_manager.get_clients())
-    buffer = await create_debug_bundle(settings, browser, client_info, connections)
+    state_dump = get_state_dump()
+    buffer = await create_debug_bundle_file(settings, browser, client_info, connections, state_dump)
     return StreamingResponse(
         buffer,
         media_type="application/zip",
@@ -56,3 +59,10 @@ def get_user_agent(request: Request) -> UserAgentInfo | None:
     except Exception as e:
         logger.exception(f"Failed to parse user agent header {user_agent_string!r}: {e}")
         return
+
+
+def get_state_dump() -> StateDump:
+    return StateDump(
+        tasks=[Task.from_celery_task(task) for _, task in state.tasks_by_time()],
+        workers=[Worker.from_celery_worker(worker) for worker in state.workers.itervalues()],
+    )

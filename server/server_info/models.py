@@ -9,6 +9,9 @@ from celery.events.state import State
 from pydantic import BaseModel, Field
 from starlette.requests import Request
 
+from tasks.model import Task
+from workers.models import Worker
+
 logger = logging.getLogger(__name__)
 start_time = time.perf_counter()
 
@@ -52,3 +55,8 @@ class ClientDebugInfo(BaseModel):
     settings: dict
     screen_width: int
     screen_height: int
+
+
+class StateDump(BaseModel):
+    tasks: list[Task]
+    workers: list[Worker]
