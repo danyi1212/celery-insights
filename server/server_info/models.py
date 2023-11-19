@@ -13,7 +13,7 @@ from tasks.model import Task
 from workers.models import Worker
 
 logger = logging.getLogger(__name__)
-start_time = time.perf_counter()
+start_time = time.time()
 
 
 class ServerInfo(BaseModel):
@@ -37,7 +37,7 @@ class ServerInfo(BaseModel):
         return ServerInfo(
             cpu_usage=os.getloadavg(),
             memory_usage=rusage.ru_maxrss,
-            uptime=time.perf_counter() - start_time,
+            uptime=time.time() - start_time,
             server_hostname=request.url.hostname,
             server_port=request.url.port,
             server_version=request.app.version,
