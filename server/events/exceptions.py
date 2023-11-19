@@ -1,6 +1,6 @@
-class InvalidEvent(ValueError):
+class InvalidEventError(ValueError):
     pass
 
 
-class InconsistentStateStore(KeyError):
+class InconsistentStateStoreError(KeyError):
     pass

@@ -6,7 +6,7 @@ from polyfactory.factories.pydantic_factory import ModelFactory
 from pytest_mock import MockerFixture
 
 from events.broadcaster import EventBroadcaster, parse_event, parse_task_event, parse_worker_event
-from events.exceptions import InconsistentStateStore, InvalidEvent
+from events.exceptions import InconsistentStateStoreError, InvalidEventError
 from events.models import EventCategory, EventMessage, EventType
 from events.receiver import state
 from tasks.model import Task
@@ -95,7 +95,7 @@ async def test_event_parsing_failure(broadcaster, mocker: MockerFixture):
 def test_parse_invalid_event(event, match, mocker: MockerFixture):
     mocker.patch.object(state, "event")
 
-    with pytest.raises(InvalidEvent, match=match):
+    with pytest.raises(InvalidEventError, match=match):
         parse_event(event)
 
 
@@ -110,7 +110,7 @@ def test_parse_event_missing_object(event, match, mocker: MockerFixture):
     mocker.patch.object(state.tasks, "get", return_value=None)
     mocker.patch.object(state.workers, "get", return_value=None)
 
-    with pytest.raises(InconsistentStateStore, match=match):
+    with pytest.raises(InconsistentStateStoreError, match=match):
         parse_event(event)
 
 
