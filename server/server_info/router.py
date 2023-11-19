@@ -2,9 +2,12 @@ import asyncio
 
 from fastapi import APIRouter, Request
 from fastapi_cache.decorator import cache
+from starlette.responses import StreamingResponse
 
 from events.receiver import state
+from server_info.debug_bundle import create_debug_bundle
 from server_info.models import ClientInfo, ServerInfo
+from settings import Settings
 from ws.managers import events_manager
 
 settings_router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -28,3 +31,14 @@ def get_clients() -> list[ClientInfo]:
 def clear_state(force: bool = False) -> bool:
     state.clear(ready=not force)
     return True
+
+
+@settings_router.get("/download-debug-bundle")
+async def download_debug_bundle():
+    settings = Settings()
+    buffer = await create_debug_bundle(settings)
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=debug_bundle.zip"}
+    )
