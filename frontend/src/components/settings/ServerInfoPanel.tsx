@@ -14,6 +14,25 @@ import { formatBytes } from "@utils/FormatBytes"
 import { formatSecondsDurationLong } from "@utils/FormatSecondsDurationLong"
 import React, { useCallback, useEffect, useState } from "react"
 
+interface LinkButtonProps {
+    href: string
+    children?: React.ReactNode
+}
+
+const LinkButton: React.FC<LinkButtonProps> = ({ href, children }) => (
+    <Button
+        component="a"
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        variant="outlined"
+        color="secondary"
+        disabled={Boolean(import.meta.env.VITE_DEMO_MODE)}
+    >
+        {children}
+    </Button>
+)
+
 export const ServerInfoPanel: React.FC = () => {
     const client = useClient()
     const getServerInfo = useCallback(() => client.settings.getServerInfo(), [client])
@@ -135,12 +154,8 @@ export const ServerInfoPanel: React.FC = () => {
                 </Grid>
                 <Grid item xs={12}>
                     <Stack direction="row" justifyContent="space-around">
-                        <Button component="a" href="/docs" variant="outlined" color="secondary">
-                            API Explorer
-                        </Button>
-                        <Button component="a" href="/redoc" variant="outlined" color="secondary">
-                            API Docs
-                        </Button>
+                        <LinkButton href="/docs">API Explorer</LinkButton>
+                        <LinkButton href="/redoc">API Docs</LinkButton>
                     </Stack>
                 </Grid>
             </Grid>
