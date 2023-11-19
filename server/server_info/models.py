@@ -101,3 +101,9 @@ class ClientInfo(BaseModel):
             return UserAgentInfo.parse(user_agent_string)
         except Exception as e:
             logger.exception(f"Error parsing user-agent string {user_agent_string!r}: {e}")
+
+
+class ClientDebugInfo(BaseModel):
+    settings: dict
+    screen_width: int
+    screen_height: int

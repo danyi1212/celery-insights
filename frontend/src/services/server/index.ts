@@ -11,6 +11,7 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { Broker } from './models/Broker';
+export type { ClientDebugInfo } from './models/ClientDebugInfo';
 export type { ClientInfo } from './models/ClientInfo';
 export type { CPULoad } from './models/CPULoad';
 export type { DeliveryInfo } from './models/DeliveryInfo';
