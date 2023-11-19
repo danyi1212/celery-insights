@@ -1,7 +1,7 @@
 from typing import Any, NamedTuple, Self
 
 from celery.events.state import Worker as CeleryWorker
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from common.types import EpochTimestamp
 
@@ -42,7 +42,7 @@ class Worker(BaseModel):
         )
 
 
-class Broker(BaseModel, extra=Extra.ignore):
+class Broker(BaseModel):
     connection_timeout: int | None = Field(None, description="How many seconds before failing to connect to broker")
     heartbeat: int = Field(description="Heartbeat interval in seconds")
     hostname: str = Field(description="Node name of remote broker")
@@ -55,8 +55,12 @@ class Broker(BaseModel, extra=Extra.ignore):
     userid: str = Field(description="User ID used to connect to the broker with")
     virtual_host: str = Field(description="Virtual host used")
 
+    model_config = ConfigDict(
+        extra="ignore",
+    )
 
-class Pool(BaseModel, extra=Extra.ignore):
+
+class Pool(BaseModel):
     max_concurrency: int = Field(
         description="Maximum number of child parallelism (processes/threads)",
         alias="max-concurrency"
@@ -68,8 +72,12 @@ class Pool(BaseModel, extra=Extra.ignore):
     processes: list[int] = Field(description="Child process IDs (or thread IDs)")
     timeouts: tuple[int, int] = Field(description="Soft time limit and hard time limit, in seconds")
 
+    model_config = ConfigDict(
+        extra="ignore",
+    )
 
-class Stats(BaseModel, extra=Extra.ignore):
+
+class Stats(BaseModel):
     broker: Broker = Field(description="Current broker stats")
     clock: int = Field(description="Current logical clock time")
     uptime: int = Field(description="Uptime in seconds")
@@ -79,13 +87,21 @@ class Stats(BaseModel, extra=Extra.ignore):
     rusage: dict[str, Any] = Field(description="Operating System statistics")
     total: dict[str, int] = Field(description="Count of accepted tasks by type")
 
+    model_config = ConfigDict(
+        extra="ignore",
+    )
 
-class ExchangeInfo(BaseModel, extra=Extra.ignore):
+
+class ExchangeInfo(BaseModel):
     name: str = Field(description="Name of exchange")
     type: str = Field(description="Exchange routing type")
 
+    model_config = ConfigDict(
+        extra="ignore",
+    )
 
-class QueueInfo(BaseModel, extra=Extra.ignore):
+
+class QueueInfo(BaseModel):
     name: str = Field(description="Name of the queue")
     exchange: ExchangeInfo = Field(description="Exchange information")
     routing_key: str = Field(description="Routing key for the queue")
@@ -101,15 +117,23 @@ class QueueInfo(BaseModel, extra=Extra.ignore):
     max_length: int | None = Field(None, description="Maximum number of task messages allowed in the queue")
     max_priority: int | None = Field(None, description="Maximum priority for task messages in the queue")
 
+    model_config = ConfigDict(
+        extra="ignore",
+    )
 
-class DeliveryInfo(BaseModel, extra=Extra.ignore):
+
+class DeliveryInfo(BaseModel):
     exchange: str = Field(description="Broker exchange used")
     priority: int | None = Field(None, description="Message priority")
     redelivered: bool = Field(description="Message sent back to queue")
     routing_key: str = Field(description="Message routing key used")
 
+    model_config = ConfigDict(
+        extra="ignore",
+    )
 
-class TaskRequest(BaseModel, extra=Extra.ignore):
+
+class TaskRequest(BaseModel):
     id: str = Field(description="Task unique id")
     name: str = Field(description="Task name")
     type: str = Field(description="Task type")
@@ -121,8 +145,16 @@ class TaskRequest(BaseModel, extra=Extra.ignore):
     hostname: str = Field(description="Worker hostname")
     worker_pid: int | None = Field(None, description="Child worker process ID")
 
+    model_config = ConfigDict(
+        extra="ignore",
+    )
 
-class ScheduledTask(BaseModel, extra=Extra.ignore):
+
+class ScheduledTask(BaseModel):
     eta: str = Field(description="Absolute time when the task should be executed")
     priority: int = Field(description="Message priority")
     request: TaskRequest = Field(description="Task Information")
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )

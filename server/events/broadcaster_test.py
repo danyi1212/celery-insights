@@ -55,7 +55,7 @@ async def test_broadcast_failure(broadcaster, mocker: MockerFixture):
 
     await broadcaster.handle_event(event)
 
-    assert broadcast_mock.call_args_list == [mocker.call(json.dumps(event)), mocker.call(message.json())]
+    assert broadcast_mock.call_args_list == [mocker.call(json.dumps(event)), mocker.call(message.model_dump_json())]
     parse_event_mock.assert_called_once_with(event)
 
 
@@ -69,7 +69,7 @@ async def test_broadcast_parsed_event(broadcaster, mocker: MockerFixture):
     await broadcaster.handle_event(event)
 
     parse_event_mock.assert_called_once_with(event)
-    broadcast_mock.assert_called_once_with(message.json())
+    broadcast_mock.assert_called_once_with(message.model_dump_json())
 
 
 @pytest.mark.asyncio
