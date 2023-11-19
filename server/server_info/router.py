@@ -6,7 +6,7 @@ from starlette.responses import StreamingResponse
 
 from events.receiver import state
 from server_info.debug_bundle import create_debug_bundle
-from server_info.models import ClientInfo, ServerInfo
+from server_info.models import ClientInfo, ServerInfo, UserAgentInfo
 from settings import Settings
 from ws.managers import events_manager
 
@@ -33,12 +33,19 @@ def clear_state(force: bool = False) -> bool:
     return True
 
 
-@settings_router.get("/download-debug-bundle")
-async def download_debug_bundle():
+@settings_router.post("/download-debug-bundle")
+async def download_debug_bundle(request: Request):
     settings = Settings()
-    buffer = await create_debug_bundle(settings)
+    browser = get_user_agent(request)
+    buffer = await create_debug_bundle(settings, browser)
     return StreamingResponse(
         buffer,
         media_type="application/zip",
         headers={"Content-Disposition": "attachment; filename=debug_bundle.zip"}
     )
+
+
+def get_user_agent(request: Request) -> UserAgentInfo:
+    user_agent_string = request.headers.get("User-Agent")
+    browser = UserAgentInfo.parse(user_agent_string)
+    return browser
