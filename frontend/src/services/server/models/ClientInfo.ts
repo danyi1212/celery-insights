@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import type { UserAgentInfo } from './UserAgentInfo';
 import type { WebSocketState } from './WebSocketState';
 
 export type ClientInfo = {
@@ -23,32 +24,8 @@ export type ClientInfo = {
      */
     is_secure: boolean;
     /**
-     * Operating System Name
+     * User agent details
      */
-    os?: (string | null);
-    /**
-     * Operating System Version
-     */
-    os_version?: (string | null);
-    /**
-     * Device Family
-     */
-    device_family?: (string | null);
-    /**
-     * Device Brand
-     */
-    device_brand?: (string | null);
-    /**
-     * Device Model
-     */
-    device_model?: (string | null);
-    /**
-     * Browser Name
-     */
-    browser?: (string | null);
-    /**
-     * Browser Version
-     */
-    browser_version?: (string | null);
+    user_agent?: (UserAgentInfo | null);
 };
 

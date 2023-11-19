@@ -30,6 +30,7 @@ export type { Task } from './models/Task';
 export type { TaskRequest } from './models/TaskRequest';
 export type { TaskResult } from './models/TaskResult';
 export { TaskState } from './models/TaskState';
+export type { UserAgentInfo } from './models/UserAgentInfo';
 export type { ValidationError } from './models/ValidationError';
 export { WebSocketState } from './models/WebSocketState';
 export type { Worker } from './models/Worker';
