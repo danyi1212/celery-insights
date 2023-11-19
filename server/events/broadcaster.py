@@ -2,8 +2,8 @@ import asyncio
 import json
 import logging
 
+from events.exceptions import InconsistentStateStoreError, InvalidEventError
 from events.models import EventCategory, EventMessage, EventType
-from events.exceptions import InconsistentStateStore, InvalidEvent
 from events.receiver import state
 from events.subscriber import QueueSubscriber
 from tasks.model import Task
@@ -32,9 +32,9 @@ async def broadcast_raw_event(event: dict) -> None:
 async def broadcast_parsed_event(event: dict) -> None:
     try:
         message = parse_event(event)
-    except InvalidEvent as e:
+    except InvalidEventError as e:
         logger.warning(f"Event object is invalid, failed to parse: {e}", exc_info=True)
-    except InconsistentStateStore as e:
+    except InconsistentStateStoreError as e:
         logger.exception(f"Inconsistent event state store: {e}")
     except Exception as e:
         logger.exception(f"Failed to parse event message: {e}")
@@ -49,7 +49,7 @@ async def broadcast_parsed_event(event: dict) -> None:
 def parse_event(event: dict) -> EventMessage:
     event_type = event.get('type')
     if event_type is None:
-        raise InvalidEvent(f"Received event without type: {event}")
+        raise InvalidEventError(f"Received event without type: {event}")
 
     event_category, _ = event_type.split("-", 1)
     state.event(event)
@@ -58,17 +58,17 @@ def parse_event(event: dict) -> EventMessage:
     elif event_category == "worker":
         return parse_worker_event(event, event_type)
     else:
-        raise InvalidEvent(f"Unknown event category {event_category!r}")
+        raise InvalidEventError(f"Unknown event category {event_category!r}")
 
 
 def parse_worker_event(event: dict, event_type: str) -> EventMessage | None:
     worker_hostname = event.get("hostname")
     if worker_hostname is None:
-        raise InvalidEvent(f"Worker event {event_type!r} is missing hostname: {event}")
+        raise InvalidEventError(f"Worker event {event_type!r} is missing hostname: {event}")
 
     state_worker = state.workers.get(worker_hostname)
     if state_worker is None:
-        raise InconsistentStateStore(f"Could not find worker {worker_hostname!r} in state")
+        raise InconsistentStateStoreError(f"Could not find worker {worker_hostname!r} in state")
 
     worker = Worker.from_celery_worker(state_worker)
     return EventMessage(
@@ -81,11 +81,11 @@ def parse_worker_event(event: dict, event_type: str) -> EventMessage | None:
 def parse_task_event(event: dict, event_type: str) -> EventMessage | None:
     task_id = event.get("uuid")
     if task_id is None:
-        raise InvalidEvent(f"Task event {event_type!r} is missing uuid: {event}")
+        raise InvalidEventError(f"Task event {event_type!r} is missing uuid: {event}")
 
     state_task = state.tasks.get(task_id)
     if state_task is None:
-        raise InconsistentStateStore(f"Could not find task {task_id!r} in state")
+        raise InconsistentStateStoreError(f"Could not find task {task_id!r} in state")
 
     task = Task.from_celery_task(state_task)
     return EventMessage(
