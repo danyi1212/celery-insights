@@ -6,10 +6,15 @@ from typing import Any
 
 from aiopath import AsyncPath
 from pydantic_core import to_json
+from starlette.requests import Request
 
+from events.receiver import state
 from logging_config import LOG_FILE_PATH
 from server_info.models import ClientDebugInfo, StateDump
 from settings import Settings
+from tasks.model import Task
+from workers.models import Worker
+from ws.managers import events_manager
 from ws.models import ClientInfo, UserAgentInfo
 
 logger = logging.getLogger(__name__)
@@ -29,9 +34,9 @@ async def dump_file(file: zipfile.ZipFile, filename: str, path: AsyncPath) -> No
     file.writestr(filename, content)
 
 
-async def create_debug_bundle_file(settings: Settings, browser: UserAgentInfo | None,
-                                   client_info: ClientDebugInfo, connections: list[ClientInfo],
-                                   state_dump: StateDump) -> BytesIO:
+async def generate_bundle_file(settings: Settings, browser: UserAgentInfo | None,
+                               client_info: ClientDebugInfo, connections: list[ClientInfo],
+                               state_dump: StateDump) -> BytesIO:
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as file:
         async with asyncio.TaskGroup() as tg:
@@ -45,3 +50,29 @@ async def create_debug_bundle_file(settings: Settings, browser: UserAgentInfo | 
 
     buffer.seek(0)
     return buffer
+
+
+def get_user_agent(request: Request) -> UserAgentInfo | None:
+    user_agent_string = request.headers.get("User-Agent")
+    if user_agent_string:
+        return
+    try:
+        return UserAgentInfo.parse(user_agent_string)
+    except Exception as e:
+        logger.exception(f"Failed to parse user agent header {user_agent_string!r}: {e}")
+        return
+
+
+def get_state_dump() -> StateDump:
+    return StateDump(
+        tasks=[Task.from_celery_task(task) for _, task in state.tasks_by_time()],
+        workers=[Worker.from_celery_worker(worker) for worker in state.workers.itervalues()],
+    )
+
+
+async def create_debug_bundle(request: Request, client_info: ClientDebugInfo) -> BytesIO:
+    settings = Settings()
+    browser = get_user_agent(request)
+    connections = list(events_manager.get_clients())
+    state_dump = get_state_dump()
+    return await generate_bundle_file(settings, browser, client_info, connections, state_dump)
