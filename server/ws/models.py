@@ -19,7 +19,12 @@ class UserAgentInfo(BaseModel):
 
     @classmethod
     def parse(cls, user_agent_string: str) -> Self:
-        user_agent = user_agents.parse(user_agent_string)
+        try:
+            user_agent = user_agents.parse(user_agent_string)
+        except Exception as e:
+            logger.exception(f"Failed to parse user agent header {user_agent_string!r}: {e}")
+            user_agent = user_agents.parse("")
+
         return cls(
             os=user_agent.os.family if user_agent is not None else None,
             os_version=user_agent.os.version_string if user_agent is not None else None,
@@ -40,22 +45,10 @@ class ClientInfo(BaseModel):
 
     @classmethod
     def from_websocket(cls, websocket: WebSocket) -> Self:
-        user_agent = cls.get_user_agent(websocket)
         return cls(
             host=websocket.client.host,
             port=websocket.client.port,
             state=websocket.client_state,
             is_secure=websocket.url.is_secure,
-            user_agent=user_agent,
+            user_agent=UserAgentInfo.parse(websocket.headers.get("User-Agent", "")),
         )
-
-    @classmethod
-    def get_user_agent(cls, websocket: WebSocket) -> UserAgentInfo | None:
-        user_agent_string = websocket.headers.get("User-Agent")
-        if user_agent_string is None:
-            return
-
-        try:
-            return UserAgentInfo.parse(user_agent_string)
-        except Exception as e:
-            logger.exception(f"Error parsing user-agent string {user_agent_string!r}: {e}")

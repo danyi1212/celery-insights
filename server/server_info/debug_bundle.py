@@ -61,17 +61,6 @@ async def generate_bundle_file(data: DebugBundleData) -> BytesIO:
     return buffer
 
 
-def get_user_agent(request: Request) -> UserAgentInfo | None:
-    user_agent_string = request.headers.get("User-Agent")
-    if user_agent_string:
-        return
-    try:
-        return UserAgentInfo.parse(user_agent_string)
-    except Exception as e:
-        logger.exception(f"Failed to parse user agent header {user_agent_string!r}: {e}")
-        return
-
-
 def get_state_dump() -> StateDump:
     return StateDump(
         tasks=[Task.from_celery_task(task) for _, task in state.tasks_by_time()],
@@ -84,7 +73,7 @@ async def create_debug_bundle(request: Request, client_info: ClientDebugInfo) ->
         DebugBundleData(
             settings=Settings(),
             log_path=LOG_FILE_PATH,
-            browser=get_user_agent(request),
+            browser=UserAgentInfo.parse(request.headers.get("User-Agent")),
             client_info=client_info,
             connections=list(events_manager.get_clients()),
             state_dump=get_state_dump(),
