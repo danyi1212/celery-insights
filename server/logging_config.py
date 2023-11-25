@@ -29,10 +29,12 @@ LOGGING_CONFIG = {
             "stream": "ext://sys.stdout",
         },
         "file": {
-            "class": "logging.FileHandler",
+            "class": "logging.RotatingFileHandler",
             "formatter": "file",
             "filename": LOG_FILE_PATH,
             "encoding": "utf-8",
+            "maxBytes": 10 * 2 ** 20,  # 10Mb
+            "backupCount": 1,
         },
     },
     "root": {
