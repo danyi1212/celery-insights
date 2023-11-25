@@ -2,30 +2,16 @@ import json
 from asyncio import Queue
 
 import pytest
-from polyfactory.factories.pydantic_factory import ModelFactory
 from pytest_mock import MockerFixture
 
 from events.broadcaster import EventBroadcaster, parse_event, parse_task_event, parse_worker_event
 from events.exceptions import InconsistentStateStoreError, InvalidEventError
+from events.factories import EventMessageFactory
 from events.models import EventCategory, EventMessage, EventType
 from events.receiver import state
-from tasks.model import Task
-from workers.models import CPULoad, Worker
+from tasks.factories import TaskFactory
+from workers.factories import WorkerFactory
 from ws.managers import events_manager
-
-
-class WorkerFactory(ModelFactory[Worker]):
-    __model__ = Worker
-    cpu_load = CPULoad(0, 0, 0)
-
-
-class TaskFactory(ModelFactory[Task]):
-    __model__ = Task
-
-
-class EventMessageFactory(ModelFactory[EventMessage]):
-    __model__ = EventMessage
-    data = TaskFactory
 
 
 @pytest.fixture()
