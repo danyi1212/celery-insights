@@ -21,8 +21,12 @@ logger = logging.getLogger(__name__)
 
 
 def dump_model(file: zipfile.ZipFile, filename: str, model: Any) -> None:
-    settings_json = to_json(model, indent=4)
-    file.writestr(filename, settings_json)
+    try:
+        settings_json = to_json(model, indent=4)
+    except Exception as e:
+        logger.exception(f"Failed to dump object {model!r} to file {filename!r}: {e}")
+    else:
+        file.writestr(filename, settings_json)
 
 
 async def dump_file(file: zipfile.ZipFile, filename: str, path: AsyncPath) -> None:
@@ -37,7 +41,7 @@ async def dump_file(file: zipfile.ZipFile, filename: str, path: AsyncPath) -> No
 class DebugBundleData(NamedTuple):
     settings: Settings
     log_path: str
-    browser: UserAgentInfo | None
+    browser: UserAgentInfo
     client_info: ClientDebugInfo
     connections: list[ClientInfo]
     state_dump: StateDump

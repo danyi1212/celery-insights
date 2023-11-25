@@ -10,14 +10,14 @@ from pydantic import BaseModel, Field
 from starlette.requests import Request
 
 from tasks.model import Task
-from workers.models import Worker
+from workers.models import CPULoad, Worker
 
 logger = logging.getLogger(__name__)
 start_time = time.time()
 
 
 class ServerInfo(BaseModel):
-    cpu_usage: tuple[float, float, float] = Field(description="CPU load average in last 1, 5 and 15 minutes")
+    cpu_usage: CPULoad = Field(description="CPU load average in last 1, 5 and 15 minutes")
     memory_usage: float = Field(description="Memory Usage in KB")
     uptime: float = Field(description="Server Uptime in seconds")
     server_hostname: str = Field(description="Server Hostname")
