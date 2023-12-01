@@ -16,6 +16,7 @@ Try Celery Insights and transform the way you monitor your Celery cluster!
 ## Installation
 
 Celery Insights is provided as a Docker image and can be launched using a single command:
+
 ```shell
 docker run -p 8555:8555 --name celery-insights ghcr.io/danyi1212/celery-insights:latest
 ```
@@ -23,15 +24,25 @@ docker run -p 8555:8555 --name celery-insights ghcr.io/danyi1212/celery-insights
 Next, navigate to http://localhost:8555/ and begin the welcome tour.
 
 ### Advanced setup
+
 Celery Insights comes pre-configured for localhost Redis as Result Backend and RabbitMQ as Broker.
 
-Utilize the [BROKER_URL](CONFIGURATION.md#brokerurl) and [RESULT_BACKEND](CONFIGURATION.md#resultbackend) environment variables to customize the
+Utilize the [BROKER_URL](CONFIGURATION.md#brokerurl) and [RESULT_BACKEND](CONFIGURATION.md#resultbackend) environment
+variables to customize the
 configuration for your specific setup.
+
+If your setup requires
+[extra Celery dependencies](https://docs.celeryq.dev/en/main/getting-started/introduction.html#bundles)
+(e.g. msgpack, sqs, etc.), you may use the `celery-insights-all` Docker image instead.
+
 For instance, the following example demonstrates a setup with Redis as the Broker and Memcache as the Result Backend:
+
 ```shell
-docker run -p 8555:8555 --name celery-insights -e BROKER_URL=redis://host.docker.internal:6379/0 -e RESULT_BACKEND=cache+memcached://host.docker.internal:11211/ ghcr.io/danyi1212/celery-insights:latest
+docker run -p 8555:8555 --name celery-insights -e BROKER_URL=redis://host.docker.internal:6379/0 -e RESULT_BACKEND=cache+memcached://host.docker.internal:11211/ ghcr.io/danyi1212/celery-insights-all:latest
 ```
-If you need more advanced Celery configuration, you can configure using a [Config File](CONFIGURATION.md#setup-with-config-file).
+
+If you need more advanced Celery configuration, you can configure using
+a [Config File](CONFIGURATION.md#setup-with-config-file).
 
 ### Asking Questions and Reporting Bugs
 

@@ -8,6 +8,11 @@ By default, Celery Insights uses only Broker URL and Result Backend to connect t
 In case you have set up a [Config File](#setup-with-config-file),
 Celery Insights will prefer it over the `BROKER_URL` and `RESULT_BACKEND` environment variables.
 
+If your setup requires
+[extra Celery dependencies](https://docs.celeryq.dev/en/main/getting-started/introduction.html#bundles)
+(e.g. msgpack, sqs, etc.), you may use the `celery-insights-all` Docker image instead.
+
+
 > :exclamation: Tip
 >
 > If you want Celery Insights to access a local service, like a Redis container, use `host.docker.internal` instead
@@ -102,8 +107,8 @@ docker run -v ./config.py:/app/config.py -p 8555:8555 --name celery-insights ghc
 
 ## Support chart
 
-:white_check_mark: - Supported and tested
-:heavy_check_mark: - Supported
+:white_check_mark: - Fully Supported
+:heavy_check_mark: - Supported with `celery-insights-all`
 :ballot_box_with_check: - Limited features
 :x: - Not supported
 
