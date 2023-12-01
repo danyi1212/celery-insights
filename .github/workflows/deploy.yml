@@ -56,6 +56,6 @@ jobs:
         with:
           context: .
           push: true
-          build-args: ${{ matrix.variant && 'VARIANT=' + matrix.variant || '' }}
+          build-args: ${{ matrix.variant == 'full' && 'VARIANT=full' || '' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
