@@ -27,14 +27,18 @@ WORKDIR /app
 # For health check
 RUN apk --no-cache add curl
 
+ENV LOG_FILE_PATH=/app/logs/app.log
+RUN mkdir /app/logs
+
 # Avoid running as root
 RUN adduser -D myuser
+RUN chown myuser:myuser /app/logs
 USER myuser
 
 # Setup python
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip --no-warn-script-location
 COPY --from=requirements-stage /tmp/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir --upgrade -r ./requirements.txt
+RUN pip install --no-cache-dir --upgrade -r ./requirements.txt --no-warn-script-location
 COPY ./server ./
 
 # Copy front static files
