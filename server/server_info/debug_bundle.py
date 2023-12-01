@@ -50,7 +50,7 @@ class DebugBundleData(NamedTuple):
 
 async def generate_bundle_file(data: DebugBundleData) -> BytesIO:
     buffer = BytesIO()
-    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as file:
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as file:
         async with asyncio.TaskGroup() as tg:
             tg.create_task(dump_file(file, "config.py", AsyncPath(data.settings.config_path)))
             tg.create_task(dump_file(file, "app.log", AsyncPath(data.log_path)))

@@ -13,10 +13,7 @@ tasks_router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
 @tasks_router.get("")
 def get_tasks(request: Request, limit: int = 1000, offset: int = 0) -> Paginated[Task]:
-    items = (
-        Task.from_celery_task(task)
-        for _, task in state.tasks_by_time()
-    )
+    items = (Task.from_celery_task(task) for _, task in state.tasks_by_time())
     return get_paginated_response(items, len(state.tasks), request, limit, offset)
 
 

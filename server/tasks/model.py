@@ -57,7 +57,7 @@ class Task(BaseModel):
             id=task.id,
             type=task.name,
             state=task.state,
-
+            # timings
             sent_at=task.sent or task.timestamp,
             received_at=task.received,
             started_at=task.started,
@@ -68,7 +68,7 @@ class Task(BaseModel):
             rejected_at=task.rejected,
             runtime=task.runtime,
             last_updated=task.timestamp,
-
+            # metadata
             args=task.args,
             kwargs=task.kwargs,
             eta=task.eta,

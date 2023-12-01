@@ -2,11 +2,11 @@
 
 Welcome to Celery Insights, the ultimate monitoring tool for your Celery cluster!
 
-With Celery Insights, you can effortlessly track your Celery cluster in real-time. 
-Our modern web interface enables you to conveniently view worker status, 
+With Celery Insights, you can effortlessly track your Celery cluster in real-time.
+Our modern web interface enables you to conveniently view worker status,
 task information, and workflow graphs, all updated using websockets.
 
-Inspired by Celery Flower, this tool takes Celery monitoring to the next level.  
+Inspired by Celery Flower, this tool takes Celery monitoring to the next level.
 Try Celery Insights and transform the way you monitor your Celery cluster!
 
 <p align="center">
@@ -43,7 +43,7 @@ For any questions, suggestions, or feature requests, please join the conversatio
 
 > :warning: **WARNING**
 >
-> If you have discovered a security vulnerability, please **DO NOT** file a public issue.  
+> If you have discovered a security vulnerability, please **DO NOT** file a public issue.
 > Instead, please report them directly to danyi1212@users.noreply.github.com.
 
 ## Contributing

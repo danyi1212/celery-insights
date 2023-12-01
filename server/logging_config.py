@@ -8,7 +8,7 @@ LOGGING_CONFIG = {
         "color": {
             "()": "colorlog.ColoredFormatter",
             "format": "%(log_color)s[%(asctime)s.%(msecs)03d] %(levelname)s - %(name)s:%(lineno)d | %(message)s",
-            'datefmt': "%H:%M:%S",
+            "datefmt": "%H:%M:%S",
             "log_colors": {
                 "DEBUG": "cyan",
                 "INFO": "green",
@@ -19,7 +19,7 @@ LOGGING_CONFIG = {
         },
         "file": {
             "format": "[%(asctime)s.%(msecs)03d] %(levelname)s - %(name)s.%(funcName)s::%(lineno)d | %(message)s",
-            'datefmt': "%Y-%m-%d %H:%M:%S",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
         },
     },
     "handlers": {
@@ -33,7 +33,7 @@ LOGGING_CONFIG = {
             "formatter": "file",
             "filename": LOG_FILE_PATH,
             "encoding": "utf-8",
-            "maxBytes": 10 * 2 ** 20,  # 10Mb
+            "maxBytes": 10 * 2**20,  # 10Mb
             "backupCount": 1,
         },
     },
@@ -53,7 +53,6 @@ LOGGING_CONFIG = {
         "server_info": {"level": "INFO"},
         "celery_app": {"level": "INFO"},
         "lifespan": {"level": "INFO"},
-
         # Third-party loggers
         "asyncio": {"level": "INFO"},
         "concurrent": {"level": "INFO"},

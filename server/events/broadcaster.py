@@ -47,7 +47,7 @@ async def broadcast_parsed_event(event: dict) -> None:
 
 
 def parse_event(event: dict) -> EventMessage:
-    event_type = event.get('type')
+    event_type = event.get("type")
     if event_type is None:
         raise InvalidEventError(f"Received event without type: {event}")
 
