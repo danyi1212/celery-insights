@@ -1,6 +1,8 @@
+import os
+
 from settings import Settings
 
-LOG_FILE_PATH = "app.log"
+LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "app.log")
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": True,
@@ -29,7 +31,7 @@ LOGGING_CONFIG = {
             "stream": "ext://sys.stdout",
         },
         "file": {
-            "class": "logging.RotatingFileHandler",
+            "class": "logging.handlers.RotatingFileHandler",
             "formatter": "file",
             "filename": LOG_FILE_PATH,
             "encoding": "utf-8",
