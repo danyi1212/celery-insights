@@ -1,3 +1,4 @@
+import { DownloadDebugBundleButton } from "@components/settings/DownloadDebugBundleButton"
 import OnlineClientsPanel from "@components/settings/OnlineClientsPanel"
 import { ServerInfoPanel } from "@components/settings/ServerInfoPanel"
 import SettingsPanel from "@components/settings/SettingsPanel"
@@ -13,6 +14,9 @@ const SettingsPage: React.FC = () => {
             <Grid item xs={12} md={6} lg={4}>
                 <ServerInfoPanel />
                 <OnlineClientsPanel />
+            </Grid>
+            <Grid item xs={12} justifyContent="center" alignItems="center">
+                <DownloadDebugBundleButton sx={{ mx: 5 }} />
             </Grid>
         </Grid>
     )

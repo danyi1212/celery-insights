@@ -28,18 +28,24 @@ export class DemoSettingsService {
                 port: 8080,
                 state: WebSocketState._1,
                 is_secure: true,
-                os: "Windows",
-                os_version: "10.0",
-                device_family: "Desktop",
-                device_brand: "Apple",
-                device_model: "Mac",
-                browser: "Chrome",
-                browser_version: "90.0.4430.85",
+                user_agent: {
+                    os: "Windows",
+                    os_version: "10.0",
+                    device_family: "Desktop",
+                    device_brand: "Apple",
+                    device_model: "Mac",
+                    browser: "Chrome",
+                    browser_version: "90.0.4430.85",
+                },
             },
         ])
     }
 
     clearState(force: boolean = false): Promise<boolean> {
         return force ? Promise.resolve(true) : Promise.reject(false)
+    }
+
+    downloadDebugBundle(): Promise<null> {
+        return Promise.reject()
     }
 }
