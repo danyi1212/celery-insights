@@ -24,9 +24,7 @@ repos:
       - id: poetry-check
         files: pyproject.toml$
         types: [ file ]
-      - id: poetry-lock
-        files: pyproject.toml$
-        types: [ file ]
+        args: [ --lock ]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.1.6

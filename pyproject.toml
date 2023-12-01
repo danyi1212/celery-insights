@@ -81,5 +81,5 @@ select = [
     "RUF", # ruff rules
 ]
 
-[tool.ruff.lint.flake8-tidy-imports]
+[tool.ruff.flake8-tidy-imports]
 ban-relative-imports = "all"
