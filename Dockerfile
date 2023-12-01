@@ -5,9 +5,16 @@ WORKDIR /tmp
 # Setup python
 RUN pip install --upgrade pip
 RUN pip install poetry
+RUN poetry self add poetry-plugin-export
 
 COPY ./pyproject.toml ./poetry.lock* /tmp/
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+
+ARG VARIANT=regular
+RUN if [ $VARIANT = "all" ]; then \
+        poetry export -f requirements.txt --output requirements.txt --with full; \
+    else \
+        poetry export -f requirements.txt --output requirements.txt; \
+    fi
 
 FROM node:18-alpine AS front-build
 
