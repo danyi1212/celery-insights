@@ -10,7 +10,7 @@ python = "^3.11"
 fastapi = "^0.104.1"
 python-dotenv = "^1.0.0"
 uvicorn = "^0.24.0"
-celery = { version = "^5.3.5", extras = [
+celery = { version = "^5.3.6", extras = [
     "arangodb",
     "auth",
     "couchdb",
@@ -34,7 +34,7 @@ websockets = "^12.0"
 fastapi-cache2 = "^0.2.1"
 user-agents = "^2.2.0"
 aiopath = "^0.6.11"
-pydantic = "^2.5.1"
+pydantic = "^2.5.2"
 pydantic-settings = "^2.1.0"
 colorlog = "^6.7.0"
 
