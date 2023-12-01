@@ -71,13 +71,14 @@ async def test_event_parsing_failure(broadcaster, mocker: MockerFixture):
 
 
 @pytest.mark.parametrize(
-    "event,match", [
+    "event,match",
+    [
         ({}, "Received event without type"),
         ({"type": "foo-bar"}, "Unknown event category 'foo'"),
         ({"type": "task-started"}, "Task event 'task-started' is missing uuid"),
         ({"type": "worker-started"}, "Worker event 'worker-started' is missing hostname"),
-    ]
-    )
+    ],
+)
 def test_parse_invalid_event(event, match, mocker: MockerFixture):
     mocker.patch.object(state, "event")
 
@@ -86,11 +87,12 @@ def test_parse_invalid_event(event, match, mocker: MockerFixture):
 
 
 @pytest.mark.parametrize(
-    "event,match", [
+    "event,match",
+    [
         ({"type": "worker-started", "hostname": "worker"}, "Could not find worker 'worker' in state"),
         ({"type": "task-started", "uuid": "task"}, "Could not find task 'task' in state"),
-    ]
-    )
+    ],
+)
 def test_parse_event_missing_object(event, match, mocker: MockerFixture):
     mocker.patch.object(state, "event")
     mocker.patch.object(state.tasks, "get", return_value=None)

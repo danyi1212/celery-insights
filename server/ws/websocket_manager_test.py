@@ -5,7 +5,6 @@ from ws.websocket_manager import WebsocketManager
 
 
 class FakeWebSocket:
-
     def __init__(self, name: str):
         self.client = name
 

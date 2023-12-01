@@ -62,12 +62,10 @@ class Broker(BaseModel):
 
 class Pool(BaseModel):
     max_concurrency: int = Field(
-        description="Maximum number of child parallelism (processes/threads)",
-        alias="max-concurrency"
+        description="Maximum number of child parallelism (processes/threads)", alias="max-concurrency"
     )
     max_tasks_per_child: int | str = Field(
-        description="Maximum number of tasks to be executed before child recycled",
-        alias="max-tasks-per-child"
+        description="Maximum number of tasks to be executed before child recycled", alias="max-tasks-per-child"
     )
     processes: list[int] = Field(description="Child process IDs (or thread IDs)")
     timeouts: tuple[int, int] = Field(description="Soft time limit and hard time limit, in seconds")

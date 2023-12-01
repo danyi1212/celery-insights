@@ -48,6 +48,7 @@ pytest-cov = "^4.0.0"
 polyfactory = "^2.0.0a1"
 ruff = "^0.0.261"
 ipython = "^8.14.0"
+pre-commit = "^3.5.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -79,3 +80,6 @@ select = [
     "PD", # pandas
     "RUF", # ruff rules
 ]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
