@@ -44,7 +44,7 @@ class ServerInfo(BaseModel):
             server_os=platform.system(),
             server_name=platform.node(),
             python_version=platform.python_version(),
-            task_count=state.task_count,
+            task_count=len(state.tasks),
             tasks_max_count=state.max_tasks_in_memory,
             worker_count=len(state.workers),
             worker_max_count=state.max_workers_in_memory,
