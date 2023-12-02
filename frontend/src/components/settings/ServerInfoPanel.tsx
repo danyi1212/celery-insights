@@ -3,9 +3,12 @@ import LinearProgressWithLabel from "@components/common/LinearProgressWithLabel"
 import Panel from "@components/common/Panel"
 import VersionCheckIcon from "@components/settings/VersionCheckIcon"
 import { useClient } from "@hooks/useClient"
+import RefreshIcon from "@mui/icons-material/Refresh"
+import LoadingButton from "@mui/lab/LoadingButton"
 import Box from "@mui/material/Box"
 import Button from "@mui/material/Button"
 import Grid from "@mui/material/Grid"
+import IconButton from "@mui/material/IconButton"
 import Stack from "@mui/material/Stack"
 import Tooltip from "@mui/material/Tooltip"
 import { resetState } from "@stores/useStateStore"
@@ -42,7 +45,9 @@ export const ServerInfoPanel: React.FC = () => {
     })
 
     const [isReset, setIsReset] = useState<boolean | null>(null)
-    const handleResetState = () =>
+    const [isResetLoading, setIsResetLoading] = useState(false)
+    const handleResetState = () => {
+        setIsResetLoading(true)
         client.settings
             .clearState(isReset === true)
             .then((res) => {
@@ -53,7 +58,8 @@ export const ServerInfoPanel: React.FC = () => {
                 }
             })
             .catch(() => setIsReset(false))
-
+            .finally(() => setIsResetLoading(false))
+    }
     useEffect(() => {
         const token = setTimeout(() => setIsReset(null), 1000 * 10)
         return () => clearTimeout(token)
@@ -65,15 +71,25 @@ export const ServerInfoPanel: React.FC = () => {
             loading={isLoading}
             error={error}
             actions={
-                <Tooltip title={isReset ? "Clear all server state, including running tasks" : "Clear all server state"}>
-                    <Button
-                        variant="outlined"
-                        color={isReset === false ? "error" : "secondary"}
-                        onClick={handleResetState}
+                <>
+                    <Tooltip
+                        title={isReset ? "Clear all server state, including running tasks" : "Clear all server state"}
                     >
-                        {isReset === null ? "Reset" : isReset ? "Force Reset" : "Error"}
-                    </Button>
-                </Tooltip>
+                        <LoadingButton
+                            variant="outlined"
+                            color={isReset === false ? "error" : "secondary"}
+                            onClick={handleResetState}
+                            loading={isResetLoading}
+                        >
+                            {isReset === null ? "Reset" : isReset ? "Force Reset" : "Error"}
+                        </LoadingButton>
+                    </Tooltip>
+                    <Tooltip title="Refresh Server Info">
+                        <IconButton color="secondary" onClick={() => refetch().then()} disabled={isLoading}>
+                            <RefreshIcon />
+                        </IconButton>
+                    </Tooltip>
+                </>
             }
         >
             <Grid container spacing={2} p={2}>

@@ -22,7 +22,7 @@ repos:
     rev: 1.7.0
     hooks:
       - id: poetry-check
-        files: pyproject.toml$
+        files: pyproject\.toml$
         types: [ file ]
         args: [ --lock ]
 
