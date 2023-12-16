@@ -3,7 +3,7 @@ from typing import Any, Self
 
 from celery import states
 from celery.events.state import Task as CeleryTask
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from common.types import EpochTimestamp
 
@@ -99,3 +99,11 @@ class TaskResult(BaseModel):
     kwargs: dict[str, Any] = Field(description="Task keyword arguments")
     retries: int = Field(description="Task retries count")
     worker: str | None = Field(None, description="Executing worker id")
+
+    @field_validator("result", mode="before")
+    @classmethod
+    def result_serializer(cls, value: Any) -> Any:
+        if isinstance(value, Exception):
+            return repr(value)
+        else:
+            return value
