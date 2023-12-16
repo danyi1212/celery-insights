@@ -20,12 +20,12 @@ async def get_server_info(request: Request) -> ServerInfo:
 
 
 @settings_router.get("/clients")
-def get_clients() -> list[ClientInfo]:
+async def get_clients() -> list[ClientInfo]:
     return list(events_manager.get_clients())
 
 
 @settings_router.post("/clear")
-def clear_state(*, force: bool = False) -> bool:
+async def clear_state(*, force: bool = False) -> bool:
     state.clear(ready=not force)
     return True
 

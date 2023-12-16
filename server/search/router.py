@@ -10,7 +10,7 @@ search_router = APIRouter(prefix="/api/search", tags=["search"])
 
 
 @search_router.get("/")
-def search(query: str, limit: int = 10) -> SearchResults:
+async def search(query: str, limit: int = 10) -> SearchResults:
     query_re = re.compile(query, re.IGNORECASE)
     workers_iter = search_workers(query_re)
     tasks_iter = search_tasks(query_re)
