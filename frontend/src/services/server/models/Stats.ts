@@ -10,7 +10,7 @@ export type Stats = {
     /**
      * Current broker stats
      */
-    broker: Broker;
+    broker?: Broker;
     /**
      * Current logical clock time
      */
@@ -26,7 +26,7 @@ export type Stats = {
     /**
      * Current pool stats
      */
-    pool: Pool;
+    pool?: Pool;
     /**
      * Current prefetch task queue for consumer
      */
@@ -34,10 +34,10 @@ export type Stats = {
     /**
      * Operating System statistics
      */
-    rusage: Record<string, any>;
+    rusage?: Record<string, any>;
     /**
      * Count of accepted tasks by type
      */
-    total: Record<string, number>;
+    total?: Record<string, number>;
 };
 

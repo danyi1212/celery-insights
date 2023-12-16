@@ -9,15 +9,15 @@ export type QueueInfo = {
     /**
      * Name of the queue
      */
-    name: string;
+    name?: (string | null);
     /**
      * Exchange information
      */
-    exchange: ExchangeInfo;
+    exchange?: ExchangeInfo;
     /**
      * Routing key for the queue
      */
-    routing_key: string;
+    routing_key?: (string | null);
     /**
      * Arguments for the queue
      */
@@ -33,19 +33,19 @@ export type QueueInfo = {
     /**
      * Queue will survive broker restart
      */
-    durable: boolean;
+    durable?: boolean;
     /**
      * Queue can be used by only one consumer
      */
-    exclusive: boolean;
+    exclusive?: boolean;
     /**
      * Queue will be deleted after last consumer unsubscribes
      */
-    auto_delete: boolean;
+    auto_delete?: boolean;
     /**
      * Workers will not acknowledge task messages
      */
-    no_ack: boolean;
+    no_ack?: boolean;
     /**
      * Queue alias if used for queue names
      */

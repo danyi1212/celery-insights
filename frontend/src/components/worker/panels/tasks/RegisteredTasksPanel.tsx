@@ -92,7 +92,7 @@ const RegisteredTasksPanel: React.FC<RegisteredTasksPanelProps> = ({ workerId, h
                             key={taskType}
                             taskType={taskType}
                             workerId={workerId}
-                            count={stats?.total[taskType]}
+                            count={stats?.total?.[taskType]}
                         />
                     ))}
                 </List>

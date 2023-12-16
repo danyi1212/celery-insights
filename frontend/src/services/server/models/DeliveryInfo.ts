@@ -7,7 +7,7 @@ export type DeliveryInfo = {
     /**
      * Broker exchange used
      */
-    exchange: string;
+    exchange?: (string | null);
     /**
      * Message priority
      */
@@ -15,10 +15,10 @@ export type DeliveryInfo = {
     /**
      * Message sent back to queue
      */
-    redelivered: boolean;
+    redelivered?: boolean;
     /**
      * Message routing key used
      */
-    routing_key: string;
+    routing_key?: (string | null);
 };
 

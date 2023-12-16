@@ -7,6 +7,6 @@ interface ReservedTaskListItemProps {
 }
 
 const ReservedTaskListItem: React.FC<ReservedTaskListItemProps> = ({ task }) => {
-    return <TaskListItem task={task} subtitle={"Routing key: " + task.delivery_info.routing_key} />
+    return <TaskListItem task={task} subtitle={"Routing key: " + task.delivery_info?.routing_key} />
 }
 export default ReservedTaskListItem
