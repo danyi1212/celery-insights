@@ -50,7 +50,7 @@ export class DemoWorkersService {
                     },
                     pool: {
                         "max-concurrency": 16,
-                        "max-tasks-per-child": "N/A",
+                        "max-tasks-per-child": 0,
                         processes: fakePIDs,
                         timeouts: [1740, 1800],
                         "put-guarded-by-semaphore": false,

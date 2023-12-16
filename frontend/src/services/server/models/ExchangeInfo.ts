@@ -7,10 +7,10 @@ export type ExchangeInfo = {
     /**
      * Name of exchange
      */
-    name: string;
+    name?: (string | null);
     /**
      * Exchange routing type
      */
-    type: string;
+    type?: (string | null);
 };
 

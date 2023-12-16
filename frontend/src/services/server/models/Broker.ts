@@ -11,31 +11,31 @@ export type Broker = {
     /**
      * Heartbeat interval in seconds
      */
-    heartbeat: number;
+    heartbeat?: number;
     /**
      * Node name of remote broker
      */
-    hostname: string;
+    hostname?: (string | null);
     /**
      * Login method used to connect to the broker
      */
-    login_method: string;
+    login_method?: (string | null);
     /**
      * Broker port
      */
-    port: number;
+    port?: number;
     /**
      * Whether to use ssl connections
      */
-    ssl: boolean;
+    ssl?: boolean;
     /**
      * Name of transport used (e.g, amqp / redis)
      */
-    transport: string;
+    transport?: (string | null);
     /**
      * Additional options used to connect to broker
      */
-    transport_options: Record<string, any>;
+    transport_options?: Record<string, any>;
     /**
      * Prefix to be added to broker uri
      */
@@ -43,10 +43,10 @@ export type Broker = {
     /**
      * User ID used to connect to the broker with
      */
-    userid: string;
+    userid?: (string | null);
     /**
      * Virtual host used
      */
-    virtual_host: string;
+    virtual_host?: (string | null);
 };
 

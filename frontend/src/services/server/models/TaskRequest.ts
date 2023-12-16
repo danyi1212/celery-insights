@@ -29,11 +29,11 @@ export type TaskRequest = {
     /**
      * Delivery Information about the task Message
      */
-    delivery_info: DeliveryInfo;
+    delivery_info?: DeliveryInfo;
     /**
      * Whether the task message is acknowledged
      */
-    acknowledged: boolean;
+    acknowledged?: boolean;
     /**
      * When the task has started by the worker
      */
