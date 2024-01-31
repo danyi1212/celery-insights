@@ -17,9 +17,9 @@ const FacetSet: React.FC<FacetSetProps> = ({ tasks, filters, setFilter }) => {
         () =>
             countUniqueProperties(
                 tasks,
-                facetConfigs.map((facetConfig) => facetConfig.property)
+                facetConfigs.map((facetConfig) => facetConfig.property),
             ),
-        [tasks, facetConfigs]
+        [tasks, facetConfigs],
     )
 
     return (

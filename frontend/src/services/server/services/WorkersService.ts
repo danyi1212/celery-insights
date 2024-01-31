@@ -1,3 +1,4 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -21,7 +22,7 @@ export class WorkersService {
      * @throws ApiError
      */
     public getWorkers(
-        alive?: boolean,
+        alive?: (boolean | null),
     ): CancelablePromise<Array<Worker>> {
         return this.httpRequest.request({
             method: 'GET',
@@ -45,7 +46,7 @@ export class WorkersService {
      */
     public getWorkerStats(
         timeout: number = 10,
-        worker?: string,
+        worker?: (string | null),
     ): CancelablePromise<Record<string, Stats>> {
         return this.httpRequest.request({
             method: 'GET',
@@ -70,7 +71,7 @@ export class WorkersService {
      */
     public getWorkerRegistered(
         timeout: number = 10,
-        worker?: string,
+        worker?: (string | null),
     ): CancelablePromise<Record<string, Array<string>>> {
         return this.httpRequest.request({
             method: 'GET',
@@ -95,7 +96,7 @@ export class WorkersService {
      */
     public getWorkerRevoked(
         timeout: number = 10,
-        worker?: string,
+        worker?: (string | null),
     ): CancelablePromise<Record<string, Array<string>>> {
         return this.httpRequest.request({
             method: 'GET',
@@ -120,7 +121,7 @@ export class WorkersService {
      */
     public getWorkerScheduled(
         timeout: number = 10,
-        worker?: string,
+        worker?: (string | null),
     ): CancelablePromise<Record<string, Array<ScheduledTask>>> {
         return this.httpRequest.request({
             method: 'GET',
@@ -145,7 +146,7 @@ export class WorkersService {
      */
     public getWorkerReserved(
         timeout: number = 10,
-        worker?: string,
+        worker?: (string | null),
     ): CancelablePromise<Record<string, Array<TaskRequest>>> {
         return this.httpRequest.request({
             method: 'GET',
@@ -170,7 +171,7 @@ export class WorkersService {
      */
     public getWorkerActive(
         timeout: number = 10,
-        worker?: string,
+        worker?: (string | null),
     ): CancelablePromise<Record<string, Array<TaskRequest>>> {
         return this.httpRequest.request({
             method: 'GET',
@@ -195,7 +196,7 @@ export class WorkersService {
      */
     public getWorkerQueues(
         timeout: number = 10,
-        worker?: string,
+        worker?: (string | null),
     ): CancelablePromise<Record<string, Array<QueueInfo>>> {
         return this.httpRequest.request({
             method: 'GET',

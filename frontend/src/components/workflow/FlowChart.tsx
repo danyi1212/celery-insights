@@ -56,7 +56,7 @@ const getChildMap = (tasks: StateTask[]): Map<string, StateTask[]> => {
 export const getFlowGraph = (
     tasks: StateTask[],
     rootTaskId: string,
-    initialPosition?: XYPosition
+    initialPosition?: XYPosition,
 ): {
     nodes: Node[]
     edges: Edge[]
@@ -132,7 +132,7 @@ const FlowChart: React.FC<FlowChartProps> = ({ tasks, rootTaskId, currentTaskId 
                 })
             else flow.setCenter(0, 0, { zoom: FOCUS_ZOOM, duration: ZOOM_ANIMATION_SPEED })
         },
-        [flow, nodes]
+        [flow, nodes],
     )
 
     const fitView = useCallback(() => flow.fitView({ duration: ZOOM_ANIMATION_SPEED }), [flow])

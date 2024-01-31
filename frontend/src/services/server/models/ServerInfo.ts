@@ -1,9 +1,15 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
 
+import type { CPULoad } from './CPULoad';
+
 export type ServerInfo = {
-    cpu_usage: Array<any>;
+    /**
+     * CPU load average in last 1, 5 and 15 minutes
+     */
+    cpu_usage: CPULoad;
     /**
      * Memory Usage in KB
      */

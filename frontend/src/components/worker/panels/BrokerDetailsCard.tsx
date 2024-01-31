@@ -23,9 +23,9 @@ const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ hostname, ...prop
                         label="Hostname"
                         value={
                             <Box display="flex" alignItems="center">
-                                {stats?.broker.hostname}
-                                <Tooltip title={stats?.broker.ssl ? "SSL Enabled" : "SSL Disabled"} describeChild>
-                                    {stats?.broker.ssl ? (
+                                {stats?.broker?.hostname}
+                                <Tooltip title={stats?.broker?.ssl ? "SSL Enabled" : "SSL Disabled"} describeChild>
+                                    {stats?.broker?.ssl ? (
                                         <LockIcon fontSize="small" color="success" sx={{ mx: 1 }} />
                                     ) : (
                                         <LockOpenIcon fontSize="small" color="error" sx={{ mx: 1 }} />
@@ -36,25 +36,25 @@ const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ hostname, ...prop
                     />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                    <DetailItem label="Port" value={stats?.broker.port} />
+                    <DetailItem label="Port" value={stats?.broker?.port} />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                    <DetailItem label="Transport" value={stats?.broker.transport} />
+                    <DetailItem label="Transport" value={stats?.broker?.transport} />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                    <DetailItem label="User ID" value={stats?.broker.userid} />
+                    <DetailItem label="User ID" value={stats?.broker?.userid} />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                    <DetailItem label="Timeout" value={stats?.broker.connection_timeout ?? "Unlimited"} />
+                    <DetailItem label="Timeout" value={stats?.broker?.connection_timeout ?? "Unlimited"} />
                 </Grid>
                 <Grid item xs={12} md={6}>
                     <DetailItem
                         label="Heartbeat Interval"
-                        value={formatSecondsDuration(stats?.broker.heartbeat || 0)}
+                        value={formatSecondsDuration(stats?.broker?.heartbeat || 0)}
                     />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                    <DetailItem label="Login Method" value={stats?.broker.login_method} />
+                    <DetailItem label="Login Method" value={stats?.broker?.login_method} />
                 </Grid>
             </Grid>
         </Panel>

@@ -1,12 +1,11 @@
 import WorkerQuickStatusList from "@components/worker/WorkerQuickStatusList"
 import MenuItem, { MenuLink } from "@layout/menu/MenuItem"
-import ApiIcon from "@mui/icons-material/Api"
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos"
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
-import InboxIcon from "@mui/icons-material/Inbox"
 import ManageSearchIcon from "@mui/icons-material/ManageSearch"
+import RssFeedIcon from "@mui/icons-material/RssFeed"
 import SettingsIcon from "@mui/icons-material/Settings"
-import SubjectIcon from "@mui/icons-material/Subject"
+import SpaceDashboardOutlinedIcon from "@mui/icons-material/SpaceDashboardOutlined"
 import { useMediaQuery, useTheme } from "@mui/material"
 import Collapse from "@mui/material/Collapse"
 import Divider from "@mui/material/Divider"
@@ -50,8 +49,8 @@ const StyledLogoContainer = styled(Link)({
 
 const menuLinks: MenuLink[] = [
     {
-        label: "Home",
-        icon: <InboxIcon />,
+        label: "Dashboard",
+        icon: <SpaceDashboardOutlinedIcon />,
         to: "/",
         external: false,
     },
@@ -62,21 +61,9 @@ const menuLinks: MenuLink[] = [
         external: false,
     },
     {
-        label: "API Explorer",
-        icon: <ApiIcon />,
-        to: "/docs",
-        external: true,
-    },
-    {
-        label: "API Docs",
-        icon: <SubjectIcon />,
-        to: "/redoc",
-        external: true,
-    },
-    {
-        label: "Settings",
-        icon: <SettingsIcon />,
-        to: "/settings",
+        label: "Live Events",
+        icon: <RssFeedIcon />,
+        to: "/raw_events",
         external: false,
     },
 ]
@@ -100,8 +87,8 @@ const Menu: React.FC = () => {
                                 ? "/LogoTextGreen.svg"
                                 : "/LogoGreen.svg"
                             : expanded
-                            ? "/LogoTextDark.svg"
-                            : "/LogoDark.svg"
+                              ? "/LogoTextDark.svg"
+                              : "/LogoDark.svg"
                     }
                     alt="logo"
                     style={{
@@ -119,6 +106,16 @@ const Menu: React.FC = () => {
             <Collapse in={expanded} unmountOnExit>
                 <WorkerQuickStatusList />
             </Collapse>
+            <Divider />
+            <MenuItem
+                link={{
+                    label: "Settings",
+                    icon: <SettingsIcon />,
+                    to: "/settings",
+                    external: false,
+                }}
+                expanded={expanded}
+            />
             <Divider />
             <ListItem disablePadding>
                 <Tooltip title={expanded ? "Collapse menu" : "Expand menu"} placement="right" arrow>

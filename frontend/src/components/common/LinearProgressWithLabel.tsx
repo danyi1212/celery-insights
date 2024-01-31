@@ -23,7 +23,7 @@ const LinearProgressWithLabel: React.FC<LinearProgressWithLabelProps> = ({
     const bufferPercentage = useMemo(() => Math.round(((buffer - min) * 100) / (max - min)), [buffer, min, max])
     const label = useMemo(
         () => (percentageLabel ? `${Math.round(percentage)}%` : `${value + min}/${max}`),
-        [percentageLabel, percentage, min, max, value]
+        [percentageLabel, percentage, min, max, value],
     )
     return (
         <Box display="flex" alignItems="center">

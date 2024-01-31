@@ -1,6 +1,9 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+
+import type { CPULoad } from './CPULoad';
 
 export type Worker = {
     /**
@@ -42,10 +45,10 @@ export type Worker = {
     /**
      * When worker will be considered offline
      */
-    heartbeat_expires?: number;
+    heartbeat_expires?: (number | null);
     /**
      * Host CPU load average in last 1, 5 and 15 minutes
      */
-    cpu_load?: Array<any>;
+    cpu_load?: (CPULoad | null);
 };
 

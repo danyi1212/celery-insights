@@ -17,7 +17,7 @@ const VersionCheckIcon: React.FC<VersionCheckIconProps> = ({ currentVersion, pro
     const { data, isLoading, error } = useGithubLatestRelease()
     const isUpdateAvailable = useMemo(
         () => data?.data.tag_name && currentVersion && semver.gt(data.data.tag_name, currentVersion),
-        [data?.data.tag_name, currentVersion]
+        [data?.data.tag_name, currentVersion],
     )
     if (isLoading)
         return (

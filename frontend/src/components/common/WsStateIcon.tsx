@@ -7,8 +7,6 @@ import Slide from "@mui/material/Slide"
 import Stack from "@mui/material/Stack"
 import Tooltip from "@mui/material/Tooltip"
 import Typography from "@mui/material/Typography"
-import useSettingsStore from "@stores/useSettingsStore"
-import { useStateStore } from "@stores/useStateStore"
 import React, { useEffect, useState } from "react"
 import { ReadyState } from "react-use-websocket"
 
@@ -40,23 +38,26 @@ const statusMeta: Record<ReadyState, Meta> = {
     },
 }
 
-const WSStatus: React.FC = () => {
-    const isDemo = useSettingsStore((state) => state.demo)
-    const status = useStateStore((store) => store.status)
-    const meta: Meta = isDemo
-        ? {
-              description: "Demo Mode",
-              icon: <OfflineBoltIcon color="primary" />,
-          }
-        : statusMeta[status]
+const demoMeta: Meta = {
+    description: "Demo Mode",
+    icon: <OfflineBoltIcon color="primary" />,
+}
 
+interface WsStateIconProps {
+    state: ReadyState
+    isDemo?: boolean
+}
+
+const WsStateIcon: React.FC<WsStateIconProps> = ({ state, isDemo }) => {
+    const meta: Meta = isDemo ? demoMeta : statusMeta[state]
     const [isOpen, setOpen] = useState(true)
 
     useEffect(() => {
         setOpen(true)
         const token = setTimeout(() => setOpen(false), 1000 * 5)
         return () => clearTimeout(token)
-    }, [status, isDemo])
+    }, [state, isDemo])
+
     return (
         <Stack direction="row" alignItems="center" p={1}>
             <Box overflow="hidden">
@@ -68,4 +69,4 @@ const WSStatus: React.FC = () => {
         </Stack>
     )
 }
-export default WSStatus
+export default WsStateIcon

@@ -12,7 +12,7 @@ import stc from "string-to-color"
 
 interface TaskAvatarProps extends AvatarProps {
     taskId: string
-    type: string | undefined
+    type: string | undefined | null
     status?: TaskState
     disableLink?: true
 }

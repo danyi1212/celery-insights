@@ -105,7 +105,7 @@ const TaskLifetimeChart: React.FC<TaskLifetimeChart> = ({ task }) => {
     const isRealtime = useMemo(
         () =>
             getReceivedAt(task) === undefined || getStartedAt(task) === undefined || getFinishedAt(task) === undefined,
-        [task]
+        [task],
     )
     const now = useNow(isRealtime ? REALTIME_INTERVAL : 0)
     const options = useMemo(() => getOptions(theme), [theme])

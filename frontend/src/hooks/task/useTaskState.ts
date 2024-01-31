@@ -23,7 +23,7 @@ const useTaskState = (taskId: string): TaskStateResult => {
             .then((task) =>
                 useStateStore.setState((state) => ({
                     tasks: state.tasks.set(task.id, translateTask(task)),
-                }))
+                })),
             )
             .catch((error) => setError(error))
             .finally(() => setLoading(false))

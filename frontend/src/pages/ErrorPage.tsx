@@ -18,7 +18,7 @@ const getErrorMessage = (error: unknown): ErrorMessage => {
         return {
             title: error.statusText,
             status: error.status,
-            message: error.error?.message || "Sorry, an unexpected error has occurred",
+            message: error.data?.message || "Sorry, an unexpected error has occurred",
         }
     } else if (error instanceof Error) {
         return {

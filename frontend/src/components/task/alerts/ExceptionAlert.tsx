@@ -17,7 +17,7 @@ import React, { useCallback, useState } from "react"
 
 interface ExceptionTracebackProps extends AlertProps {
     exception: string
-    traceback?: string
+    traceback?: string | null
     currentTaskId?: string
 }
 
@@ -35,8 +35,8 @@ const ExceptionTraceback: React.FC<ExceptionTracebackProps> = ({ exception, trac
                     })
                 return similar
             },
-            [largeScreen, currentTaskId, exception]
-        )
+            [largeScreen, currentTaskId, exception],
+        ),
     )
     const showSimilar = similarTasks.length > 0 && largeScreen
 

@@ -1,5 +1,6 @@
 import CopyLinkButton from "@components/common/CopyLinkButton"
 import TaskAvatar from "@components/task/TaskAvatar"
+import TaskTimer from "@components/task/TaskTimer"
 import { WorkflowChartType } from "@components/workflow/WorkflowGraph"
 import AccountTreeIcon from "@mui/icons-material/AccountTree"
 import ViewTimelineIcon from "@mui/icons-material/ViewTimeline"
@@ -61,6 +62,7 @@ const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setCha
             </Zoom>
             <Box flexGrow={1} />
             <Stack direction="row" justifyContent="space-between" spacing={1} sx={{ justifyContent: "center" }}>
+                {task && <TaskTimer task={task} sx={{ px: 1, my: "auto" }} align="center" />}
                 <Button
                     variant="text"
                     color="secondary"

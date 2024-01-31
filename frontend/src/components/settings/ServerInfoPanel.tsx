@@ -3,19 +3,95 @@ import LinearProgressWithLabel from "@components/common/LinearProgressWithLabel"
 import Panel from "@components/common/Panel"
 import VersionCheckIcon from "@components/settings/VersionCheckIcon"
 import { useClient } from "@hooks/useClient"
+import RefreshIcon from "@mui/icons-material/Refresh"
+import LoadingButton from "@mui/lab/LoadingButton"
 import Box from "@mui/material/Box"
+import Button from "@mui/material/Button"
 import Grid from "@mui/material/Grid"
+import IconButton from "@mui/material/IconButton"
+import Stack from "@mui/material/Stack"
+import Tooltip from "@mui/material/Tooltip"
+import { resetState } from "@stores/useStateStore"
+import { useQuery } from "@tanstack/react-query"
 import { formatBytes } from "@utils/FormatBytes"
 import { formatSecondsDurationLong } from "@utils/FormatSecondsDurationLong"
-import React, { useCallback } from "react"
-import { useQuery } from "react-query"
+import React, { useCallback, useEffect, useState } from "react"
+
+interface LinkButtonProps {
+    href: string
+    children?: React.ReactNode
+}
+
+const LinkButton: React.FC<LinkButtonProps> = ({ href, children }) => (
+    <Button
+        component="a"
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        variant="outlined"
+        color="secondary"
+        disabled={Boolean(import.meta.env.VITE_DEMO_MODE)}
+    >
+        {children}
+    </Button>
+)
 
 export const ServerInfoPanel: React.FC = () => {
     const client = useClient()
     const getServerInfo = useCallback(() => client.settings.getServerInfo(), [client])
-    const { data, isLoading, error } = useQuery("server-info", getServerInfo)
+    const { data, isLoading, error, refetch } = useQuery({
+        queryKey: ["server-info"],
+        queryFn: getServerInfo,
+    })
+
+    const [isReset, setIsReset] = useState<boolean | null>(null)
+    const [isResetLoading, setIsResetLoading] = useState(false)
+    const handleResetState = () => {
+        setIsResetLoading(true)
+        client.settings
+            .clearState(isReset === true)
+            .then((res) => {
+                setIsReset(res)
+                if (res) {
+                    resetState()
+                    refetch().then()
+                }
+            })
+            .catch(() => setIsReset(false))
+            .finally(() => setIsResetLoading(false))
+    }
+    useEffect(() => {
+        const token = setTimeout(() => setIsReset(null), 1000 * 10)
+        return () => clearTimeout(token)
+    }, [isReset])
+
     return (
-        <Panel title="Server Info" loading={isLoading} error={error}>
+        <Panel
+            title="Server Info"
+            loading={isLoading}
+            error={error}
+            actions={
+                <>
+                    <Tooltip
+                        title={isReset ? "Clear all server state, including running tasks" : "Clear all server state"}
+                    >
+                        <LoadingButton
+                            variant="outlined"
+                            color={isReset === false ? "error" : "secondary"}
+                            onClick={handleResetState}
+                            loading={isResetLoading}
+                        >
+                            {isReset === null ? "Reset" : isReset ? "Force Reset" : "Error"}
+                        </LoadingButton>
+                    </Tooltip>
+                    <Tooltip title="Refresh Server Info">
+                        <IconButton color="secondary" onClick={() => refetch().then()} disabled={isLoading}>
+                            <RefreshIcon />
+                        </IconButton>
+                    </Tooltip>
+                </>
+            }
+        >
             <Grid container spacing={2} p={2}>
                 <Grid item xs={12} md={6}>
                     <DetailItem label="Name" value={data?.server_name || "???"} />
@@ -91,6 +167,12 @@ export const ServerInfoPanel: React.FC = () => {
                         description="Number of workers stored in state / limit"
                         value={`${data?.worker_count || 0} / ${data?.worker_max_count || "Unknown"}`}
                     />
+                </Grid>
+                <Grid item xs={12}>
+                    <Stack direction="row" justifyContent="space-around">
+                        <LinkButton href="/docs">API Explorer</LinkButton>
+                        <LinkButton href="/redoc">API Docs</LinkButton>
+                    </Stack>
                 </Grid>
             </Grid>
         </Panel>

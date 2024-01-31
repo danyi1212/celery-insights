@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Literal
 
 from pydantic import BaseModel
 
@@ -26,16 +25,7 @@ class EventCategory(str, Enum):
     WORKER = "worker"
 
 
-class TaskEventMessage(BaseModel):
+class EventMessage(BaseModel):
     type: EventType
-    category: Literal[EventCategory.TASK]
-    task: Task
-
-
-class WorkerEventMessage(BaseModel):
-    type: EventType
-    category: Literal[EventCategory.WORKER]
-    worker: Worker
-
-
-EventMessage = TaskEventMessage | WorkerEventMessage
+    category: EventCategory
+    data: Task | Worker

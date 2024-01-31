@@ -74,7 +74,7 @@ export const useExplorerConfig = create<ExplorerConfig>(() => ({
 
 function modifyConfig<P extends keyof StateTask>(
     property: P,
-    callback: (config: ColumnConfig<StateTask, P>) => ColumnConfig<StateTask, P>
+    callback: (config: ColumnConfig<StateTask, P>) => ColumnConfig<StateTask, P>,
 ): void {
     return useExplorerConfig.setState((state) => {
         return !(property in state.configs)
@@ -93,15 +93,15 @@ const removeUndefined = <T>(arr: (T | undefined)[]): T[] => arr.filter((item): i
 export const useExplorerFacets = () =>
     useExplorerConfig((state) =>
         removeUndefined(state.facetOrder.map((facet) => state.configs[facet])).filter(
-            (facetConfig) => !facetConfig.noFacet && facetConfig.showFacet
-        )
+            (facetConfig) => !facetConfig.noFacet && facetConfig.showFacet,
+        ),
     )
 
 export const useExplorerColumns = () =>
     useExplorerConfig((state) =>
         removeUndefined(state.columnOrder.map((column) => state.configs[column])).filter(
-            (columnConfig) => columnConfig.showColumn
-        )
+            (columnConfig) => columnConfig.showColumn,
+        ),
     )
 
 export const toggleShowColumn = (property: keyof StateTask) =>

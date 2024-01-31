@@ -5,8 +5,8 @@ Thank you for your interest in contributing to Celery Insights! This document wi
 ## Reporting Bugs
 
 > :warning: **WARNING**
-> 
-> If you have discovered a security vulnerability, please **DO NOT** file a public issue.  
+>
+> If you have discovered a security vulnerability, please **DO NOT** file a public issue.
 > Instead, please report them directly to danyi1212@users.noreply.github.com.
 
 If you have found a bug, we would like to know, so we can fix it! Before you file a bug report, please make sure that
@@ -64,17 +64,18 @@ To contribute to the project, follow these steps:
     ```shell
     poetry install
     ```
-4. Navigate to the frontend folder.
-    ```shell
-    cd frontend/
-    ```
+4. Install pre-commit hooks
+   ```shell
+   pre-commit install
+   ```
 5. Install the Node.js dependencies using npm.
     ```shell
+    cd frontend/
     npm install
-    ``` 
+    ```
 6. Create `.env` file
     ```shell
-   cd server/
+   cd ../server/
    cp .env.example .env
 
 ### Run dev server
@@ -118,10 +119,10 @@ To contribute to the project, follow these steps:
         // Dont
         const [lengthBad, setLength] = useState(items.length)
         useEffect(() => setLength(items.length), [items])
-        
+
         // Do
         const lengthGood = useMemo(() => items.length, [items])
-    } 
+    }
     ```
 - Avoid unnecessary React re-renders. Performance is important.
 - Follow the existing folder structure.

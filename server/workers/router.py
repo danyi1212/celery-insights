@@ -12,12 +12,11 @@ workers_router = APIRouter(prefix="/api/workers", tags=["workers"])
 
 
 @workers_router.get("")
-def get_workers(alive: bool | None = None) -> list[Worker]:
+async def get_workers(alive: bool | None = None) -> list[Worker]:
     return [
         Worker.from_celery_worker(worker)
         for worker in state.workers.itervalues()
         if alive is None or worker.alive == alive
-
     ]
 
 

@@ -1,3 +1,4 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -12,7 +13,7 @@ export type TaskResult = {
     /**
      * Task type name
      */
-    type?: string;
+    type?: (string | null);
     /**
      * Task current state
      */
@@ -20,15 +21,15 @@ export type TaskResult = {
     /**
      * Task queue name
      */
-    queue?: string;
+    queue?: (string | null);
     /**
      * Task return value or exception
      */
-    result?: any;
+    result?: null;
     /**
      * Task exception traceback
      */
-    traceback?: string;
+    traceback?: (string | null);
     /**
      * Task result is ignored
      */
@@ -40,7 +41,7 @@ export type TaskResult = {
     /**
      * Task keyword arguments
      */
-    kwargs: any;
+    kwargs: Record<string, any>;
     /**
      * Task retries count
      */
@@ -48,6 +49,6 @@ export type TaskResult = {
     /**
      * Executing worker id
      */
-    worker?: string;
+    worker?: (string | null);
 };
 

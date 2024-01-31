@@ -1,7 +1,9 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
 
+import type { UserAgentInfo } from './UserAgentInfo';
 import type { WebSocketState } from './WebSocketState';
 
 export type ClientInfo = {
@@ -22,32 +24,8 @@ export type ClientInfo = {
      */
     is_secure: boolean;
     /**
-     * Operating System Name
+     * User agent details
      */
-    os?: string;
-    /**
-     * Operating System Version
-     */
-    os_version?: string;
-    /**
-     * Device Family
-     */
-    device_family?: string;
-    /**
-     * Device Brand
-     */
-    device_brand?: string;
-    /**
-     * Device Model
-     */
-    device_model?: string;
-    /**
-     * Browser Name
-     */
-    browser?: string;
-    /**
-     * Browser Version
-     */
-    browser_version?: string;
+    user_agent?: (UserAgentInfo | null);
 };
 

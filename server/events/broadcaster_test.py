@@ -1,27 +1,17 @@
+import json
 from asyncio import Queue
 
 import pytest
-from polyfactory.factories.pydantic_factory import ModelFactory
 from pytest_mock import MockerFixture
 
 from events.broadcaster import EventBroadcaster, parse_event, parse_task_event, parse_worker_event
-from events.models import EventCategory, EventType, TaskEventMessage, WorkerEventMessage
+from events.exceptions import InconsistentStateStoreError, InvalidEventError
+from events.factories import EventMessageFactory
+from events.models import EventCategory, EventMessage, EventType
 from events.receiver import state
-from tasks.model import Task
-from workers.models import Worker
+from tasks.factories import TaskFactory
+from workers.factories import WorkerFactory
 from ws.managers import events_manager
-
-
-class TaskEventMessageFactory(ModelFactory[TaskEventMessage]):
-    __model__ = TaskEventMessage
-
-
-class WorkerFactory(ModelFactory[Worker]):
-    __model__ = Worker
-
-
-class TaskFactory(ModelFactory[Task]):
-    __model__ = Task
 
 
 @pytest.fixture()
@@ -31,87 +21,85 @@ def broadcaster():
 
 @pytest.mark.asyncio
 async def test_broadcasts_event(broadcaster, mocker: MockerFixture):
-    message = TaskEventMessageFactory.build()
-    parse_event_mock = mocker.patch("events.broadcaster.parse_event", return_value=message)
-    broadcast_mock = mocker.patch.object(events_manager, "broadcast")
     event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
+    raw_event_mock = mocker.patch("events.broadcaster.broadcast_raw_event")
+    parsed_event_mock = mocker.patch("events.broadcaster.broadcast_parsed_event")
 
     await broadcaster.handle_event(event)
 
-    parse_event_mock.assert_called_once_with(event)
-    broadcast_mock.assert_called_once_with(message.json())
-
-
-@pytest.mark.asyncio
-async def test_event_parsing_failure(broadcaster, mocker: MockerFixture):
-    parse_event_mock = mocker.patch("events.broadcaster.parse_event", side_effect=Exception("Parsing failed"))
-    broadcast_mock = mocker.patch.object(events_manager, "broadcast")
-    event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
-
-    await broadcaster.handle_event(event)
-
-    parse_event_mock.assert_called_once_with(event)
-    broadcast_mock.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_no_message_specified(broadcaster, mocker: MockerFixture):
-    parse_event_mock = mocker.patch("events.broadcaster.parse_event", return_value=None)
-    broadcast_mock = mocker.patch.object(events_manager, "broadcast")
-    event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
-
-    await broadcaster.handle_event(event)
-
-    parse_event_mock.assert_called_once_with(event)
-    broadcast_mock.assert_not_called()
+    raw_event_mock.assert_called_once_with(event)
+    parsed_event_mock.assert_called_once_with(event)
 
 
 @pytest.mark.asyncio
 async def test_broadcast_failure(broadcaster, mocker: MockerFixture):
-    message = TaskEventMessageFactory.build()
+    event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
+    message = EventMessageFactory.build()
     parse_event_mock = mocker.patch("events.broadcaster.parse_event", return_value=message)
-    broadcast_mock = mocker.patch.object(events_manager, "broadcast", side_effect=Exception("Broadcast failed"))
+    broadcast_mock = mocker.patch("ws.websocket_manager.WebsocketManager.broadcast")
+    broadcast_mock.side_effect = Exception("Broadcast failed")
+
+    await broadcaster.handle_event(event)
+
+    assert broadcast_mock.call_args_list == [mocker.call(json.dumps(event)), mocker.call(message.model_dump_json())]
+    parse_event_mock.assert_called_once_with(event)
+
+
+@pytest.mark.asyncio
+async def test_broadcast_parsed_event(broadcaster, mocker: MockerFixture):
+    message = EventMessageFactory.build()
+    parse_event_mock = mocker.patch("events.broadcaster.parse_event", return_value=message)
+    broadcast_mock = mocker.patch.object(events_manager, "broadcast")
     event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
 
     await broadcaster.handle_event(event)
 
     parse_event_mock.assert_called_once_with(event)
-    broadcast_mock.assert_called_once_with(message.json())
+    broadcast_mock.assert_called_once_with(message.model_dump_json())
 
 
-def test_parse_event_no_type():
-    event = {}
-    assert parse_event(event) is None
+@pytest.mark.asyncio
+async def test_event_parsing_failure(broadcaster, mocker: MockerFixture):
+    event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
+    parse_event_mock = mocker.patch("events.broadcaster.parse_event", side_effect=Exception("Parsing failed"))
+    broadcast_mock = mocker.patch.object(events_manager, "broadcast")
+
+    await broadcaster.handle_event(event)
+
+    parse_event_mock.assert_called_once_with(event)
+    broadcast_mock.assert_not_called()
 
 
-def test_parse_event_unknown_category(caplog: pytest.LogCaptureFixture):
-    event = {"type": "foo-bar"}
-    assert parse_event(event) is None
-    assert "Unknown event category 'foo'" in caplog.text
+@pytest.mark.parametrize(
+    "event,match",
+    [
+        ({}, "Received event without type"),
+        ({"type": "foo-bar"}, "Unknown event category 'foo'"),
+        ({"type": "task-started"}, "Task event 'task-started' is missing uuid"),
+        ({"type": "worker-started"}, "Worker event 'worker-started' is missing hostname"),
+    ],
+)
+def test_parse_invalid_event(event, match, mocker: MockerFixture):
+    mocker.patch.object(state, "event")
+
+    with pytest.raises(InvalidEventError, match=match):
+        parse_event(event)
 
 
-def test_parse_worker_event_missing_hostname(caplog: pytest.LogCaptureFixture):
-    event = {"type": "worker-started"}
-    assert parse_worker_event(event, "worker-started") is None
-    assert "Worker event 'worker-started' is missing hostname" in caplog.text
+@pytest.mark.parametrize(
+    "event,match",
+    [
+        ({"type": "worker-started", "hostname": "worker"}, "Could not find worker 'worker' in state"),
+        ({"type": "task-started", "uuid": "task"}, "Could not find task 'task' in state"),
+    ],
+)
+def test_parse_event_missing_object(event, match, mocker: MockerFixture):
+    mocker.patch.object(state, "event")
+    mocker.patch.object(state.tasks, "get", return_value=None)
+    mocker.patch.object(state.workers, "get", return_value=None)
 
-
-def test_parse_worker_event_missing_worker(caplog: pytest.LogCaptureFixture):
-    event = {"type": "worker-started", "hostname": "worker"}
-    assert parse_worker_event(event, "worker-started") is None
-    assert "Could not find worker 'worker' in state" in caplog.text
-
-
-def test_parse_task_event_missing_uuid(caplog: pytest.LogCaptureFixture):
-    event = {"type": "task-started"}
-    assert parse_task_event(event, "task-started") is None
-    assert "Task event 'task-started' is missing uuid" in caplog.text
-
-
-def test_parse_task_event_missing_task(caplog: pytest.LogCaptureFixture):
-    event = {"type": "task-started", "uuid": "task"}
-    assert parse_task_event(event, "task-started") is None
-    assert "Could not find task 'task' in state" in caplog.text
+    with pytest.raises(InconsistentStateStoreError, match=match):
+        parse_event(event)
 
 
 def test_parse_worker_event(mocker: MockerFixture):
@@ -126,10 +114,10 @@ def test_parse_worker_event(mocker: MockerFixture):
 
     state_mock.assert_called_once_with("test")
     cast_mock.assert_called_once_with(state_worker)
-    assert actual == WorkerEventMessage(
+    assert actual == EventMessage(
         type=EventType.WORKER_ONLINE,
         category=EventCategory.WORKER,
-        worker=worker,
+        data=worker,
     )
 
 
@@ -145,9 +133,8 @@ def test_parse_task_event(mocker: MockerFixture):
 
     state_mock.assert_called_once_with("test")
     cast_mock.assert_called_once_with(state_task)
-    assert actual == TaskEventMessage(
+    assert actual == EventMessage(
         type=EventType.TASK_STARTED,
         category=EventCategory.TASK,
-        task=task,
+        data=task,
     )
-

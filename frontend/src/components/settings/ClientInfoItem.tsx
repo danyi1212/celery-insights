@@ -25,26 +25,26 @@ const ClientInfoItem: React.FC<ClientInfoItemProps> = ({ client }) => {
                 primary={`${client.host}:${client.port}`}
                 secondaryTypographyProps={{ component: "div" }}
                 secondary={
-                    client.browser ? (
+                    client.user_agent?.browser ? (
                         <Grid container justifyContent="space-between" width="100%">
                             <Grid item>
                                 <Tooltip title="Browser Info" arrow describeChild>
                                     <Typography>
-                                        {client.browser} {client.browser_version}
+                                        {client.user_agent?.browser} {client.user_agent?.browser_version}
                                     </Typography>
                                 </Tooltip>
                             </Grid>
                             <Grid item>
                                 <Tooltip title="OS Info" arrow describeChild>
                                     <Typography>
-                                        {client.os} {client.os_version}
+                                        {client.user_agent?.os} {client.user_agent?.os_version}
                                     </Typography>
                                 </Tooltip>
                             </Grid>
                             <Grid item>
                                 <Tooltip title="Device Info" arrow describeChild>
                                     <Typography>
-                                        {client.device_brand} {client.device_model}
+                                        {client.user_agent?.device_brand} {client.user_agent?.device_model}
                                     </Typography>
                                 </Tooltip>
                             </Grid>

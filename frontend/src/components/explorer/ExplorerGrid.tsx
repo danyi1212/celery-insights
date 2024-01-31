@@ -31,10 +31,10 @@ const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, filters }) => {
                     minWidth: columnConfig.columnWidth,
                     valueFormatter: (params) =>
                         columnConfig.valueFormatter ? columnConfig.valueFormatter(params.value as never) : params.value,
-                })
+                }),
             ),
         ],
-        [columnConfigs]
+        [columnConfigs],
     )
 
     const deferredTasks = useDeferredValue(tasks)
@@ -47,7 +47,7 @@ const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, filters }) => {
                 }
                 return true
             }),
-        [deferredTasks, filters]
+        [deferredTasks, filters],
     )
 
     return (

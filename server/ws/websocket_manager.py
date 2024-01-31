@@ -1,8 +1,11 @@
 import asyncio
 import logging
 from asyncio import Queue
+from collections.abc import Iterable
 
 from fastapi import WebSocket
+
+from ws.models import ClientInfo
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +26,12 @@ class WebsocketManager:
 
     async def broadcast(self, message: str) -> None:
         results = await asyncio.gather(
-            *[
-                connection.send_text(message)
-                for connection in self.active_connections
-            ], return_exceptions=True
-            )
+            *[connection.send_text(message) for connection in self.active_connections], return_exceptions=True
+        )
         for result, connection in zip(results, self.active_connections, strict=True):
             if isinstance(result, Exception):
                 logger.exception(f"Failed to send message to client {connection.client!r}: {result}", exc_info=result)
+
+    def get_clients(self) -> Iterable[ClientInfo]:
+        for client in self.active_connections:
+            yield ClientInfo.from_websocket(client)

@@ -1,3 +1,4 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -6,46 +7,46 @@ export type Broker = {
     /**
      * How many seconds before failing to connect to broker
      */
-    connection_timeout?: number;
+    connection_timeout?: (number | null);
     /**
      * Heartbeat interval in seconds
      */
-    heartbeat: number;
+    heartbeat?: number;
     /**
      * Node name of remote broker
      */
-    hostname: string;
+    hostname?: (string | null);
     /**
      * Login method used to connect to the broker
      */
-    login_method: string;
+    login_method?: (string | null);
     /**
      * Broker port
      */
-    port: number;
+    port?: number;
     /**
      * Whether to use ssl connections
      */
-    ssl: boolean;
+    ssl?: boolean;
     /**
      * Name of transport used (e.g, amqp / redis)
      */
-    transport: string;
+    transport?: (string | null);
     /**
      * Additional options used to connect to broker
      */
-    transport_options: any;
+    transport_options?: Record<string, any>;
     /**
      * Prefix to be added to broker uri
      */
-    uri_prefix?: string;
+    uri_prefix?: (string | null);
     /**
      * User ID used to connect to the broker with
      */
-    userid: string;
+    userid?: (string | null);
     /**
      * Virtual host used
      */
-    virtual_host: string;
+    virtual_host?: (string | null);
 };
 
