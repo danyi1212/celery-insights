@@ -33,7 +33,7 @@ export const useExplorerConfig = create<ExplorerConfig>(() => ({
             columnWidth: 160,
             showColumn: true,
             noFacet: true,
-            valueFormatter: (value) => format(value, "MMM dd  hh:mm:ss.SSS"),
+            valueFormatter: (value) => (value ? format(value, "MMM dd  hh:mm:ss.SSS") : "NaT"),
         },
         state: {
             property: "state",
@@ -72,22 +72,6 @@ export const useExplorerConfig = create<ExplorerConfig>(() => ({
     },
 }))
 
-function modifyConfig<P extends keyof StateTask>(
-    property: P,
-    callback: (config: ColumnConfig<StateTask, P>) => ColumnConfig<StateTask, P>,
-): void {
-    return useExplorerConfig.setState((state) => {
-        return !(property in state.configs)
-            ? state
-            : {
-                  configs: {
-                      ...state.configs,
-                      [property]: callback(state.configs[property]),
-                  },
-              }
-    })
-}
-
 const removeUndefined = <T>(arr: (T | undefined)[]): T[] => arr.filter((item): item is T => item !== undefined)
 
 export const useExplorerFacets = () =>
@@ -103,15 +87,3 @@ export const useExplorerColumns = () =>
             (columnConfig) => columnConfig.showColumn,
         ),
     )
-
-export const toggleShowColumn = (property: keyof StateTask) =>
-    modifyConfig(property, (config) => ({
-        ...config,
-        showColumn: !config.showColumn,
-    }))
-
-export const toggleShowFacet = (property: keyof StateTask) =>
-    modifyConfig(property, (config) => ({
-        ...config,
-        showFacet: !config.showFacet,
-    }))

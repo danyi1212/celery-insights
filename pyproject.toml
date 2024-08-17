@@ -4,27 +4,30 @@ version = "0.2.0"
 description = "Modern Real-Time Monitor for Celery"
 authors = ["Dan Yishai <danyi1212@users.noreply.github.com>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.11"
-fastapi = "^0.104.1"
-python-dotenv = "^1.0.0"
-uvicorn = "^0.24.0"
-celery = "^5.3.6"
-websockets = "^12.0"
-fastapi-cache2 = "^0.2.1"
-user-agents = "^2.2.0"
-aiopath = "^0.6.11"
-pydantic = "^2.5.2"
-pydantic-settings = "^2.1.0"
-colorlog = "^6.7.0"
+python = "^3.12"
+fastapi = "^0.112"
+python-dotenv = "^1"
+uvicorn = "^0.30"
+pendulum = "*"
+time-machine = "*"
+celery = "~5.4"
+websockets = "*"
+fastapi-cache2 = "*"
+user-agents = "*"
+aiopath = "^0"
+pydantic = "^2"
+pydantic-settings = "^2"
+colorlog = "*"
 
 [tool.poetry.group.all]
 optional = true
 
 [tool.poetry.group.all.dependencies]
-cryptography = "^41.0.7"
-celery = { version = "^5.3.6", extras = [
+cryptography = "*"
+celery = { version = "*", extras = [
     "arangodb",
     "couchdb",
     "consul",
@@ -45,16 +48,17 @@ celery = { version = "^5.3.6", extras = [
 ] }
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.3.0"
-pytest-xdist = "^3.2.1"
-pytest-mock = "^3.10.0"
-pytest-asyncio = "^0.21.0"
-pytest-env = "^0.8.1"
-pytest-cov = "^4.0.0"
-polyfactory = "^2.0.0a1"
-ruff = "^0.0.261"
-ipython = "^8.14.0"
-pre-commit = "^3.5.0"
+pytest = "^7"
+pytest-xdist = "*"
+pytest-mock = "*"
+pytest-asyncio = "*"
+pytest-env = "*"
+pytest-cov = "*"
+polyfactory = "*"
+ruff = "*"
+ipython = "*"
+pre-commit = "*"
+poetry-plugin-bundle = "*"
 
 [build-system]
 requires = ["poetry-core"]

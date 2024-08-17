@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Poetry (celery-insights)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Poetry (celery-insights)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_22" />
 </project>
