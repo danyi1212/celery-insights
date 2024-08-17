@@ -1,4 +1,12 @@
-FROM python:3.11-alpine AS requirements-stage
+FROM python:3.12-alpine AS python-base
+
+ENV PYTHONFAULTHANDLER=1 \
+    PYTHONHASHSEED=random \
+    PYTHONUNBUFFERED=1
+
+RUN pip install --upgrade pip
+
+FROM python-base AS requirements-stage
 
 WORKDIR /tmp
 
@@ -16,7 +24,7 @@ RUN if [ $VARIANT = "all" ]; then \
         poetry export -f requirements.txt --output requirements.txt; \
     fi
 
-FROM node:18-alpine AS front-build
+FROM node:22-alpine AS front-build
 
 WORKDIR /frontend
 
@@ -27,7 +35,7 @@ RUN npm ci
 COPY /frontend/ .
 RUN npm run build
 
-FROM python:3.11-alpine
+FROM python-base
 
 WORKDIR /app
 

@@ -8,7 +8,6 @@ from starlette.staticfiles import StaticFiles
 
 from events.router import events_router
 from lifespan import lifespan
-from logging_config import LOGGING_CONFIG
 from search.router import search_router
 from server_info.router import settings_router
 from settings import Settings
@@ -16,7 +15,6 @@ from tasks.router import tasks_router
 from workers.router import workers_router
 from ws.router import ws_router
 
-logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger(__name__)
 
 
