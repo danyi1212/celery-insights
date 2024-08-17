@@ -27,7 +27,7 @@ jobs:
     - name: Install dependencies
       run: poetry install
     - name: Lint with ruff
-      run: poetry run ruff check server --format=github
+      run: poetry run ruff check
     - name: Run pytest
       run: poetry run pytest server --doctest-modules --junitxml=junit/test-results.xml --cov=server --cov-report=xml --cov-report=html -n auto
     - name: Publish Test Results

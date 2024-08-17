@@ -71,6 +71,8 @@ log_cli_level = "INFO"
 [tool.ruff]
 line-length = 120
 src = ["server"]
+
+[tool.ruff.lint]
 select = [
     "E", # pycodestyle
     "W", # pycodestyle
@@ -91,5 +93,5 @@ select = [
     "RUF", # ruff rules
 ]
 
-[tool.ruff.flake8-tidy-imports]
+[tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
