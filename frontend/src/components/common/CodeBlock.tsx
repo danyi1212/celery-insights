@@ -4,15 +4,11 @@ import { PrismLight as SyntaxHighlighter, SyntaxHighlighterProps } from "react-s
 import darkStyle from "react-syntax-highlighter/dist/esm/styles/prism/material-dark"
 import lightStyle from "react-syntax-highlighter/dist/esm/styles/prism/material-light"
 
-interface CodeBlockProps extends Omit<SyntaxHighlighterProps, "children"> {
-    code: string
-}
-
-const CodeBlock: React.FC<CodeBlockProps> = ({ code, ...props }) => {
+const CodeBlock: React.FC<SyntaxHighlighterProps> = ({ children, ...props }) => {
     const theme = useTheme()
     return (
         <SyntaxHighlighter style={theme.palette.mode === "dark" ? darkStyle : lightStyle} {...props}>
-            {code}
+            {children}
         </SyntaxHighlighter>
     )
 }

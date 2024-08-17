@@ -31,8 +31,7 @@ async def main():
     stop_signal = asyncio.Event()
 
     logger.info("Starting producer...")
-    async with asyncio.TaskGroup() as tg:
-        tg.create_task(timer(10, lambda: publish(order_workflow.si()), stop_signal))
+    await timer(10, lambda: publish(order_workflow.si()), stop_signal)
 
 
 if __name__ == "__main__":

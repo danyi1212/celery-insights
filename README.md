@@ -23,6 +23,22 @@ docker run -p 8555:8555 --name celery-insights ghcr.io/danyi1212/celery-insights
 
 Next, navigate to http://localhost:8555/ and begin the welcome tour.
 
+### Enabling Celery Events
+
+Celery Insights relies on Celery events to monitor your Celery cluster.
+
+The recommended configuration for using Celery Insights are:
+```python
+app = Celery("myapp")
+app.conf.worker_send_task_events = True  # Enables task events
+app.conf.task_send_sent_event = True  # Enables sent events
+app.conf.task_track_started = True  # (opt) Update task result state to STARTED
+app.conf.result_extended = True  # (opt) Store args and kwargs in the result
+```
+Other events-related configurations should be left as default.
+
+For more information on Celery events configurations, please refer to the [Celery documentation](https://docs.celeryq.dev/en/stable/userguide/configuration.html#events).
+
 ### Advanced setup
 
 Celery Insights comes pre-configured for localhost Redis as Result Backend and RabbitMQ as Broker.
