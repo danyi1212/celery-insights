@@ -12,14 +12,13 @@ WORKDIR /tmp
 
 # Setup python
 RUN pip install --upgrade pip
-RUN pip install poetry
-RUN poetry self add poetry-plugin-export
+RUN pip install poetry poetry-plugin-export
 
 COPY ./pyproject.toml ./poetry.lock* /tmp/
 
 ARG VARIANT=regular
 RUN if [ $VARIANT = "all" ]; then \
-        poetry export -f requirements.txt --output requirements.txt --with full; \
+        poetry export -f requirements.txt --output requirements.txt --with all; \
     else \
         poetry export -f requirements.txt --output requirements.txt; \
     fi
