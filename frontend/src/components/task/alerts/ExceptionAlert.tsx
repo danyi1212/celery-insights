@@ -70,7 +70,7 @@ const ExceptionTraceback: React.FC<ExceptionTracebackProps> = ({ exception, trac
                         Traceback
                     </Button>
                     <Collapse in={expanded} unmountOnExit>
-                        <CodeBlock language="python" code={traceback} />
+                        <CodeBlock language="python">{traceback}</CodeBlock>
                     </Collapse>
                 </>
             )}

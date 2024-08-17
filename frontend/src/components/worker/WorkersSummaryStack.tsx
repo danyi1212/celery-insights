@@ -23,9 +23,12 @@ const WorkersSummaryStack: React.FC = () => {
                     ))}
                 </Stack>
             ) : (
-                <Typography variant="h4" align="center" my={5}>
-                    No online workers
-                </Typography>
+                <Box textAlign="center" my={5}>
+                    <Typography variant="h4" gutterBottom>
+                        No online workers
+                    </Typography>
+                    <span>Start a Celery worker to see it here</span>
+                </Box>
             )}
         </Box>
     )
