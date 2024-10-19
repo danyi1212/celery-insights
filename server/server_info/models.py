@@ -3,7 +3,7 @@ import os
 import platform
 import resource
 import time
-from typing import Self
+from typing import Any, Self
 
 from celery.events.state import State
 from pydantic import BaseModel, Field
@@ -52,7 +52,7 @@ class ServerInfo(BaseModel):
 
 
 class ClientDebugInfo(BaseModel):
-    settings: dict
+    settings: dict[str, Any]
     screen_width: int
     screen_height: int
 
