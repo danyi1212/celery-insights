@@ -1,6 +1,5 @@
 import pytest
 from pytest_mock import MockerFixture
-
 from ws.websocket_manager import WebsocketManager
 
 
@@ -13,34 +12,33 @@ class FakeWebSocket:
         return ""
 
 
-def test_websocket_manager_subscribe(caplog: pytest.LogCaptureFixture):
+def test_websocket_manager_subscribe(caplog: pytest.LogCaptureFixture) -> None:
     manager = WebsocketManager("test")
     ws = FakeWebSocket("Fake Client")
 
     with caplog.at_level("INFO"):
-        manager.subscribe(ws)  # type: ignore
+        manager.subscribe(ws)
 
     assert ws in manager.active_connections
     assert repr(ws.client) in caplog.messages[-1]
     assert repr(manager.name) in caplog.messages[-1]
 
 
-def test_websocket_manager_unsubscribe(caplog: pytest.LogCaptureFixture):
+def test_websocket_manager_unsubscribe(caplog: pytest.LogCaptureFixture) -> None:
     manager = WebsocketManager("test")
     ws = FakeWebSocket("Fake Client")
-    manager.active_connections.append(ws)  # type: ignore
+    manager.active_connections.append(ws)
 
     with caplog.at_level("INFO"):
-        manager.unsubscribe(ws)  # type: ignore
+        manager.unsubscribe(ws)
 
     assert ws not in manager.active_connections
-
     assert repr(ws.client) in caplog.messages[-1]
     assert repr(manager.name) in caplog.messages[-1]
 
 
 @pytest.mark.asyncio
-async def test_websocket_manager_broadcast(mocker: MockerFixture, caplog: pytest.LogCaptureFixture):
+async def test_websocket_manager_broadcast(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     manager = WebsocketManager("test")
     wss = [FakeWebSocket("Fake Client 1"), FakeWebSocket("Fake Client 2")]
     manager.active_connections = wss
