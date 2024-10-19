@@ -1,6 +1,6 @@
 import json
 from asyncio import Queue
-
+from typing import Any
 import pytest
 from pytest_mock import MockerFixture
 
@@ -15,12 +15,12 @@ from ws.managers import events_manager
 
 
 @pytest.fixture()
-def broadcaster():
+def broadcaster() -> EventBroadcaster:
     return EventBroadcaster(Queue())
 
 
 @pytest.mark.asyncio
-async def test_broadcasts_event(broadcaster, mocker: MockerFixture):
+async def test_broadcasts_event(broadcaster: EventBroadcaster, mocker: MockerFixture) -> None:
     event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
     raw_event_mock = mocker.patch("events.broadcaster.broadcast_raw_event")
     parsed_event_mock = mocker.patch("events.broadcaster.broadcast_parsed_event")
@@ -32,7 +32,7 @@ async def test_broadcasts_event(broadcaster, mocker: MockerFixture):
 
 
 @pytest.mark.asyncio
-async def test_broadcast_failure(broadcaster, mocker: MockerFixture):
+async def test_broadcast_failure(broadcaster: EventBroadcaster, mocker: MockerFixture) -> None:
     event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
     message = EventMessageFactory.build()
     parse_event_mock = mocker.patch("events.broadcaster.parse_event", return_value=message)
@@ -46,7 +46,7 @@ async def test_broadcast_failure(broadcaster, mocker: MockerFixture):
 
 
 @pytest.mark.asyncio
-async def test_broadcast_parsed_event(broadcaster, mocker: MockerFixture):
+async def test_broadcast_parsed_event(broadcaster: EventBroadcaster, mocker: MockerFixture) -> None:
     message = EventMessageFactory.build()
     parse_event_mock = mocker.patch("events.broadcaster.parse_event", return_value=message)
     broadcast_mock = mocker.patch.object(events_manager, "broadcast")
@@ -59,7 +59,7 @@ async def test_broadcast_parsed_event(broadcaster, mocker: MockerFixture):
 
 
 @pytest.mark.asyncio
-async def test_event_parsing_failure(broadcaster, mocker: MockerFixture):
+async def test_event_parsing_failure(broadcaster: EventBroadcaster, mocker: MockerFixture) -> None:
     event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
     parse_event_mock = mocker.patch("events.broadcaster.parse_event", side_effect=Exception("Parsing failed"))
     broadcast_mock = mocker.patch.object(events_manager, "broadcast")
@@ -79,7 +79,7 @@ async def test_event_parsing_failure(broadcaster, mocker: MockerFixture):
         ({"type": "worker-started"}, "Worker event 'worker-started' is missing hostname"),
     ],
 )
-def test_parse_invalid_event(event, match, mocker: MockerFixture):
+def test_parse_invalid_event(event: dict[str, Any], match: str, mocker: MockerFixture) -> None:
     mocker.patch.object(state, "event")
 
     with pytest.raises(InvalidEventError, match=match):
@@ -93,7 +93,7 @@ def test_parse_invalid_event(event, match, mocker: MockerFixture):
         ({"type": "task-started", "uuid": "task"}, "Could not find task 'task' in state"),
     ],
 )
-def test_parse_event_missing_object(event, match, mocker: MockerFixture):
+def test_parse_event_missing_object(event: dict[str, Any], match: str, mocker: MockerFixture) -> None:
     mocker.patch.object(state, "event")
     mocker.patch.object(state.tasks, "get", return_value=None)
     mocker.patch.object(state.workers, "get", return_value=None)
@@ -102,7 +102,7 @@ def test_parse_event_missing_object(event, match, mocker: MockerFixture):
         parse_event(event)
 
 
-def test_parse_worker_event(mocker: MockerFixture):
+def test_parse_worker_event(mocker: MockerFixture) -> None:
     state_worker = object()
     state_mock = mocker.patch.object(state.workers, "get", return_value=state_worker)
 
@@ -121,7 +121,7 @@ def test_parse_worker_event(mocker: MockerFixture):
     )
 
 
-def test_parse_task_event(mocker: MockerFixture):
+def test_parse_task_event(mocker: MockerFixture) -> None:
     state_task = object()
     state_mock = mocker.patch.object(state.tasks, "get", return_value=state_task)
 
