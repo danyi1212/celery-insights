@@ -59,3 +59,4 @@ repos:
       - id: mypy
         files: \.py$  # *.py
         types: [ file ]
+        args: ["--config-file=mypy.ini"]
