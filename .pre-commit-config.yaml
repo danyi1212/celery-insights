@@ -52,3 +52,10 @@ repos:
           - "eslint-plugin-react-hooks@4.6.0"
           - "@typescript-eslint/eslint-plugin@6.11.0"
           - "@typescript-eslint/parser@6.11.0"
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.0.0
+    hooks:
+      - id: mypy
+        files: \.py$  # *.py
+        types: [ file ]
