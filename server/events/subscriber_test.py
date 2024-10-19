@@ -12,12 +12,12 @@ class FakeQueueSubscriber(QueueSubscriber[int]):
 
 
 @pytest.fixture()
-def subscriber():
+def subscriber() -> FakeQueueSubscriber:
     return FakeQueueSubscriber(Queue())
 
 
 @pytest.mark.asyncio
-async def test_queue_subscriber_start_stop(subscriber):
+async def test_queue_subscriber_start_stop(subscriber: FakeQueueSubscriber) -> None:
     subscriber.start()
     assert not subscriber._stop_signal.is_set()
     subscriber.stop()
@@ -25,7 +25,7 @@ async def test_queue_subscriber_start_stop(subscriber):
 
 
 @pytest.mark.asyncio
-async def test_queue_subscriber_handle_event(subscriber):
+async def test_queue_subscriber_handle_event(subscriber: FakeQueueSubscriber) -> None:
     subscriber.start()
     event = 123
     subscriber.queue.put_nowait(event)
@@ -35,7 +35,9 @@ async def test_queue_subscriber_handle_event(subscriber):
 
 
 @pytest.mark.asyncio
-async def test_queue_subscriber_exception_handling(subscriber, mocker: MockerFixture, caplog: pytest.LogCaptureFixture):
+async def test_queue_subscriber_exception_handling(
+    subscriber: FakeQueueSubscriber, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
     subscriber.start()
     event = 123
     mocker.patch.object(subscriber, "handle_event", side_effect=Exception("test exception"))
@@ -46,7 +48,7 @@ async def test_queue_subscriber_exception_handling(subscriber, mocker: MockerFix
 
 
 @pytest.mark.asyncio
-async def test_queue_subscriber_cancel(subscriber, mocker: MockerFixture):
+async def test_queue_subscriber_cancel(subscriber: FakeQueueSubscriber, mocker: MockerFixture) -> None:
     subscriber.start()
     cancel_mock = mocker.patch.object(subscriber._task, "cancel")
     subscriber.stop()

@@ -13,15 +13,15 @@ from ws.managers import events_manager, raw_events_manager
 logger = logging.getLogger(__name__)
 
 
-class EventBroadcaster(QueueSubscriber[dict]):
-    async def handle_event(self, event: dict) -> None:
+class EventBroadcaster(QueueSubscriber[dict[str, str]]):
+    async def handle_event(self, event: dict[str, str]) -> None:
         await asyncio.gather(
             broadcast_raw_event(event),
             broadcast_parsed_event(event),
         )
 
 
-async def broadcast_raw_event(event: dict) -> None:
+async def broadcast_raw_event(event: dict[str, str]) -> None:
     logger.debug(f"Broadcasting raw event of type {event.get('type', 'UNKNOWN')!r}")
     try:
         await raw_events_manager.broadcast(json.dumps(event))
@@ -29,7 +29,7 @@ async def broadcast_raw_event(event: dict) -> None:
         logger.exception(f"Failed to broadcast raw event: {e}")
 
 
-async def broadcast_parsed_event(event: dict) -> None:
+async def broadcast_parsed_event(event: dict[str, str]) -> None:
     try:
         message = parse_event(event)
     except InvalidEventError as e:
@@ -46,7 +46,7 @@ async def broadcast_parsed_event(event: dict) -> None:
             logger.exception(f"Failed to broadcast event: {e}")
 
 
-def parse_event(event: dict) -> EventMessage:
+def parse_event(event: dict[str, str]) -> EventMessage:
     event_type = event.get("type")
     if event_type is None:
         raise InvalidEventError(f"Received event without type: {event}")
@@ -61,7 +61,7 @@ def parse_event(event: dict) -> EventMessage:
         raise InvalidEventError(f"Unknown event category {event_category!r}")
 
 
-def parse_worker_event(event: dict, event_type: str) -> EventMessage | None:
+def parse_worker_event(event: dict[str, str], event_type: str) -> EventMessage | None:
     worker_hostname = event.get("hostname")
     if worker_hostname is None:
         raise InvalidEventError(f"Worker event {event_type!r} is missing hostname: {event}")
@@ -78,7 +78,7 @@ def parse_worker_event(event: dict, event_type: str) -> EventMessage | None:
     )
 
 
-def parse_task_event(event: dict, event_type: str) -> EventMessage | None:
+def parse_task_event(event: dict[str, str], event_type: str) -> EventMessage | None:
     task_id = event.get("uuid")
     if task_id is None:
         raise InvalidEventError(f"Task event {event_type!r} is missing uuid: {event}")

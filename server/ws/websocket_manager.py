@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class WebsocketManager:
     def __init__(self, name: str):
         self.name = name
-        self.queue = Queue()
+        self.queue: Queue[str] = Queue()
         self.active_connections: list[WebSocket] = []
 
     def subscribe(self, websocket: WebSocket) -> None:

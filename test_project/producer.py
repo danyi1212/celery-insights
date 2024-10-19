@@ -1,7 +1,7 @@
 import asyncio
 import inspect
 import logging
-from typing import Callable, Coroutine, Never, Union
+from typing import Callable, Coroutine, Union
 
 from celery.canvas import Signature
 
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 Callback = Union[Callable[..., Coroutine], Callable[..., None]]
 
 
-async def timer(interval: float, callback: Callback, stop_signal: asyncio.Event) -> Never:
+async def timer(interval: float, callback: Callback, stop_signal: asyncio.Event) -> None:
     """An asynchronous timer that triggers a callback at a given interval and stops when signalled."""
     while not stop_signal.is_set():
         if inspect.iscoroutinefunction(callback):
@@ -27,7 +27,7 @@ def publish(signature: Signature) -> None:
     signature.apply_async()
 
 
-async def main():
+async def main() -> None:
     stop_signal = asyncio.Event()
 
     logger.info("Starting producer...")

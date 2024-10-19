@@ -1,6 +1,6 @@
 import logging.config
 from pathlib import Path
-
+from typing import Any
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
@@ -18,7 +18,7 @@ from ws.router import ws_router
 logger = logging.getLogger(__name__)
 
 
-def custom_generate_unique_id(route: APIRoute) -> str:
+def custom_generate_unique_id(route: APIRoute) -> Any:
     return route.name
 
 
@@ -26,7 +26,7 @@ app = FastAPI(
     title="Celery Insights",
     description="Modern Real-Time Monitoring for Celery",
     debug=Settings().debug,
-    lifespan=lifespan,  # type: ignore
+    lifespan=lifespan,
     generate_unique_id_function=custom_generate_unique_id,
     version="v0.2.0",
 )
@@ -46,7 +46,7 @@ app.add_middleware(
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 

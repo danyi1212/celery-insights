@@ -1,6 +1,6 @@
 import importlib.util
 import logging
-
+from typing import Any
 from aiopath import AsyncPath
 from celery import Celery
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 _celery_app_cache: Celery | None = None
 
 
-async def get_celery_app(settings: Settings | None = None):
+async def get_celery_app(settings: Settings | None = None) -> Celery:
     global _celery_app_cache
     if _celery_app_cache is not None:
         return _celery_app_cache
@@ -34,8 +34,8 @@ async def get_celery_app(settings: Settings | None = None):
     logger.info(f"Loading celery app config from {settings.config_path!r}")
     app = Celery()
     try:
-        spec = importlib.util.spec_from_file_location("config", str(config_path))
-        config = importlib.util.module_from_spec(spec)
+        spec: Any = importlib.util.spec_from_file_location("config", str(config_path))
+        config: Any = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(config)
         app.config_from_object(config)
     except Exception as e:

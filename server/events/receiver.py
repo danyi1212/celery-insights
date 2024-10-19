@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Any
 import time
 from threading import Event, Thread
 
@@ -24,7 +25,7 @@ class CeleryEventReceiver(Thread):
         super().__init__()
         self.app = app
         self._stop_signal = Event()
-        self.queue = asyncio.Queue()
+        self.queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         self.receiver: EventReceiver | None = None
 
     def run(self) -> None:
@@ -39,7 +40,7 @@ class CeleryEventReceiver(Thread):
                 if not self._stop_signal.is_set():
                     time.sleep(10)
 
-    def consume_events(self):
+    def consume_events(self) -> None:
         logger.info("Connecting to celery cluster...")
         with self.app.connection() as connection:
             self.receiver = EventReceiver(
@@ -52,7 +53,7 @@ class CeleryEventReceiver(Thread):
             logger.info("Starting to consume events...")
             self.receiver.capture(limit=None, timeout=None, wakeup=True)
 
-    def on_event(self, event: dict) -> None:
+    def on_event(self, event: dict[str, Any]) -> None:
         logger.debug(f"Received event: {event}")
         state.event(event)
         self.queue.put_nowait(event)

@@ -6,12 +6,12 @@ from events.receiver import CeleryEventReceiver, state
 
 
 @pytest.fixture
-def receiver():
+def receiver() -> CeleryEventReceiver:
     celery_app = Celery()
     return CeleryEventReceiver(celery_app)
 
 
-def test_stop_with_receiver(receiver, mocker: MockerFixture):
+def test_stop_with_receiver(receiver: CeleryEventReceiver, mocker: MockerFixture) -> None:
     join_mock = mocker.patch.object(receiver, "join")
     receiver.receiver = mocker.Mock()
 
@@ -22,7 +22,7 @@ def test_stop_with_receiver(receiver, mocker: MockerFixture):
     join_mock.assert_called_once()
 
 
-def test_stop_without_receiver(receiver, mocker: MockerFixture):
+def test_stop_without_receiver(receiver: CeleryEventReceiver, mocker: MockerFixture) -> None:
     join_mock = mocker.patch.object(receiver, "join")
 
     receiver.stop()
@@ -33,9 +33,15 @@ def test_stop_without_receiver(receiver, mocker: MockerFixture):
 
 
 @pytest.mark.parametrize("should_stop", [True, False])
-def test_adds_event_to_queue(receiver, should_stop, mocker: MockerFixture):
+def test_adds_event_to_queue(
+    receiver: CeleryEventReceiver,
+    mocker: MockerFixture,
+    *,  # Enforcing keyword-only argument for 'should_stop' to avoid ambiguity with boolean positional arguments
+    should_stop: bool = False,
+) -> None:
     event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
     state_mock = mocker.patch.object(state, "event")
+
     if should_stop:
         receiver._stop_signal.set()
 
