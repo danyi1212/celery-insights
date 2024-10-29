@@ -1,7 +1,7 @@
-from typing import Annotated, Any, NamedTuple, Self
+from typing import Annotated, Any, NamedTuple, Self, Dict, List, Tuple
 
 from celery.events.state import Worker as CeleryWorker
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, Field, ConfigDict
 
 from common.types import EpochTimestamp
 
@@ -42,7 +42,7 @@ class Worker(BaseModel):
         )
 
 
-def cast_int(value) -> int:
+def cast_int(value: Any) -> int:
     if isinstance(value, int):
         return value
     elif isinstance(value, str) and value.isdigit():
@@ -67,7 +67,9 @@ class Broker(BaseModel):
     port: CastedInt = Field(0, description="Broker port")
     ssl: bool = Field(default=False, description="Whether to use ssl connections")
     transport: str | None = Field(default=None, description="Name of transport used (e.g, amqp / redis)")
-    transport_options: dict = Field(default_factory=dict, description="Additional options used to connect to broker")
+    transport_options: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional options used to connect to broker"
+    )
     uri_prefix: str | None = Field(default=None, description="Prefix to be added to broker uri")
     userid: str | None = Field(default=None, description="User ID used to connect to the broker with")
     virtual_host: str | None = Field(default=None, description="Virtual host used")
@@ -84,8 +86,8 @@ class Pool(BaseModel):
     max_tasks_per_child: CastedInt = Field(
         0, description="Maximum number of tasks to be executed before child recycled", alias="max-tasks-per-child"
     )
-    processes: list[int] = Field(default_factory=list, description="Child process IDs (or thread IDs)")
-    timeouts: tuple[int, int] = Field(
+    processes: List[int] = Field(default_factory=list, description="Child process IDs (or thread IDs)")
+    timeouts: Tuple[int, int] = Field(
         default_factory=lambda: (0, 0), description="Soft time limit and hard time limit, in seconds"
     )
 
@@ -101,78 +103,8 @@ class Stats(BaseModel):
     pid: CastedInt = Field(description="Process ID of worker instance (Main process)")
     pool: Pool = Field(default_factory=Pool, description="Current pool stats")
     prefetch_count: CastedInt = Field(description="Current prefetch task queue for consumer")
-    rusage: dict = Field(default_factory=dict, description="Operating System statistics")
-    total: dict[str, int] = Field(default_factory=dict, description="Count of accepted tasks by type")
-
-    model_config = ConfigDict(
-        extra="ignore",
-    )
-
-
-class ExchangeInfo(BaseModel):
-    name: str | None = Field(default=None, description="Name of exchange")
-    type: str | None = Field(default=None, description="Exchange routing type")
-
-    model_config = ConfigDict(
-        extra="ignore",
-    )
-
-
-class QueueInfo(BaseModel):
-    name: str | None = Field(default=None, description="Name of the queue")
-    exchange: ExchangeInfo = Field(default_factory=ExchangeInfo, description="Exchange information")
-    routing_key: str | None = Field(default=None, description="Routing key for the queue")
-    queue_arguments: dict[str, Any] | None = Field(default=None, description="Arguments for the queue")
-    binding_arguments: dict[str, Any] | None = Field(default=None, description="Arguments for bindings")
-    consumer_arguments: dict[str, Any] | None = Field(default=None, description="Arguments for consumers")
-    durable: bool = Field(default=False, description="Queue will survive broker restart")
-    exclusive: bool = Field(default=False, description="Queue can be used by only one consumer")
-    auto_delete: bool = Field(default=False, description="Queue will be deleted after last consumer unsubscribes")
-    no_ack: bool = Field(default=False, description="Workers will not acknowledge task messages")
-    alias: str | None = Field(default=None, description="Queue alias if used for queue names")
-    message_ttl: int | None = Field(default=None, description="Message TTL in seconds")
-    max_length: int | None = Field(default=None, description="Maximum number of task messages allowed in the queue")
-    max_priority: int | None = Field(default=None, description="Maximum priority for task messages in the queue")
-
-    model_config = ConfigDict(
-        extra="ignore",
-    )
-
-
-class DeliveryInfo(BaseModel):
-    exchange: str | None = Field(default=None, description="Broker exchange used")
-    priority: int | None = Field(default=None, description="Message priority")
-    redelivered: bool = Field(default=False, description="Message sent back to queue")
-    routing_key: str | None = Field(default=None, description="Message routing key used")
-
-    model_config = ConfigDict(
-        extra="ignore",
-    )
-
-
-class TaskRequest(BaseModel):
-    id: str = Field(description="Task unique id")
-    name: str = Field(description="Task name")
-    type: str = Field(description="Task type")
-    args: list[Any] = Field(description="Task positional arguments")
-    kwargs: dict[str, Any] = Field(description="Task keyword arguments")
-    delivery_info: DeliveryInfo = Field(
-        default_factory=DeliveryInfo, description="Delivery Information about the task Message"
-    )
-    acknowledged: bool = Field(default=False, description="Whether the task message is acknowledged")
-    time_start: EpochTimestamp | None = Field(default=None, description="When the task has started by the worker")
-    hostname: str = Field(description="Worker hostname")
-    worker_pid: int | None = Field(default=None, description="Child worker process ID")
-
-    model_config = ConfigDict(
-        extra="ignore",
-    )
-
-
-class ScheduledTask(BaseModel):
-    eta: str = Field(description="Absolute time when the task should be executed")
-    priority: CastedInt = Field(description="Message priority")
-    request: TaskRequest = Field(description="Task Information")
+    rusage: Dict[str, Any] = Field(default_factory=dict, description="Operating System statistics")
+    total: Dict[str, int] = Field(default_factory=dict, description="Count of accepted tasks by type")
 
     model_config = ConfigDict(
         extra="ignore",

@@ -8,13 +8,13 @@ T = TypeVar("T")
 
 
 class QueueSubscriber(Generic[T], ABC):
-    def __init__(self, queue: Queue[T], name: str | None = None):
+    def __init__(self, queue: Queue[T], name: str | None = None) -> None:
         self.queue = queue
         self.name = name or self.__class__.__name__
         self._stop_signal = Event()
-        self._task: AioTask | None = None
+        self._task: AioTask[None] | None = None
 
-    def start(self):
+    def start(self) -> None:
         self._task = create_task(self._listen())
 
     async def _listen(self) -> None:
@@ -35,10 +35,10 @@ class QueueSubscriber(Generic[T], ABC):
     async def handle_event(self, event: T) -> None:
         raise NotImplementedError()
 
-    def stop(self):
+    def stop(self) -> None:
         logger.info(f"Stopping subscriber {self.name!r}...")
         self._stop_signal.set()
-        if self._task.done():
+        if self._task is not None and self._task.done():
             self._task.result()
-        else:
+        elif self._task is not None:
             self._task.cancel()

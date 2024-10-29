@@ -29,7 +29,7 @@ def zip_file(tmp_path: Path) -> zipfile.ZipFile:
         ([TaskFactory.build(), TaskFactory.build()], list[Task]),
     ],
 )
-def test_dump_model(zip_file: zipfile.ZipFile, model: Any, model_type: type, filename="test.json"):
+def test_dump_model(zip_file: zipfile.ZipFile, model: Any, model_type: type, filename: str = "test.json") -> None:
     dump_model(zip_file, filename, model)
 
     assert filename in zip_file.namelist(), f"File {filename!r} does not exist in the Zip file."
@@ -42,7 +42,7 @@ def test_dump_model(zip_file: zipfile.ZipFile, model: Any, model_type: type, fil
     assert actual_object == model
 
 
-def test_dump_model_non_serializable_type(zip_file: zipfile.ZipFile, caplog: pytest.LogCaptureFixture):
+def test_dump_model_non_serializable_type(zip_file: zipfile.ZipFile, caplog: pytest.LogCaptureFixture) -> None:
     class UnsupportedModel:
         pass
 
@@ -57,7 +57,7 @@ def test_dump_model_non_serializable_type(zip_file: zipfile.ZipFile, caplog: pyt
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("encoding", ["utf-8"])
-async def test_dump_file(zip_file: zipfile.ZipFile, tmp_path: Path, encoding: str):
+async def test_dump_file(zip_file: zipfile.ZipFile, tmp_path: Path, encoding: str) -> None:
     test_file = AsyncPath(tmp_path) / "test.txt"
     await test_file.write_text("sample content", encoding=encoding)
 
@@ -69,7 +69,9 @@ async def test_dump_file(zip_file: zipfile.ZipFile, tmp_path: Path, encoding: st
 
 
 @pytest.mark.asyncio
-async def test_dump_file_nonexistent_path(zip_file: zipfile.ZipFile, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+async def test_dump_file_nonexistent_path(
+    zip_file: zipfile.ZipFile, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     non_existent_file = AsyncPath(tmp_path) / "nonexistent.txt"
 
     await dump_file(zip_file, "nonexistent.txt", non_existent_file)
@@ -78,7 +80,9 @@ async def test_dump_file_nonexistent_path(zip_file: zipfile.ZipFile, tmp_path: P
 
 
 @pytest.mark.asyncio
-async def test_dump_file_not_a_file(zip_file: zipfile.ZipFile, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+async def test_dump_file_not_a_file(
+    zip_file: zipfile.ZipFile, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     not_a_file = AsyncPath(tmp_path) / "some_folder"
     await not_a_file.mkdir(exist_ok=True, parents=True)
 
@@ -88,7 +92,7 @@ async def test_dump_file_not_a_file(zip_file: zipfile.ZipFile, tmp_path: Path, c
 
 
 @pytest.mark.asyncio
-async def test_generate_bundle_file(tmp_path: Path):
+async def test_generate_bundle_file(tmp_path: Path) -> None:
     config_path = tmp_path / "config.py"
     config_path.write_text("sample content")
 

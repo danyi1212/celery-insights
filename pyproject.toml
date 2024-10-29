@@ -60,6 +60,7 @@ ruff = "*"
 ipython = "*"
 pre-commit = "*"
 poetry-plugin-bundle = "*"
+mypy = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -96,3 +97,6 @@ select = [
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
+
+[tool.mypy]
+disable_error_code = ["misc"]

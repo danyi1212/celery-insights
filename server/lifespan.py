@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from typing import Any, AsyncGenerator
 from asyncio import CancelledError
 from contextlib import asynccontextmanager
 
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(_):
+async def lifespan(_: Any) -> AsyncGenerator[None, None]:
     logger.info("Welcome to Celery Insights!")
     settings = Settings()
 
