@@ -21,7 +21,7 @@ aiopath = "^0"
 pydantic = "^2"
 pydantic-settings = "^2"
 colorlog = "*"
-redis = "^5.0.8"
+redis = "^5.2.1"
 
 [tool.poetry.group.all]
 optional = true
