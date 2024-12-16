@@ -27,7 +27,7 @@ repos:
         args: [ --lock ]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.7.1
+    rev: v0.8.3
     hooks:
       - id: ruff
         files: \.py$
@@ -37,7 +37,7 @@ repos:
         types: [ file ]
 
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.13.0
+    rev: v9.17.0
     hooks:
       - id: eslint
         files: \.[jt]sx?$  # *.js, *.jsx, *.ts and *.tsx
