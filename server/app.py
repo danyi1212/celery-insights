@@ -4,13 +4,13 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
-from starlette.staticfiles import StaticFiles
 
 from events.router import events_router
 from lifespan import lifespan
 from search.router import search_router
 from server_info.router import settings_router
 from settings import Settings
+from spa import SpaFiles
 from tasks.router import tasks_router
 from workers.router import workers_router
 from ws.router import ws_router
@@ -58,4 +58,4 @@ app.include_router(events_router)
 app.include_router(settings_router)
 
 if Path("static").exists():
-    app.mount("/", StaticFiles(directory="static", html=True), name="static")
+    app.mount("/", SpaFiles("static", ignore_prefixes=["/api", "/docs", "/redoc", "/ws"]), name="static")
