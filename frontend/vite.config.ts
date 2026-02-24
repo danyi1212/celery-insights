@@ -13,13 +13,25 @@ export default defineConfig({
             generatedRouteTree: "app/routeTree.gen.ts",
             autoCodeSplitting: true,
         }),
-        react(),
+        react({
+            jsxImportSource: "@emotion/react",
+        }),
     ],
     define: {
         // react-joyrider uses the global object, even though it doesn't exist in the browser.
         // https://github.com/vitejs/vite/discussions/5912
         // https://github.com/bevacqua/dragula/issues/602#issuecomment-1296313369
         global: "window",
+    },
+    optimizeDeps: {
+        include: [
+            "@emotion/react",
+            "@emotion/styled",
+            "@emotion/react/jsx-runtime",
+            "@mui/material",
+            "@mui/system",
+            "@mui/material/styles",
+        ],
     },
     server: {
         port: 3000,
