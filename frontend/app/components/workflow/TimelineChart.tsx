@@ -1,16 +1,10 @@
 import { useNow } from "@hooks/useNow"
-import DownloadIcon from "@mui/icons-material/Download"
-import HighlightAltIcon from "@mui/icons-material/HighlightAlt"
-import PanToolIcon from "@mui/icons-material/PanTool"
-import ZoomInIcon from "@mui/icons-material/ZoomIn"
-import ZoomOutIcon from "@mui/icons-material/ZoomOut"
-import ZoomOutMapIcon from "@mui/icons-material/ZoomOutMap"
-import { Theme, useTheme } from "@mui/material"
-import Box from "@mui/material/Box"
+import { useIsDark } from "@hooks/useIsDark"
 import { useTourChangeStepOnLoad } from "@stores/useTourStore"
 import { formatDurationExact } from "@utils/FormatDurationExact"
 import { StateTask } from "@utils/translateServerModels"
 import { ApexOptions } from "apexcharts"
+import { Download, Maximize2, Move, ScanSearch, ZoomIn, ZoomOut } from "lucide-react"
 import React, { useMemo } from "react"
 import Chart from "react-apexcharts"
 import { renderToString } from "react-dom/server"
@@ -33,11 +27,10 @@ const getSeries = (tasks: StateTask[], now: Date): ApexAxisChartSeries => {
 }
 
 const REALTIME_INTERVAL = 100
-const getOptions = (theme: Theme, navigate: (to: string) => void): ApexOptions => ({
+const getOptions = (isDark: boolean, navigate: (to: string) => void): ApexOptions => ({
     chart: {
-        background: theme.palette.background.paper,
-        foreColor: theme.palette.text.primary,
-        fontFamily: theme.typography.fontFamily,
+        background: isDark ? "oklch(0.20 0.01 155)" : "oklch(0.98 0.005 150)",
+        foreColor: isDark ? "#e8e5de" : "#1f2117",
         parentHeightOffset: 0,
         animations: {
             enabled: true,
@@ -51,13 +44,13 @@ const getOptions = (theme: Theme, navigate: (to: string) => void): ApexOptions =
             offsetX: -15,
             offsetY: -15,
             tools: {
-                download: renderToString(<DownloadIcon />),
-                selection: renderToString(<HighlightAltIcon />),
-                pan: renderToString(<PanToolIcon />),
-                reset: renderToString(<ZoomOutMapIcon />),
-                zoomout: renderToString(<ZoomOutIcon />),
-                zoomin: renderToString(<ZoomInIcon />),
-                zoom: renderToString(<HighlightAltIcon />),
+                download: renderToString(<Download size={14} />),
+                selection: renderToString(<ScanSearch size={14} />),
+                pan: renderToString(<Move size={14} />),
+                reset: renderToString(<Maximize2 size={14} />),
+                zoomout: renderToString(<ZoomOut size={14} />),
+                zoomin: renderToString(<ZoomIn size={14} />),
+                zoom: renderToString(<ScanSearch size={14} />),
             },
         },
         zoom: {
@@ -78,7 +71,7 @@ const getOptions = (theme: Theme, navigate: (to: string) => void): ApexOptions =
         },
     },
     theme: {
-        mode: theme.palette.mode,
+        mode: isDark ? "dark" : "light",
         palette: "palette4",
     },
     plotOptions: {
@@ -122,7 +115,7 @@ interface TimelineChartProps {
 
 const TimelineChart: React.FC<TimelineChartProps> = ({ tasks }) => {
     useTourChangeStepOnLoad(5)
-    const theme = useTheme()
+    const isDark = useIsDark()
     const navigate = useNavigate()
     const sortedTasks = useMemo(() => tasks.sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1)), [tasks])
     const isRealtime = useMemo(
@@ -131,10 +124,10 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ tasks }) => {
     )
     const now = useNow(isRealtime ? REALTIME_INTERVAL : undefined)
     const series = useMemo(() => getSeries(sortedTasks, now), [sortedTasks, now])
-    const options: ApexOptions = useMemo(() => getOptions(theme, navigate), [theme, navigate])
+    const options: ApexOptions = useMemo(() => getOptions(isDark, navigate), [isDark, navigate])
     const isLarge = useMemo(() => tasks.length > 15, [tasks])
     return (
-        <Box sx={{ overflowY: isLarge ? "auto" : "clip", overflowX: "clip" }} height="100%" pt="17px">
+        <div className={`h-full pt-[17px] overflow-x-clip ${isLarge ? "overflow-y-auto" : "overflow-y-clip"}`}>
             <Chart
                 type="rangeBar"
                 options={options}
@@ -142,7 +135,7 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ tasks }) => {
                 height={isLarge ? tasks.length * 25 : "100%"}
                 width="100%"
             />
-        </Box>
+        </div>
     )
 }
 

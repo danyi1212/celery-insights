@@ -321,7 +321,7 @@ export const Route = createRootRoute({
 - [x] **3d. Explorer Page** (`explorer.tsx`): Migrate `ExplorerGrid` to TanStack Table + Shadcn Table, `ExplorerLayout`, facet components
 - [x] **3e. Raw Events Page** (`raw_events.tsx`): Migrate `RawEventsTable`, `RawEventRow`, `LimitSelect`, `ToggleConnect`
 - [x] **3f. Settings Page** (`settings.tsx`): Migrate `SettingsPanel`, `ServerInfoPanel`, `OnlineClientsPanel`, `ClientInfoItem`, `ClientConnectionStatus`, `DownloadDebugBundleButton`, `VersionCheckIcon`
-- [ ] **3g. Workflow Components**: Migrate `FlowChart`, `TaskNode`, `TimelineChart`, `WorkflowGraph` (update @xyflow/react imports)
+- [x] **3g. Workflow Components**: Migrate `FlowChart`, `TaskNode`, `TimelineChart`, `WorkflowGraph` (update @xyflow/react imports)
 - [ ] **3h. Search Components**: Migrate `SearchResultList`, `SearchResultListItem`
 
 **Verification per page**: Each page renders correctly, all interactions work, dark/light mode works.

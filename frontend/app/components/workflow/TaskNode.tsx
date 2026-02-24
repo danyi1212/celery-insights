@@ -1,5 +1,4 @@
 import TaskAvatar from "@components/task/TaskAvatar"
-import Zoom from "@mui/material/Zoom"
 import { StateTask } from "@utils/translateServerModels"
 import React from "react"
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react"
@@ -10,11 +9,9 @@ const TaskNode: React.FC<NodeProps<TaskNodeType>> = ({ data }) => {
     return (
         <>
             <Handle type="target" position={Position.Left} />
-            <Zoom in>
-                <div>
-                    <TaskAvatar taskId={data.id} type={data.type} status={data.state} sx={{ width: 60, height: 60 }} />
-                </div>
-            </Zoom>
+            <div className="animate-in zoom-in-75 fade-in duration-300">
+                <TaskAvatar taskId={data.id} type={data.type} status={data.state} className="size-[60px]" />
+            </div>
             <Handle type="source" position={Position.Right} />
         </>
     )
