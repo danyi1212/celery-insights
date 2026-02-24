@@ -29,7 +29,7 @@ export const RawEventRow: React.FC<RawEventRowProps> = ({ event }) => {
                     )}
                 </TableCell>
                 <TableCell>
-                    {event?.timestamp ? format(event.timestamp as number, "hh:mm:ss.SSS") : "Unknown"}
+                    {event?.timestamp ? format(event.timestamp as number, "HH:mm:ss.SSS") : "Unknown"}
                 </TableCell>
                 <TableCell>{(event?.type as string) || "Unknown"}</TableCell>
                 <TableCell>{(event?.name as string) || (event?.hostname as string) || "Unknown"}</TableCell>
