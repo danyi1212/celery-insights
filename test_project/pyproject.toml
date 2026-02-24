@@ -1,0 +1,12 @@
+[project]
+name = "celery-insights-test-project"
+version = "0.1.0"
+description = "Test harness for celery-insights E2E testing"
+requires-python = ">=3.12"
+dependencies = [
+    "celery[redis]>=5.4,<6",
+    "colorlog>=6.8,<7",
+    "fastapi>=0.115,<1",
+    "pydantic-settings>=2.7,<3",
+    "uvicorn[standard]>=0.34,<1",
+]
