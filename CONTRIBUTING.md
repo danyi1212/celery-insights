@@ -32,7 +32,7 @@ To contribute to the project, follow these steps:
 1. Fork the repository.
 2. Create a branch with a descriptive name, using prefixes like `feature/` or `bug/` for the branch names.
 3. Make your changes in the branch.
-   > For server API changes, make sure to run `npm run generate-client` in the frontend folder to update the Server
+   > For server API changes, make sure to run `bun run generate-client` in the frontend folder to update the Server
    Client SDK.
    >
    > You can use the provided PyCharm run configuration `generate-client`
@@ -46,8 +46,8 @@ To contribute to the project, follow these steps:
 
 #### Prerequisites
 
-- Python
-- Node.js
+- Python 3.12+
+- [Bun](https://bun.sh/)
 - An IDE (we suggest PyCharm, but you can use your preferred IDE)
 
 ### Create dev environment
@@ -68,10 +68,10 @@ To contribute to the project, follow these steps:
    ```shell
    pre-commit install
    ```
-5. Install the Node.js dependencies using npm.
+5. Install the frontend dependencies using Bun.
     ```shell
     cd frontend/
-    npm install
+    bun install
     ```
 6. Create `.env` file
     ```shell
@@ -85,12 +85,12 @@ To contribute to the project, follow these steps:
    cd server/
    python run.py
    ```
-2. Start the frontend server (provided PyCharm run configuration `dev`)
+2. Start the frontend dev server (provided PyCharm run configuration `dev`)
     ```shell
    cd frontend/
-   npm run dev
+   bun dev
    ```
-3. Open browser to http://localhost:5173
+3. Open browser to http://localhost:3000
 
 ## Code Styles
 

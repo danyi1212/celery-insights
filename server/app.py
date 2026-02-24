@@ -1,10 +1,8 @@
 import logging.config
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
-from starlette.staticfiles import StaticFiles
 
 from events.router import events_router
 from lifespan import lifespan
@@ -34,8 +32,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:8555",
+        "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:8555",
     ],
@@ -56,6 +56,3 @@ app.include_router(workers_router)
 app.include_router(search_router)
 app.include_router(events_router)
 app.include_router(settings_router)
-
-if Path("static").exists():
-    app.mount("/", StaticFiles(directory="static", html=True), name="static")

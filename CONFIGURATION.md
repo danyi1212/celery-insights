@@ -56,13 +56,14 @@ Specify how many workers can be stored in memory.
 
 Default: `0.0.0.0`
 
-Specify Celery Insights hostname. By default, it will listen to all IP addresses.
+Specify the Python backend hostname. By default, it will listen to all IP addresses.
 
 ### PORT
 
 Default: `8555`
 
-Specify Celery Insights port number.
+Specify the port Bun serves on externally.
+In production, the Python backend runs on an internal port (8556) managed by Bun automatically.
 
 ### TIMEZONE
 
