@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { DownloadDebugBundleButton } from "@components/settings/DownloadDebugBundleButton"
-import OnlineClientsPanel from "@components/settings/OnlineClientsPanel"
-import { ServerInfoPanel } from "@components/settings/ServerInfoPanel"
-import SettingsPanel from "@components/settings/SettingsPanel"
+import { DownloadDebugBundleButton } from "@components/settings/download-debug-bundle-button"
+import OnlineClientsPanel from "@components/settings/online-clients-panel"
+import { ServerInfoPanel } from "@components/settings/server-info-panel"
+import SettingsPanel from "@components/settings/settings-panel"
 
 const SettingsPage = () => {
     return (
