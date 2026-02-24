@@ -4,15 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-**Backend** (from repo root): `poetry run pytest`, `poetry run ruff check server/`, `poetry run ruff format server/`
+**Backend** (from repo root): `uv run pytest`, `uv run ruff check server/`, `uv run ruff format server/`
 **Frontend** (from `frontend/`): `bun dev`, `bun run build`, `bun run lint`, `bun run lint-fix`
 **Regenerate API client** (after any endpoint change): `cd frontend && bun run generate-client`
 
-Tests are colocated: `model.py` -> `model_test.py`. Run one with `poetry run pytest server/tasks/model_test.py`.
+Tests are colocated: `model.py` -> `model_test.py`. Run one with `uv run pytest server/tasks/model_test.py`.
 
 ## Stack
 
-- **Backend**: FastAPI, Python 3.12, Celery 5.4, Pydantic v2, Poetry
+- **Backend**: FastAPI, Python 3.12, Celery 5.4, Pydantic v2, uv
 - **Frontend**: React 18, TypeScript, Vite, TanStack Router (file-based, auto code-splitting), Bun, MUI v5, Zustand, TanStack Query, ReactFlow
 - **Real-time**: WebSockets — Celery events flow through a threaded receiver -> async queue -> broadcaster -> WebSocket -> Zustand stores
 - **Architecture**: Bun is the single entrypoint — serves the SPA, spawns the Python backend as a child process (on port 8556 internally), and reverse-proxies API/WS to it. External port is 8555.
@@ -45,6 +45,16 @@ Tests are colocated: `model.py` -> `model_test.py`. Run one with `poetry run pyt
 
 The Vite dev server handles HMR and proxies `/api/*` and `/ws/*` to Python at 8555.
 
+## Deployment
+
+Published as a Docker container. After changing dependencies or the build pipeline, verify with `docker build .`.
+
 ## Mindset
 
 This is a monitoring tool — it observes, never mutates the Celery cluster. Prioritize real-time responsiveness and clear data presentation. The target user is a developer debugging their Celery setup, so surface full technical detail rather than abstracting it away. Keep the UI information-dense. Performance matters: avoid unnecessary re-renders on the frontend and avoid blocking the async event loop on the backend.
+
+## Checklist
+
+- Never use `npm` or `yarn` commands. Always use `bun`.
+- Never use `poetry` or `pip` commands. Always use `uv`.
+- Never use `rm` commands. Always use `trash`.
