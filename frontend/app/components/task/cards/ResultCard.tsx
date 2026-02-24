@@ -15,6 +15,13 @@ interface CardContentProps {
     result?: TaskResult
 }
 
+const normalizeJsonViewValue = (value: unknown): object => {
+    if (value !== null && typeof value === "object") {
+        return value
+    }
+    return { result: value }
+}
+
 const CardContent: React.FC<CardContentProps> = ({ result }) => {
     const isDark = useIsDark()
 
@@ -40,7 +47,7 @@ const CardContent: React.FC<CardContentProps> = ({ result }) => {
 
     return (
         <JsonView
-            value={result.result as object}
+            value={normalizeJsonViewValue(result.result)}
             style={isDark ? githubDarkTheme : githubLightTheme}
             collapsed={2}
             displayDataTypes={false}
