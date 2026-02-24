@@ -1,5 +1,4 @@
 import TourTooltip from "@layout/TourTooltip"
-import { useTheme } from "@mui/material"
 import useSettingsStore from "@stores/useSettingsStore"
 import { backStep, nextStep, stopTour, useTourStore } from "@stores/useTourStore"
 import React, { useMemo } from "react"
@@ -206,7 +205,6 @@ const createSteps = (): Step[] => [
 ]
 
 const JoyrideTour: React.FC = () => {
-    const theme = useTheme()
     const state = useTourStore()
     const steps = useMemo(() => createSteps(), [])
 
@@ -245,11 +243,11 @@ const JoyrideTour: React.FC = () => {
             spotlightPadding={0}
             styles={{
                 options: {
-                    arrowColor: theme.palette.background.paper,
-                    backgroundColor: theme.palette.background.paper,
-                    primaryColor: theme.palette.primary.main,
-                    textColor: theme.palette.text.primary,
-                    zIndex: theme.zIndex.tooltip,
+                    arrowColor: "var(--card)",
+                    backgroundColor: "var(--card)",
+                    primaryColor: "var(--color-primary)",
+                    textColor: "var(--foreground)",
+                    zIndex: 1500,
                 },
             }}
         />

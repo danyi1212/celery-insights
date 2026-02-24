@@ -330,7 +330,7 @@ export const Route = createRootRoute({
 
 ### Phase 4: Tour Restyling
 
-- [ ] Restyle `TourTooltip.tsx` with Shadcn `Card`/`Button`, Tailwind classes, `tailwindcss-animate` for Zoom replacement. Test full tour flow.
+- [x] Restyle `TourTooltip.tsx` with Shadcn `Card`/`Button`, Tailwind classes, `tailwindcss-animate` for Zoom replacement. Test full tour flow.
 
 ---
 
