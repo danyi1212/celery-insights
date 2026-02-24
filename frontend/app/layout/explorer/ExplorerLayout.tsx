@@ -1,12 +1,7 @@
-import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew"
-import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
-import Box from "@mui/material/Box"
-import Divider from "@mui/material/Divider"
-import IconButton from "@mui/material/IconButton"
-import Stack from "@mui/material/Stack"
-import Toolbar from "@mui/material/Toolbar"
-import Tooltip from "@mui/material/Tooltip"
-import Typography from "@mui/material/Typography"
+import { Button } from "@components/ui/button"
+import { Separator } from "@components/ui/separator"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { ArrowLeft, ArrowRight } from "lucide-react"
 import React, { useState } from "react"
 
 interface ExplorerLayoutProps {
@@ -20,36 +15,32 @@ export const ExplorerLayout: React.FC<ExplorerLayoutProps> = ({ facets, actions,
     const [isFacetMenuOpen, setFacetMenuOpen] = useState(true)
 
     return (
-        <Box display="flex" flexDirection="row">
-            <Box
-                width={isFacetMenuOpen ? FACET_WIDTH : 0}
-                sx={{ transition: (theme) => theme.transitions.create("width"), overflow: "hidden" }}
+        <div className="flex flex-row">
+            <div
+                className="overflow-hidden transition-[width] duration-300"
+                style={{ width: isFacetMenuOpen ? FACET_WIDTH : 0 }}
             >
-                <Toolbar>
-                    <Typography variant="h5">Facets</Typography>
-                </Toolbar>
-                <Divider />
+                <div className="flex h-12 items-center px-4">
+                    <h5 className="text-lg font-semibold">Facets</h5>
+                </div>
+                <Separator />
                 {facets}
-            </Box>
-            <Box flexGrow={1}>
-                <Toolbar>
-                    <Tooltip title={isFacetMenuOpen ? "Hide facets" : "Show facets"}>
-                        <IconButton onClick={() => setFacetMenuOpen(!isFacetMenuOpen)}>
-                            {isFacetMenuOpen ? <ArrowBackIosNewIcon /> : <ArrowForwardIosIcon />}
-                        </IconButton>
+            </div>
+            <div className="flex-1 min-w-0">
+                <div className="flex h-12 items-center px-2">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={() => setFacetMenuOpen(!isFacetMenuOpen)}>
+                                {isFacetMenuOpen ? <ArrowLeft className="size-4" /> : <ArrowRight className="size-4" />}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{isFacetMenuOpen ? "Hide facets" : "Show facets"}</TooltipContent>
                     </Tooltip>
-                    <Box flexGrow={1} />
-                    <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        spacing={1}
-                        sx={{ justifyContent: "space-between", alignItems: "center" }}
-                    >
-                        {actions}
-                    </Stack>
-                </Toolbar>
+                    <div className="flex-1" />
+                    <div className="flex items-center gap-2">{actions}</div>
+                </div>
                 {children}
-            </Box>
-        </Box>
+            </div>
+        </div>
     )
 }

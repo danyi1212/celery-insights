@@ -21,6 +21,7 @@
         "@tailwindcss/vite": "^4.2.1",
         "@tanstack/react-query": "^5.90.21",
         "@tanstack/react-router": "^1.162.9",
+        "@tanstack/react-table": "^8.21.3",
         "@textea/json-viewer": "^3.4.1",
         "@uiw/react-json-view": "^2.0.0-alpha.41",
         "@xyflow/react": "^12",

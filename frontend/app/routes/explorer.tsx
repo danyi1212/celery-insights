@@ -4,8 +4,6 @@ import ExplorerGrid from "@components/explorer/ExplorerGrid"
 import FacetSet from "@components/explorer/FacetSet"
 import { useExplorerFilter } from "@hooks/explorer/useExplorerFilter"
 import { ExplorerLayout } from "@layout/explorer/ExplorerLayout"
-import Box from "@mui/material/Box"
-import Typography from "@mui/material/Typography"
 import { useStateStore } from "@stores/useStateStore"
 import { useTourChangeStepOnLoad } from "@stores/useTourStore"
 import { StateTask } from "@utils/translateServerModels"
@@ -22,14 +20,14 @@ const ExplorerPage = () => {
     return (
         <ExplorerLayout
             facets={
-                <Box id="facets-menu">
+                <div id="facets-menu">
                     <FacetSet tasks={tasks} filters={filters} setFilter={setFilter} />
-                </Box>
+                </div>
             }
             actions={
                 <>
                     <CopyLinkButton />
-                    <Typography variant="subtitle2">{tasks.length} Tasks found</Typography>
+                    <span className="text-sm text-muted-foreground">{tasks.length} Tasks found</span>
                 </>
             }
         >

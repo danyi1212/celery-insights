@@ -1,15 +1,11 @@
 import FacetQuickFilter from "@components/explorer/FacetQuickFilter"
 import FacetValue from "@components/explorer/FacetValue"
-import ClearAllIcon from "@mui/icons-material/ClearAll"
-import ExpandLessIcon from "@mui/icons-material/ExpandLess"
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
-import Box from "@mui/material/Box"
-import Collapse from "@mui/material/Collapse"
-import Divider from "@mui/material/Divider"
-import IconButton from "@mui/material/IconButton"
-import List from "@mui/material/List"
-import Tooltip from "@mui/material/Tooltip"
-import Typography from "@mui/material/Typography"
+import { Button } from "@components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@components/ui/collapsible"
+import { ScrollArea } from "@components/ui/scroll-area"
+import { Separator } from "@components/ui/separator"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { ChevronDown, ChevronUp, ListX } from "lucide-react"
 import React, { useState } from "react"
 
 interface FacetProps {
@@ -40,42 +36,47 @@ const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected, val
     const handleClearAll = () => setSelected(new Set())
 
     return (
-        <Box onMouseEnter={() => setHover(!isOpen)} onMouseLeave={() => setHover(false)}>
-            <Box display="flex">
-                <IconButton size="small" onClick={() => setOpen(!isOpen)}>
-                    {isOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                </IconButton>
-                <Typography variant="h6" flexGrow={1} noWrap>
-                    {title}
-                </Typography>
-                <Tooltip title="Clear selection">
-                    <IconButton size="small" sx={{ mx: 1 }} onClick={() => handleClearAll()}>
-                        <ClearAllIcon />
-                    </IconButton>
-                </Tooltip>
-            </Box>
-            <Divider />
-            <Collapse in={isOpen || isHover} orientation="vertical">
-                <Box>
+        <Collapsible open={isOpen || isHover} onOpenChange={setOpen}>
+            <div onMouseEnter={() => setHover(!isOpen)} onMouseLeave={() => setHover(false)}>
+                <div className="flex items-center">
+                    <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="icon-xs">
+                            {isOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                        </Button>
+                    </CollapsibleTrigger>
+                    <h6 className="flex-1 truncate text-base font-semibold">{title}</h6>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon-xs" className="mx-1" onClick={() => handleClearAll()}>
+                                <ListX className="size-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Clear selection</TooltipContent>
+                    </Tooltip>
+                </div>
+                <Separator />
+                <CollapsibleContent>
                     <FacetQuickFilter filter={filter} setFilter={setFilter} />
-                    <List sx={{ maxHeight: FACET_MAX_HEIGHT, overflow: "auto" }} disablePadding>
-                        {Array.from(counts.entries())
-                            .filter(([value]) => !filter || value.toLowerCase().includes(filter.toLowerCase()))
-                            .sort((a, b) => b[1] - a[1])
-                            .map(([value, count]) => (
-                                <FacetValue
-                                    key={value}
-                                    value={value}
-                                    label={valueFormatter ? valueFormatter(value) : value}
-                                    count={count}
-                                    selected={selected}
-                                    onSelect={() => handleSelect(value)}
-                                />
-                            ))}
-                    </List>
-                </Box>
-            </Collapse>
-        </Box>
+                    <ScrollArea className="w-full" style={{ maxHeight: FACET_MAX_HEIGHT }}>
+                        <ul>
+                            {Array.from(counts.entries())
+                                .filter(([value]) => !filter || value.toLowerCase().includes(filter.toLowerCase()))
+                                .sort((a, b) => b[1] - a[1])
+                                .map(([value, count]) => (
+                                    <FacetValue
+                                        key={value}
+                                        value={value}
+                                        label={valueFormatter ? valueFormatter(value) : value}
+                                        count={count}
+                                        selected={selected}
+                                        onSelect={() => handleSelect(value)}
+                                    />
+                                ))}
+                        </ul>
+                    </ScrollArea>
+                </CollapsibleContent>
+            </div>
+        </Collapsible>
     )
 }
 export default Facet

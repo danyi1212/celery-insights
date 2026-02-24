@@ -1,10 +1,18 @@
 import TaskAvatar from "@components/task/TaskAvatar"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { TaskFilter } from "@hooks/explorer/useExplorerFilter"
-import Box from "@mui/material/Box"
-import { DataGrid, GridColDef } from "@mui/x-data-grid"
 import { useExplorerColumns } from "@stores/useExplorerConfig"
 import { StateTask } from "@utils/translateServerModels"
-import React, { useDeferredValue, useMemo } from "react"
+import {
+    flexRender,
+    getCoreRowModel,
+    getSortedRowModel,
+    useReactTable,
+    type ColumnDef,
+    type SortingState,
+} from "@tanstack/react-table"
+import React, { useDeferredValue, useMemo, useState } from "react"
+import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react"
 
 interface ExplorerGridProps {
     tasks: StateTask[]
@@ -13,24 +21,32 @@ interface ExplorerGridProps {
 
 const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, filters }) => {
     const columnConfigs = useExplorerColumns()
-    const columnDefs: GridColDef[] = useMemo(
+    const [sorting, setSorting] = useState<SortingState>([{ id: "lastUpdated", desc: true }])
+
+    const columns: ColumnDef<StateTask>[] = useMemo(
         () => [
             {
-                field: "id",
-                headerName: "Task",
-                renderCell: (params) => (
-                    <Box display="flex" alignItems="center" justifyContent="center" width="100%" height="100%">
-                        <TaskAvatar taskId={params.row.id} type={params.row.type} status={params.row.state} />
-                    </Box>
+                id: "avatar",
+                header: "Task",
+                size: 60,
+                enableSorting: false,
+                cell: ({ row }) => (
+                    <div className="flex items-center justify-center">
+                        <TaskAvatar taskId={row.original.id} type={row.original.type} status={row.original.state} />
+                    </div>
                 ),
             },
             ...columnConfigs.map(
-                (columnConfig): GridColDef => ({
-                    field: columnConfig.property,
-                    headerName: columnConfig.label,
-                    minWidth: columnConfig.columnWidth,
-                    valueFormatter: (params) =>
-                        columnConfig.valueFormatter ? columnConfig.valueFormatter(params.value as never) : params.value,
+                (columnConfig): ColumnDef<StateTask> => ({
+                    accessorKey: columnConfig.property,
+                    header: columnConfig.label,
+                    size: columnConfig.columnWidth,
+                    cell: ({ getValue }) => {
+                        const value = getValue()
+                        return columnConfig.valueFormatter
+                            ? columnConfig.valueFormatter(value as never)
+                            : (value as string)
+                    },
                 }),
             ),
         ],
@@ -50,13 +66,64 @@ const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, filters }) => {
         [deferredTasks, filters],
     )
 
+    const table = useReactTable({
+        data: filteredTasks,
+        columns,
+        state: { sorting },
+        onSortingChange: setSorting,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getRowId: (row) => row.id,
+    })
+
     return (
-        <DataGrid
-            columns={columnDefs}
-            rows={filteredTasks}
-            initialState={{ sorting: { sortModel: [{ field: "lastUpdated", sort: "desc" }] } }}
-            autoHeight
-        />
+        <Table>
+            <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                            <TableHead
+                                key={header.id}
+                                style={{ width: header.getSize() }}
+                                className={header.column.getCanSort() ? "cursor-pointer select-none" : ""}
+                                onClick={header.column.getToggleSortingHandler()}
+                            >
+                                <div className="flex items-center gap-1">
+                                    {flexRender(header.column.columnDef.header, header.getContext())}
+                                    {header.column.getCanSort() &&
+                                        (header.column.getIsSorted() === "asc" ? (
+                                            <ChevronUp className="size-4" />
+                                        ) : header.column.getIsSorted() === "desc" ? (
+                                            <ChevronDown className="size-4" />
+                                        ) : (
+                                            <ChevronsUpDown className="size-3.5 text-muted-foreground" />
+                                        ))}
+                                </div>
+                            </TableHead>
+                        ))}
+                    </TableRow>
+                ))}
+            </TableHeader>
+            <TableBody>
+                {table.getRowModel().rows.length === 0 ? (
+                    <TableRow>
+                        <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                            No tasks found.
+                        </TableCell>
+                    </TableRow>
+                ) : (
+                    table.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id}>
+                            {row.getVisibleCells().map((cell) => (
+                                <TableCell key={cell.id}>
+                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                </TableCell>
+                            ))}
+                        </TableRow>
+                    ))
+                )}
+            </TableBody>
+        </Table>
     )
 }
 
