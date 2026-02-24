@@ -2,37 +2,21 @@ import DetailItem from "@components/common/DetailItem"
 import LinearProgressWithLabel from "@components/common/LinearProgressWithLabel"
 import Panel from "@components/common/Panel"
 import VersionCheckIcon from "@components/settings/VersionCheckIcon"
+import { Button } from "@components/ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { useClient } from "@hooks/useClient"
-import RefreshIcon from "@mui/icons-material/Refresh"
-import LoadingButton from "@mui/lab/LoadingButton"
-import Box from "@mui/material/Box"
-import Button from "@mui/material/Button"
-import Grid from "@mui/material/Grid"
-import IconButton from "@mui/material/IconButton"
-import Stack from "@mui/material/Stack"
-import Tooltip from "@mui/material/Tooltip"
 import { resetState } from "@stores/useStateStore"
 import { useQuery } from "@tanstack/react-query"
 import { formatBytes } from "@utils/FormatBytes"
 import { formatSecondsDurationLong } from "@utils/FormatSecondsDurationLong"
+import { Loader2, RotateCw } from "lucide-react"
 import React, { useCallback, useEffect, useState } from "react"
 
-interface LinkButtonProps {
-    href: string
-    children?: React.ReactNode
-}
-
-const LinkButton: React.FC<LinkButtonProps> = ({ href, children }) => (
-    <Button
-        component="a"
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        variant="outlined"
-        color="secondary"
-        disabled={Boolean(import.meta.env.VITE_DEMO_MODE)}
-    >
-        {children}
+const LinkButton: React.FC<{ href: string; children?: React.ReactNode }> = ({ href, children }) => (
+    <Button variant="outline" asChild disabled={Boolean(import.meta.env.VITE_DEMO_MODE)}>
+        <a href={href} target="_blank" rel="noopener noreferrer">
+            {children}
+        </a>
     </Button>
 )
 
@@ -72,50 +56,45 @@ export const ServerInfoPanel: React.FC = () => {
             error={error}
             actions={
                 <>
-                    <Tooltip
-                        title={isReset ? "Clear all server state, including running tasks" : "Clear all server state"}
-                    >
-                        <LoadingButton
-                            variant="outlined"
-                            color={isReset === false ? "error" : "secondary"}
-                            onClick={handleResetState}
-                            loading={isResetLoading}
-                        >
-                            {isReset === null ? "Reset" : isReset ? "Force Reset" : "Error"}
-                        </LoadingButton>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="outline"
+                                onClick={handleResetState}
+                                disabled={isResetLoading}
+                                className={isReset === false ? "border-destructive text-destructive" : ""}
+                            >
+                                {isResetLoading && <Loader2 className="size-4 animate-spin" />}
+                                {isReset === null ? "Reset" : isReset ? "Force Reset" : "Error"}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            {isReset ? "Clear all server state, including running tasks" : "Clear all server state"}
+                        </TooltipContent>
                     </Tooltip>
-                    <Tooltip title="Refresh Server Info">
-                        <IconButton color="secondary" onClick={() => refetch().then()} disabled={isLoading}>
-                            <RefreshIcon />
-                        </IconButton>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={() => refetch().then()} disabled={isLoading}>
+                                <RotateCw className="size-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Refresh Server Info</TooltipContent>
                     </Tooltip>
                 </>
             }
         >
-            <Grid container spacing={2} p={2}>
-                <Grid item xs={12} md={6}>
-                    <DetailItem label="Name" value={data?.server_name || "???"} />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <DetailItem
-                        label="Version"
-                        value={
-                            <Box display="flex" alignItems="center">
-                                {data?.server_version || "???"}
-                                <VersionCheckIcon
-                                    currentVersion={data?.server_version}
-                                    progressProps={{
-                                        size: "1rem",
-                                        sx: { mx: 1 },
-                                    }}
-                                    fontSize="small"
-                                    sx={{ mx: 1 }}
-                                />
-                            </Box>
-                        }
-                    />
-                </Grid>
-                <Grid item xs={12}>
+            <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
+                <DetailItem label="Name" value={data?.server_name || "???"} />
+                <DetailItem
+                    label="Version"
+                    value={
+                        <span className="flex items-center">
+                            {data?.server_version || "???"}
+                            <VersionCheckIcon currentVersion={data?.server_version} />
+                        </span>
+                    }
+                />
+                <div className="md:col-span-2">
                     <DetailItem
                         label="CPU Usage"
                         description="CPU usage by the server process"
@@ -127,54 +106,36 @@ export const ServerInfoPanel: React.FC = () => {
                             />
                         }
                     />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <DetailItem
-                        label="Memory"
-                        description="Total memory usage by the server process"
-                        value={formatBytes(data?.memory_usage || 0)}
-                    />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <DetailItem
-                        label="Uptime"
-                        description="Amount of time the server process has been running"
-                        value={formatSecondsDurationLong(data?.uptime || 0)}
-                    />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <DetailItem label="Hostname" value={data?.server_hostname || "???"} />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <DetailItem label="Port" value={data?.server_port || "???"} />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <DetailItem label="Server OS" value={data?.server_os || "???"} />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <DetailItem label="Python Version" value={data?.python_version || "???"} />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <DetailItem
-                        label="Tasks"
-                        description="Number of tasks stored in state / limit"
-                        value={`${data?.task_count || 0} / ${data?.tasks_max_count || "Unknown"}`}
-                    />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <DetailItem
-                        label="Workers"
-                        description="Number of workers stored in state / limit"
-                        value={`${data?.worker_count || 0} / ${data?.worker_max_count || "Unknown"}`}
-                    />
-                </Grid>
-                <Grid item xs={12}>
-                    <Stack direction="row" justifyContent="space-around">
-                        <LinkButton href="/docs">API Explorer</LinkButton>
-                        <LinkButton href="/redoc">API Docs</LinkButton>
-                    </Stack>
-                </Grid>
-            </Grid>
+                </div>
+                <DetailItem
+                    label="Memory"
+                    description="Total memory usage by the server process"
+                    value={formatBytes(data?.memory_usage || 0)}
+                />
+                <DetailItem
+                    label="Uptime"
+                    description="Amount of time the server process has been running"
+                    value={formatSecondsDurationLong(data?.uptime || 0)}
+                />
+                <DetailItem label="Hostname" value={data?.server_hostname || "???"} />
+                <DetailItem label="Port" value={data?.server_port || "???"} />
+                <DetailItem label="Server OS" value={data?.server_os || "???"} />
+                <DetailItem label="Python Version" value={data?.python_version || "???"} />
+                <DetailItem
+                    label="Tasks"
+                    description="Number of tasks stored in state / limit"
+                    value={`${data?.task_count || 0} / ${data?.tasks_max_count || "Unknown"}`}
+                />
+                <DetailItem
+                    label="Workers"
+                    description="Number of workers stored in state / limit"
+                    value={`${data?.worker_count || 0} / ${data?.worker_max_count || "Unknown"}`}
+                />
+                <div className="flex justify-around gap-4 md:col-span-2">
+                    <LinkButton href="/docs">API Explorer</LinkButton>
+                    <LinkButton href="/redoc">API Docs</LinkButton>
+                </div>
+            </div>
         </Panel>
     )
 }

@@ -1,19 +1,14 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { useGithubLatestRelease } from "@hooks/useGithubLatestRelease"
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline"
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline"
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline"
-import { CircularProgressProps, SvgIconProps } from "@mui/material"
-import CircularProgress from "@mui/material/CircularProgress"
-import Tooltip from "@mui/material/Tooltip"
+import { AlertCircle, CheckCircle, HelpCircle, Loader2 } from "lucide-react"
 import React, { useMemo } from "react"
 import semver from "semver"
 
-interface VersionCheckIconProps extends SvgIconProps {
+interface VersionCheckIconProps {
     currentVersion: string | undefined
-    progressProps?: CircularProgressProps
 }
 
-const VersionCheckIcon: React.FC<VersionCheckIconProps> = ({ currentVersion, progressProps, ...props }) => {
+const VersionCheckIcon: React.FC<VersionCheckIconProps> = ({ currentVersion }) => {
     const { data, isLoading, error } = useGithubLatestRelease()
     const isUpdateAvailable = useMemo(
         () => data?.data.tag_name && currentVersion && semver.gt(data.data.tag_name, currentVersion),
@@ -21,32 +16,47 @@ const VersionCheckIcon: React.FC<VersionCheckIconProps> = ({ currentVersion, pro
     )
     if (isLoading)
         return (
-            <Tooltip title="Checking for updates">
-                <CircularProgress {...progressProps} />
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Loader2 className="mx-1 size-4 animate-spin text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>Checking for updates</TooltipContent>
             </Tooltip>
         )
     else if (error)
         return (
-            <Tooltip title="Error while checking for updates">
-                <ErrorOutlineIcon color="error" {...props} />
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <AlertCircle className="mx-1 size-4 text-destructive" />
+                </TooltipTrigger>
+                <TooltipContent>Error while checking for updates</TooltipContent>
             </Tooltip>
         )
     if (currentVersion === undefined || data?.data.tag_name === undefined)
         return (
-            <Tooltip title="Unable to check for updates">
-                <HelpOutlineIcon color="disabled" {...props} />
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <HelpCircle className="mx-1 size-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>Unable to check for updates</TooltipContent>
             </Tooltip>
         )
     else if (isUpdateAvailable) {
         return (
-            <Tooltip title={`Update is available! ${currentVersion} => ${data.data.tag_name}`}>
-                <ErrorOutlineIcon color="warning" {...props} />
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <AlertCircle className="mx-1 size-4 text-yellow-500" />
+                </TooltipTrigger>
+                <TooltipContent>{`Update is available! ${currentVersion} => ${data.data.tag_name}`}</TooltipContent>
             </Tooltip>
         )
     } else {
         return (
-            <Tooltip title="Up to date">
-                <CheckCircleOutlineIcon color="success" {...props} />
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <CheckCircle className="mx-1 size-4 text-green-500" />
+                </TooltipTrigger>
+                <TooltipContent>Up to date</TooltipContent>
             </Tooltip>
         )
     }
