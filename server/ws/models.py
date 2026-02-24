@@ -45,9 +45,12 @@ class ClientInfo(BaseModel):
 
     @classmethod
     def from_websocket(cls, websocket: WebSocket) -> Self:
+        client = websocket.client
+        if client is None:
+            raise ValueError("WebSocket client address is not available")
         return cls(
-            host=websocket.client.host,
-            port=websocket.client.port,
+            host=client.host,
+            port=client.port,
             state=websocket.client_state,
             is_secure=websocket.url.is_secure,
             user_agent=UserAgentInfo.parse(websocket.headers.get("User-Agent", "")),

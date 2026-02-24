@@ -32,7 +32,7 @@ async def get_task_result(task_id: str) -> TaskResult:
     celery_app = await get_celery_app()
     result = AsyncResult(task_id, app=celery_app)
     return TaskResult(
-        id=result.id,
+        id=result.id,  # ty: ignore[invalid-argument-type]
         type=result.name,
         state=result.state,
         queue=result.queue,

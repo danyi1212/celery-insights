@@ -34,12 +34,12 @@ class ServerInfo(BaseModel):
     @classmethod
     def create(cls, request: Request, state: State) -> Self:
         rusage = resource.getrusage(resource.RUSAGE_SELF)
-        return ServerInfo(
-            cpu_usage=os.getloadavg(),
+        return cls(
+            cpu_usage=CPULoad(*os.getloadavg()),
             memory_usage=rusage.ru_maxrss,
             uptime=time.time() - start_time,
-            server_hostname=request.url.hostname,
-            server_port=request.url.port,
+            server_hostname=request.url.hostname or "",
+            server_port=request.url.port or 0,
             server_version=request.app.version,
             server_os=platform.system(),
             server_name=platform.node(),

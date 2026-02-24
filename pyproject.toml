@@ -31,6 +31,7 @@ dev = [
     "pytest-cov",
     "polyfactory",
     "ruff",
+    "ty",
     "ipython",
     "pre-commit",
 ]
@@ -77,3 +78,10 @@ select = [
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
+
+[tool.ty.environment]
+python-version = "3.12"
+extra-paths = ["server"]
+
+[tool.ty.terminal]
+output-format = "concise"

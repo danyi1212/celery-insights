@@ -77,7 +77,7 @@ async def create_debug_bundle(request: Request, client_info: ClientDebugInfo) ->
         DebugBundleData(
             settings=Settings(),
             log_path=LOG_FILE_PATH,
-            browser=UserAgentInfo.parse(request.headers.get("User-Agent")),
+            browser=UserAgentInfo.parse(request.headers.get("User-Agent", "")),
             client_info=client_info,
             connections=list(events_manager.get_clients()),
             state_dump=get_state_dump(),
