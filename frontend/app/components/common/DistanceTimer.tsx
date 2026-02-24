@@ -1,5 +1,4 @@
 import { useNow } from "@hooks/useNow"
-import Typography from "@mui/material/Typography"
 import { differenceInDays, differenceInHours, differenceInMinutes, formatDistanceStrict, Locale } from "date-fns"
 import React, { useMemo } from "react"
 
@@ -40,7 +39,7 @@ const TimeSince: React.FC<TimeSinceProps> = ({ time, addSuffix, unit, roundingMe
             }),
         [time, now, addSuffix, unit, roundingMethod, locale],
     )
-    return <Typography component="span">{text}</Typography>
+    return <span>{text}</span>
 }
 
 export default TimeSince

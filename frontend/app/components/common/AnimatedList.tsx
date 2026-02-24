@@ -1,13 +1,11 @@
-import { ListProps } from "@mui/material"
-import List from "@mui/material/List"
 import React from "react"
 import { TransitionGroup } from "react-transition-group"
 
-const AnimatedList: React.FC<ListProps> = (props) => {
+const AnimatedList: React.FC<React.ComponentProps<"ul">> = (props) => {
     return (
-        <List {...props}>
+        <ul {...props}>
             <TransitionGroup>{props.children}</TransitionGroup>
-        </List>
+        </ul>
     )
 }
 export default AnimatedList

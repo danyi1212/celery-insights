@@ -1,15 +1,23 @@
-import { useTheme } from "@mui/material"
+import ShikiHighlighter from "react-shiki"
 import React from "react"
-import { PrismLight as SyntaxHighlighter, SyntaxHighlighterProps } from "react-syntax-highlighter"
-import darkStyle from "react-syntax-highlighter/dist/esm/styles/prism/material-dark"
-import lightStyle from "react-syntax-highlighter/dist/esm/styles/prism/material-light"
 
-const CodeBlock: React.FC<SyntaxHighlighterProps> = ({ children, ...props }) => {
-    const theme = useTheme()
+interface CodeBlockProps {
+    language?: string
+    children?: string
+    className?: string
+}
+
+const CodeBlock: React.FC<CodeBlockProps> = ({ children, language, className }) => {
     return (
-        <SyntaxHighlighter style={theme.palette.mode === "dark" ? darkStyle : lightStyle} {...props}>
-            {children}
-        </SyntaxHighlighter>
+        <ShikiHighlighter
+            language={language || "text"}
+            theme={{ light: "github-light", dark: "github-dark" }}
+            defaultColor="light"
+            showLanguage={false}
+            className={className}
+        >
+            {children ?? ""}
+        </ShikiHighlighter>
     )
 }
 export default CodeBlock

@@ -1,5 +1,5 @@
-import Alert from "@mui/material/Alert"
-import AlertTitle from "@mui/material/AlertTitle"
+import { Alert, AlertDescription, AlertTitle } from "@components/ui/alert"
+import { AlertCircle } from "lucide-react"
 import { HTTPValidationError } from "@services/server"
 import React from "react"
 
@@ -9,15 +9,18 @@ interface ValidationErrorAlertProps {
 
 const ValidationErrorAlert: React.FC<ValidationErrorAlertProps> = (props) => {
     return (
-        <Alert severity="error">
+        <Alert variant="destructive">
+            <AlertCircle className="size-4" />
             <AlertTitle>Invalid data</AlertTitle>
-            <ul>
-                {props.error.detail?.map((error, index) => (
-                    <li key={index}>
-                        {error.loc.join(".")}: {error.msg} ({error.type})
-                    </li>
-                ))}
-            </ul>
+            <AlertDescription>
+                <ul className="list-disc pl-4">
+                    {props.error.detail?.map((error, index) => (
+                        <li key={index}>
+                            {error.loc.join(".")}: {error.msg} ({error.type})
+                        </li>
+                    ))}
+                </ul>
+            </AlertDescription>
         </Alert>
     )
 }

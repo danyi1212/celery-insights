@@ -1,5 +1,5 @@
-import Alert from "@mui/material/Alert"
-import AlertTitle from "@mui/material/AlertTitle"
+import { Alert, AlertDescription, AlertTitle } from "@components/ui/alert"
+import { AlertCircle } from "lucide-react"
 import { ApiError } from "@services/server"
 import React from "react"
 import ApiErrorAlert from "./ApiErrorAlert"
@@ -13,9 +13,10 @@ const ErrorAlert: React.FC<ErrorAlertProps> = (props) => {
     else {
         console.error(props.error)
         return (
-            <Alert severity="error">
+            <Alert variant="destructive">
+                <AlertCircle className="size-4" />
                 <AlertTitle>Unhandled Error</AlertTitle>
-                We have encountered an unknown error 😳
+                <AlertDescription>We have encountered an unknown error</AlertDescription>
             </Alert>
         )
     }

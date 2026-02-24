@@ -1,24 +1,14 @@
-import { PaperProps } from "@mui/material"
-import Paper from "@mui/material/Paper"
+import { cn } from "@lib/utils"
 import React from "react"
 
-interface PanelPaperProps extends PaperProps {
+interface PanelPaperProps extends React.ComponentProps<"div"> {
     children?: React.ReactNode
 }
 
-const PanelPaper: React.FC<PanelPaperProps> = ({ children, ...props }) => (
-    <Paper
-        {...props}
-        sx={{
-            padding: 1,
-            borderRadius: "24px",
-            ...props.sx,
-            height: "100%",
-            overflow: "auto",
-        }}
-    >
+const PanelPaper: React.FC<PanelPaperProps> = ({ children, className, ...props }) => (
+    <div className={cn("h-full overflow-auto rounded-3xl bg-card p-1", className)} {...props}>
         {children}
-    </Paper>
+    </div>
 )
 
 export default PanelPaper
