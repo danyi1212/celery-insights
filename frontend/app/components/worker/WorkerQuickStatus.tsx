@@ -1,7 +1,5 @@
 import LinearProgressWithLabel from "@components/common/LinearProgressWithLabel"
-import Box from "@mui/material/Box"
-import Tooltip from "@mui/material/Tooltip"
-import Typography from "@mui/material/Typography"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { useStateStore } from "@stores/useStateStore"
 import React from "react"
 
@@ -13,22 +11,26 @@ const WorkerQuickStatus: React.FC<WorkerQuickStatusProps> = ({ workerId }) => {
     const worker = useStateStore((state) => state.workers.get(workerId))
     if (worker === undefined) return <></>
     return (
-        <Box m={1}>
-            <Tooltip title={worker.hostname}>
-                <Typography variant="subtitle2" mx={1} noWrap overflow="hidden">
-                    {worker.hostname}
-                </Typography>
+        <div className="m-1">
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <p className="mx-1 truncate overflow-hidden text-sm font-medium">{worker.hostname}</p>
+                </TooltipTrigger>
+                <TooltipContent>{worker.hostname}</TooltipContent>
             </Tooltip>
-            <Tooltip title="CPU Utilization" placement="right" arrow>
-                <div>
-                    <LinearProgressWithLabel
-                        value={worker.cpuLoad?.[2] || 0}
-                        buffer={worker.cpuLoad?.[0] || 0}
-                        percentageLabel
-                    />
-                </div>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <div>
+                        <LinearProgressWithLabel
+                            value={worker.cpuLoad?.[2] || 0}
+                            buffer={worker.cpuLoad?.[0] || 0}
+                            percentageLabel
+                        />
+                    </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">CPU Utilization</TooltipContent>
             </Tooltip>
-        </Box>
+        </div>
     )
 }
 export default WorkerQuickStatus

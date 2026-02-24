@@ -3,14 +3,9 @@ import ExceptionsSummary from "@components/task/alerts/ExceptionsSummary"
 import RecentTasksPanel from "@components/task/RecentTasksPanel"
 import WelcomeBanner from "@components/WelcomeBanner"
 import WorkersSummaryStack from "@components/worker/WorkersSummaryStack"
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline"
-import Box from "@mui/material/Box"
-import CircularProgress from "@mui/material/CircularProgress"
-import Collapse from "@mui/material/Collapse"
-import Grid from "@mui/material/Grid"
-import Typography from "@mui/material/Typography"
 import useSettingsStore from "@stores/useSettingsStore"
 import { useStateStore } from "@stores/useStateStore"
+import { AlertCircle, Loader2 } from "lucide-react"
 import { ReadyState } from "react-use-websocket"
 
 const HomePage = () => {
@@ -19,46 +14,41 @@ const HomePage = () => {
     const wsStatus = useStateStore((state) => state.status)
     if (!isDemo && wsStatus !== ReadyState.OPEN) {
         return (
-            <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100%">
+            <div className="flex h-full flex-col items-center justify-center">
                 {wsStatus === ReadyState.CONNECTING || wsStatus === ReadyState.UNINSTANTIATED ? (
-                    <CircularProgress />
+                    <Loader2 className="size-8 animate-spin text-primary" />
                 ) : (
                     <>
-                        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                            <ErrorOutlineIcon
-                                sx={{ fontSize: (theme) => theme.typography.h3.fontSize, mr: 2 }}
-                                color="error"
-                            />
-                            <Typography variant="h3" color="textPrimary">
-                                Unable to connect to the server
-                            </Typography>
-                        </Box>
-                        <Typography variant="h5">
-                            <ul>
-                                <li>Make sure you are connected to the network</li>
-                                <li>Check the server logs for any error messages or issues</li>
-                                <li>Try restarting the server</li>
-                            </ul>
-                        </Typography>
+                        <div className="mb-4 flex items-center">
+                            <AlertCircle className="mr-3 size-10 text-destructive" />
+                            <h3 className="text-3xl font-semibold">Unable to connect to the server</h3>
+                        </div>
+                        <ul className="text-xl">
+                            <li>Make sure you are connected to the network</li>
+                            <li>Check the server logs for any error messages or issues</li>
+                            <li>Try restarting the server</li>
+                        </ul>
                     </>
                 )}
-            </Box>
+            </div>
         )
     }
     return (
         <>
-            <Collapse in={!hideWelcomeBanner} unmountOnExit>
-                <WelcomeBanner />
-            </Collapse>
+            {!hideWelcomeBanner && (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <WelcomeBanner />
+                </div>
+            )}
             <ExceptionsSummary />
-            <Grid container spacing={3} px={3}>
-                <Grid item lg={8} xs={12}>
+            <div className="grid grid-cols-12 gap-6 px-6">
+                <div className="col-span-12 lg:col-span-8">
                     <RecentTasksPanel id="recent-tasks" />
-                </Grid>
-                <Grid item lg={4} xs={12}>
+                </div>
+                <div className="col-span-12 lg:col-span-4">
                     <WorkersSummaryStack />
-                </Grid>
-            </Grid>
+                </div>
+            </div>
         </>
     )
 }

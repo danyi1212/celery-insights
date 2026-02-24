@@ -315,7 +315,7 @@ export const Route = createRootRoute({
 
 ### Phase 3: Page-by-Page Migration
 
-- [ ] **3a. Home Page** (`index.tsx`): Migrate `WelcomeBanner`, `BannerFlowchart`, `RecentTasksPanel`, `WorkersSummaryStack`, `WorkerQuickStatusList`, `WorkerQuickStatus`, `DemoSimulator`, `CeleryStateSync`
+- [x] **3a. Home Page** (`index.tsx`): Migrate `WelcomeBanner`, `BannerFlowchart`, `RecentTasksPanel`, `WorkersSummaryStack`, `WorkerQuickStatusList`, `WorkerQuickStatus`, `DemoSimulator`, `CeleryStateSync`
 - [ ] **3b. Task Detail Page** (`tasks.$taskId.tsx`): Migrate `TaskPageHeader`, `TaskAvatar`, `TaskStatusIcon`, `TaskTimer`, `TaskLifetimeChart`, alert components, card components
 - [ ] **3c. Worker Detail Page** (`workers.$workerId.tsx`): Migrate `WorkerSummary`, `WorkerStatus`, panel components (6 files), task sub-panels (7 files)
 - [ ] **3d. Explorer Page** (`explorer.tsx`): Migrate `ExplorerGrid` to TanStack Table + Shadcn Table, `ExplorerLayout`, facet components

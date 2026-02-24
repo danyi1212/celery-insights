@@ -1,36 +1,28 @@
 import WorkerSummary from "@components/worker/WorkerSummary"
 import { useOnlineWorkerIds } from "@hooks/worker/useOnlineWorkerIds"
-import Box from "@mui/material/Box"
-import Stack from "@mui/material/Stack"
-import Toolbar from "@mui/material/Toolbar"
-import Typography from "@mui/material/Typography"
 import React from "react"
 
 const WorkersSummaryStack: React.FC = () => {
     const workerIds = useOnlineWorkerIds()
 
     return (
-        <Box>
-            <Toolbar>
-                <Typography variant="h4" noWrap>
-                    Online Workers
-                </Typography>
-            </Toolbar>
+        <div>
+            <div className="flex min-h-16 items-center px-4">
+                <h4 className="truncate text-2xl font-semibold">Online Workers</h4>
+            </div>
             {workerIds.length ? (
-                <Stack spacing={5}>
+                <div className="flex flex-col gap-5">
                     {workerIds.map((workerId) => (
                         <WorkerSummary key={workerId} workerId={workerId} />
                     ))}
-                </Stack>
+                </div>
             ) : (
-                <Box textAlign="center" my={5}>
-                    <Typography variant="h4" gutterBottom>
-                        No online workers
-                    </Typography>
+                <div className="my-10 text-center">
+                    <h4 className="mb-4 text-2xl font-semibold">No online workers</h4>
                     <span>Start a Celery worker to see it here</span>
-                </Box>
+                </div>
             )}
-        </Box>
+        </div>
     )
 }
 export default WorkersSummaryStack

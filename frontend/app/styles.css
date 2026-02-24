@@ -121,6 +121,14 @@
     }
 }
 
+/* Welcome banner gradient: primary → card background */
+.banner-gradient {
+    background: linear-gradient(to right, oklch(0.78 0.16 105) 0px, var(--card) min(1000px, 85%));
+}
+.dark .banner-gradient {
+    background: linear-gradient(to right, oklch(0.55 0.12 105) 0px, var(--card) min(1000px, 85%));
+}
+
 /* Shiki dual-theme: switch to dark colors when .dark class is applied */
 .dark .shiki,
 .dark .shiki span {
