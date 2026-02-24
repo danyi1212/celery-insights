@@ -2,15 +2,9 @@ import AnimatedList from "@components/common/AnimatedList"
 import AnimatedListItem from "@components/common/AnimatedListItem"
 import Panel, { PanelProps } from "@components/common/Panel"
 import TaskAvatar from "@components/task/TaskAvatar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import useWorkerRevokedTasks from "@hooks/worker/useWorkerRevokedTasks"
-import ReadMoreIcon from "@mui/icons-material/ReadMore"
-import Box from "@mui/material/Box"
-import ListItemAvatar from "@mui/material/ListItemAvatar"
-import ListItemButton from "@mui/material/ListItemButton"
-import ListItemSecondaryAction from "@mui/material/ListItemSecondaryAction"
-import ListItemText from "@mui/material/ListItemText"
-import Tooltip from "@mui/material/Tooltip"
-import Typography from "@mui/material/Typography"
+import { ChevronRight } from "lucide-react"
 import { useStateStore } from "@stores/useStateStore"
 import React, { useCallback } from "react"
 import { Link } from "@tanstack/react-router"
@@ -27,17 +21,22 @@ const RevokedTaskListItem: React.FC<RevokedTaskListItemProps> = ({ taskId }) => 
     const task = useStateStore(useCallback((state) => state.tasks.get(taskId), [taskId]))
     return (
         <AnimatedListItem disablePadding>
-            <ListItemButton component={Link} to={`/tasks/${taskId}`}>
-                <ListItemAvatar>
-                    <TaskAvatar taskId={taskId} type={task?.type} status={task?.state} disableLink />
-                </ListItemAvatar>
-                <ListItemText primary={task?.type || "Unknown task"} secondary={taskId} />
-                <ListItemSecondaryAction>
-                    <Tooltip title="View task...">
-                        <ReadMoreIcon />
-                    </Tooltip>
-                </ListItemSecondaryAction>
-            </ListItemButton>
+            <Link
+                to={`/tasks/${taskId}`}
+                className="flex w-full items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-accent"
+            >
+                <TaskAvatar taskId={taskId} type={task?.type} status={task?.state} disableLink />
+                <div className="min-w-0 flex-grow">
+                    <p className="truncate text-sm font-medium">{task?.type || "Unknown task"}</p>
+                    <p className="truncate text-xs text-muted-foreground">{taskId}</p>
+                </div>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>View task...</TooltipContent>
+                </Tooltip>
+            </Link>
         </AnimatedListItem>
     )
 }
@@ -47,17 +46,15 @@ const RevokedTasksPanel: React.FC<RevokedTasksPanelProps> = ({ hostname, ...prop
     return (
         <Panel title="Revoked Tasks" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (
-                <AnimatedList disablePadding>
+                <AnimatedList>
                     {tasks.map((taskId) => (
                         <RevokedTaskListItem key={taskId} taskId={taskId} />
                     ))}
                 </AnimatedList>
             ) : (
-                <Box display="flex" justifyContent="center" alignItems="center" p={3}>
-                    <Typography variant="h4" align="center">
-                        Revoke list is empty
-                    </Typography>
-                </Box>
+                <div className="flex items-center justify-center p-3">
+                    <h4 className="text-center text-2xl font-semibold">Revoke list is empty</h4>
+                </div>
             )}
         </Panel>
     )

@@ -1,10 +1,7 @@
 import ErrorAlert from "@components/errors/ErrorAlert"
 import QueueDetailsPanel from "@components/worker/panels/QueueDetailsPanel"
 import useWorkerQueues from "@hooks/worker/useWorkerQueues"
-import Box from "@mui/material/Box"
-import CircularProgress from "@mui/material/CircularProgress"
-import Grid from "@mui/material/Grid"
-import Typography from "@mui/material/Typography"
+import { Loader2 } from "lucide-react"
 import React from "react"
 
 interface QueueDetailsProps {
@@ -15,33 +12,29 @@ const QueueDetails: React.FC<QueueDetailsProps> = ({ hostname }) => {
     const { queues, isLoading, error } = useWorkerQueues(hostname)
     if (isLoading) {
         return (
-            <Box display="flex" justifyContent="center" alignItems="center" height="100%" width="100%">
-                <CircularProgress />
-            </Box>
+            <div className="flex h-full w-full items-center justify-center">
+                <Loader2 className="size-8 animate-spin text-primary" />
+            </div>
         )
     }
     if (error) {
         return (
-            <Box display="flex" justifyContent="center" alignItems="center" height="100%" width="100%">
+            <div className="flex h-full w-full items-center justify-center">
                 <ErrorAlert error={error} />
-            </Box>
+            </div>
         )
     }
     if (!queues || !queues.length) {
-        return (
-            <Typography variant="h3" align="center" p={3}>
-                No Queues Connected
-            </Typography>
-        )
+        return <h3 className="p-3 text-center text-2xl font-semibold">No Queues Connected</h3>
     }
     return (
-        <Grid container spacing={3} px={3}>
+        <div className="grid grid-cols-12 gap-3 px-3">
             {queues.map((queue) => (
-                <Grid item xs={12} sm={6} lg={4} xl={3} key={queue.name}>
+                <div className="col-span-12 sm:col-span-6 lg:col-span-4 xl:col-span-3" key={queue.name}>
                     <QueueDetailsPanel queue={queue} />
-                </Grid>
+                </div>
             ))}
-        </Grid>
+        </div>
     )
 }
 

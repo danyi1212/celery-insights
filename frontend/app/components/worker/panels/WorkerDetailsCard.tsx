@@ -4,7 +4,6 @@ import LinearProgressWithLabel from "@components/common/LinearProgressWithLabel"
 import Panel, { PanelProps } from "@components/common/Panel"
 import WorkerStatus from "@components/worker/WorkerStatus"
 import useWorkerStats from "@hooks/worker/useWorkerStats"
-import Grid from "@mui/material/Grid"
 import { useStateStore } from "@stores/useStateStore"
 import { formatBytes } from "@utils/FormatBytes"
 import { formatSecondsDurationLong } from "@utils/FormatSecondsDurationLong"
@@ -21,11 +20,11 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, hostnam
 
     return (
         <Panel title="Worker" loading={isLoading} error={error} actions={<CopyLinkButton />} {...props}>
-            <Grid container spacing={2} p={2}>
-                <Grid item xs={12}>
+            <div className="grid grid-cols-12 gap-2 p-2">
+                <div className="col-span-12">
                     <DetailItem label="Hostname" value={worker?.hostname} />
-                </Grid>
-                <Grid item xs={12}>
+                </div>
+                <div className="col-span-12">
                     <DetailItem
                         label="CPU Usage"
                         description="Percentage of CPU used by worker process"
@@ -37,34 +36,34 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, hostnam
                             />
                         }
                     />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </div>
+                <div className="col-span-12 md:col-span-6">
                     <DetailItem
                         label="Uptime"
                         description="Amount of time the worker process has been running"
                         value={formatSecondsDurationLong(stats?.uptime || 0)}
                     />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </div>
+                <div className="col-span-12 md:col-span-6">
                     <DetailItem
                         label="Memory"
                         description="Total memory usage by worker process"
                         value={formatBytes(stats?.rusage?.maxrss || 0)}
                     />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </div>
+                <div className="col-span-12 md:col-span-6">
                     <DetailItem label="Process ID" value={worker?.pid} />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </div>
+                <div className="col-span-12 md:col-span-6">
                     <DetailItem label="Software Name" value={worker?.softwareIdentity} />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </div>
+                <div className="col-span-12 md:col-span-6">
                     <DetailItem label="Host OS" value={worker?.softwareSys} />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </div>
+                <div className="col-span-12 md:col-span-6">
                     <DetailItem label="Software Version" value={worker?.softwareVersion} />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </div>
+                <div className="col-span-12 md:col-span-6">
                     <DetailItem
                         label="Status"
                         description="Amount of time until the worker is considered offline"
@@ -75,15 +74,15 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, hostnam
                             </div>
                         }
                     />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </div>
+                <div className="col-span-12 md:col-span-6">
                     <DetailItem
                         label="Processed"
                         description="Number of tasks processed"
                         value={Object.values(stats?.total || {}).reduce((acc, curr) => acc + curr, 0)}
                     />
-                </Grid>
-            </Grid>
+                </div>
+            </div>
         </Panel>
     )
 }

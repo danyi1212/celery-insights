@@ -1,6 +1,6 @@
 import DetailItem from "@components/common/DetailItem"
 import Panel from "@components/common/Panel"
-import Switch from "@mui/material/Switch"
+import { Switch } from "@components/ui/switch"
 import { QueueInfo } from "@services/server"
 import React from "react"
 
@@ -10,7 +10,7 @@ interface QueueDetailsPanelProps {
 
 const QueueDetailsPanel: React.FC<QueueDetailsPanelProps> = ({ queue }) => {
     return (
-        <Panel title={queue.name || "Unknown"} sx={{ px: 2 }} elevation={10}>
+        <Panel title={queue.name || "Unknown"} className="px-2">
             {queue?.exchange?.name !== queue.routing_key ? (
                 <DetailItem
                     label="Exchange"
@@ -27,17 +27,17 @@ const QueueDetailsPanel: React.FC<QueueDetailsPanelProps> = ({ queue }) => {
             <DetailItem
                 label="Durable"
                 description="Whether the queue should survive broker restarts"
-                value={<Switch color="success" size="small" checked={queue.durable} />}
+                value={<Switch size="sm" checked={queue.durable} />}
             />
             <DetailItem
                 label="Exclusive"
                 description="Whether the queue can be used by only one consumer"
-                value={<Switch color="success" size="small" checked={queue.exclusive} />}
+                value={<Switch size="sm" checked={queue.exclusive} />}
             />
             <DetailItem
                 label="No Ack"
                 description="Whether task messages will not be acknowledged by workers"
-                value={<Switch color="success" size="small" checked={queue.no_ack} />}
+                value={<Switch size="sm" checked={queue.no_ack} />}
             />
             {queue.message_ttl && (
                 <DetailItem
