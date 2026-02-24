@@ -24,7 +24,7 @@ const SearchResultList: React.FC<SearchResultsProps> = ({ query }) => {
 
     useEffect(() => {
         setLoading(true)
-        setError(false)
+        setError(null)
         if (query) {
             const token = setTimeout(() => {
                 client.search
@@ -34,6 +34,9 @@ const SearchResultList: React.FC<SearchResultsProps> = ({ query }) => {
                     .finally(() => setLoading(false))
             }, debounce)
             return () => clearTimeout(token)
+        } else {
+            setLoading(false)
+            setResults({ tasks: [], workers: [] })
         }
     }, [query, client])
 
@@ -45,7 +48,7 @@ const SearchResultList: React.FC<SearchResultsProps> = ({ query }) => {
         )
     }
     if (loading) {
-        return <ListSkeleton count={5} dense />
+        return <ListSkeleton count={5} />
     }
     if (error) {
         return <ErrorAlert error={error} />
@@ -60,9 +63,9 @@ const SearchResultList: React.FC<SearchResultsProps> = ({ query }) => {
 
     return (
         <ul className="w-full py-1">
-            {results.workers.map((worker, index) => (
+            {results.workers.map((worker) => (
                 <SearchResultListItem
-                    key={index}
+                    key={worker.id}
                     primary={worker.hostname}
                     secondary={`PID ${worker.pid}`}
                     link={`/workers/${worker.id}`}
@@ -75,9 +78,9 @@ const SearchResultList: React.FC<SearchResultsProps> = ({ query }) => {
                     }
                 />
             ))}
-            {results.tasks.map((task, index) => (
+            {results.tasks.map((task) => (
                 <SearchResultListItem
-                    key={index}
+                    key={task.id}
                     primary={task?.type || "Unknown"}
                     secondary={"Sent at " + format(task.sent_at, "HH:mm:ss")}
                     link={`/tasks/${task.id}`}

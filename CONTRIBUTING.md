@@ -125,7 +125,16 @@ To contribute to the project, follow these steps:
     }
     ```
 - Avoid unnecessary React re-renders. Performance is important.
-- Follow the existing folder structure.
+- Frontend source code lives in `frontend/app/` (routes in `app/routes/`, components in `app/components/`, stores in `app/stores/`).
+- Routes use [TanStack Router](https://tanstack.com/router) with file-based routing. `frontend/app/routeTree.gen.ts` is auto-generated — do not edit manually.
+
+### UI Components & Styling
+
+- Use [Shadcn UI](https://ui.shadcn.com/) components from `frontend/app/components/ui/`. Add new Shadcn components via `bunx shadcn@latest add <component>`.
+- Style with Tailwind CSS v4 utility classes. Theme configuration is CSS-first in `frontend/app/styles.css` (no `tailwind.config.js`).
+- Use `cn()` from `@lib/utils` for conditional class merging.
+- Use [Lucide React](https://lucide.dev/) for all icons.
+- Dark mode is toggled via `.dark` class on `<html>`. Use Tailwind's `dark:` variant for dark-mode-specific styles.
 
 ### Design Guidelines
 

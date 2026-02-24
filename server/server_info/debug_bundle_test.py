@@ -84,7 +84,7 @@ async def test_dump_file_not_a_file(zip_file: zipfile.ZipFile, tmp_path: Path, c
     await not_a_file.mkdir(exist_ok=True, parents=True)
 
     await dump_file(zip_file, "some_folder", not_a_file)
-    assert "nonexistent.txt" not in zip_file.namelist()
+    assert "some_folder" not in zip_file.namelist()
     assert "Unable to find file" in caplog.messages[-1]
 
 

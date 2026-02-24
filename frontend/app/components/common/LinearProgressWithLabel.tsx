@@ -5,7 +5,6 @@ interface LinearProgressWithLabelProps {
     value: number
     max?: number
     min?: number
-    buffer?: number
     percentageLabel?: boolean
 }
 
@@ -17,8 +16,8 @@ const LinearProgressWithLabel: React.FC<LinearProgressWithLabelProps> = ({
 }) => {
     const percentage = useMemo(() => Math.round(((value - min) * 100) / (max - min)), [value, min, max])
     const label = useMemo(
-        () => (percentageLabel ? `${Math.round(percentage)}%` : `${value + min}/${max}`),
-        [percentageLabel, percentage, min, max, value],
+        () => (percentageLabel ? `${Math.round(percentage)}%` : `${value}/${max}`),
+        [percentageLabel, percentage, max, value],
     )
     return (
         <div className="flex items-center">
