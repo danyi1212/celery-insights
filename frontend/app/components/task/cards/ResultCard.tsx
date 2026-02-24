@@ -36,6 +36,8 @@ const CardContent: React.FC<CardContentProps> = ({ result }) => {
             </p>
         )
 
+    if (result.result == null) return <p>No result available.</p>
+
     return (
         <JsonView
             value={result.result as object}
