@@ -17,19 +17,18 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-    - name: Install poetry
-      run: pipx install poetry
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
-        cache: 'poetry'
     - name: Install dependencies
-      run: poetry install
+      run: uv sync
     - name: Lint with ruff
-      run: poetry run ruff check
+      run: uv run ruff check
     - name: Run pytest
-      run: poetry run pytest server --doctest-modules --junitxml=junit/test-results.xml --cov=server --cov-report=xml --cov-report=html -n auto
+      run: uv run pytest server --doctest-modules --junitxml=junit/test-results.xml --cov=server --cov-report=xml --cov-report=html -n auto
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()

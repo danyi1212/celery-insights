@@ -10,17 +10,14 @@ FROM python-base AS requirements-stage
 
 WORKDIR /tmp
 
-# Setup python
-RUN pip install --upgrade pip
-RUN pip install poetry poetry-plugin-export
-
-COPY ./pyproject.toml ./poetry.lock* /tmp/
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY ./pyproject.toml ./uv.lock* /tmp/
 
 ARG VARIANT=regular
-RUN if [ $VARIANT = "all" ]; then \
-        poetry export -f requirements.txt --output requirements.txt --with all; \
+RUN if [ "$VARIANT" = "all" ]; then \
+        uv export --no-hashes --frozen --no-emit-project --group all -o requirements.txt; \
     else \
-        poetry export -f requirements.txt --output requirements.txt; \
+        uv export --no-hashes --frozen --no-emit-project -o requirements.txt; \
     fi
 
 FROM oven/bun:alpine AS front-build

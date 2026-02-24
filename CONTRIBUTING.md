@@ -60,9 +60,9 @@ To contribute to the project, follow these steps:
     ```shell
     cd celery_insights/
     ```
-3. Install the Python dependencies using Poetry.
+3. Install the Python dependencies using [uv](https://docs.astral.sh/uv/).
     ```shell
-    poetry install
+    uv sync
     ```
 4. Install pre-commit hooks
    ```shell
