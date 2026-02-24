@@ -2,8 +2,6 @@ import AnimatedList from "@components/common/AnimatedList"
 import Panel, { PanelProps } from "@components/common/Panel"
 import ReservedTaskListItem from "@components/worker/panels/tasks/ReservedTaskListItem"
 import useWorkerReservedTasks from "@hooks/worker/useWorkerReservedTasks"
-import Box from "@mui/material/Box"
-import Typography from "@mui/material/Typography"
 import React from "react"
 
 interface ReservedTasksPanelProps extends Omit<PanelProps, "title"> {
@@ -15,17 +13,15 @@ const ReservedTasksPanel: React.FC<ReservedTasksPanelProps> = ({ hostname, ...pr
     return (
         <Panel title="Reserved Task" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (
-                <AnimatedList disablePadding>
+                <AnimatedList>
                     {tasks.map((task, index) => (
                         <ReservedTaskListItem key={index} task={task} />
                     ))}
                 </AnimatedList>
             ) : (
-                <Box display="flex" justifyContent="center" alignItems="center" p={3}>
-                    <Typography variant="h4" align="center">
-                        No reserved tasks
-                    </Typography>
-                </Box>
+                <div className="flex items-center justify-center p-3">
+                    <h4 className="text-center text-2xl font-semibold">No reserved tasks</h4>
+                </div>
             )}
         </Panel>
     )

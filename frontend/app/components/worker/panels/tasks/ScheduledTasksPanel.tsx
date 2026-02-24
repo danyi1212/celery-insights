@@ -2,8 +2,6 @@ import AnimatedList from "@components/common/AnimatedList"
 import Panel, { PanelProps } from "@components/common/Panel"
 import ScheduledTaskListItem from "@components/worker/panels/tasks/ScheduledTaskListItem"
 import useWorkerScheduledTasks from "@hooks/worker/useWorkerScheduledTasks"
-import Box from "@mui/material/Box"
-import Typography from "@mui/material/Typography"
 import React from "react"
 
 interface ScheduledTasksPanelProps extends Omit<PanelProps, "title"> {
@@ -15,17 +13,15 @@ const ScheduledTasksPanel: React.FC<ScheduledTasksPanelProps> = ({ hostname, ...
     return (
         <Panel title="Scheduled Task" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (
-                <AnimatedList disablePadding>
+                <AnimatedList>
                     {tasks.map((task, index) => (
                         <ScheduledTaskListItem key={index} task={task} />
                     ))}
                 </AnimatedList>
             ) : (
-                <Box display="flex" justifyContent="center" alignItems="center" p={3}>
-                    <Typography variant="h4" align="center">
-                        No scheduled tasks
-                    </Typography>
-                </Box>
+                <div className="flex items-center justify-center p-3">
+                    <h4 className="text-center text-2xl font-semibold">No scheduled tasks</h4>
+                </div>
             )}
         </Panel>
     )

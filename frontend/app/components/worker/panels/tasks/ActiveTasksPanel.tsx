@@ -2,8 +2,6 @@ import AnimatedList from "@components/common/AnimatedList"
 import Panel, { PanelProps } from "@components/common/Panel"
 import ActiveTaskListItem from "@components/worker/panels/tasks/ActiveTaskListItem"
 import useWorkerActiveTasks from "@hooks/worker/useWorkerActiveTasks"
-import Box from "@mui/material/Box"
-import Typography from "@mui/material/Typography"
 import React from "react"
 
 interface ActiveTasksPanelProps extends Omit<PanelProps, "title"> {
@@ -15,17 +13,15 @@ const ActiveTasksPanel: React.FC<ActiveTasksPanelProps> = ({ hostname, ...props 
     return (
         <Panel title="Active Task" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (
-                <AnimatedList disablePadding>
+                <AnimatedList>
                     {tasks.map((task, index) => (
                         <ActiveTaskListItem key={index} task={task} />
                     ))}
                 </AnimatedList>
             ) : (
-                <Box display="flex" justifyContent="center" alignItems="center" p={3}>
-                    <Typography variant="h4" align="center">
-                        No active tasks
-                    </Typography>
-                </Box>
+                <div className="flex items-center justify-center p-3">
+                    <h4 className="text-center text-2xl font-semibold">No active tasks</h4>
+                </div>
             )}
         </Panel>
     )

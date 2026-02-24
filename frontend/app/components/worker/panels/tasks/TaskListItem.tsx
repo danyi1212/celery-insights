@@ -1,13 +1,7 @@
 import AnimatedListItem from "@components/common/AnimatedListItem"
 import TaskAvatar from "@components/task/TaskAvatar"
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline"
-import HighlightOffIcon from "@mui/icons-material/HighlightOff"
-import ReadMoreIcon from "@mui/icons-material/ReadMore"
-import ListItemAvatar from "@mui/material/ListItemAvatar"
-import ListItemButton from "@mui/material/ListItemButton"
-import ListItemSecondaryAction from "@mui/material/ListItemSecondaryAction"
-import ListItemText from "@mui/material/ListItemText"
-import Tooltip from "@mui/material/Tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { CheckCircle, ChevronRight, XCircle } from "lucide-react"
 import { TaskRequest } from "@services/server"
 import React from "react"
 import { Link } from "@tanstack/react-router"
@@ -20,26 +14,39 @@ interface TaskListItemProps {
 const TaskListItem: React.FC<TaskListItemProps> = ({ task, subtitle }) => {
     return (
         <AnimatedListItem disablePadding>
-            <ListItemButton component={Link} to={`/tasks/${task.id}`}>
-                <ListItemAvatar>
-                    <TaskAvatar taskId={task.id} type={task.type} disableLink />
-                </ListItemAvatar>
-                <ListItemText primary={task.type} secondary={subtitle} />
-                <ListItemSecondaryAction>
+            <Link
+                to={`/tasks/${task.id}`}
+                className="flex w-full items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-accent"
+            >
+                <TaskAvatar taskId={task.id} type={task.type} disableLink />
+                <div className="min-w-0 flex-grow">
+                    <p className="truncate text-sm font-medium">{task.type}</p>
+                    <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
                     {task.acknowledged ? (
-                        <Tooltip title="Message Acknowledged" describeChild>
-                            <CheckCircleOutlineIcon color="success" />
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <CheckCircle className="size-4 text-green-500" />
+                            </TooltipTrigger>
+                            <TooltipContent>Message Acknowledged</TooltipContent>
                         </Tooltip>
                     ) : (
-                        <Tooltip title="Message Not Acknowledged" describeChild>
-                            <HighlightOffIcon color="warning" />
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <XCircle className="size-4 text-amber-500" />
+                            </TooltipTrigger>
+                            <TooltipContent>Message Not Acknowledged</TooltipContent>
                         </Tooltip>
                     )}
-                    <Tooltip title="View task...">
-                        <ReadMoreIcon />
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <ChevronRight className="size-4 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>View task...</TooltipContent>
                     </Tooltip>
-                </ListItemSecondaryAction>
-            </ListItemButton>
+                </div>
+            </Link>
         </AnimatedListItem>
     )
 }

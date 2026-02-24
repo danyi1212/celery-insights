@@ -1,4 +1,4 @@
-import Typography from "@mui/material/Typography"
+import { cn } from "@lib/utils"
 import React, { useMemo } from "react"
 
 interface WorkerStatusProps {
@@ -6,28 +6,24 @@ interface WorkerStatusProps {
 }
 
 const WorkerStatus: React.FC<WorkerStatusProps> = ({ heartbeatExpires }) => {
-    const { status, color } = useMemo(() => {
-        if (!heartbeatExpires) return { status: "Unknown", color: "warning" }
+    const { status, colorClass } = useMemo(() => {
+        if (!heartbeatExpires) return { status: "Unknown", colorClass: "text-amber-500" }
         const secondsLeft = Math.floor(heartbeatExpires.getTime() - Date.now()) / 1000
         if (secondsLeft < 0) {
             return {
                 status: `Offline`,
-                color: "danger",
+                colorClass: "text-destructive",
             }
         } else if (secondsLeft < 1) {
             return {
                 status: `Unresponsive`,
-                color: "warning",
+                colorClass: "text-amber-500",
             }
         } else {
-            return { status: "Online", color: "inherit" }
+            return { status: "Online", colorClass: "text-foreground" }
         }
     }, [heartbeatExpires])
-    return (
-        <Typography variant="body1" component="span" color={color}>
-            {status}
-        </Typography>
-    )
+    return <span className={cn("text-base", colorClass)}>{status}</span>
 }
 
 export default WorkerStatus

@@ -1,7 +1,7 @@
 import TaskAvatar from "@components/task/TaskAvatar"
-import PendingIcon from "@mui/icons-material/Pending"
-import Chip from "@mui/material/Chip"
-import Tooltip from "@mui/material/Tooltip"
+import { Badge } from "@components/ui/badge"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { Clock } from "lucide-react"
 import { TaskRequest } from "@services/server"
 import React from "react"
 
@@ -12,20 +12,23 @@ interface ProcessChipProps {
 
 const ProcessChip: React.FC<ProcessChipProps> = ({ processId, task }) => {
     return (
-        <Tooltip title="Child Process ID" arrow>
-            <Chip
-                label={processId}
-                variant="outlined"
-                avatar={
-                    task ? (
-                        <TaskAvatar taskId={task.id} type={task.type} />
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Badge variant="outline" className="gap-1.5 py-1">
+                    {task ? (
+                        <TaskAvatar taskId={task.id} type={task.type} className="size-5" />
                     ) : (
-                        <Tooltip title="Sleeping" arrow placement="left">
-                            <PendingIcon />
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Clock className="size-4 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent side="left">Sleeping</TooltipContent>
                         </Tooltip>
-                    )
-                }
-            />
+                    )}
+                    {processId}
+                </Badge>
+            </TooltipTrigger>
+            <TooltipContent>Child Process ID</TooltipContent>
         </Tooltip>
     )
 }
