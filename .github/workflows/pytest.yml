@@ -27,6 +27,8 @@ jobs:
       run: uv sync
     - name: Lint with ruff
       run: uv run ruff check
+    - name: Type check with ty
+      run: uv run ty check server/
     - name: Run pytest
       run: uv run pytest server --doctest-modules --junitxml=junit/test-results.xml --cov=server --cov-report=xml --cov-report=html -n auto
     - name: Publish Test Results

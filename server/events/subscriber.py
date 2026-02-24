@@ -38,7 +38,8 @@ class QueueSubscriber(Generic[T], ABC):
     def stop(self):
         logger.info(f"Stopping subscriber {self.name!r}...")
         self._stop_signal.set()
-        if self._task.done():
-            self._task.result()
-        else:
-            self._task.cancel()
+        if self._task is not None:
+            if self._task.done():
+                self._task.result()
+            else:
+                self._task.cancel()

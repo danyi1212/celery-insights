@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-**Backend** (from repo root): `uv run pytest`, `uv run ruff check server/`, `uv run ruff format server/`
+**Backend** (from repo root): `uv run pytest`, `uv run ruff check server/`, `uv run ruff format server/`, `uv run ty check server/`
 **Frontend** (from `frontend/`): `bun dev`, `bun run build`, `bun run lint`, `bun run lint-fix`
 **Regenerate API client** (after any endpoint change): `cd frontend && bun run generate-client`
 

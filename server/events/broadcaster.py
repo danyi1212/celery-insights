@@ -61,7 +61,7 @@ def parse_event(event: dict) -> EventMessage:
         raise InvalidEventError(f"Unknown event category {event_category!r}")
 
 
-def parse_worker_event(event: dict, event_type: str) -> EventMessage | None:
+def parse_worker_event(event: dict, event_type: str) -> EventMessage:
     worker_hostname = event.get("hostname")
     if worker_hostname is None:
         raise InvalidEventError(f"Worker event {event_type!r} is missing hostname: {event}")
@@ -78,7 +78,7 @@ def parse_worker_event(event: dict, event_type: str) -> EventMessage | None:
     )
 
 
-def parse_task_event(event: dict, event_type: str) -> EventMessage | None:
+def parse_task_event(event: dict, event_type: str) -> EventMessage:
     task_id = event.get("uuid")
     if task_id is None:
         raise InvalidEventError(f"Task event {event_type!r} is missing uuid: {event}")

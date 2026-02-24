@@ -24,13 +24,13 @@ app = FastAPI(
     title="Celery Insights",
     description="Modern Real-Time Monitoring for Celery",
     debug=Settings().debug,
-    lifespan=lifespan,  # type: ignore
+    lifespan=lifespan,
     generate_unique_id_function=custom_generate_unique_id,
     version="v0.2.0",
 )
 
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware,  # ty: ignore[invalid-argument-type]
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:5173",

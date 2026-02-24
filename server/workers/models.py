@@ -29,12 +29,12 @@ class Worker(BaseModel):
     def from_celery_worker(cls, worker: CeleryWorker) -> Self:
         return cls(
             id=f"{worker.hostname}-{worker.pid}",
-            hostname=worker.hostname,
-            pid=worker.pid,
-            last_updated=worker.timestamp,
-            software_identity=worker.sw_ident,
-            software_version=worker.sw_ver,
-            software_sys=worker.sw_sys,
+            hostname=worker.hostname,  # ty: ignore[invalid-argument-type]
+            pid=worker.pid,  # ty: ignore[invalid-argument-type]
+            last_updated=worker.timestamp,  # ty: ignore[unresolved-attribute]
+            software_identity=worker.sw_ident,  # ty: ignore[invalid-argument-type]
+            software_version=worker.sw_ver,  # ty: ignore[invalid-argument-type]
+            software_sys=worker.sw_sys,  # ty: ignore[invalid-argument-type]
             active_tasks=worker.active or 0,
             processed_tasks=worker.processed or 0,
             heartbeat_expires=worker.heartbeat_expires if worker.heartbeats else None,

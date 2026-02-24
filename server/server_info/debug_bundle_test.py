@@ -1,4 +1,5 @@
 import zipfile
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +16,7 @@ from ws.models import UserAgentInfo
 
 
 @pytest.fixture()
-def zip_file(tmp_path: Path) -> zipfile.ZipFile:
+def zip_file(tmp_path: Path) -> Generator[zipfile.ZipFile, None, None]:
     zip_path = tmp_path / "test.zip"
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
         yield zip_file
