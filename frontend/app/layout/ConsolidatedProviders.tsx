@@ -1,5 +1,6 @@
 import CeleryStateSync from "@components/CeleryStateSync"
 import DemoSimulator from "@components/DemoSimulator"
+import { useDarkMode } from "@hooks/useDarkMode"
 import { usePreferredTheme } from "@hooks/usePreferredTheme"
 import CssBaseline from "@mui/material/CssBaseline"
 import { ThemeProvider } from "@mui/material/styles"
@@ -16,6 +17,7 @@ interface Props {
 const ConsolidatedProviders: React.FC<Props> = ({ children }) => {
     const theme = usePreferredTheme()
     const isDemo = useSettingsStore((state) => state.demo)
+    useDarkMode()
     return (
         <QueryClientProvider client={queryClient}>
             <ThemeProvider theme={theme}>

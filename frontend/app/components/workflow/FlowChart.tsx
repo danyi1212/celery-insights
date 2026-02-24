@@ -13,18 +13,17 @@ import {
     Background,
     ControlButton,
     Controls,
-    Edge,
+    type Edge,
     getNodesBounds,
     getViewportForBounds,
     MiniMap,
-    Node,
-    NodeProps,
+    type Node,
     ReactFlow,
     useEdgesState,
     useNodesState,
     useReactFlow,
-    XYPosition,
-} from "reactflow"
+    type XYPosition,
+} from "@xyflow/react"
 
 const createNode = (task: StateTask, x: number, y: number, nodeId?: string): Node => ({
     id: nodeId || task.id,
@@ -126,7 +125,7 @@ interface FlowChartProps {
     currentTaskId?: string
 }
 
-const nodeTypes: Record<string, React.ComponentType<NodeProps>> = {
+const nodeTypes = {
     taskNode: TaskNode,
 }
 const FlowChart: React.FC<FlowChartProps> = ({ tasks, rootTaskId, currentTaskId }) => {

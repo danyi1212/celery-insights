@@ -3,8 +3,8 @@ import TimelineChart from "@components/workflow/TimelineChart"
 import { useStateStore } from "@stores/useStateStore"
 import { StateTask } from "@utils/translateServerModels"
 import React, { useDeferredValue } from "react"
-import { ReactFlowProvider } from "reactflow"
-import "reactflow/dist/style.css"
+import { ReactFlowProvider } from "@xyflow/react"
+import "@xyflow/react/dist/style.css"
 import { shallow } from "zustand/shallow"
 
 export enum WorkflowChartType {

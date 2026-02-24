@@ -5,7 +5,7 @@ import useMediaQuery from "@mui/material/useMediaQuery"
 import { TaskState } from "@services/server"
 import { StateTask } from "@utils/translateServerModels"
 import React, { useMemo } from "react"
-import ReactFlow, { Background } from "reactflow"
+import { ReactFlow, Background } from "@xyflow/react"
 
 const nodeTypes = {
     taskNode: TaskNode,
