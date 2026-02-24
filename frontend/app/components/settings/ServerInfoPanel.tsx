@@ -98,13 +98,7 @@ export const ServerInfoPanel: React.FC = () => {
                     <DetailItem
                         label="CPU Usage"
                         description="CPU usage by the server process"
-                        value={
-                            <LinearProgressWithLabel
-                                value={data?.cpu_usage[2] || 0}
-                                buffer={data?.cpu_usage[0] || 0}
-                                percentageLabel
-                            />
-                        }
+                        value={<LinearProgressWithLabel value={data?.cpu_usage[2] || 0} percentageLabel />}
                     />
                 </div>
                 <DetailItem

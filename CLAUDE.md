@@ -12,7 +12,7 @@ Tests are colocated: `model.py` -> `model_test.py`. Run one with `uv run pytest 
 
 ## Stack
 
-- **Backend**: FastAPI, Python 3.12, Celery 5.4, Pydantic v2, uv
+- **Backend**: FastAPI, Python 3.12, Celery 5.4, Pydantic v2, uv, ty (type checker)
 - **Frontend**: React 19, TypeScript, Vite, TanStack Router (file-based, auto code-splitting), Bun, Shadcn UI, Tailwind CSS v4, Lucide React, Zustand, TanStack Query, TanStack Table, @xyflow/react v12
 - **Real-time**: WebSockets — Celery events flow through a threaded receiver -> async queue -> broadcaster -> WebSocket -> Zustand stores
 - **Architecture**: Bun is the single entrypoint — serves the SPA, spawns the Python backend as a child process (on port 8556 internally), and reverse-proxies API/WS to it. External port is 8555.
@@ -27,6 +27,8 @@ Tests are colocated: `model.py` -> `model_test.py`. Run one with `uv run pytest 
 - `frontend/app/stores/` — Zustand state (tasks, workers, WebSocket status, settings)
 - `frontend/app/services/server/` — auto-generated OpenAPI client, **never edit manually**
 - `frontend/app/components/` — organized by domain, mirrors backend modules
+- `frontend/app/lib/utils.ts` — `cn()` helper for Tailwind class merging
+- `frontend/components.json` — Shadcn UI config (style variant, path aliases, CSS location)
 - `frontend/vite.config.ts` — Vite config with TanStack Router plugin and dev proxy rules
 - `frontend/bun-entry.ts` — Production entry: spawns Python, serves SPA, proxies API/WS
 - `CONTRIBUTING.md` — full code style guide and design guidelines

@@ -36,7 +36,7 @@ const WorkflowGraph: React.FC<WorkflowGraphProps> = ({ chartType, rootTaskId, cu
                 </ReactFlowProvider>
             )
         case WorkflowChartType.TIMELINE:
-            return <TimelineChart tasks={deferredTasks} rootTaskId={rootTaskId} currentTaskId={currentTaskId} />
+            return <TimelineChart tasks={deferredTasks} currentTaskId={currentTaskId} />
     }
 }
 

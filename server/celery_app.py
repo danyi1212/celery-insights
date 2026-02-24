@@ -41,7 +41,6 @@ async def get_celery_app(settings: Settings | None = None):
         spec.loader.exec_module(config)
         app.config_from_object(config)
     except Exception as e:
-        logger.exception(f"Failed to load celery app config from {settings.config_path!r}: {e}")
-    else:
-        _celery_app_cache = app
-        return app
+        raise RuntimeError(f"Failed to load celery app config from {settings.config_path!r}") from e
+    _celery_app_cache = app
+    return app

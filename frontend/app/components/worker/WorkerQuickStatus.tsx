@@ -21,11 +21,7 @@ const WorkerQuickStatus: React.FC<WorkerQuickStatusProps> = ({ workerId }) => {
             <Tooltip>
                 <TooltipTrigger asChild>
                     <div>
-                        <LinearProgressWithLabel
-                            value={worker.cpuLoad?.[2] || 0}
-                            buffer={worker.cpuLoad?.[0] || 0}
-                            percentageLabel
-                        />
+                        <LinearProgressWithLabel value={worker.cpuLoad?.[2] || 0} percentageLabel />
                     </div>
                 </TooltipTrigger>
                 <TooltipContent side="right">CPU Utilization</TooltipContent>

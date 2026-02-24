@@ -9,7 +9,6 @@ export enum PreferredTheme {
 
 interface Settings {
     theme: PreferredTheme
-    menuExpanded: boolean
     hideWelcomeBanner: boolean
     demo: boolean
     rawEventsLimit: number
@@ -17,7 +16,6 @@ interface Settings {
 
 const defaultSettings: Settings = {
     theme: PreferredTheme.SYSTEM,
-    menuExpanded: true,
     hideWelcomeBanner: false,
     demo: Boolean(import.meta.env.VITE_DEMO_MODE),
     rawEventsLimit: 100,

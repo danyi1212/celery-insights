@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Self
 
 from celery import states
@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 from common.types import EpochTimestamp
 
 
-class TaskState(str, Enum):
+class TaskState(StrEnum):
     PENDING = states.PENDING
     RECEIVED = states.RECEIVED
     STARTED = states.STARTED

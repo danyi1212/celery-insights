@@ -14,6 +14,7 @@ import {
 } from "@components/ui/sidebar"
 import MenuItem, { MenuLink } from "@layout/menu/MenuItem"
 import { LayoutDashboard, Rss, Search, Settings } from "lucide-react"
+import { useIsDark } from "@hooks/useIsDark"
 import { Link } from "@tanstack/react-router"
 import React from "react"
 
@@ -41,7 +42,7 @@ const menuLinks: MenuLink[] = [
 const SidebarLogo: React.FC = () => {
     const { state } = useSidebar()
     const expanded = state === "expanded"
-    const isDark = document.documentElement.classList.contains("dark")
+    const isDark = useIsDark()
 
     return (
         <Link to="/" className="flex items-center justify-center p-5 no-underline bg-transparent">

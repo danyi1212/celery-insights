@@ -56,8 +56,8 @@ const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
         >
             {recentTaskIds.length ? (
                 <AnimatedList>
-                    {recentTaskIds.map((taskId, index) => (
-                        <RecentTaskListItem key={index} taskId={taskId} />
+                    {recentTaskIds.map((taskId) => (
+                        <RecentTaskListItem key={taskId} taskId={taskId} />
                     ))}
                 </AnimatedList>
             ) : (

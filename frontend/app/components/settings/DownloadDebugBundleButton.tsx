@@ -9,34 +9,36 @@ export const DownloadDebugBundleButton: React.FC = () => {
 
     const handleDownloadDebugBundle = async () => {
         setIsLoading(true)
-        const response = await fetch("/api/settings/download-debug-bundle", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                settings: useSettingsStore.getState(),
-                screen_height: window.innerHeight,
-                screen_width: window.innerWidth,
-            }),
-        })
-        if (!response.ok) {
+        try {
+            const response = await fetch("/api/settings/download-debug-bundle", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    settings: useSettingsStore.getState(),
+                    screen_height: window.innerHeight,
+                    screen_width: window.innerWidth,
+                }),
+            })
+            if (!response.ok) return
+
+            const blob = await response.blob()
+            const blobUrl = window.URL.createObjectURL(blob)
+
+            const anchor = document.createElement("a")
+            anchor.href = blobUrl
+            anchor.download = "debug_bundle.zip"
+            document.body.appendChild(anchor)
+            anchor.click()
+
+            document.body.removeChild(anchor)
+            URL.revokeObjectURL(blobUrl)
+        } catch (error) {
+            console.error("Failed to download debug bundle:", error)
+        } finally {
             setIsLoading(false)
-            return
         }
-
-        const blob = await response.blob()
-        const blobUrl = window.URL.createObjectURL(blob)
-
-        const anchor = document.createElement("a")
-        anchor.href = blobUrl
-        anchor.download = "debug_bundle.zip"
-        document.body.appendChild(anchor)
-        anchor.click()
-
-        document.body.removeChild(anchor)
-        URL.revokeObjectURL(blobUrl)
-        setIsLoading(false)
     }
 
     return (

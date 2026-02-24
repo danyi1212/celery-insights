@@ -8,7 +8,7 @@ import ThemeSelector from "@layout/header/ThemeSelector"
 import { Github } from "lucide-react"
 import useSettingsStore from "@stores/useSettingsStore"
 import { useStateStore } from "@stores/useStateStore"
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 
 const StateWsStatusIcon: React.FC = () => {
     const isDemo = useSettingsStore((state) => state.demo)
@@ -18,17 +18,17 @@ const StateWsStatusIcon: React.FC = () => {
 
 const Header: React.FC = () => {
     const [visible, setVisible] = useState(true)
-    const [lastScrollY, setLastScrollY] = useState(0)
+    const lastScrollYRef = useRef(0)
 
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY
-            setVisible(currentScrollY <= 0 || currentScrollY < lastScrollY)
-            setLastScrollY(currentScrollY)
+            setVisible(currentScrollY <= 0 || currentScrollY < lastScrollYRef.current)
+            lastScrollYRef.current = currentScrollY
         }
         window.addEventListener("scroll", handleScroll, { passive: true })
         return () => window.removeEventListener("scroll", handleScroll)
-    }, [lastScrollY])
+    }, [])
 
     return (
         <header

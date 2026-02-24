@@ -28,13 +28,7 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, hostnam
                     <DetailItem
                         label="CPU Usage"
                         description="Percentage of CPU used by worker process"
-                        value={
-                            <LinearProgressWithLabel
-                                value={worker?.cpuLoad?.[2] || 0}
-                                buffer={worker?.cpuLoad?.[0] || 0}
-                                percentageLabel
-                            />
-                        }
+                        value={<LinearProgressWithLabel value={worker?.cpuLoad?.[2] || 0} percentageLabel />}
                     />
                 </div>
                 <div className="col-span-12 md:col-span-6">
