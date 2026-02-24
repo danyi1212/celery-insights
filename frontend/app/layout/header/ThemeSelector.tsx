@@ -1,10 +1,5 @@
 import { Button } from "@components/ui/button"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@components/ui/dropdown-menu"
 import { Monitor, Moon, Sun } from "lucide-react"
 import useSettingsStore, { PreferredTheme } from "@stores/useSettingsStore"
 

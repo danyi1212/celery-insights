@@ -80,7 +80,8 @@ const server = Bun.serve({
 
         // Serve static assets (JS/CSS bundles, SVGs, fonts, images)
         if (url.pathname.startsWith("/assets/") || url.pathname.match(/\.(svg|png|ico|jpg|css|js|woff2?|ttf|map)$/)) {
-            const filePath = path.join(DIST_DIR, url.pathname)
+            const filePath = path.resolve(DIST_DIR, "." + url.pathname)
+            if (!filePath.startsWith(DIST_DIR)) return new Response("Forbidden", { status: 403 })
             const file = Bun.file(filePath)
             if (await file.exists()) {
                 return new Response(file, {

@@ -1,3 +1,4 @@
+import { useNow } from "@hooks/useNow"
 import { cn } from "@lib/utils"
 import React, { useMemo } from "react"
 
@@ -6,9 +7,10 @@ interface WorkerStatusProps {
 }
 
 const WorkerStatus: React.FC<WorkerStatusProps> = ({ heartbeatExpires }) => {
+    const now = useNow(heartbeatExpires ? 1000 : undefined)
     const { status, colorClass } = useMemo(() => {
         if (!heartbeatExpires) return { status: "Unknown", colorClass: "text-amber-500" }
-        const secondsLeft = Math.floor(heartbeatExpires.getTime() - Date.now()) / 1000
+        const secondsLeft = (heartbeatExpires.getTime() - now.getTime()) / 1000
         if (secondsLeft < 0) {
             return {
                 status: `Offline`,
@@ -22,7 +24,7 @@ const WorkerStatus: React.FC<WorkerStatusProps> = ({ heartbeatExpires }) => {
         } else {
             return { status: "Online", colorClass: "text-foreground" }
         }
-    }, [heartbeatExpires])
+    }, [heartbeatExpires, now])
     return <span className={cn("text-base", colorClass)}>{status}</span>
 }
 

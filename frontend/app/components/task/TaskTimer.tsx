@@ -50,7 +50,7 @@ function getTimerInfo(etaDate: Date | null, expireDate: Date | null, now: Date):
 const TaskTimer: React.FC<TaskTimerProps> = ({ task, className, ...props }) => {
     const etaDate = useMemo(() => (task.eta ? new Date(task.eta) : null), [task.eta])
     const expireDate = useMemo(() => (task.expires ? new Date(task.expires) : null), [task.expires])
-    const now = useNow(etaDate && expireDate ? 1000 : undefined)
+    const now = useNow(etaDate || expireDate ? 1000 : undefined)
     const info = useMemo(() => getTimerInfo(etaDate, expireDate, now), [etaDate, expireDate, now])
 
     if (!info) return null
