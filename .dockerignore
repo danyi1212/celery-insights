@@ -5,3 +5,4 @@
 **/.mypy_cache
 **/.pytest_cache
 /server/static/
+/test_project/

@@ -1,0 +1,91 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build: .
+    command: celery -A celery_app worker -l INFO -c 4 -n worker@%h
+    environment:
+      BROKER_URL: amqp://guest:guest@rabbitmq/
+      RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-secondary:
+    build: .
+    command: celery -A celery_app worker -l INFO -c 2 -Q secondary -n worker-secondary@%h
+    environment:
+      BROKER_URL: amqp://guest:guest@rabbitmq/
+      RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  producer:
+    build: .
+    command: python -m producer.interval
+    environment:
+      BROKER_URL: amqp://guest:guest@rabbitmq/
+      RESULT_BACKEND: redis://redis:6379/0
+      PRODUCE_INTERVAL: "8"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      worker:
+        condition: service_started
+
+  interactive:
+    build: .
+    command: uvicorn producer.interactive:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      BROKER_URL: amqp://guest:guest@rabbitmq/
+      RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - interactive
+
+  celery-insights:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "8555:8555"
+    environment:
+      BROKER_URL: amqp://guest:guest@rabbitmq/
+      RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

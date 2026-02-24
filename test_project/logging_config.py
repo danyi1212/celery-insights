@@ -29,17 +29,22 @@ LOGGING_CONFIG = {
     },
     "loggers": {
         # Internal loggers
-        "app": {"level": "INFO"},
-        "producer": {"level": "INFO"},
+        "tasks.basic": {"level": "INFO"},
+        "tasks.canvas": {"level": "INFO"},
+        "tasks.failures": {"level": "INFO"},
+        "tasks.lifecycle": {"level": "INFO"},
+        "tasks.payloads": {"level": "INFO"},
+        "producer.scenarios": {"level": "INFO"},
+        "producer.interval": {"level": "INFO"},
+        "producer.interactive": {"level": "INFO"},
         # Third-party loggers
         "asyncio": {"level": "INFO"},
         "concurrent": {"level": "INFO"},
-        "faker": {"level": "INFO"},
         "amqp": {"level": "INFO"},
         "celery": {"level": "INFO"},
         "dotenv": {"level": "INFO"},
         "fastapi": {"level": "INFO"},
-        "fastapi_cache": {"level": "INFO"},
         "kombu": {"level": "INFO"},
+        "uvicorn": {"level": "INFO"},
     },
 }
