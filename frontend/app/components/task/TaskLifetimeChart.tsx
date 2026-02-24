@@ -1,5 +1,5 @@
 import { useNow } from "@hooks/useNow"
-import { Theme, useTheme } from "@mui/material"
+import { useIsDark } from "@hooks/useIsDark"
 import { formatDurationExact } from "@utils/FormatDurationExact"
 import { StateTask } from "@utils/translateServerModels"
 import { ApexOptions } from "apexcharts"
@@ -11,11 +11,11 @@ interface TaskLifetimeChart {
 }
 
 const REALTIME_INTERVAL = 10
-const getOptions = (theme: Theme): ApexOptions => ({
+
+const getOptions = (isDark: boolean): ApexOptions => ({
     chart: {
         background: "#00000000",
-        foreColor: theme.palette.text.primary,
-        fontFamily: theme.typography.fontFamily,
+        foreColor: isDark ? "#ede9e1" : "#1f2117",
         parentHeightOffset: 0,
         animations: {
             enabled: true,
@@ -49,7 +49,7 @@ const getOptions = (theme: Theme): ApexOptions => ({
             },
         },
     },
-    colors: [theme.palette.grey.A400, theme.palette.info.main, theme.palette.success.main],
+    colors: [isDark ? "#6b6b6b" : "#9e9e9e", "#2196f3", "#4caf50"],
     fill: {
         type: "solid",
     },
@@ -101,14 +101,14 @@ const getSeries = (task: StateTask, now: Date): ApexAxisChartSeries => [
 ]
 
 const TaskLifetimeChart: React.FC<TaskLifetimeChart> = ({ task }) => {
-    const theme = useTheme()
+    const isDark = useIsDark()
     const isRealtime = useMemo(
         () =>
             getReceivedAt(task) === undefined || getStartedAt(task) === undefined || getFinishedAt(task) === undefined,
         [task],
     )
     const now = useNow(isRealtime ? REALTIME_INTERVAL : 0)
-    const options = useMemo(() => getOptions(theme), [theme])
+    const options = useMemo(() => getOptions(isDark), [isDark])
     const series = useMemo(() => getSeries(task, now), [task, now])
 
     return <Chart type="rangeBar" options={options} series={series} width="100%" height="120px" />

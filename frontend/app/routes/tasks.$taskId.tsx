@@ -7,11 +7,8 @@ import TaskAvatar from "@components/task/TaskAvatar"
 import TaskLifetimeChart from "@components/task/TaskLifetimeChart"
 import TaskPageHeader from "@components/task/TaskPageHeader"
 import WorkflowGraph, { WorkflowChartType } from "@components/workflow/WorkflowGraph"
+import { Skeleton } from "@components/ui/skeleton"
 import useTaskState from "@hooks/task/useTaskState"
-import Box from "@mui/material/Box"
-import Grid from "@mui/material/Grid"
-import Skeleton from "@mui/material/Skeleton"
-import Typography from "@mui/material/Typography"
 import { useTourChangeStepOnLoad } from "@stores/useTourStore"
 import React from "react"
 
@@ -23,42 +20,34 @@ const TaskPage = () => {
 
     if (task === undefined)
         return (
-            <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="100%">
-                <Box sx={{ display: "flex", alignItems: "center" }}>
+            <div className="flex h-full flex-col items-center justify-center">
+                <div className="flex items-center">
                     <TaskAvatar taskId={taskId} type={undefined} />
-                    <Typography variant="h4" color="textPrimary" ml={2}>
-                        Could not find this task
-                    </Typography>
-                </Box>
-            </Box>
+                    <h2 className="ml-2 text-2xl font-semibold">Could not find this task</h2>
+                </div>
+            </div>
         )
 
     return (
-        <Box>
-            <Box width="100%" height="50vh" id="workflow-chart">
+        <div>
+            <div className="h-[50vh] w-full" id="workflow-chart">
                 {task ? (
                     <WorkflowGraph chartType={chartType} rootTaskId={task.rootId || task.id} currentTaskId={task.id} />
                 ) : (
-                    <Skeleton variant="rectangular" width="100%" height="450px" />
+                    <Skeleton className="h-[450px] w-full" />
                 )}
-            </Box>
+            </div>
             <TaskPageHeader task={task} chartType={chartType} setChartType={setChartType} />
-            <Box my={2} id="lifetime-chart">
-                {task ? <TaskLifetimeChart task={task} /> : <Skeleton variant="rounded" animation="wave" />}
-            </Box>
+            <div className="my-2" id="lifetime-chart">
+                {task ? <TaskLifetimeChart task={task} /> : <Skeleton className="h-8 w-full rounded-md" />}
+            </div>
             <TaskAlerts taskId={taskId} />
-            <Grid container spacing={3} px={3} id="task-details">
-                <Grid item lg={4} xs={12}>
-                    <DeliveryInfoPanel taskId={taskId} />
-                </Grid>
-                <Grid item lg={4} xs={12}>
-                    <ArgumentPanel taskId={taskId} />
-                </Grid>
-                <Grid item lg={4} xs={12}>
-                    <ResultCard taskId={taskId} />
-                </Grid>
-            </Grid>
-        </Box>
+            <div className="grid grid-cols-1 gap-3 px-3 lg:grid-cols-3" id="task-details">
+                <DeliveryInfoPanel taskId={taskId} />
+                <ArgumentPanel taskId={taskId} />
+                <ResultCard taskId={taskId} />
+            </div>
+        </div>
     )
 }
 

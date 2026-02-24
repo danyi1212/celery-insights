@@ -1,42 +1,53 @@
-import CancelIcon from "@mui/icons-material/Cancel"
-import ChangeCircleIcon from "@mui/icons-material/ChangeCircle"
-import CheckCircleIcon from "@mui/icons-material/CheckCircle"
-import ErrorIcon from "@mui/icons-material/Error"
-import PlayCircleIcon from "@mui/icons-material/PlayCircle"
-import RemoveCircleIcon from "@mui/icons-material/RemoveCircle"
-import WatchLaterIcon from "@mui/icons-material/WatchLater"
-import { SvgIconProps } from "@mui/material"
-import Tooltip from "@mui/material/Tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { cn } from "@lib/utils"
 import { TaskState } from "@services/server"
+import {
+    Ban,
+    CheckCircle2,
+    CircleAlert,
+    CircleMinus,
+    CirclePlay,
+    Clock,
+    LucideIcon,
+    RotateCw,
+    XCircle,
+} from "lucide-react"
 import React from "react"
 
-interface TaskStatusIconProps extends SvgIconProps {
+interface TaskStatusIconProps extends React.ComponentProps<"span"> {
     status: TaskState
+    iconClassName?: string
 }
 
 interface StateIconMeta {
-    icon: React.ElementType
-    color: SvgIconProps["color"]
+    icon: LucideIcon
+    className: string
     tooltip: string
 }
 
 const stateMeta: Record<TaskState, StateIconMeta> = {
-    [TaskState.PENDING]: { icon: WatchLaterIcon, color: "disabled", tooltip: "Pending" },
-    [TaskState.RECEIVED]: { icon: WatchLaterIcon, color: "info", tooltip: "Received" },
-    [TaskState.STARTED]: { icon: PlayCircleIcon, color: "info", tooltip: "Started" },
-    [TaskState.SUCCESS]: { icon: CheckCircleIcon, color: "success", tooltip: "Success" },
-    [TaskState.FAILURE]: { icon: ErrorIcon, color: "error", tooltip: "Failure" },
-    [TaskState.IGNORED]: { icon: CancelIcon, color: "error", tooltip: "Ignored" },
-    [TaskState.REJECTED]: { icon: CancelIcon, color: "error", tooltip: "Rejected" },
-    [TaskState.REVOKED]: { icon: RemoveCircleIcon, color: "warning", tooltip: "Revoked" },
-    [TaskState.RETRY]: { icon: ChangeCircleIcon, color: "warning", tooltip: "Retry" },
+    [TaskState.PENDING]: { icon: Clock, className: "text-muted-foreground", tooltip: "Pending" },
+    [TaskState.RECEIVED]: { icon: Clock, className: "text-blue-500", tooltip: "Received" },
+    [TaskState.STARTED]: { icon: CirclePlay, className: "text-blue-500", tooltip: "Started" },
+    [TaskState.SUCCESS]: { icon: CheckCircle2, className: "text-green-500", tooltip: "Success" },
+    [TaskState.FAILURE]: { icon: CircleAlert, className: "text-red-500", tooltip: "Failure" },
+    [TaskState.IGNORED]: { icon: XCircle, className: "text-red-500", tooltip: "Ignored" },
+    [TaskState.REJECTED]: { icon: Ban, className: "text-red-500", tooltip: "Rejected" },
+    [TaskState.REVOKED]: { icon: CircleMinus, className: "text-yellow-500", tooltip: "Revoked" },
+    [TaskState.RETRY]: { icon: RotateCw, className: "text-yellow-500", tooltip: "Retry" },
 }
 
-const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status, ...props }) => {
+const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status, className, iconClassName, ...props }) => {
     const meta = stateMeta[status]
+    const Icon = meta.icon
     return (
-        <Tooltip title={meta.tooltip} arrow>
-            <meta.icon color={meta.color} {...props} />
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className={cn("inline-flex", className)} {...props}>
+                    <Icon className={cn("size-4", meta.className, iconClassName)} />
+                </span>
+            </TooltipTrigger>
+            <TooltipContent>{meta.tooltip}</TooltipContent>
         </Tooltip>
     )
 }
