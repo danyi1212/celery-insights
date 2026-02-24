@@ -1,11 +1,9 @@
-import DownloadIcon from "@mui/icons-material/Download"
-import { LoadingButtonProps } from "@mui/lab"
-import LoadingButton from "@mui/lab/LoadingButton"
-import CircularProgress from "@mui/material/CircularProgress"
+import { Button } from "@components/ui/button"
 import useSettingsStore from "@stores/useSettingsStore"
+import { Download, Loader2 } from "lucide-react"
 import React, { useState } from "react"
 
-export const DownloadDebugBundleButton: React.FC<LoadingButtonProps> = (props) => {
+export const DownloadDebugBundleButton: React.FC = () => {
     const isDemo = useSettingsStore((state) => state.demo)
     const [isLoading, setIsLoading] = useState(false)
 
@@ -34,7 +32,7 @@ export const DownloadDebugBundleButton: React.FC<LoadingButtonProps> = (props) =
         anchor.href = blobUrl
         anchor.download = "debug_bundle.zip"
         document.body.appendChild(anchor)
-        anchor.click() // Programmatically click the anchor to trigger the download
+        anchor.click()
 
         document.body.removeChild(anchor)
         URL.revokeObjectURL(blobUrl)
@@ -42,18 +40,9 @@ export const DownloadDebugBundleButton: React.FC<LoadingButtonProps> = (props) =
     }
 
     return (
-        <LoadingButton
-            variant="outlined"
-            color="secondary"
-            {...props}
-            onClick={handleDownloadDebugBundle}
-            disabled={isDemo}
-            loading={isLoading}
-            loadingPosition="start"
-            startIcon={<DownloadIcon />}
-            loadingIndicator={<CircularProgress color="inherit" size={16} />}
-        >
+        <Button variant="outline" onClick={handleDownloadDebugBundle} disabled={isDemo || isLoading}>
+            {isLoading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
             <span>Download Debug Bundle</span>
-        </LoadingButton>
+        </Button>
     )
 }

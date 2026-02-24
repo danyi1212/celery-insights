@@ -1,46 +1,50 @@
-import Brightness2Icon from "@mui/icons-material/Brightness2"
-import BrightnessAutoIcon from "@mui/icons-material/BrightnessAuto"
-import BrightnessHighIcon from "@mui/icons-material/BrightnessHigh"
-import ToggleButton from "@mui/material/ToggleButton"
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup"
-import Tooltip from "@mui/material/Tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { ToggleGroup, ToggleGroupItem } from "@components/ui/toggle-group"
 import useSettingsStore, { PreferredTheme } from "@stores/useSettingsStore"
+import { Monitor, Moon, Sun } from "lucide-react"
 import React from "react"
 
 const meta = [
     {
         theme: PreferredTheme.SYSTEM,
-        icon: <BrightnessAutoIcon />,
+        icon: <Monitor className="size-4" />,
         tooltip: "System Default",
     },
     {
         theme: PreferredTheme.DARK,
-        icon: <Brightness2Icon />,
+        icon: <Moon className="size-4" />,
         tooltip: "Dark Theme",
     },
     {
         theme: PreferredTheme.LIGHT,
-        icon: <BrightnessHighIcon />,
+        icon: <Sun className="size-4" />,
         tooltip: "Light Theme",
     },
 ]
+
 const ThemeSelector: React.FC = () => {
     const theme = useSettingsStore((state) => state.theme)
     return (
-        <ToggleButtonGroup
-            exclusive
+        <ToggleGroup
+            type="single"
+            variant="outline"
             value={theme}
-            onChange={(event, newValue: PreferredTheme | undefined) =>
-                newValue && useSettingsStore.setState({ theme: newValue })
-            }
+            onValueChange={(value: string) => {
+                if (value) useSettingsStore.setState({ theme: value as PreferredTheme })
+            }}
             aria-label="Theme"
         >
             {meta.map((item, index) => (
-                <ToggleButton key={index} value={item.theme} aria-label={item.tooltip}>
-                    <Tooltip title={item.tooltip}>{item.icon}</Tooltip>
-                </ToggleButton>
+                <Tooltip key={index}>
+                    <TooltipTrigger asChild>
+                        <ToggleGroupItem value={item.theme} aria-label={item.tooltip}>
+                            {item.icon}
+                        </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent>{item.tooltip}</TooltipContent>
+                </Tooltip>
             ))}
-        </ToggleButtonGroup>
+        </ToggleGroup>
     )
 }
 

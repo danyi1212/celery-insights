@@ -1,10 +1,6 @@
-import SignalWifi1BarIcon from "@mui/icons-material/SignalWifi1Bar"
-import SignalWifi1BarLockIcon from "@mui/icons-material/SignalWifi1BarLock"
-import SignalWifi4BarIcon from "@mui/icons-material/SignalWifi4Bar"
-import SignalWifi4BarLockIcon from "@mui/icons-material/SignalWifi4BarLock"
-import SignalWifiBadIcon from "@mui/icons-material/SignalWifiBad"
-import Tooltip from "@mui/material/Tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { WebSocketState } from "@services/server"
+import { Lock, Wifi, WifiOff } from "lucide-react"
 import React from "react"
 
 interface ClientConnectionStatusProps {
@@ -15,37 +11,36 @@ interface ClientConnectionStatusProps {
 const ClientConnectionStatus: React.FC<ClientConnectionStatusProps> = ({ state, isSecure }) => {
     switch (state) {
         case WebSocketState._0:
-            if (isSecure) {
-                return (
-                    <Tooltip title="Connecting with SSL">
-                        <SignalWifi1BarLockIcon color="info" />
-                    </Tooltip>
-                )
-            } else {
-                return (
-                    <Tooltip title="Connecting without SSL">
-                        <SignalWifi1BarIcon color="warning" />
-                    </Tooltip>
-                )
-            }
+            return (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span className="relative flex items-center">
+                            <Wifi className="size-5 text-blue-500 opacity-60" />
+                            {isSecure && <Lock className="absolute -bottom-0.5 -right-0.5 size-2.5 text-blue-500" />}
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{isSecure ? "Connecting with SSL" : "Connecting without SSL"}</TooltipContent>
+                </Tooltip>
+            )
         case WebSocketState._1:
-            if (isSecure) {
-                return (
-                    <Tooltip title="Connected with SSL">
-                        <SignalWifi4BarLockIcon color="warning" />
-                    </Tooltip>
-                )
-            } else {
-                return (
-                    <Tooltip title="Connected without SSL">
-                        <SignalWifi4BarIcon color="warning" />
-                    </Tooltip>
-                )
-            }
+            return (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span className="relative flex items-center">
+                            <Wifi className="size-5 text-yellow-500" />
+                            {isSecure && <Lock className="absolute -bottom-0.5 -right-0.5 size-2.5 text-yellow-500" />}
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{isSecure ? "Connected with SSL" : "Connected without SSL"}</TooltipContent>
+                </Tooltip>
+            )
         case WebSocketState._2:
             return (
-                <Tooltip title="Disconnected">
-                    <SignalWifiBadIcon color="error" />
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <WifiOff className="size-5 text-destructive" />
+                    </TooltipTrigger>
+                    <TooltipContent>Disconnected</TooltipContent>
                 </Tooltip>
             )
     }

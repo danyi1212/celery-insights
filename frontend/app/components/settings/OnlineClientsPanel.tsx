@@ -1,7 +1,6 @@
 import Panel from "@components/common/Panel"
 import ClientInfoItem from "@components/settings/ClientInfoItem"
 import { useClient } from "@hooks/useClient"
-import List from "@mui/material/List"
 import { useQuery } from "@tanstack/react-query"
 import React, { useCallback } from "react"
 
@@ -14,11 +13,11 @@ const OnlineClientsPanel: React.FC = () => {
     })
     return (
         <Panel title="Online Clients" loading={isLoading} error={error}>
-            <List>
+            <ul>
                 {data?.map((onlineClient) => (
                     <ClientInfoItem key={`${onlineClient.host}:${onlineClient.port}`} client={onlineClient} />
                 ))}
-            </List>
+            </ul>
         </Panel>
     )
 }

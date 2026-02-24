@@ -320,7 +320,7 @@ export const Route = createRootRoute({
 - [x] **3c. Worker Detail Page** (`workers.$workerId.tsx`): Migrate `WorkerSummary`, `WorkerStatus`, panel components (6 files), task sub-panels (7 files)
 - [x] **3d. Explorer Page** (`explorer.tsx`): Migrate `ExplorerGrid` to TanStack Table + Shadcn Table, `ExplorerLayout`, facet components
 - [x] **3e. Raw Events Page** (`raw_events.tsx`): Migrate `RawEventsTable`, `RawEventRow`, `LimitSelect`, `ToggleConnect`
-- [ ] **3f. Settings Page** (`settings.tsx`): Migrate `SettingsPanel`, `ServerInfoPanel`, `OnlineClientsPanel`, `ClientInfoItem`, `ClientConnectionStatus`, `DownloadDebugBundleButton`, `VersionCheckIcon`
+- [x] **3f. Settings Page** (`settings.tsx`): Migrate `SettingsPanel`, `ServerInfoPanel`, `OnlineClientsPanel`, `ClientInfoItem`, `ClientConnectionStatus`, `DownloadDebugBundleButton`, `VersionCheckIcon`
 - [ ] **3g. Workflow Components**: Migrate `FlowChart`, `TaskNode`, `TimelineChart`, `WorkflowGraph` (update @xyflow/react imports)
 - [ ] **3h. Search Components**: Migrate `SearchResultList`, `SearchResultListItem`
 
