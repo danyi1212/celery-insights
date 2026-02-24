@@ -1,6 +1,6 @@
 import IdentityIcon from "@components/common/IdentityIcon"
 import TaskStatusIcon from "@components/task/TaskStatusIcon"
-import { Avatar, AvatarBadge } from "@components/ui/avatar"
+import { Avatar } from "@components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { cn } from "@lib/utils"
 import { TaskState } from "@services/server"
@@ -25,18 +25,20 @@ const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, type, disableLi
         <Wrapper {...(!disableLink ? { to: `/tasks/${taskId}` } : {})}>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Avatar
-                        className={cn("size-10", className)}
-                        style={{ backgroundColor: backgroundColor || undefined }}
-                        {...props}
-                    >
-                        <IdentityIcon username={taskId} lightness={iconBrightness || 0} className="size-full" />
+                    <div className="relative inline-flex">
+                        <Avatar
+                            className={cn("size-10", className)}
+                            style={{ backgroundColor: backgroundColor || undefined }}
+                            {...props}
+                        >
+                            <IdentityIcon username={taskId} lightness={iconBrightness || 0} className="size-full" />
+                        </Avatar>
                         {status && (
-                            <AvatarBadge className="bg-black">
-                                <TaskStatusIcon status={status} iconClassName="size-2" />
-                            </AvatarBadge>
+                            <span className="absolute -bottom-1 -right-1 z-10 inline-flex rounded-full bg-background">
+                                <TaskStatusIcon status={status} iconClassName="size-4" />
+                            </span>
                         )}
-                    </Avatar>
+                    </div>
                 </TooltipTrigger>
                 <TooltipContent side="right">
                     <span>
