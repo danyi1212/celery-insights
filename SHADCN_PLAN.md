@@ -282,8 +282,8 @@ export const Route = createRootRoute({
 
 **Goal**: Replace the shell — Menu drawer and Header AppBar.
 
-- [ ] **Sidebar**: Replace MUI `Drawer` in `Menu.tsx` with Shadcn `Sidebar` (`collapsible="icon"` mode, port menu items/worker status, wrap root in `SidebarProvider`, remove Zustand `menuExpanded`)
-- [ ] **Header**: Replace MUI `AppBar` in `Header.tsx` with Tailwind-styled header (CSS translate-y, port SearchBox/ThemeSelector/NotificationBadge, replace icons with Lucide)
+- [x] **Sidebar**: Replace MUI `Drawer` in `Menu.tsx` with Shadcn `Sidebar` (`collapsible="icon"` mode, port menu items/worker status, wrap root in `SidebarProvider`, remove Zustand `menuExpanded`)
+- [x] **Header**: Replace MUI `AppBar` in `Header.tsx` with Tailwind-styled header (CSS translate-y, port SearchBox/ThemeSelector/NotificationBadge, replace icons with Lucide)
 
 **Files modified**: `Menu.tsx`, `MenuItem.tsx`, `Header.tsx`, `SearchBox.tsx`, `ThemeSelector.tsx`, `NotificationBadge.tsx`, `__root.tsx` (layout restructure)
 

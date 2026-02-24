@@ -1,12 +1,5 @@
-import ChangeCircleIcon from "@mui/icons-material/ChangeCircle"
-import CheckCircleIcon from "@mui/icons-material/CheckCircle"
-import ErrorIcon from "@mui/icons-material/Error"
-import OfflineBoltIcon from "@mui/icons-material/OfflineBolt"
-import Box from "@mui/material/Box"
-import Slide from "@mui/material/Slide"
-import Stack from "@mui/material/Stack"
-import Tooltip from "@mui/material/Tooltip"
-import Typography from "@mui/material/Typography"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { CheckCircle2, AlertCircle, RotateCw, Zap } from "lucide-react"
 import React, { useEffect, useState } from "react"
 import { ReadyState } from "react-use-websocket"
 
@@ -18,29 +11,29 @@ interface Meta {
 const statusMeta: Record<ReadyState, Meta> = {
     [ReadyState.OPEN]: {
         description: "Connected",
-        icon: <CheckCircleIcon color="success" />,
+        icon: <CheckCircle2 className="size-5 text-green-500" />,
     },
     [ReadyState.CLOSED]: {
         description: "Disconnected",
-        icon: <ErrorIcon color="error" />,
+        icon: <AlertCircle className="size-5 text-red-500" />,
     },
     [ReadyState.CLOSING]: {
         description: "Disconnecting...",
-        icon: <ChangeCircleIcon color="warning" />,
+        icon: <RotateCw className="size-5 text-yellow-500" />,
     },
     [ReadyState.CONNECTING]: {
         description: "Connecting...",
-        icon: <ChangeCircleIcon color="warning" />,
+        icon: <RotateCw className="size-5 text-yellow-500" />,
     },
     [ReadyState.UNINSTANTIATED]: {
         description: "Starting...",
-        icon: <ChangeCircleIcon color="warning" />,
+        icon: <RotateCw className="size-5 text-yellow-500" />,
     },
 }
 
 const demoMeta: Meta = {
     description: "Demo Mode",
-    icon: <OfflineBoltIcon color="primary" />,
+    icon: <Zap className="size-5 text-primary" />,
 }
 
 interface WsStateIconProps {
@@ -59,14 +52,25 @@ const WsStateIcon: React.FC<WsStateIconProps> = ({ state, isDemo }) => {
     }, [state, isDemo])
 
     return (
-        <Stack direction="row" alignItems="center" p={1}>
-            <Box overflow="hidden">
-                <Slide appear={false} direction="left" in={isOpen}>
-                    <Typography p="10px">{meta.description}</Typography>
-                </Slide>
-            </Box>
-            <Tooltip title={meta.description}>{meta.icon}</Tooltip>
-        </Stack>
+        <div className="flex items-center p-1">
+            <div className="overflow-hidden">
+                <div
+                    className="transition-all duration-300"
+                    style={{
+                        transform: isOpen ? "translateX(0)" : "translateX(100%)",
+                        opacity: isOpen ? 1 : 0,
+                    }}
+                >
+                    <span className="px-2.5 py-1 text-sm">{meta.description}</span>
+                </div>
+            </div>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className="flex items-center">{meta.icon}</span>
+                </TooltipTrigger>
+                <TooltipContent>{meta.description}</TooltipContent>
+            </Tooltip>
+        </div>
     )
 }
 export default WsStateIcon
