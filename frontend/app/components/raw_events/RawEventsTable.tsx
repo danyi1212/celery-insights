@@ -1,11 +1,6 @@
 import { RawEventRow } from "@components/raw_events/RawEventRow"
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { CeleryEvent } from "@hooks/useRawEvents"
-import Table from "@mui/material/Table"
-import TableBody from "@mui/material/TableBody"
-import TableCell from "@mui/material/TableCell"
-import TableContainer from "@mui/material/TableContainer"
-import TableHead from "@mui/material/TableHead"
-import TableRow from "@mui/material/TableRow"
 import React from "react"
 
 interface RawEventsTableProps {
@@ -14,23 +9,21 @@ interface RawEventsTableProps {
 
 export const RawEventsTable: React.FC<RawEventsTableProps> = ({ events }) => {
     return (
-        <TableContainer>
-            <Table>
-                <TableHead>
-                    <TableRow>
-                        <TableCell width={60}>Task</TableCell>
-                        <TableCell width={120}>Timestamp</TableCell>
-                        <TableCell width={180}>Type</TableCell>
-                        <TableCell>Name</TableCell>
-                        <TableCell width={120}>Expand</TableCell>
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {events.map((event, index) => (
-                        <RawEventRow key={index} event={event} />
-                    ))}
-                </TableBody>
-            </Table>
-        </TableContainer>
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead className="w-[60px]">Task</TableHead>
+                    <TableHead className="w-[120px]">Timestamp</TableHead>
+                    <TableHead className="w-[180px]">Type</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead className="w-[120px]">Expand</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {events.map((event, index) => (
+                    <RawEventRow key={index} event={event} />
+                ))}
+            </TableBody>
+        </Table>
     )
 }

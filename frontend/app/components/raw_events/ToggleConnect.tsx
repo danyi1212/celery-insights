@@ -1,7 +1,6 @@
-import PauseIcon from "@mui/icons-material/Pause"
-import PlayArrowIcon from "@mui/icons-material/PlayArrow"
-import IconButton from "@mui/material/IconButton"
-import Tooltip from "@mui/material/Tooltip"
+import { Button } from "@components/ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { Pause, Play } from "lucide-react"
 import React from "react"
 
 interface ToggleConnectProps {
@@ -12,10 +11,13 @@ interface ToggleConnectProps {
 
 export const ToggleConnect: React.FC<ToggleConnectProps> = ({ connect, setConnect, disabled }) => {
     return (
-        <Tooltip title={connect ? "Freeze" : "Connect"}>
-            <IconButton onClick={() => setConnect(!connect)} disabled={disabled}>
-                {connect ? <PauseIcon /> : <PlayArrowIcon />}
-            </IconButton>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => setConnect(!connect)} disabled={disabled}>
+                    {connect ? <Pause className="size-4" /> : <Play className="size-4" />}
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent>{connect ? "Freeze" : "Connect"}</TooltipContent>
         </Tooltip>
     )
 }

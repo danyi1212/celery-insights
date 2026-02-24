@@ -6,11 +6,9 @@ import { RawEventsTable } from "@components/raw_events/RawEventsTable"
 import { ToggleConnect } from "@components/raw_events/ToggleConnect"
 import { CeleryEvent, useRawEvents } from "@hooks/useRawEvents"
 import { ExplorerLayout } from "@layout/explorer/ExplorerLayout"
-import CircularProgress from "@mui/material/CircularProgress"
-import Stack from "@mui/material/Stack"
-import Typography from "@mui/material/Typography"
 import useSettingsStore from "@stores/useSettingsStore"
 import { countUniqueProperties } from "@utils/CountUniqueProperties"
+import { Loader2 } from "lucide-react"
 import React, { useMemo, useState } from "react"
 
 interface PlaceholderProps {
@@ -20,10 +18,10 @@ interface PlaceholderProps {
 
 const Placeholder: React.FC<PlaceholderProps> = ({ text, progress }) => {
     return (
-        <Stack direction="row" justifyContent="center" alignItems="center" spacing={3} my={10}>
-            {progress && <CircularProgress />}
-            <Typography variant="h5">{text}</Typography>
-        </Stack>
+        <div className="my-10 flex items-center justify-center gap-3">
+            {progress && <Loader2 className="size-8 animate-spin text-muted-foreground" />}
+            <h5 className="text-xl font-semibold">{text}</h5>
+        </div>
     )
 }
 
@@ -48,9 +46,7 @@ const RawEventsPage = () => {
                 actions={
                     <>
                         <WsStateIcon state={readyState} />
-                        <Typography variant="subtitle2" noWrap>
-                            {events.length} Events
-                        </Typography>
+                        <span className="text-sm font-medium truncate">{events.length} Events</span>
                         <ToggleConnect connect={connect} setConnect={setConnect} disabled={isDemo} />
                         <LimitSelect
                             limit={limit}
