@@ -295,17 +295,17 @@ export const Route = createRootRoute({
 
 **Goal**: Migrate the shared component library used across all pages.
 
-- [ ] `Panel.tsx` / `PanelPaper.tsx` → Shadcn `Card` with Tailwind
-- [ ] `AnimatedList.tsx` / `AnimatedListItem.tsx` → native `<ul>`/`<li>` + Tailwind transitions
-- [ ] `CodeBlock.tsx` → new syntax highlighter (Shiki or prism-react-renderer)
-- [ ] `CopyLinkButton.tsx` → Shadcn `Button` + Lucide `Link` + `Copy` icons
-- [ ] `DetailItem.tsx` → remove `styled()`, use Tailwind classes
-- [ ] `DistanceTimer.tsx` → replace MUI `Typography` with Tailwind text
-- [ ] `IdentityIcon.tsx` → minimal changes (SVG-based)
-- [ ] `LinearProgressWithLabel.tsx` → Shadcn `Progress`
-- [ ] `ListSkeleton.tsx` → Shadcn `Skeleton`
-- [ ] `WsStateIcon.tsx` → Lucide WiFi icons
-- [ ] Error alert components (5 files) → Shadcn `Alert`
+- [x] `Panel.tsx` / `PanelPaper.tsx` → Shadcn `Card` with Tailwind
+- [x] `AnimatedList.tsx` / `AnimatedListItem.tsx` → native `<ul>`/`<li>` + Tailwind transitions
+- [x] `CodeBlock.tsx` → new syntax highlighter (Shiki or prism-react-renderer)
+- [x] `CopyLinkButton.tsx` → Shadcn `Button` + Lucide `Link` + `Copy` icons
+- [x] `DetailItem.tsx` → remove `styled()`, use Tailwind classes
+- [x] `DistanceTimer.tsx` → replace MUI `Typography` with Tailwind text
+- [x] `IdentityIcon.tsx` → minimal changes (SVG-based)
+- [x] `LinearProgressWithLabel.tsx` → Shadcn `Progress`
+- [x] `ListSkeleton.tsx` → Shadcn `Skeleton`
+- [x] `WsStateIcon.tsx` → Lucide WiFi icons
+- [x] Error alert components (5 files) → Shadcn `Alert`
 
 **Files modified**: 16 files in `components/common/` and `components/errors/`
 

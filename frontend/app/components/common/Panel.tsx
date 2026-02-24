@@ -1,48 +1,53 @@
 import PanelPaper from "@components/common/PanelPaper"
 import ErrorAlert from "@components/errors/ErrorAlert"
-import { PaperProps, TypographyProps } from "@mui/material"
-import Box from "@mui/material/Box"
-import CircularProgress from "@mui/material/CircularProgress"
-import Stack from "@mui/material/Stack"
-import Toolbar from "@mui/material/Toolbar"
-import Typography from "@mui/material/Typography"
+import { cn } from "@lib/utils"
+import { Loader2 } from "lucide-react"
 import React, { useMemo } from "react"
 
-export interface PanelProps extends PaperProps {
+export interface PanelProps extends React.ComponentProps<"div"> {
     title: string
-    titleProps?: TypographyProps
+    titleClassName?: string
     actions?: React.ReactNode
     children?: React.ReactNode
     loading?: boolean
     error?: unknown
 }
 
-const Panel: React.FC<PanelProps> = ({ title, children, actions, titleProps, loading, error, ...props }) => {
+const Panel: React.FC<PanelProps> = ({
+    title,
+    children,
+    actions,
+    titleClassName,
+    loading,
+    error,
+    className,
+    ...props
+}) => {
     const content = useMemo(() => {
         if (loading)
             return (
-                <Box display="flex" justifyContent="center" alignItems="center" height="100%" width="100%">
-                    <CircularProgress />
-                </Box>
+                <div className="flex h-full w-full items-center justify-center">
+                    <Loader2 className="size-8 animate-spin text-primary" />
+                </div>
             )
         else if (error)
             return (
-                <Box display="flex" justifyContent="center" alignItems="center" height="100%" width="100%">
+                <div className="flex h-full w-full items-center justify-center">
                     <ErrorAlert error={error} />
-                </Box>
+                </div>
             )
         else return children
     }, [loading, error, children])
     return (
-        <Stack direction="column" height="100%">
-            <Toolbar>
-                <Typography variant="h4" {...titleProps} noWrap flexGrow={1}>
-                    {title}
-                </Typography>
+        <div className="flex h-full flex-col">
+            <div className="flex min-h-16 items-center gap-2 px-4">
+                <h4 className={cn("flex-grow truncate text-2xl font-semibold", titleClassName)}>{title}</h4>
                 {actions}
-            </Toolbar>
-            <PanelPaper {...props}>{content}</PanelPaper>
-        </Stack>
+            </div>
+            <PanelPaper className={className} {...props}>
+                {content}
+            </PanelPaper>
+        </div>
     )
 }
 export default Panel

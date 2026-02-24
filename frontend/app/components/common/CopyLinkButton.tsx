@@ -1,8 +1,6 @@
-import CancelIcon from "@mui/icons-material/Cancel"
-import CheckCircleIcon from "@mui/icons-material/CheckCircle"
-import LinkIcon from "@mui/icons-material/Link"
-import IconButton, { IconButtonProps } from "@mui/material/IconButton"
-import Tooltip from "@mui/material/Tooltip"
+import { Button } from "@components/ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { CheckCircle2, Link, XCircle } from "lucide-react"
 import React, { useMemo, useState } from "react"
 
 enum IconStatus {
@@ -13,20 +11,20 @@ enum IconStatus {
 
 const icons: Record<IconStatus, { icon: React.ReactNode; tooltip: string }> = {
     [IconStatus.Default]: {
-        icon: <LinkIcon color="disabled" />,
+        icon: <Link className="size-4 text-muted-foreground" />,
         tooltip: "Copy link",
     },
     [IconStatus.Copied]: {
-        icon: <CheckCircleIcon color="success" />,
+        icon: <CheckCircle2 className="size-4 text-green-500" />,
         tooltip: "Copied!",
     },
     [IconStatus.Error]: {
-        icon: <CancelIcon color="error" />,
+        icon: <XCircle className="size-4 text-red-500" />,
         tooltip: "Error: could not copy",
     },
 }
 
-const CopyLinkButton: React.FC<IconButtonProps> = (props) => {
+const CopyLinkButton: React.FC<React.ComponentProps<typeof Button>> = (props) => {
     const [status, setStatus] = useState<IconStatus>(IconStatus.Default)
 
     const copyCurrentLocation = async () => {
@@ -48,10 +46,13 @@ const CopyLinkButton: React.FC<IconButtonProps> = (props) => {
 
     const icon = useMemo(() => icons[status], [status])
     return (
-        <Tooltip title={icon.tooltip}>
-            <IconButton onClick={copyCurrentLocation} {...props}>
-                {icon.icon}
-            </IconButton>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={copyCurrentLocation} {...props}>
+                    {icon.icon}
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent>{icon.tooltip}</TooltipContent>
         </Tooltip>
     )
 }

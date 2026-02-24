@@ -1,5 +1,5 @@
-import Alert from "@mui/material/Alert"
-import AlertTitle from "@mui/material/AlertTitle"
+import { Alert, AlertDescription, AlertTitle } from "@components/ui/alert"
+import { AlertCircle } from "lucide-react"
 import React from "react"
 
 interface NotFoundAlertProps {
@@ -8,9 +8,10 @@ interface NotFoundAlertProps {
 
 const NotFoundAlert: React.FC<NotFoundAlertProps> = (props) => {
     return (
-        <Alert severity="error">
+        <Alert variant="destructive">
+            <AlertCircle className="size-4" />
             <AlertTitle>Not found</AlertTitle>
-            {props.error}
+            <AlertDescription>{props.error}</AlertDescription>
         </Alert>
     )
 }

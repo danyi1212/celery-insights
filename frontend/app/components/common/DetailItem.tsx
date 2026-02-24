@@ -1,48 +1,40 @@
-import { TypographyProps } from "@mui/material"
-import { styled } from "@mui/material/styles"
-import Tooltip from "@mui/material/Tooltip"
-import Typography from "@mui/material/Typography"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { cn } from "@lib/utils"
 import React from "react"
 
 interface DetailItemProps {
     label: string
     value: React.ReactNode
-    color?: TypographyProps["color"]
+    color?: string
     description?: string
 }
 
-const DetailContainer = styled("div")({
-    display: "flex",
-    alignItems: "center",
-    whiteSpace: "nowrap",
-})
+const colorMap: Record<string, string> = {
+    primary: "text-primary",
+    secondary: "text-secondary",
+    danger: "text-destructive",
+    error: "text-destructive",
+}
 
 const DetailItem: React.FC<DetailItemProps> = ({ label, value, color, description }) => {
-    const labelNode = (
-        <Typography
-            component="span"
-            color={color || "primary"}
-            sx={{ fontWeight: (theme) => theme.typography.fontWeightBold, pr: 1 }}
-        >
-            {`${label}:`}
-        </Typography>
-    )
+    const colorClass = colorMap[color || "primary"] || "text-primary"
+
+    const labelNode = <span className={cn("pr-1 font-bold", colorClass)}>{`${label}:`}</span>
 
     const tooltip = description ? (
-        <Tooltip title={description} arrow>
-            {labelNode}
+        <Tooltip>
+            <TooltipTrigger asChild>{labelNode}</TooltipTrigger>
+            <TooltipContent>{description}</TooltipContent>
         </Tooltip>
     ) : (
         labelNode
     )
 
     return (
-        <DetailContainer>
+        <div className="flex items-center whitespace-nowrap">
             {tooltip}
-            <Typography variant="body1" component="span" noWrap flexGrow={1}>
-                {value}
-            </Typography>
-        </DetailContainer>
+            <span className="flex-grow truncate">{value}</span>
+        </div>
     )
 }
 

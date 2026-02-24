@@ -1,5 +1,5 @@
-import Alert from "@mui/material/Alert"
-import AlertTitle from "@mui/material/AlertTitle"
+import { Alert, AlertDescription, AlertTitle } from "@components/ui/alert"
+import { AlertCircle } from "lucide-react"
 import { ApiError } from "@services/server"
 import React from "react"
 import BadRequestAlert from "./BadRequestAlert"
@@ -21,14 +21,17 @@ const ApiErrorAlert: React.FC<ApiErrorAlertProps> = (props) => {
         default:
             console.error(props.error)
             return (
-                <Alert severity="error">
+                <Alert variant="destructive">
+                    <AlertCircle className="size-4" />
                     <AlertTitle>Failed to access server</AlertTitle>
-                    We are not able to contact the server, possibly due to:
-                    <ol>
-                        <li>The server is not running</li>
-                        <li>Internal Server Error (500)</li>
-                        <li>Incorrect server URL or Port</li>
-                    </ol>
+                    <AlertDescription>
+                        We are not able to contact the server, possibly due to:
+                        <ol className="list-decimal pl-4">
+                            <li>The server is not running</li>
+                            <li>Internal Server Error (500)</li>
+                            <li>Incorrect server URL or Port</li>
+                        </ol>
+                    </AlertDescription>
                 </Alert>
             )
     }
