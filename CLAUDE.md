@@ -13,7 +13,7 @@ Tests are colocated: `model.py` -> `model_test.py`. Run one with `uv run pytest 
 ## Stack
 
 - **Backend**: FastAPI, Python 3.12, Celery 5.4, Pydantic v2, uv
-- **Frontend**: React 18, TypeScript, Vite, TanStack Router (file-based, auto code-splitting), Bun, MUI v5, Zustand, TanStack Query, ReactFlow
+- **Frontend**: React 19, TypeScript, Vite, TanStack Router (file-based, auto code-splitting), Bun, Shadcn UI, Tailwind CSS v4, Lucide React, Zustand, TanStack Query, TanStack Table, @xyflow/react v12
 - **Real-time**: WebSockets — Celery events flow through a threaded receiver -> async queue -> broadcaster -> WebSocket -> Zustand stores
 - **Architecture**: Bun is the single entrypoint — serves the SPA, spawns the Python backend as a child process (on port 8556 internally), and reverse-proxies API/WS to it. External port is 8555.
 
@@ -36,6 +36,7 @@ Tests are colocated: `model.py` -> `model_test.py`. Run one with `uv run pytest 
 
 - **Python**: Ruff (line-length 120). Absolute imports only (relative banned). Pydantic models, not dicts. Async-first — use `asyncio.to_thread` for blocking code. Register new loggers in `logging_config.py`.
 - **TypeScript**: Prettier (tabWidth 4, no semis, printWidth 120). Arrow functions. `useMemo` for derived state, never `useState`+`useEffect` for it. Path alias `@*` -> `app/*`.
+- **UI**: Shadcn UI components in `frontend/app/components/ui/`. Tailwind CSS v4 for styling (CSS-first config in `app/styles.css`). Lucide React for icons. Dark mode via `.dark` class on `<html>`. Use `cn()` from `@lib/utils` for conditional class merging.
 - **Tests**: Colocated, suffixed `_test.py` (not prefixed `test_`). Pythonpath is `server/`, so imports start from package root.
 
 ## Development
