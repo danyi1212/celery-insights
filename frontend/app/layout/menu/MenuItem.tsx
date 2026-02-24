@@ -1,10 +1,6 @@
-import ListItem from "@mui/material/ListItem"
-import ListItemButton from "@mui/material/ListItemButton"
-import ListItemIcon from "@mui/material/ListItemIcon"
-import ListItemText from "@mui/material/ListItemText"
-import Tooltip from "@mui/material/Tooltip"
-import React from "react"
+import { SidebarMenuButton, SidebarMenuItem as SidebarMenuItemWrapper } from "@components/ui/sidebar"
 import { Link, useLocation } from "@tanstack/react-router"
+import React from "react"
 
 export interface MenuLink {
     label: string
@@ -15,52 +11,41 @@ export interface MenuLink {
 
 interface MenuItemProps {
     link: MenuLink
-    expanded?: boolean
+    disabled?: boolean
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({ link, expanded }) => {
+const MenuItem: React.FC<MenuItemProps> = ({ link, disabled }) => {
     const location = useLocation()
-
-    const buttonContent = (
-        <>
-            <ListItemIcon sx={{ justifyContent: "center" }}>{link.icon}</ListItemIcon>
-            <ListItemText primary={link.label} sx={{ opacity: expanded ? 1 : 0 }} />
-        </>
-    )
+    const isActive = link.to === "/" ? location.pathname === "/" : location.pathname.startsWith(link.to)
 
     if (link.external) {
         return (
-            <ListItem disablePadding sx={{ display: "block" }}>
-                <Tooltip title={link.label} placement="right" disableHoverListener={expanded} arrow describeChild>
-                    <ListItemButton
-                        selected={link.to === location.pathname}
-                        component="a"
+            <SidebarMenuItemWrapper>
+                <SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
+                    <a
                         href={link.to}
-                        disabled={Boolean(import.meta.env.VITE_DEMO_MODE)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        sx={{ justifyContent: expanded ? "initial" : "center" }}
+                        aria-disabled={disabled}
+                        className={disabled ? "pointer-events-none opacity-50" : undefined}
                     >
-                        {buttonContent}
-                    </ListItemButton>
-                </Tooltip>
-            </ListItem>
+                        {link.icon}
+                        <span>{link.label}</span>
+                    </a>
+                </SidebarMenuButton>
+            </SidebarMenuItemWrapper>
         )
     }
 
     return (
-        <ListItem disablePadding sx={{ display: "block" }}>
-            <Tooltip title={link.label} placement="right" disableHoverListener={expanded} arrow describeChild>
-                <ListItemButton
-                    selected={link.to === location.pathname}
-                    component={Link}
-                    to={link.to}
-                    sx={{ justifyContent: expanded ? "initial" : "center" }}
-                >
-                    {buttonContent}
-                </ListItemButton>
-            </Tooltip>
-        </ListItem>
+        <SidebarMenuItemWrapper>
+            <SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
+                <Link to={link.to}>
+                    {link.icon}
+                    <span>{link.label}</span>
+                </Link>
+            </SidebarMenuButton>
+        </SidebarMenuItemWrapper>
     )
 }
 

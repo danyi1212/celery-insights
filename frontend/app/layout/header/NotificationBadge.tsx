@@ -1,17 +1,17 @@
-import NotificationsOffIcon from "@mui/icons-material/NotificationsOff"
-import Badge from "@mui/material/Badge"
-import IconButton from "@mui/material/IconButton"
-import Tooltip from "@mui/material/Tooltip"
+import { Button } from "@components/ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { BellOff } from "lucide-react"
 import React from "react"
 
 const NotificationBadge: React.FC = () => {
     return (
-        <Tooltip title="Coming soon!" arrow>
-            <IconButton>
-                <Badge badgeContent={0} color="error">
-                    <NotificationsOffIcon />
-                </Badge>
-            </IconButton>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon">
+                    <BellOff className="size-5" />
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent>Coming soon!</TooltipContent>
         </Tooltip>
     )
 }

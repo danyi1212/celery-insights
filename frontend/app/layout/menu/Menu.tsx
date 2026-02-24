@@ -1,133 +1,111 @@
 import WorkerQuickStatusList from "@components/worker/WorkerQuickStatusList"
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarGroupLabel,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarRail,
+    SidebarSeparator,
+    useSidebar,
+} from "@components/ui/sidebar"
 import MenuItem, { MenuLink } from "@layout/menu/MenuItem"
-import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos"
-import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos"
-import ManageSearchIcon from "@mui/icons-material/ManageSearch"
-import RssFeedIcon from "@mui/icons-material/RssFeed"
-import SettingsIcon from "@mui/icons-material/Settings"
-import SpaceDashboardOutlinedIcon from "@mui/icons-material/SpaceDashboardOutlined"
-import { useMediaQuery, useTheme } from "@mui/material"
-import Collapse from "@mui/material/Collapse"
-import Divider from "@mui/material/Divider"
-import Drawer from "@mui/material/Drawer"
-import List from "@mui/material/List"
-import ListItem from "@mui/material/ListItem"
-import ListItemButton from "@mui/material/ListItemButton"
-import { styled } from "@mui/material/styles"
-import Tooltip from "@mui/material/Tooltip"
-import useSettingsStore from "@stores/useSettingsStore"
-import React, { useEffect } from "react"
+import { LayoutDashboard, Rss, Search, Settings } from "lucide-react"
 import { Link } from "@tanstack/react-router"
-
-export const DRAWER_WIDTH = 240
-export const DRAWER_WIDTH_COLLAPSED = 72
-
-const StyledDrawer = styled(Drawer, { shouldForwardProp: (prop) => prop !== "open" })(({ theme, open }) => ({
-    backgroundColor: theme.palette.background.paper,
-    "& .MuiDrawer-paper": {
-        position: "fixed",
-        whiteSpace: "nowrap",
-        width: DRAWER_WIDTH,
-        transition: theme.transitions.create("width"),
-        boxSizing: "border-box",
-        ...(!open && {
-            overflowX: "hidden",
-            transition: theme.transitions.create("width"),
-            width: DRAWER_WIDTH_COLLAPSED,
-        }),
-    },
-}))
-
-const StyledLogoContainer = styled(Link)({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    margin: "20px",
-    textDecoration: "none",
-    background: "transparent",
-})
+import React from "react"
 
 const menuLinks: MenuLink[] = [
     {
         label: "Dashboard",
-        icon: <SpaceDashboardOutlinedIcon />,
+        icon: <LayoutDashboard />,
         to: "/",
         external: false,
     },
     {
         label: "Tasks Explorer",
-        icon: <ManageSearchIcon />,
+        icon: <Search />,
         to: "/explorer",
         external: false,
     },
     {
         label: "Live Events",
-        icon: <RssFeedIcon />,
+        icon: <Rss />,
         to: "/raw_events",
         external: false,
     },
 ]
 
-const Menu: React.FC = () => {
-    const expanded = useSettingsStore((state) => state.menuExpanded)
-    const theme = useTheme()
-    const smallScreen = useMediaQuery(theme.breakpoints.down("sm"))
-
-    useEffect(() => {
-        if (smallScreen) useSettingsStore.setState({ menuExpanded: false })
-    }, [smallScreen])
+const SidebarLogo: React.FC = () => {
+    const { state } = useSidebar()
+    const expanded = state === "expanded"
+    const isDark = document.documentElement.classList.contains("dark")
 
     return (
-        <StyledDrawer variant="permanent" open={expanded}>
-            <StyledLogoContainer to="/">
-                <img
-                    src={
-                        theme.palette.mode === "dark"
-                            ? expanded
-                                ? "/LogoTextGreen.svg"
-                                : "/LogoGreen.svg"
-                            : expanded
-                              ? "/LogoTextDark.svg"
-                              : "/LogoDark.svg"
-                    }
-                    alt="logo"
-                    style={{
-                        width: expanded ? "128px" : "32px",
-                        height: "auto",
-                        transition: theme.transitions.create("width"),
-                    }}
-                />
-            </StyledLogoContainer>
-            <List component="nav" sx={{ flexGrow: 1 }}>
-                {menuLinks.map((link, index) => (
-                    <MenuItem key={index} link={link} expanded={expanded} />
-                ))}
-            </List>
-            <Collapse in={expanded} unmountOnExit>
-                <WorkerQuickStatusList />
-            </Collapse>
-            <Divider />
-            <MenuItem
-                link={{
-                    label: "Settings",
-                    icon: <SettingsIcon />,
-                    to: "/settings",
-                    external: false,
-                }}
-                expanded={expanded}
+        <Link to="/" className="flex items-center justify-center p-5 no-underline bg-transparent">
+            <img
+                src={
+                    isDark
+                        ? expanded
+                            ? "/LogoTextGreen.svg"
+                            : "/LogoGreen.svg"
+                        : expanded
+                          ? "/LogoTextDark.svg"
+                          : "/LogoDark.svg"
+                }
+                alt="logo"
+                className="h-auto transition-[width] duration-200"
+                style={{ width: expanded ? "128px" : "32px" }}
             />
-            <Divider />
-            <ListItem disablePadding>
-                <Tooltip title={expanded ? "Collapse menu" : "Expand menu"} placement="right" arrow>
-                    <ListItemButton
-                        onClick={() => useSettingsStore.setState({ menuExpanded: !expanded })}
-                        sx={{ display: "flex", justifyContent: expanded ? "flex-end" : "center" }}
-                    >
-                        {expanded ? <ArrowBackIosIcon /> : <ArrowForwardIosIcon />}
-                    </ListItemButton>
-                </Tooltip>
-            </ListItem>
-        </StyledDrawer>
+        </Link>
+    )
+}
+
+const Menu: React.FC = () => {
+    const { state } = useSidebar()
+    const expanded = state === "expanded"
+
+    return (
+        <Sidebar collapsible="icon">
+            <SidebarHeader>
+                <SidebarLogo />
+            </SidebarHeader>
+            <SidebarContent>
+                <SidebarGroup>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            {menuLinks.map((link, index) => (
+                                <MenuItem key={index} link={link} />
+                            ))}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+                {expanded && (
+                    <SidebarGroup>
+                        <SidebarGroupLabel>Workers</SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <WorkerQuickStatusList />
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                )}
+            </SidebarContent>
+            <SidebarFooter>
+                <SidebarSeparator />
+                <SidebarMenu>
+                    <MenuItem
+                        link={{
+                            label: "Settings",
+                            icon: <Settings />,
+                            to: "/settings",
+                            external: false,
+                        }}
+                    />
+                </SidebarMenu>
+            </SidebarFooter>
+            <SidebarRail />
+        </Sidebar>
     )
 }
 
