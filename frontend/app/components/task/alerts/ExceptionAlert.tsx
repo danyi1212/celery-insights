@@ -1,30 +1,31 @@
 import CodeBlock from "@components/common/CodeBlock"
 import TaskAvatar from "@components/task/TaskAvatar"
-import ExpandLessIcon from "@mui/icons-material/ExpandLess"
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore"
-import { useTheme } from "@mui/material"
-import Alert, { AlertProps } from "@mui/material/Alert"
-import AlertTitle from "@mui/material/AlertTitle"
-import AvatarGroup from "@mui/material/AvatarGroup"
-import Button from "@mui/material/Button"
-import Collapse from "@mui/material/Collapse"
-import Stack from "@mui/material/Stack"
-import Typography from "@mui/material/Typography"
-import useMediaQuery from "@mui/material/useMediaQuery"
+import { Alert, AlertDescription, AlertTitle } from "@components/ui/alert"
+import { AvatarGroup } from "@components/ui/avatar"
+import { Button } from "@components/ui/button"
+import { Collapsible, CollapsibleContent } from "@components/ui/collapsible"
+import { cn } from "@lib/utils"
+import { useMediaQuery } from "@hooks/useMediaQuery"
 import { useStateStore } from "@stores/useStateStore"
 import { StateTask } from "@utils/translateServerModels"
+import { AlertCircle, ChevronDown, ChevronUp } from "lucide-react"
 import React, { useCallback, useState } from "react"
 
-interface ExceptionTracebackProps extends AlertProps {
+interface ExceptionTracebackProps extends React.ComponentProps<"div"> {
     exception: string
     traceback?: string | null
     currentTaskId?: string
 }
 
-const ExceptionTraceback: React.FC<ExceptionTracebackProps> = ({ exception, traceback, currentTaskId, ...props }) => {
+const ExceptionTraceback: React.FC<ExceptionTracebackProps> = ({
+    exception,
+    traceback,
+    currentTaskId,
+    className,
+    ...props
+}) => {
     const [expanded, setExpanded] = useState(false)
-    const theme = useTheme()
-    const largeScreen = useMediaQuery(theme.breakpoints.up("sm"))
+    const largeScreen = useMediaQuery("(min-width: 640px)")
     const similarTasks = useStateStore(
         useCallback(
             (state) => {
@@ -41,39 +42,42 @@ const ExceptionTraceback: React.FC<ExceptionTracebackProps> = ({ exception, trac
     const showSimilar = similarTasks.length > 0 && largeScreen
 
     return (
-        <Alert
-            severity="error"
-            {...props}
-            sx={{ ...props.sx, ".MuiAlert-message": { flexGrow: 1, pt: showSimilar ? 0 : 1 } }}
-        >
-            <AlertTitle sx={{ display: "flex", alignItems: "center", flexGrow: 1 }}>
-                <Typography flexGrow={1}>Failed Task</Typography>
-                <Collapse in={showSimilar} orientation="horizontal">
-                    <Stack direction="row" alignItems="center" spacing={2}>
-                        <Typography>Similar:</Typography>
+        <Alert variant="destructive" className={cn("[&>svg+div]:flex-grow", className)} {...props}>
+            <AlertCircle className="size-4" />
+            <AlertTitle className="flex items-center">
+                <span className="flex-grow">Failed Task</span>
+                {showSimilar && (
+                    <div className="flex items-center gap-2">
+                        <span>Similar:</span>
                         <AvatarGroup>
                             {similarTasks.map((task) => (
-                                <TaskAvatar key={task.id} taskId={task.id} type={task.type} />
+                                <TaskAvatar key={task.id} taskId={task.id} type={task.type} className="size-6" />
                             ))}
                         </AvatarGroup>
-                    </Stack>
-                </Collapse>
+                    </div>
+                )}
             </AlertTitle>
-            <Typography py={1}>{exception}</Typography>
-            {traceback && (
-                <>
-                    <Button
-                        color="inherit"
-                        onClick={() => setExpanded((expended) => !expended)}
-                        startIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    >
-                        Traceback
-                    </Button>
-                    <Collapse in={expanded} unmountOnExit>
-                        <CodeBlock language="python">{traceback}</CodeBlock>
-                    </Collapse>
-                </>
-            )}
+            <AlertDescription>
+                <p className="py-1">{exception}</p>
+                {traceback && (
+                    <>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setExpanded((prev) => !prev)}
+                            className="gap-1 px-0"
+                        >
+                            {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                            Traceback
+                        </Button>
+                        <Collapsible open={expanded}>
+                            <CollapsibleContent>
+                                <CodeBlock language="python">{traceback}</CodeBlock>
+                            </CollapsibleContent>
+                        </Collapsible>
+                    </>
+                )}
+            </AlertDescription>
         </Alert>
     )
 }

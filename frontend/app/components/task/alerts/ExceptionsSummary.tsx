@@ -1,9 +1,8 @@
 import ExceptionAlert from "@components/task/alerts/ExceptionAlert"
-import Avatar from "@mui/material/Avatar"
-import Box from "@mui/material/Box"
-import Chip from "@mui/material/Chip"
-import Collapse from "@mui/material/Collapse"
-import Tooltip from "@mui/material/Tooltip"
+import { Badge } from "@components/ui/badge"
+import { Collapsible, CollapsibleContent } from "@components/ui/collapsible"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { cn } from "@lib/utils"
 import { useStateStore } from "@stores/useStateStore"
 import React, { useMemo, useState } from "react"
 
@@ -26,40 +25,40 @@ const ExceptionsSummary: React.FC = () => {
     const errorMessages = useMemo(() => Array.from(errorsMap.keys()), [errorsMap])
 
     return (
-        <Box mx={2}>
-            <Box display="flex" flexWrap="wrap" mt={3}>
+        <div className="mx-2">
+            <div className="mt-3 flex flex-wrap">
                 {errorMessages.map((error) => (
-                    <Tooltip key={error} title="Click to show error">
-                        <Chip
-                            label={error}
-                            onClick={() => setSelectedError(selectedError === error ? null : error)}
-                            avatar={
-                                <Avatar
-                                    sx={{
-                                        backgroundColor: (theme) =>
-                                            theme.palette.mode == "dark"
-                                                ? theme.palette.error.dark
-                                                : theme.palette.error.light,
-                                    }}
-                                >
+                    <Tooltip key={error}>
+                        <TooltipTrigger asChild>
+                            <button
+                                onClick={() => setSelectedError(selectedError === error ? null : error)}
+                                className={cn(
+                                    "mx-1 inline-flex max-w-[300px] cursor-pointer items-center gap-1.5 truncate rounded-full border px-3 py-1 text-sm transition-colors",
+                                    selectedError === error
+                                        ? "border-destructive bg-destructive text-white"
+                                        : "border-destructive text-destructive hover:bg-destructive/10",
+                                )}
+                            >
+                                <Badge variant="destructive" className="size-5 justify-center rounded-full p-0 text-xs">
                                     {errorsMap.get(error)?.count || 0}
-                                </Avatar>
-                            }
-                            color="error"
-                            variant={selectedError === error ? "filled" : "outlined"}
-                            sx={{ mx: 1, maxWidth: "300px" }}
-                        />
+                                </Badge>
+                                <span className="truncate">{error}</span>
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Click to show error</TooltipContent>
                     </Tooltip>
                 ))}
-            </Box>
-            <Collapse in={Boolean(selectedError)} unmountOnExit>
-                <ExceptionAlert
-                    exception={selectedError || ""}
-                    traceback={errorsMap.get(selectedError || "")?.traceback}
-                    sx={{ my: 2 }}
-                />
-            </Collapse>
-        </Box>
+            </div>
+            <Collapsible open={Boolean(selectedError)}>
+                <CollapsibleContent>
+                    <ExceptionAlert
+                        exception={selectedError || ""}
+                        traceback={errorsMap.get(selectedError || "")?.traceback}
+                        className="my-2"
+                    />
+                </CollapsibleContent>
+            </Collapsible>
+        </div>
     )
 }
 

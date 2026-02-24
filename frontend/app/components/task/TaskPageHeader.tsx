@@ -1,21 +1,14 @@
 import CopyLinkButton from "@components/common/CopyLinkButton"
 import TaskAvatar from "@components/task/TaskAvatar"
 import TaskTimer from "@components/task/TaskTimer"
+import { Button } from "@components/ui/button"
+import { Skeleton } from "@components/ui/skeleton"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { ToggleGroup, ToggleGroupItem } from "@components/ui/toggle-group"
 import { WorkflowChartType } from "@components/workflow/WorkflowGraph"
-import AccountTreeIcon from "@mui/icons-material/AccountTree"
-import ViewTimelineIcon from "@mui/icons-material/ViewTimeline"
-import Box from "@mui/material/Box"
-import Button from "@mui/material/Button"
-import Paper from "@mui/material/Paper"
-import Skeleton from "@mui/material/Skeleton"
-import Stack from "@mui/material/Stack"
-import ToggleButton from "@mui/material/ToggleButton"
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup"
-import Toolbar from "@mui/material/Toolbar"
-import Tooltip from "@mui/material/Tooltip"
-import Typography from "@mui/material/Typography"
-import Zoom from "@mui/material/Zoom"
+import { cn } from "@lib/utils"
 import { StateTask } from "@utils/translateServerModels"
+import { GanttChart, GitBranch } from "lucide-react"
 import React, { useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 
@@ -29,45 +22,41 @@ const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setCha
     const [isHover, setHover] = useState(false)
     const navigate = useNavigate()
     return (
-        <Toolbar
+        <div
             id="task-header"
-            component={Paper}
-            elevation={3}
-            sx={{ pt: 0.5, pb: 1, borderRadius: 0 }}
+            className="flex items-center gap-2 border-b bg-card px-4 pt-1 pb-2 shadow-md"
             onPointerEnter={() => setHover(true)}
             onPointerLeave={() => setHover(false)}
         >
-            <Box pr={3}>
+            <div className="pr-3">
                 {task === undefined ? (
-                    <Skeleton variant="circular" width={40} height={40} />
+                    <Skeleton className="size-10 rounded-full" />
                 ) : (
                     <TaskAvatar taskId={task.id} type={task.type} status={task.state} />
                 )}
-            </Box>
-            <Stack height={64} justifyContent="flex-end">
+            </div>
+            <div className="flex h-16 flex-col justify-end">
+                {task ? <h2 className="text-xl font-semibold">{task.type}</h2> : <Skeleton className="h-6 w-48" />}
                 {task ? (
-                    <Typography variant="h5">{task.type}</Typography>
+                    <span className="text-xs text-muted-foreground">{task.id}</span>
                 ) : (
-                    <Skeleton variant="rectangular" animation="wave" />
+                    <Skeleton className="h-4 w-64" />
                 )}
-                {task ? (
-                    <Typography variant="caption">{task.id}</Typography>
-                ) : (
-                    <Skeleton variant="rectangular" animation="wave" />
+            </div>
+            <div
+                className={cn(
+                    "transition-opacity duration-200",
+                    isHover ? "opacity-100" : "pointer-events-none opacity-0",
                 )}
-            </Stack>
-            <Zoom in={isHover}>
-                <div>
-                    <CopyLinkButton sx={{ mx: 2 }} />
-                </div>
-            </Zoom>
-            <Box flexGrow={1} />
-            <Stack direction="row" justifyContent="space-between" spacing={1} sx={{ justifyContent: "center" }}>
-                {task && <TaskTimer task={task} sx={{ px: 1, my: "auto" }} align="center" />}
+            >
+                <CopyLinkButton className="mx-2" />
+            </div>
+            <div className="flex-grow" />
+            <div className="flex flex-row items-center justify-center gap-1">
+                {task && <TaskTimer task={task} className="px-1 text-center" />}
                 <Button
-                    variant="text"
-                    color="secondary"
-                    sx={{ px: 1, textTransform: "none" }}
+                    variant="link"
+                    className="text-secondary"
                     disabled={!task?.type}
                     onClick={() =>
                         task?.type &&
@@ -79,26 +68,33 @@ const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setCha
                 >
                     Find similar tasks
                 </Button>
-                <ToggleButtonGroup
+                <ToggleGroup
+                    type="single"
                     value={chartType}
-                    onChange={(_, newValue) => newValue && setChartType(newValue)}
-                    exclusive
-                    size="small"
+                    onValueChange={(value) => value && setChartType(value as WorkflowChartType)}
+                    size="sm"
+                    variant="outline"
                     id="workflow-selector"
                 >
-                    <ToggleButton value={WorkflowChartType.FLOWCHART}>
-                        <Tooltip title="Flowchart">
-                            <AccountTreeIcon />
-                        </Tooltip>
-                    </ToggleButton>
-                    <ToggleButton value={WorkflowChartType.TIMELINE}>
-                        <Tooltip title="Timeline">
-                            <ViewTimelineIcon />
-                        </Tooltip>
-                    </ToggleButton>
-                </ToggleButtonGroup>
-            </Stack>
-        </Toolbar>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <ToggleGroupItem value={WorkflowChartType.FLOWCHART}>
+                                <GitBranch className="size-4" />
+                            </ToggleGroupItem>
+                        </TooltipTrigger>
+                        <TooltipContent>Flowchart</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <ToggleGroupItem value={WorkflowChartType.TIMELINE}>
+                                <GanttChart className="size-4" />
+                            </ToggleGroupItem>
+                        </TooltipTrigger>
+                        <TooltipContent>Timeline</TooltipContent>
+                    </Tooltip>
+                </ToggleGroup>
+            </div>
+        </div>
     )
 }
 export default TaskPageHeader

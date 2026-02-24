@@ -1,62 +1,52 @@
 import IdentityIcon from "@components/common/IdentityIcon"
 import TaskStatusIcon from "@components/task/TaskStatusIcon"
-import Avatar, { AvatarProps } from "@mui/material/Avatar"
-import Badge from "@mui/material/Badge"
-import Box from "@mui/material/Box"
-import Tooltip from "@mui/material/Tooltip"
+import { Avatar, AvatarBadge } from "@components/ui/avatar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { cn } from "@lib/utils"
 import { TaskState } from "@services/server"
 import { getBrightness } from "@utils/colorUtils"
 import React, { useMemo } from "react"
 import { Link } from "@tanstack/react-router"
 import stc from "string-to-color"
 
-interface TaskAvatarProps extends AvatarProps {
+interface TaskAvatarProps extends React.ComponentProps<typeof Avatar> {
     taskId: string
     type: string | undefined | null
     status?: TaskState
     disableLink?: true
 }
 
-const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, type, disableLink, ...props }) => {
+const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, type, disableLink, className, ...props }) => {
     const backgroundColor = useMemo(() => type && stc(type), [type])
     const iconBrightness = useMemo(() => backgroundColor && 100 - getBrightness(backgroundColor), [backgroundColor])
+    const Wrapper = disableLink ? "div" : Link
+
     return (
-        <Box component={!disableLink ? Link : "div"} to={`/tasks/${taskId}`}>
-            <Badge
-                overlap="circular"
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                badgeContent={
-                    status ? (
-                        <TaskStatusIcon
-                            status={status}
-                            fontSize="small"
-                            sx={{
-                                backgroundColor: (theme) => theme.palette.common.black,
-                                borderRadius: "100%",
-                            }}
-                        />
-                    ) : null
-                }
-                invisible={!status}
-            >
-                <Tooltip
-                    title={
-                        <span>
-                            {taskId}
-                            <br />
-                            {type}
-                        </span>
-                    }
-                    placement="right"
-                    arrow
-                    describeChild
-                >
-                    <Avatar alt={taskId} {...props} sx={{ backgroundColor: backgroundColor, ...props.sx }}>
-                        <IdentityIcon username={taskId} lightness={iconBrightness || 0} />
+        <Wrapper {...(!disableLink ? { to: `/tasks/${taskId}` } : {})}>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Avatar
+                        className={cn("size-10", className)}
+                        style={{ backgroundColor: backgroundColor || undefined }}
+                        {...props}
+                    >
+                        <IdentityIcon username={taskId} lightness={iconBrightness || 0} className="size-full" />
+                        {status && (
+                            <AvatarBadge className="bg-black">
+                                <TaskStatusIcon status={status} iconClassName="size-2" />
+                            </AvatarBadge>
+                        )}
                     </Avatar>
-                </Tooltip>
-            </Badge>
-        </Box>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                    <span>
+                        {taskId}
+                        <br />
+                        {type}
+                    </span>
+                </TooltipContent>
+            </Tooltip>
+        </Wrapper>
     )
 }
 

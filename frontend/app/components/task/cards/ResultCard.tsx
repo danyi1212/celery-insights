@@ -1,9 +1,10 @@
 import Panel from "@components/common/Panel"
 import useTaskResult from "@hooks/task/useTaskResult"
-import { useTheme } from "@mui/material"
-import Typography from "@mui/material/Typography"
+import { useIsDark } from "@hooks/useIsDark"
 import { TaskResult } from "@services/server"
-import { JsonViewer } from "@textea/json-viewer"
+import JsonView from "@uiw/react-json-view"
+import { githubDarkTheme } from "@uiw/react-json-view/githubDark"
+import { githubLightTheme } from "@uiw/react-json-view/githubLight"
 import React from "react"
 
 interface ResultCardProps {
@@ -15,33 +16,33 @@ interface CardContentProps {
 }
 
 const CardContent: React.FC<CardContentProps> = ({ result }) => {
-    const theme = useTheme()
+    const isDark = useIsDark()
 
-    if (!result) return <Typography>Could not find task result.</Typography>
+    if (!result) return <p>Could not find task result.</p>
 
     if (result.ignored)
         return (
-            <Typography>
+            <p>
                 Task is configured to{" "}
                 <a
                     target="_blank"
                     rel="noopener noreferrer"
                     href="https://docs.celeryq.dev/en/stable/userguide/tasks.html#Task.ignore_result"
+                    className="text-primary underline hover:opacity-80"
                 >
                     ignore result
                 </a>
                 .
-            </Typography>
+            </p>
         )
 
     return (
-        <JsonViewer
-            theme={theme.palette.mode}
-            editable={false}
-            rootName={false}
-            quotesOnKeys={false}
-            defaultInspectDepth={2}
-            value={result.result}
+        <JsonView
+            value={result.result as object}
+            style={isDark ? githubDarkTheme : githubLightTheme}
+            collapsed={2}
+            displayDataTypes={false}
+            enableClipboard={false}
         />
     )
 }

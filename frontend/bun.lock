@@ -15,6 +15,7 @@
         "@tanstack/react-query": "^5.90.21",
         "@tanstack/react-router": "^1.162.9",
         "@textea/json-viewer": "^3.4.1",
+        "@uiw/react-json-view": "^2.0.0-alpha.41",
         "@xyflow/react": "^12",
         "apexcharts": "^3.52.0",
         "axios": "^1.7.4",
@@ -577,6 +578,8 @@
     "@typescript-eslint/utils": ["@typescript-eslint/utils@8.1.0", "", { "dependencies": { "@eslint-community/eslint-utils": "^4.4.0", "@typescript-eslint/scope-manager": "8.1.0", "@typescript-eslint/types": "8.1.0", "@typescript-eslint/typescript-estree": "8.1.0" }, "peerDependencies": { "eslint": "^8.57.0 || ^9.0.0" } }, "sha512-ypRueFNKTIFwqPeJBfeIpxZ895PQhNyH4YID6js0UoBImWYoSjBsahUn9KMiJXh94uOjVBgHD9AmkyPsPnFwJA=="],
 
     "@typescript-eslint/visitor-keys": ["@typescript-eslint/visitor-keys@8.1.0", "", { "dependencies": { "@typescript-eslint/types": "8.1.0", "eslint-visitor-keys": "^3.4.3" } }, "sha512-ba0lNI19awqZ5ZNKh6wCModMwoZs457StTebQ0q1NP58zSi2F6MOZRXwfKZy+jB78JNJ/WH8GSh2IQNzXX8Nag=="],
+
+    "@uiw/react-json-view": ["@uiw/react-json-view@2.0.0-alpha.41", "", { "peerDependencies": { "@babel/runtime": ">=7.10.0", "react": ">=18.0.0", "react-dom": ">=18.0.0" } }, "sha512-botRpQ5AgymYEsqXSdT2/1LefAJEYfMntvdnx1SqhTQCTW9HygeFZXx9inkYqUmiQZ3+0QlZnodjBvwnUfZhVA=="],
 
     "@ungap/structured-clone": ["@ungap/structured-clone@1.2.0", "", {}, "sha512-zuVdFrMJiuCDQUMCzQaD6KL28MjnqqN8XnAqiEq9PNm/hCPTSGfrXCOfwj1ow4LFb/tNymJPwsNbVePc1xFqrQ=="],
 
