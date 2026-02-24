@@ -1,7 +1,6 @@
 import { getFlowGraph } from "@components/workflow/FlowChart"
 import TaskNode from "@components/workflow/TaskNode"
-import { useTheme } from "@mui/material"
-import useMediaQuery from "@mui/material/useMediaQuery"
+import { useMediaQuery } from "@hooks/useMediaQuery"
 import { TaskState } from "@services/server"
 import { StateTask } from "@utils/translateServerModels"
 import React, { useMemo } from "react"
@@ -56,10 +55,9 @@ const demoTasks: StateTask[] = [
     }),
 ]
 const BannerFlowchart: React.FC = () => {
-    const theme = useTheme()
-    const isLargeScreen = useMediaQuery(theme.breakpoints.up("xl"))
-    const isMediumScreen = useMediaQuery(theme.breakpoints.down("lg"))
-    const isSmallScreen = useMediaQuery(theme.breakpoints.down("md")) // Disable graph
+    const isLargeScreen = useMediaQuery("(min-width: 1536px)")
+    const isMediumScreen = useMediaQuery("(max-width: 1199px)")
+    const isSmallScreen = useMediaQuery("(max-width: 899px)")
     const graph: ReturnType<typeof getFlowGraph> = useMemo(
         () =>
             isSmallScreen
