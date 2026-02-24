@@ -336,13 +336,13 @@ export const Route = createRootRoute({
 
 ### Phase 5: Cleanup & Finalization
 
-- [ ] **Remove MUI**: Uninstall `@mui/material`, `@mui/icons-material`, `@mui/lab`, `@mui/x-data-grid`, `@emotion/react`, `@emotion/styled`
-- [ ] **Delete `theme.ts`**: All theming now in CSS variables
-- [ ] **Remove `ConsolidatedProviders.tsx`**: No more `ThemeProvider`/`CssBaseline`
-- [ ] **Update `usePreferredTheme.ts`**: Simplify to toggle `.dark` class on `<html>`
-- [ ] **Update CLAUDE.md**: Reflect new stack and conventions
-- [ ] **Run full lint + type check**: `bun run lint-fix && bunx tsc --noEmit`
-- [ ] **Visual regression test**: Compare every page in dark/light mode
+- [x] **Remove MUI**: Uninstall `@mui/material`, `@mui/icons-material`, `@mui/lab`, `@mui/x-data-grid`, `@emotion/react`, `@emotion/styled`
+- [x] **Delete `theme.ts`**: All theming now in CSS variables
+- [x] **Remove `ConsolidatedProviders.tsx`**: No more `ThemeProvider`/`CssBaseline`
+- [x] **Update `usePreferredTheme.ts`**: Simplify to toggle `.dark` class on `<html>`
+- [x] **Update CLAUDE.md**: Reflect new stack and conventions
+- [x] **Run full lint + type check**: `bun run lint-fix && bunx tsc --noEmit`
+- [x] **Visual regression test**: Compare every page in dark/light mode
 
 **Final verification**:
 

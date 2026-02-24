@@ -1,14 +1,23 @@
 import { createRootRoute, Outlet, Link as RouterLink } from "@tanstack/react-router"
-import ConsolidatedProviders from "@layout/ConsolidatedProviders"
+import CeleryStateSync from "@components/CeleryStateSync"
+import DemoSimulator from "@components/DemoSimulator"
+import { useDarkMode } from "@hooks/useDarkMode"
 import Header from "@layout/header/Header"
 import JoyrideTour from "@layout/JoyrideTour"
 import Menu from "@layout/menu/Menu"
+import useSettingsStore from "@stores/useSettingsStore"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { SidebarInset, SidebarProvider } from "@components/ui/sidebar"
 import { TooltipProvider } from "@components/ui/tooltip"
 
+const queryClient = new QueryClient()
+
 const RootComponent = () => {
+    const isDemo = useSettingsStore((state) => state.demo)
+    useDarkMode()
     return (
-        <ConsolidatedProviders>
+        <QueryClientProvider client={queryClient}>
+            {isDemo ? <DemoSimulator /> : <CeleryStateSync />}
             <SidebarProvider>
                 <Menu />
                 <SidebarInset>
@@ -19,7 +28,7 @@ const RootComponent = () => {
                 </SidebarInset>
                 <JoyrideTour />
             </SidebarProvider>
-        </ConsolidatedProviders>
+        </QueryClientProvider>
     )
 }
 
