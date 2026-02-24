@@ -1,12 +1,8 @@
 import TaskNode from "@components/workflow/TaskNode"
-import CameraIcon from "@mui/icons-material/Camera"
-import CenterFocusStrongIcon from "@mui/icons-material/CenterFocusStrong"
-import ControlCameraIcon from "@mui/icons-material/ControlCamera"
-import CropFreeIcon from "@mui/icons-material/CropFree"
-import PanToolIcon from "@mui/icons-material/PanTool"
-import { useTheme } from "@mui/material"
-import Tooltip from "@mui/material/Tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { useIsDark } from "@hooks/useIsDark"
 import { StateTask } from "@utils/translateServerModels"
+import { Camera, Focus, Maximize2, Move, Navigation } from "lucide-react"
 import { toSvg } from "html-to-image"
 import React, { useCallback, useEffect, useState } from "react"
 import {
@@ -134,7 +130,7 @@ const FlowChart: React.FC<FlowChartProps> = ({ tasks, rootTaskId, currentTaskId 
     const [edges, setEdges, onEdgesChange] = useEdgesState([])
     const [locked, setLocked] = useState<boolean>(true)
     const [isInitialized, setInitialized] = useState<boolean>(false)
-    const theme = useTheme()
+    const isDark = useIsDark()
 
     const focusNode = useCallback(
         (nodeId: string) => {
@@ -173,6 +169,9 @@ const FlowChart: React.FC<FlowChartProps> = ({ tasks, rootTaskId, currentTaskId 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentTaskId])
 
+    const bgColor = isDark ? "oklch(0.16 0.01 155)" : "oklch(0.95 0.015 150)"
+    const hoverColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)"
+
     const handleDownloadImage = useCallback(() => {
         const nodesBounds = getNodesBounds(nodes)
         const viewport = getViewportForBounds(nodesBounds, EXPORT_IMAGE_WIDTH, EXPORT_IMAGE_HEIGHT, 0.5, 2)
@@ -183,13 +182,13 @@ const FlowChart: React.FC<FlowChartProps> = ({ tasks, rootTaskId, currentTaskId 
             width: EXPORT_IMAGE_WIDTH,
             height: EXPORT_IMAGE_HEIGHT,
             style: {
-                backgroundColor: theme.palette.background.default,
+                backgroundColor: bgColor,
                 width: `${EXPORT_IMAGE_WIDTH}px`,
                 height: `${EXPORT_IMAGE_HEIGHT}px`,
                 transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
             },
         }).then(downloadImage)
-    }, [nodes, theme.palette.background.default])
+    }, [nodes, bgColor])
 
     return (
         <ReactFlow
@@ -203,30 +202,50 @@ const FlowChart: React.FC<FlowChartProps> = ({ tasks, rootTaskId, currentTaskId 
             <Background />
             <Controls showZoom={false} showFitView={false} showInteractive={false}>
                 <ControlButton onClick={() => setLocked((locked) => !locked)}>
-                    <Tooltip title={locked ? "Move nodes" : "Move camera"} placement="right" arrow>
-                        {locked ? <PanToolIcon /> : <ControlCameraIcon />}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="flex items-center justify-center">
+                                {locked ? <Move className="size-3" /> : <Navigation className="size-3" />}
+                            </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">{locked ? "Move nodes" : "Move camera"}</TooltipContent>
                     </Tooltip>
                 </ControlButton>
                 <ControlButton onClick={() => fitView()}>
-                    <Tooltip title="Fit view" placement="right" arrow>
-                        <CropFreeIcon />
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="flex items-center justify-center">
+                                <Maximize2 className="size-3" />
+                            </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">Fit view</TooltipContent>
                     </Tooltip>
                 </ControlButton>
                 <ControlButton onClick={() => currentTaskId && focusNode(currentTaskId)} disabled={!currentTaskId}>
-                    <Tooltip title="Focus current task" placement="right" arrow>
-                        <CenterFocusStrongIcon />
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="flex items-center justify-center">
+                                <Focus className="size-3" />
+                            </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">Focus current task</TooltipContent>
                     </Tooltip>
                 </ControlButton>
                 <ControlButton onClick={() => handleDownloadImage()}>
-                    <Tooltip title="Save as image" placement="right" arrow>
-                        <CameraIcon />
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="flex items-center justify-center">
+                                <Camera className="size-3" />
+                            </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">Save as image</TooltipContent>
                     </Tooltip>
                 </ControlButton>
             </Controls>
             <MiniMap
                 position="top-right"
-                style={{ backgroundColor: theme.palette.background.default, height: 100, width: 200 }}
-                maskColor={theme.palette.action.hover}
+                style={{ backgroundColor: bgColor, height: 100, width: 200 }}
+                maskColor={hoverColor}
                 pannable
             />
         </ReactFlow>
