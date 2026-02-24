@@ -132,6 +132,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!frontend/app/lib/
 lib64/
 parts/
 sdist/
@@ -283,3 +284,6 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/pycharm,python
 /server/static/
+
+# ralphex progress logs
+.ralphex/progress/

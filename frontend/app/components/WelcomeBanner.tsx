@@ -12,7 +12,7 @@ import Typography from "@mui/material/Typography"
 import useSettingsStore from "@stores/useSettingsStore"
 import { startTour } from "@stores/useTourStore"
 import React from "react"
-import { ReactFlowProvider } from "reactflow"
+import { ReactFlowProvider } from "@xyflow/react"
 
 const Banner = styled(Box)(({ theme }) => ({
     height: "450px",

@@ -28,6 +28,16 @@ repos:
         files: \.py$
         types: [ file ]
 
+  - repo: local
+    hooks:
+      - id: ty
+        name: ty check
+        entry: uvx ty check
+        language: system
+        files: \.py$
+        types: [file]
+        pass_filenames: false
+
   - repo: https://github.com/pre-commit/mirrors-eslint
     rev: v9.13.0
     hooks:

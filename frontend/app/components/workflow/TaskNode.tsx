@@ -2,13 +2,11 @@ import TaskAvatar from "@components/task/TaskAvatar"
 import Zoom from "@mui/material/Zoom"
 import { StateTask } from "@utils/translateServerModels"
 import React from "react"
-import { Handle, NodeProps, Position } from "reactflow"
+import { Handle, type Node, type NodeProps, Position } from "@xyflow/react"
 
-interface TaskNodeProps extends NodeProps {
-    data: StateTask
-}
+type TaskNodeType = Node<StateTask, "taskNode">
 
-const TaskNode: React.FC<TaskNodeProps> = ({ data }) => {
+const TaskNode: React.FC<NodeProps<TaskNodeType>> = ({ data }) => {
     return (
         <>
             <Handle type="target" position={Position.Left} />
