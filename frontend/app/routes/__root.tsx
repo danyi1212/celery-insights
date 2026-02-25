@@ -1,6 +1,8 @@
 import { createRootRoute, Outlet, Link as RouterLink } from "@tanstack/react-router"
+import { ReadOnlyBanner } from "@components/connection-status"
 import CeleryStateSync from "@components/celery-state-sync"
 import DemoSimulator from "@components/demo-simulator"
+import SurrealDBProvider from "@components/surrealdb-provider"
 import { useDarkMode } from "@hooks/use-dark-mode"
 import Header from "@layout/header/header"
 import JoyrideTour from "@layout/joyride-tour"
@@ -18,16 +20,19 @@ const RootComponent = () => {
     return (
         <QueryClientProvider client={queryClient}>
             {isDemo ? <DemoSimulator /> : <CeleryStateSync />}
-            <SidebarProvider>
-                <Menu />
-                <SidebarInset>
-                    <Header />
-                    <div className="flex-1 p-0">
-                        <Outlet />
-                    </div>
-                </SidebarInset>
-                <JoyrideTour />
-            </SidebarProvider>
+            <SurrealDBProvider>
+                <SidebarProvider>
+                    <Menu />
+                    <SidebarInset>
+                        <ReadOnlyBanner />
+                        <Header />
+                        <div className="flex-1 p-0">
+                            <Outlet />
+                        </div>
+                    </SidebarInset>
+                    <JoyrideTour />
+                </SidebarProvider>
+            </SurrealDBProvider>
         </QueryClientProvider>
     )
 }

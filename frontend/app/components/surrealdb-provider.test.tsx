@@ -19,7 +19,7 @@ vi.mock("surrealdb", () => {
         isConnected = false
         status = "disconnected"
     }
-    return { default: MockSurreal }
+    return { Surreal: MockSurreal }
 })
 
 // Helper to test useSurrealDB hook
