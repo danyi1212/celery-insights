@@ -18,7 +18,7 @@ def test_websocket_manager_subscribe(caplog: pytest.LogCaptureFixture):
     ws = FakeWebSocket("Fake Client")
 
     with caplog.at_level("INFO"):
-        manager.subscribe(ws)  # type: ignore
+        manager.subscribe(ws)  # ty: ignore[invalid-argument-type]
 
     assert ws in manager.active_connections
     assert repr(ws.client) in caplog.messages[-1]
@@ -28,10 +28,10 @@ def test_websocket_manager_subscribe(caplog: pytest.LogCaptureFixture):
 def test_websocket_manager_unsubscribe(caplog: pytest.LogCaptureFixture):
     manager = WebsocketManager("test")
     ws = FakeWebSocket("Fake Client")
-    manager.active_connections.append(ws)  # type: ignore
+    manager.active_connections.append(ws)  # ty: ignore[invalid-argument-type]
 
     with caplog.at_level("INFO"):
-        manager.unsubscribe(ws)  # type: ignore
+        manager.unsubscribe(ws)  # ty: ignore[invalid-argument-type]
 
     assert ws not in manager.active_connections
 
@@ -43,7 +43,7 @@ def test_websocket_manager_unsubscribe(caplog: pytest.LogCaptureFixture):
 async def test_websocket_manager_broadcast(mocker: MockerFixture, caplog: pytest.LogCaptureFixture):
     manager = WebsocketManager("test")
     wss = [FakeWebSocket("Fake Client 1"), FakeWebSocket("Fake Client 2")]
-    manager.active_connections = wss
+    manager.active_connections = wss  # ty: ignore[invalid-assignment]
     success_mock = mocker.patch.object(wss[0], "send_text")
     exception_message = "test exception"
     error_mock = mocker.patch.object(wss[1], "send_text", side_effect=Exception(exception_message))

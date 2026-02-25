@@ -1,13 +1,11 @@
 import logging
 from abc import ABC, abstractmethod
 from asyncio import CancelledError, Event, Queue, Task as AioTask, create_task
-from typing import Generic, TypeVar
 
 logger = logging.getLogger(__name__)
-T = TypeVar("T")
 
 
-class QueueSubscriber(Generic[T], ABC):
+class QueueSubscriber[T](ABC):
     def __init__(self, queue: Queue[T], name: str | None = None):
         self.queue = queue
         self.name = name or self.__class__.__name__
@@ -38,7 +36,8 @@ class QueueSubscriber(Generic[T], ABC):
     def stop(self):
         logger.info(f"Stopping subscriber {self.name!r}...")
         self._stop_signal.set()
-        if self._task.done():
-            self._task.result()
-        else:
-            self._task.cancel()
+        if self._task is not None:
+            if self._task.done():
+                self._task.result()
+            else:
+                self._task.cancel()

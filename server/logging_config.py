@@ -66,5 +66,8 @@ LOGGING_CONFIG = {
         "uvicorn": {"level": "INFO"},
         "fastapi_cache": {"level": "INFO"},
         "kombu": {"level": "INFO"},
+        "redis": {"level": "INFO"},
+        "server": {"level": "INFO"},
+        "tzlocal": {"level": "INFO"},
     },
 }

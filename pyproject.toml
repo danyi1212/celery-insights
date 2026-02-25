@@ -1,69 +1,51 @@
-[tool.poetry]
-name = "Celery Insights"
+[project]
+name = "celery-insights"
 version = "0.2.0"
 description = "Modern Real-Time Monitor for Celery"
-authors = ["Dan Yishai <danyi1212@users.noreply.github.com>"]
 readme = "README.md"
-package-mode = false
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.112",
+    "python-dotenv>=1",
+    "uvicorn>=0.30",
+    "pendulum",
+    "time-machine",
+    "celery~=5.4",
+    "websockets",
+    "fastapi-cache2",
+    "user-agents",
+    "aiopath",
+    "pydantic>=2",
+    "pydantic-settings>=2",
+    "colorlog",
+    "redis>=5.0.8",
+]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-fastapi = "^0.112"
-python-dotenv = "^1"
-uvicorn = "^0.30"
-pendulum = "*"
-time-machine = "*"
-celery = "~5.4"
-websockets = "*"
-fastapi-cache2 = "*"
-user-agents = "*"
-aiopath = "^0"
-pydantic = "^2"
-pydantic-settings = "^2"
-colorlog = "*"
-redis = "^5.0.8"
-
-[tool.poetry.group.all]
-optional = true
-
-[tool.poetry.group.all.dependencies]
-cryptography = "*"
-celery = { version = "*", extras = [
-    "arangodb",
-    "couchdb",
-    "consul",
-    "dynamodb",
-    "elasticsearch",
-    "eventlet",
-    "gevent",
-    "msgpack",
-    "pymemcache",
-    "pyro",
-    "redis",
-    "riak",
-    "s3",
-    "slmq",
-    "sqlalchemy",
-    "tblib",
-    "zookeeper",
-] }
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^7"
-pytest-xdist = "*"
-pytest-mock = "*"
-pytest-asyncio = "*"
-pytest-env = "*"
-pytest-cov = "*"
-polyfactory = "*"
-ruff = "*"
-ipython = "*"
-pre-commit = "*"
-poetry-plugin-bundle = "*"
+[dependency-groups]
+dev = [
+    "pytest>=7",
+    "pytest-xdist",
+    "pytest-mock",
+    "pytest-asyncio",
+    "pytest-env",
+    "pytest-cov",
+    "polyfactory",
+    "ruff",
+    "ty",
+    "ipython",
+    "pre-commit",
+]
+all = [
+    "cryptography",
+    "celery[arangodb,couchdb,consul,dynamodb,elasticsearch,eventlet,gevent,msgpack,pymemcache,pyro,redis,riak,s3,slmq,sqlalchemy,tblib,zookeeper]",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["server"]
 
 [tool.pytest.ini_options]
 pythonpath = "server"
@@ -96,3 +78,10 @@ select = [
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
+
+[tool.ty.environment]
+python-version = "3.12"
+extra-paths = ["server"]
+
+[tool.ty.terminal]
+output-format = "concise"

@@ -1,6 +1,6 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
-exclude: ^frontend/src/services/server
+exclude: ^frontend/app/services/server
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -18,14 +18,6 @@ repos:
       - id: mixed-line-ending
         args: [ --fix=lf ]
 
-  - repo: https://github.com/python-poetry/poetry
-    rev: 1.8.0
-    hooks:
-      - id: poetry-check
-        files: pyproject\.toml$
-        types: [ file ]
-        args: [ --lock ]
-
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.7.1
     hooks:
@@ -36,6 +28,16 @@ repos:
         files: \.py$
         types: [ file ]
 
+  - repo: local
+    hooks:
+      - id: ty
+        name: ty check
+        entry: uv run ty check server/
+        language: system
+        files: \.py$
+        types: [file]
+        pass_filenames: false
+
   - repo: https://github.com/pre-commit/mirrors-eslint
     rev: v9.13.0
     hooks:
@@ -45,8 +47,6 @@ repos:
         additional_dependencies:
           - "eslint@8.54.0"
           - "eslint-plugin-jsx-a11y@6.8.0"
-          - "eslint-plugin-material-ui@1.0.1"
-          - "eslint-plugin-mui-path-imports@0.0.15"
           - "eslint-plugin-prettier@5.0.1"
           - "eslint-plugin-react@7.33.2"
           - "eslint-plugin-react-hooks@4.6.0"

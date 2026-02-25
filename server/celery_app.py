@@ -35,11 +35,12 @@ async def get_celery_app(settings: Settings | None = None):
     app = Celery()
     try:
         spec = importlib.util.spec_from_file_location("config", str(config_path))
+        if spec is None or spec.loader is None:
+            raise RuntimeError(f"Could not load module spec for config at {settings.config_path!r}")
         config = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(config)
         app.config_from_object(config)
     except Exception as e:
-        logger.exception(f"Failed to load celery app config from {settings.config_path!r}: {e}")
-    else:
-        _celery_app_cache = app
-        return app
+        raise RuntimeError(f"Failed to load celery app config from {settings.config_path!r}") from e
+    _celery_app_cache = app
+    return app

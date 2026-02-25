@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Self
 
 from celery import states
@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 from common.types import EpochTimestamp
 
 
-class TaskState(str, Enum):
+class TaskState(StrEnum):
     PENDING = states.PENDING
     RECEIVED = states.RECEIVED
     STARTED = states.STARTED
@@ -56,9 +56,9 @@ class Task(BaseModel):
         return cls(
             id=task.id,
             type=task.name,
-            state=task.state,
+            state=TaskState(task.state or "PENDING"),
             # timings
-            sent_at=task.sent or task.timestamp,
+            sent_at=task.sent or task.timestamp,  # ty: ignore[invalid-argument-type]
             received_at=task.received,
             started_at=task.started,
             succeeded_at=task.succeeded,
@@ -67,7 +67,7 @@ class Task(BaseModel):
             revoked_at=task.revoked,
             rejected_at=task.rejected,
             runtime=task.runtime,
-            last_updated=task.timestamp,
+            last_updated=task.timestamp,  # ty: ignore[invalid-argument-type]
             # metadata
             args=task.args,
             kwargs=task.kwargs,
@@ -79,7 +79,6 @@ class Task(BaseModel):
             root_id=task.root_id,
             parent_id=task.parent_id,
             children=[child.id for child in task.children],
-            client=task.client,
             worker=f"{task.worker.hostname}-{task.worker.pid}" if task.worker is not None else None,
             result=task.result,
             exception=task.exception,

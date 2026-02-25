@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
@@ -6,7 +6,7 @@ from tasks.model import Task
 from workers.models import Worker
 
 
-class EventType(str, Enum):
+class EventType(StrEnum):
     TASK_SENT = "task-sent"
     TASK_RECEIVED = "task-received"
     TASK_STARTED = "task-started"
@@ -20,7 +20,7 @@ class EventType(str, Enum):
     WORKER_OFFLINE = "worker-offline"
 
 
-class EventCategory(str, Enum):
+class EventCategory(StrEnum):
     TASK = "task"
     WORKER = "worker"
 

@@ -1,13 +1,20 @@
-import react from "@vitejs/plugin-react-swc"
 import { defineConfig } from "vite"
-import viteCompression from "vite-plugin-compression"
-import eslint from "vite-plugin-eslint"
-import tsconfigPaths from "vite-tsconfig-paths"
+import tailwindcss from "@tailwindcss/vite"
+import tsConfigPaths from "vite-tsconfig-paths"
+import { TanStackRouterVite } from "@tanstack/router-plugin/vite"
+import react from "@vitejs/plugin-react"
 
-// https://vitejs.dev/config/
-// noinspection JSUnusedGlobalSymbols
 export default defineConfig({
-    plugins: [eslint(), tsconfigPaths(), react(), viteCompression()],
+    plugins: [
+        tailwindcss(),
+        tsConfigPaths({ projects: ["./tsconfig.json"] }),
+        TanStackRouterVite({
+            routesDirectory: "app/routes",
+            generatedRouteTree: "app/routeTree.gen.ts",
+            autoCodeSplitting: true,
+        }),
+        react(),
+    ],
     define: {
         // react-joyrider uses the global object, even though it doesn't exist in the browser.
         // https://github.com/vitejs/vite/discussions/5912
@@ -15,6 +22,7 @@ export default defineConfig({
         global: "window",
     },
     server: {
+        port: 3000,
         proxy: {
             "/api": {
                 target: "http://localhost:8555",
@@ -38,6 +46,11 @@ export default defineConfig({
                 secure: false,
             },
             "/openapi.json": {
+                target: "http://localhost:8555",
+                changeOrigin: true,
+                secure: false,
+            },
+            "/health": {
                 target: "http://localhost:8555",
                 changeOrigin: true,
                 secure: false,

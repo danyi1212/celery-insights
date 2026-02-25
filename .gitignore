@@ -132,6 +132,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!frontend/app/lib/
 lib64/
 parts/
 sdist/
@@ -211,12 +212,9 @@ ipython_config.py
 #   install all needed dependencies.
 #Pipfile.lock
 
-# poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-#poetry.lock
+# uv
+#   uv.lock should be committed to version control for reproducible installs.
+#   https://docs.astral.sh/uv/
 
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
@@ -277,8 +275,6 @@ cython_debug/
 #.idea/
 
 ### Python Patch ###
-# Poetry local configuration file - https://python-poetry.org/docs/configuration/#local-configuration
-poetry.toml
 
 # ruff
 .ruff_cache/
@@ -288,3 +284,11 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/pycharm,python
 /server/static/
+
+# ralphex progress logs
+.ralphex/progress/
+
+# Playwright
+frontend/e2e/test-results/
+frontend/e2e/playwright-report/
+frontend/test-results/

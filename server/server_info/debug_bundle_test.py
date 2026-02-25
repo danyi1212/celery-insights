@@ -1,4 +1,5 @@
 import zipfile
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +16,7 @@ from ws.models import UserAgentInfo
 
 
 @pytest.fixture()
-def zip_file(tmp_path: Path) -> zipfile.ZipFile:
+def zip_file(tmp_path: Path) -> Generator[zipfile.ZipFile, None, None]:
     zip_path = tmp_path / "test.zip"
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
         yield zip_file
@@ -83,7 +84,7 @@ async def test_dump_file_not_a_file(zip_file: zipfile.ZipFile, tmp_path: Path, c
     await not_a_file.mkdir(exist_ok=True, parents=True)
 
     await dump_file(zip_file, "some_folder", not_a_file)
-    assert "nonexistent.txt" not in zip_file.namelist()
+    assert "some_folder" not in zip_file.namelist()
     assert "Unable to find file" in caplog.messages[-1]
 
 
