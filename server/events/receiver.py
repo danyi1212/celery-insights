@@ -12,8 +12,8 @@ from settings import Settings
 logger = logging.getLogger(__name__)
 
 state = State(
-    max_tasks_in_memory=Settings().max_tasks,
-    max_workers_in_memory=Settings().max_workers,
+    max_tasks_in_memory=Settings().task_max_count or 10_000,
+    max_workers_in_memory=5_000,
 )
 
 
