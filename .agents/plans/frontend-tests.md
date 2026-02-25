@@ -19,10 +19,10 @@ The frontend currently has **zero testing infrastructure** — no test runner, n
 
 ## Phase 2: Tier 1 — Pure Utility Tests (highest ROI, no mocking)
 
-- [ ] 2.1 `app/lib/utils_test.ts` (~6 tests) — Merges class strings, handles conditionals via clsx, resolves Tailwind conflicts via twMerge, handles undefined/null/empty inputs
-- [ ] 2.2 `app/utils/color-utils_test.ts` (~6 tests) — getBrightness: white=100, black=0, pure red/green/blue correct values, uppercase hex handling
-- [ ] 2.3 `app/utils/translate-server-models_test.ts` (~8 tests) — translateTask: Unix timestamp → Date, null → undefined, snake_case → camelCase, children array preserved; translateWorker: timestamps, camelCase mapping, cpuLoad tuple
-- [ ] 2.4 `app/utils/task-phases_test.ts` (~20 tests) — isTerminalState (all 9 states), getTaskEndTime (terminal timestamps, priority, fallback), computeTaskPhases (3-phase, single phase, zero-duration, running, skipped worker wait, revoked fallbacks), formatDuration (ms/seconds/minutes, 0ms, boundaries), formatTime (default vs detailed, zero-padding)
+- [x] 2.1 `app/lib/utils_test.ts` (~6 tests) — Merges class strings, handles conditionals via clsx, resolves Tailwind conflicts via twMerge, handles undefined/null/empty inputs
+- [x] 2.2 `app/utils/color-utils_test.ts` (~6 tests) — getBrightness: white=100, black=0, pure red/green/blue correct values, uppercase hex handling
+- [x] 2.3 `app/utils/translate-server-models_test.ts` (~8 tests) — translateTask: Unix timestamp → Date, null → undefined, snake_case → camelCase, children array preserved; translateWorker: timestamps, camelCase mapping, cpuLoad tuple
+- [x] 2.4 `app/utils/task-phases_test.ts` (~20 tests) — isTerminalState (all 9 states), getTaskEndTime (terminal timestamps, priority, fallback), computeTaskPhases (3-phase, single phase, zero-duration, running, skipped worker wait, revoked fallbacks), formatDuration (ms/seconds/minutes, 0ms, boundaries), formatTime (default vs detailed, zero-padding)
 
 ---
 
