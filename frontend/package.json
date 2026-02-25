@@ -12,7 +12,9 @@
         "generate-client": "openapi --input http://localhost:8555/openapi.json --output ./app/services/server --client axios --name ServerClient",
         "e2e": "playwright test --config e2e/playwright.config.ts",
         "e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
-        "e2e:headed": "playwright test --config e2e/playwright.config.ts --headed"
+        "e2e:headed": "playwright test --config e2e/playwright.config.ts --headed",
+        "test": "vitest run",
+        "test:watch": "vitest"
     },
     "dependencies": {
         "@tailwindcss/vite": "^4.2.1",
@@ -48,6 +50,9 @@
     "devDependencies": {
         "@playwright/test": "^1.58.2",
         "@tanstack/router-plugin": "^1.162.9",
+        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/react": "^16.3.2",
+        "@testing-library/user-event": "^14.6.1",
         "@types/react": "^19",
         "@types/react-dom": "^19",
         "@types/react-transition-group": "^4.4.12",
@@ -61,11 +66,13 @@
         "eslint-plugin-prettier": "^5.2.1",
         "eslint-plugin-react": "^7.35.0",
         "eslint-plugin-react-hooks": "^4.6.2",
+        "happy-dom": "^20.7.0",
         "openapi-typescript-codegen": "^0.29.0",
         "prettier": "^3.3.3",
         "typescript": "^5.5.4",
         "vite": "^6.0.0",
-        "vite-tsconfig-paths": "^5.0.1"
+        "vite-tsconfig-paths": "^5.0.1",
+        "vitest": "^4.0.18"
     },
     "prettier": {
         "tabWidth": 4,
