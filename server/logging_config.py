@@ -58,6 +58,7 @@ LOGGING_CONFIG = {
         "surrealdb_client": {"level": "INFO"},
         "tasks.result_fetcher": {"level": "INFO"},
         "workers.poller": {"level": "INFO"},
+        "cleanup": {"level": "INFO"},
         # Third-party loggers
         "asyncio": {"level": "INFO"},
         "concurrent": {"level": "INFO"},

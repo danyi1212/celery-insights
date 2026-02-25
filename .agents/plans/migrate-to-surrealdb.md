@@ -452,7 +452,7 @@ The broadcaster becomes a `SurrealDBIngester`:
 - **Offline detection**: compares current inspect response hostnames against known workers in SurrealDB. Tracks a `missed_polls` counter per worker — only marks a worker offline after **3 consecutive** missed polls (`UPDATE worker:$id SET status = "offline"`). This avoids false positives from transient network issues, broker hiccups, or workers busy with long-running tasks. The counter resets to 0 when the worker responds.
 - Started/stopped in lifespan
 
-### [ ] 2d. Data cleanup job (`server/cleanup.py`)
+### [x] 2d. Data cleanup job (`server/cleanup.py`)
 
 SurrealDB has no native TTL, cron, or retention policies. Cleanup must be triggered externally.
 
