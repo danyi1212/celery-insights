@@ -375,7 +375,7 @@ Add `package.json` scripts:
 - Pin to a specific SurrealDB v2.x minor version (e.g., `v2.1.x`) — SurrealDB's API has broken between minors before
 - Expose storage volume mount point for persistent mode (`/data` default)
 
-### [ ] 1f. SurrealDB client module (`server/surrealdb_client.py`)
+### [x] 1f. SurrealDB client module (`server/surrealdb_client.py`)
 
 Python-side SurrealDB client — used only by the ingestion pipeline:
 
