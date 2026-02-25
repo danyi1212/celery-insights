@@ -1,6 +1,6 @@
 /**
  * Custom Bun entry point for production.
- * Orchestrates SurrealDB connection, leader election, Python ingester spawning,
+ * Orchestrates SurrealDB subprocess, leader election, Python ingester spawning,
  * serves static SPA files, and proxies API/WS/SurrealDB requests.
  *
  * Usage: bun run bun-entry.ts
@@ -20,10 +20,78 @@ const DIST_DIR = path.resolve(import.meta.dir, "dist")
 // Read index.html once at startup for SPA fallback
 const indexHtml = Bun.file(path.join(DIST_DIR, "index.html"))
 
+let surrealProcess: ChildProcess | null = null
 let pythonProcess: ChildProcess | null = null
 let leaderElection: LeaderElection | null = null
 let ingestionStatus: IngestionStatus = "disabled"
+let shuttingDown = false
 const instanceId = generateInstanceId()
+const managingSurrealDB = !config.surrealdbExternalUrl
+
+// --- SurrealDB subprocess management ---
+
+const SURREAL_BACKOFF_BASE_MS = 1000
+const SURREAL_BACKOFF_MAX_MS = 30000
+let surrealRestartAttempts = 0
+
+function spawnSurrealDB(): ChildProcess {
+    console.log(
+        `Spawning SurrealDB subprocess on port ${config.surrealdbPort} (storage: ${config.surrealdbStorage})`,
+    )
+    const proc = spawn(
+        "surreal",
+        ["start", "--bind", `0.0.0.0:${config.surrealdbPort}`, "--user", "root", "--pass", "root", config.surrealdbStorage],
+        { stdio: "inherit" },
+    )
+
+    proc.on("exit", (code) => {
+        if (shuttingDown) return
+        console.error(`SurrealDB exited with code ${code}`)
+        surrealProcess = null
+
+        const backoffMs = Math.min(SURREAL_BACKOFF_BASE_MS * 2 ** surrealRestartAttempts, SURREAL_BACKOFF_MAX_MS)
+        surrealRestartAttempts++
+        console.log(`Restarting SurrealDB in ${backoffMs}ms (attempt ${surrealRestartAttempts})`)
+        setTimeout(() => {
+            if (!shuttingDown) {
+                surrealProcess = spawnSurrealDB()
+            }
+        }, backoffMs)
+    })
+
+    return proc
+}
+
+/**
+ * Wait for SurrealDB to accept HTTP connections before proceeding.
+ * Polls the health endpoint with exponential backoff.
+ */
+async function waitForSurrealDB(maxWaitMs = 30000): Promise<void> {
+    const surrealHttpUrl = config.surrealdbExternalUrl
+        ? config.surrealdbExternalUrl.replace(/\/rpc$/, "")
+        : `http://localhost:${config.surrealdbPort}`
+    const healthUrl = `${surrealHttpUrl}/health`
+    const startTime = Date.now()
+    let delayMs = 200
+
+    while (Date.now() - startTime < maxWaitMs) {
+        try {
+            const res = await fetch(healthUrl)
+            if (res.ok) {
+                surrealRestartAttempts = 0
+                console.log("SurrealDB is ready")
+                return
+            }
+        } catch {
+            // Not ready yet
+        }
+        await Bun.sleep(delayMs)
+        delayMs = Math.min(delayMs * 1.5, 2000)
+    }
+    throw new Error(`SurrealDB did not become ready within ${maxWaitMs}ms`)
+}
+
+// --- Python subprocess management ---
 
 function spawnPython(): ChildProcess {
     console.log("Spawning Python ingester subprocess")
@@ -52,9 +120,10 @@ function spawnPython(): ChildProcess {
     })
 
     proc.on("exit", (code) => {
+        if (shuttingDown) return
         console.error(`Python ingester exited with code ${code}`)
         // If we're still leader, restart Python
-        if (leaderElection?.isLeader && !shuttingDown) {
+        if (leaderElection?.isLeader) {
             console.log("Restarting Python ingester (leader still holds lock)")
             pythonProcess = spawnPython()
         }
@@ -63,19 +132,26 @@ function spawnPython(): ChildProcess {
     return proc
 }
 
-let shuttingDown = false
+// --- Signal handling ---
 
 async function shutdown(signal: string): Promise<void> {
     if (shuttingDown) return
     shuttingDown = true
     console.log(`Received ${signal} — shutting down`)
 
+    // 1. Release ingestion lock (if held)
     if (leaderElection) {
         await leaderElection.stop()
     }
 
+    // 2. Kill Python subprocess (if running)
     if (pythonProcess) {
         pythonProcess.kill(signal === "SIGTERM" ? "SIGTERM" : "SIGINT")
+    }
+
+    // 3. Kill SurrealDB subprocess (if managed)
+    if (surrealProcess) {
+        surrealProcess.kill("SIGTERM")
     }
 
     process.exit(0)
@@ -84,7 +160,19 @@ async function shutdown(signal: string): Promise<void> {
 process.on("SIGTERM", () => shutdown("SIGTERM"))
 process.on("SIGINT", () => shutdown("SIGINT"))
 
-// Connect to SurrealDB and run leader election
+// --- Startup sequence ---
+
+// 1. Start SurrealDB subprocess (or skip if external URL is set)
+if (managingSurrealDB) {
+    surrealProcess = spawnSurrealDB()
+} else {
+    console.log(`Using external SurrealDB at ${config.surrealdbExternalUrl}`)
+}
+
+// 2. Wait for SurrealDB to be ready
+await waitForSurrealDB()
+
+// 3. Connect to SurrealDB as ingester user
 const db = new Surreal()
 const surrealdbBaseUrl = config.surrealdbUrl.replace(/\/rpc$/, "")
 
@@ -105,7 +193,7 @@ try {
     process.exit(1)
 }
 
-// Run leader election
+// 4. Run leader election (spawns Python if this instance becomes leader)
 leaderElection = new LeaderElection({
     db,
     config,
@@ -124,6 +212,7 @@ leaderElection = new LeaderElection({
 
 ingestionStatus = await leaderElection.start()
 
+// 5. Start serving
 const server = Bun.serve({
     port: config.port,
     async fetch(req, server) {
@@ -144,6 +233,20 @@ const server = Bun.serve({
                 authRequired: config.surrealdbFrontendPass != null,
                 surrealPath: "/surreal/rpc",
                 ingestionStatus: leaderElection?.status ?? ingestionStatus,
+            })
+        }
+
+        // Bun-served endpoint: health check (always available)
+        if (url.pathname === "/health") {
+            return Response.json({
+                status: "ok",
+                ingestionStatus: leaderElection?.status ?? ingestionStatus,
+                surrealdb: managingSurrealDB
+                    ? surrealProcess
+                        ? "running"
+                        : "stopped"
+                    : "external",
+                python: pythonProcess ? "running" : "not running",
             })
         }
 
@@ -177,22 +280,14 @@ const server = Bun.serve({
             }
         }
 
-        // Proxy API, health, docs, etc. to Python backend (only if Python is running)
+        // Proxy API, docs, etc. to Python backend (only if Python is running)
         if (
             url.pathname.startsWith("/api") ||
-            url.pathname === "/health" ||
             url.pathname === "/docs" ||
             url.pathname === "/redoc" ||
             url.pathname === "/openapi.json"
         ) {
             if (!pythonProcess) {
-                if (url.pathname === "/health") {
-                    return Response.json({
-                        status: "ok",
-                        ingestionStatus: leaderElection?.status ?? ingestionStatus,
-                        python: "not running",
-                    })
-                }
                 return new Response("Backend not available (ingestion not active on this instance)", { status: 503 })
             }
 
@@ -291,4 +386,5 @@ const server = Bun.serve({
 })
 
 console.log(`Celery Insights running at http://localhost:${server.port}`)
-console.log(`Ingestion status: ${ingestionStatus}`)
+console.log(`SurrealDB: ${managingSurrealDB ? `managed (port ${config.surrealdbPort}, storage: ${config.surrealdbStorage})` : `external (${config.surrealdbExternalUrl})`}`)
+console.log(`Ingestion status: ${leaderElection?.status ?? ingestionStatus}`)
