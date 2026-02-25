@@ -312,7 +312,7 @@ Standby behavior (Bun manages):
 - `/api/config` endpoint (frontend configuration — auth mode, ingestion status)
 - Schema migration and conditional auth setup
 
-### [ ] 1c. Bun subprocess management (`frontend/bun-entry.ts`)
+### [x] 1c. Bun subprocess management (`frontend/bun-entry.ts`)
 
 Bun is now the full orchestrator — it manages both subprocesses and decides what to start:
 
