@@ -517,7 +517,7 @@ Python no longer manages leader election, schema migration, or standby mode — 
 
 ## [ ] Phase 3: Frontend Data Layer
 
-### [ ] 3a. SurrealDB provider (`frontend/app/components/surrealdb-provider.tsx`)
+### [x] 3a. SurrealDB provider (`frontend/app/components/surrealdb-provider.tsx`)
 
 - React context providing the SurrealDB connection instance
 - **On mount**: fetches `GET /api/config` to determine auth mode and ingestion status
