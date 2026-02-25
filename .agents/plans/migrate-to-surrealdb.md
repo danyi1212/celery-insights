@@ -652,7 +652,7 @@ useExplorerTasks(filters: ExplorerFilters, sort: SortConfig, page: number, pageS
   // This pushes filtering to SurrealDB (indexed!) instead of loading 10k records into the browser
 ```
 
-### [ ] 3d. Search via SurrealDB (`frontend/app/hooks/use-search.ts`)
+### [x] 3d. Search via SurrealDB (`frontend/app/hooks/use-search.ts`)
 
 Replace the REST `/api/search` endpoint with a direct SurrealDB query from the frontend:
 
