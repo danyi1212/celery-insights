@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
-import Surreal, { type ConnectionStatus } from "surrealdb"
+import { Surreal, type ConnectionStatus } from "surrealdb"
 
 export type IngestionStatus = "leader" | "standby" | "read-only" | "disabled"
 

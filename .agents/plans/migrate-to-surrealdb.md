@@ -681,7 +681,7 @@ DEFINE INDEX idx_task_search ON task FIELDS type SEARCH ANALYZER task_analyzer B
 
 Then switch to `search::score()` / `@@` syntax. Defer this to post-migration optimization.
 
-### [ ] 3e. Connection & ingestion status component (`frontend/app/components/connection-status.tsx`)
+### [x] 3e. Connection & ingestion status component (`frontend/app/components/connection-status.tsx`)
 
 Replace the current WebSocket status indicator with a combined SurrealDB + ingestion status:
 
