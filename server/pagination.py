@@ -26,7 +26,7 @@ def get_paginated_response[T](
         else None
     )
     previous_url = (
-        str(request.url.replace_query_params(offset=max(0, offset - limit), limit=limit)) if count > 0 else None
+        str(request.url.replace_query_params(offset=max(0, offset - limit), limit=limit)) if offset > 0 else None
     )
     return Paginated(
         count=count,

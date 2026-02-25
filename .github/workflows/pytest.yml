@@ -4,6 +4,9 @@ on:
   push:
     paths:
       - server/**
+  pull_request:
+    paths:
+      - server/**
 
 permissions:
   contents: read
