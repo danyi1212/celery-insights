@@ -44,9 +44,7 @@ RUN curl -fsSL https://bun.sh/install | bash \
 
 # Install SurrealDB binary (pinned v2.1.x)
 ARG SURREALDB_VERSION=v2.1.4
-RUN curl -fsSL https://install.surrealdb.com | sh -s -- --version ${SURREALDB_VERSION} \
-    && mv /root/.surrealdb/surreal /usr/local/bin/surreal \
-    && rm -rf /root/.surrealdb
+RUN curl -fsSL https://install.surrealdb.com | sh -s -- --version ${SURREALDB_VERSION}
 
 ENV LOG_FILE_PATH=/app/logs/app.log
 RUN mkdir /app/logs

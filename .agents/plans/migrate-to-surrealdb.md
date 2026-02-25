@@ -369,7 +369,7 @@ Add `package.json` scripts:
 - `"dev:surreal": "surreal start --bind 0.0.0.0:8557 --user root --pass root memory"` — start SurrealDB standalone
 - `"dev:all": "concurrently \"bun run dev:surreal\" \"cd ../server && python run.py\" \"bun dev\""` — start all three processes in one terminal for convenience
 
-### [ ] 1e. Docker (`Dockerfile`)
+### [x] 1e. Docker (`Dockerfile`)
 
 - Add SurrealDB binary to the Docker image (download from GitHub releases or use official install script)
 - Pin to a specific SurrealDB v2.x minor version (e.g., `v2.1.x`) — SurrealDB's API has broken between minors before
