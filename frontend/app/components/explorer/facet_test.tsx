@@ -61,7 +61,7 @@ describe("Facet", () => {
     it("clears all selections on clear button click", async () => {
         const user = userEvent.setup()
         const setSelected = vi.fn()
-        const { container } = render(
+        render(
             <Facet
                 title="Type"
                 counts={defaultCounts}
@@ -70,11 +70,7 @@ describe("Facet", () => {
             />,
         )
 
-        // The clear button is outside the list, next to the title — it's a button with the ListX icon
-        // Find it by its position: it's the second direct button in the header area (first is collapse toggle)
-        const headerButtons = container.querySelectorAll(":scope > div > div > div:first-child button")
-        // The last button in the header row is the clear button
-        const clearButton = headerButtons[headerButtons.length - 1] as HTMLElement
+        const clearButton = screen.getByRole("button", { name: "Clear selection" })
         await user.click(clearButton)
         expect(setSelected).toHaveBeenCalledWith(new Set())
     })

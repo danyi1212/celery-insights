@@ -95,10 +95,11 @@ export const computeTaskPhases = (task: StateTask, now: Date): TaskPhase[] => {
 export const formatDuration = (ms: number): string => {
     if (ms < 1000) return `${Math.round(ms)}ms`
     const seconds = ms / 1000
-    if (seconds < 60) return `${seconds.toFixed(1)}s`
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    return `${minutes}m ${remainingSeconds.toFixed(0)}s`
+    if (seconds < 59.95) return `${seconds.toFixed(1)}s`
+    const totalRounded = Math.round(seconds)
+    const minutes = Math.floor(totalRounded / 60)
+    const remainingSeconds = totalRounded % 60
+    return `${minutes}m ${remainingSeconds}s`
 }
 
 export const formatTime = (date: Date, detailed = false): string => {

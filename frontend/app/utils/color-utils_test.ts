@@ -28,4 +28,12 @@ describe("getBrightness", () => {
         expect(getBrightness("#FFFFFF")).toBe(100)
         expect(getBrightness("#FF0000")).toBe(21)
     })
+
+    it("throws for empty string", () => {
+        expect(() => getBrightness("")).toThrow("Invalid hex color")
+    })
+
+    it("throws for strings with no alphanumeric pairs", () => {
+        expect(() => getBrightness("---")).toThrow("Invalid hex color")
+    })
 })

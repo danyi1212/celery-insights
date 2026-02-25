@@ -52,9 +52,9 @@ describe("getFlowGraph", () => {
         expect(edges.map((e) => e.target)).toEqual(["a", "b", "c"])
     })
 
-    it("handles cycle detection by creating replaced nodes", () => {
-        // Two parents share a child: root -> [c1, c2], c1 -> [shared], c2 -> [shared]
-        // getChildMap builds from parentId in the tasks array, so include shared twice
+    it("handles already-visited nodes by creating replaced nodes", () => {
+        // Diamond DAG: root -> [c1, c2], c1 -> [shared], c2 -> [shared]
+        // When DFS visits "shared" via c1 first, visiting it again via c2 creates a replaced node
         const tasks = [
             createStateTask({ id: "root" }),
             createStateTask({ id: "c1", parentId: "root" }),

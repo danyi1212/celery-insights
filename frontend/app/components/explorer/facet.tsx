@@ -47,7 +47,13 @@ const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected, val
                     <h6 className="flex-1 truncate text-base font-semibold">{title}</h6>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon-xs" className="mx-1" onClick={() => handleClearAll()}>
+                            <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                className="mx-1"
+                                aria-label="Clear selection"
+                                onClick={() => handleClearAll()}
+                            >
                                 <ListX className="size-4" />
                             </Button>
                         </TooltipTrigger>
