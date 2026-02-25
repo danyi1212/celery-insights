@@ -28,9 +28,9 @@ The frontend currently has **zero testing infrastructure** — no test runner, n
 
 ## Phase 3: Tier 2 — Zustand Store Tests
 
-- [ ] 3.1 `app/stores/use-state-store_test.ts` (~10 tests) — handleEvent task (adds new, adds to recentTaskIds, no duplicates, caps at capacity, updates existing), handleEvent worker (adds/updates), resetState (clears all), direct store testing via getState()/setState()
-- [ ] 3.2 `app/stores/use-settings-store_test.ts` (~4 tests) — Default values, resetSettings restores defaults, useIsDefaultSettings hook, clear localStorage in beforeEach
-- [ ] 3.3 `app/stores/use-explorer-config_test.ts` (~5 tests) — Default column/facet orders, useExplorerColumns returns visible columns in order, useExplorerFacets excludes noFacet columns
+- [x] 3.1 `app/stores/use-state-store_test.ts` (~10 tests) — handleEvent task (adds new, adds to recentTaskIds, no duplicates, caps at capacity, updates existing), handleEvent worker (adds/updates), resetState (clears all), direct store testing via getState()/setState()
+- [x] 3.2 `app/stores/use-settings-store_test.ts` (~4 tests) — Default values, resetSettings restores defaults, useIsDefaultSettings hook, clear localStorage in beforeEach
+- [x] 3.3 `app/stores/use-explorer-config_test.ts` (~5 tests) — Default column/facet orders, useExplorerColumns returns visible columns in order, useExplorerFacets excludes noFacet columns
 
 ---
 
