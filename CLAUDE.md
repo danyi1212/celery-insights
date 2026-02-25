@@ -6,14 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Backend** (from repo root): `uv run pytest`, `uv run ruff check server/`, `uv run ruff format server/`, `uv run ty check server/`
 **Frontend** (from `frontend/`): `bun dev`, `bun run build`, `bun run lint`, `bun run lint-fix`
+**Frontend tests** (from `frontend/`): `bun run test`, `bun run test:watch`
 **Regenerate API client** (after any endpoint change): `cd frontend && bun run generate-client`
 
-Tests are colocated: `model.py` -> `model_test.py`. Run one with `uv run pytest server/tasks/model_test.py`.
+Tests are colocated: `model.py` -> `model_test.py`, `task-avatar.tsx` -> `task-avatar_test.tsx`. Run one with `uv run pytest server/tasks/model_test.py` or `cd frontend && bunx vitest run app/components/task/task-avatar_test.tsx`.
 
 ## Stack
 
 - **Backend**: FastAPI, Python 3.12, Celery 5.4, Pydantic v2, uv, ty (type checker)
 - **Frontend**: React 19, TypeScript, Vite, TanStack Router (file-based, auto code-splitting), Bun, Shadcn UI, Tailwind CSS v4, Lucide React, Zustand, TanStack Query, TanStack Table, @xyflow/react v12
+- **Frontend testing**: Vitest, Testing Library (React + user-event + jest-dom), happy-dom
 - **Real-time**: WebSockets — Celery events flow through a threaded receiver -> async queue -> broadcaster -> WebSocket -> Zustand stores
 - **Architecture**: Bun is the single entrypoint — serves the SPA, spawns the Python backend as a child process (on port 8556 internally), and reverse-proxies API/WS to it. External port is 8555.
 
@@ -29,6 +31,9 @@ Tests are colocated: `model.py` -> `model_test.py`. Run one with `uv run pytest 
 - `frontend/app/components/` — organized by domain, mirrors backend modules
 - `frontend/app/lib/utils.ts` — `cn()` helper for Tailwind class merging
 - `frontend/components.json` — Shadcn UI config (style variant, path aliases, CSS location)
+- `frontend/vitest.config.ts` — Vitest configuration (happy-dom, colocated `_test` pattern)
+- `frontend/app/test-utils.tsx` — Custom `render` that wraps components with required providers
+- `frontend/app/test-fixtures.ts` — Shared factory helpers (`createServerTask`, `createStateTask`, etc.)
 - `frontend/vite.config.ts` — Vite config with TanStack Router plugin and dev proxy rules
 - `frontend/bun-entry.ts` — Production entry: spawns Python, serves SPA, proxies API/WS
 - `CONTRIBUTING.md` — full code style guide and design guidelines
@@ -39,7 +44,8 @@ Tests are colocated: `model.py` -> `model_test.py`. Run one with `uv run pytest 
 - **Python**: Ruff (line-length 120). Absolute imports only (relative banned). Pydantic models, not dicts. Async-first — use `asyncio.to_thread` for blocking code. Register new loggers in `logging_config.py`.
 - **TypeScript**: Prettier (tabWidth 4, no semis, printWidth 120). Arrow functions. `useMemo` for derived state, never `useState`+`useEffect` for it. Path alias `@*` -> `app/*`.
 - **UI**: Shadcn UI components in `frontend/app/components/ui/`. Tailwind CSS v4 for styling (CSS-first config in `app/styles.css`). Lucide React for icons. Dark mode via `.dark` class on `<html>`. Use `cn()` from `@lib/utils` for conditional class merging.
-- **Tests**: Colocated, suffixed `_test.py` (not prefixed `test_`). Pythonpath is `server/`, so imports start from package root.
+- **Tests (Python)**: Colocated, suffixed `_test.py` (not prefixed `test_`). Pythonpath is `server/`, so imports start from package root.
+- **Tests (Frontend)**: Colocated, suffixed `_test.ts` / `_test.tsx`. Vitest with happy-dom. Use custom `render` from `app/test-utils.tsx` (wraps providers). Shared factories in `app/test-fixtures.ts`.
 
 ## Development
 

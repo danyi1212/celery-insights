@@ -72,8 +72,6 @@ export const getFlowGraph = (
 
         const children = childMap.get(task.id) || []
 
-        if (!children) return
-
         const startY = y - (children.length - 1) / 2
         const childX = x + 1
 
@@ -93,7 +91,7 @@ export const getFlowGraph = (
     }
 
     const rootTask = taskMap.get(rootTaskId)
-    if (rootTask) dfs(rootTask, initialPosition?.x || 0, initialPosition?.y || 0)
+    if (rootTask) dfs(rootTask, initialPosition?.x ?? 0, initialPosition?.y ?? 0)
 
     return {
         nodes: nodes,

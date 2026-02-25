@@ -1,5 +1,5 @@
 import { TaskState } from "@services/server"
-import { createStateTask } from "@/test-fixtures"
+import { createStateTask } from "@test-fixtures"
 import {
     isTerminalState,
     getTaskEndTime,
@@ -57,6 +57,28 @@ describe("getTaskEndTime", () => {
             failedAt: new Date("2024-01-01T11:30:00Z"),
         })
         expect(getTaskEndTime(task, now)).toEqual(new Date("2024-01-01T11:00:00Z"))
+    })
+
+    it("returns rejectedAt when only rejectedAt is set", () => {
+        const task = createStateTask({
+            succeededAt: undefined,
+            failedAt: undefined,
+            retriedAt: undefined,
+            rejectedAt: new Date("2024-01-01T11:20:00Z"),
+            revokedAt: undefined,
+        })
+        expect(getTaskEndTime(task, now)).toEqual(new Date("2024-01-01T11:20:00Z"))
+    })
+
+    it("returns revokedAt when only revokedAt is set", () => {
+        const task = createStateTask({
+            succeededAt: undefined,
+            failedAt: undefined,
+            retriedAt: undefined,
+            rejectedAt: undefined,
+            revokedAt: new Date("2024-01-01T11:25:00Z"),
+        })
+        expect(getTaskEndTime(task, now)).toEqual(new Date("2024-01-01T11:25:00Z"))
     })
 
     it("falls back to now when no terminal timestamp exists", () => {
@@ -196,7 +218,8 @@ describe("formatDuration", () => {
     it("formats seconds for values under 60 seconds", () => {
         expect(formatDuration(1000)).toBe("1.0s")
         expect(formatDuration(1500)).toBe("1.5s")
-        expect(formatDuration(59999)).toBe("60.0s")
+        expect(formatDuration(59949)).toBe("59.9s")
+        expect(formatDuration(59999)).toBe("1m 0s")
     })
 
     it("formats minutes for values >= 60 seconds", () => {

@@ -1,5 +1,5 @@
 import { TaskState } from "@services/server"
-import { createServerTask, createServerWorker } from "@/test-fixtures"
+import { createServerTask, createServerWorker } from "@test-fixtures"
 import { translateTask, translateWorker } from "./translate-server-models"
 
 describe("translateTask", () => {
@@ -75,6 +75,13 @@ describe("translateTask", () => {
         expect(result.expires).toBe("2024-01-02T00:00:00")
         expect(result.retries).toBe(3)
         expect(result.exchange).toBe("custom-exchange")
+    })
+
+    it("preserves zero values for numeric fields", () => {
+        const server = createServerTask({ retries: 0, runtime: 0 })
+        const result = translateTask(server)
+        expect(result.retries).toBe(0)
+        expect(result.runtime).toBe(0)
     })
 
     it("converts all timestamp fields when present", () => {

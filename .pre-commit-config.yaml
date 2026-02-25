@@ -1,6 +1,6 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
-exclude: ^frontend/src/services/server
+exclude: ^frontend/app/services/server
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -47,8 +47,6 @@ repos:
         additional_dependencies:
           - "eslint@8.54.0"
           - "eslint-plugin-jsx-a11y@6.8.0"
-          - "eslint-plugin-material-ui@1.0.1"
-          - "eslint-plugin-mui-path-imports@0.0.15"
           - "eslint-plugin-prettier@5.0.1"
           - "eslint-plugin-react@7.33.2"
           - "eslint-plugin-react-hooks@4.6.0"

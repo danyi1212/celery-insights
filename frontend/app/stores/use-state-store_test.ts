@@ -1,5 +1,5 @@
 import { TaskState } from "@services/server"
-import { createServerTask, createTaskEventMessage, createWorkerEventMessage } from "@/test-fixtures"
+import { createServerTask, createTaskEventMessage, createWorkerEventMessage } from "@test-fixtures"
 import { translateTask } from "@utils/translate-server-models"
 import { useStateStore, handleEvent, resetState } from "./use-state-store"
 

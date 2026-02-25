@@ -11,7 +11,7 @@ vi.mock("@hooks/use-now", () => ({
 
 describe("TaskLifetimeChart", () => {
     it("shows empty message when task has no lifecycle data", () => {
-        // A task with sentAt in the future relative to all timestamps => empty phases
+        // A task with sentAt equal to now and no further timestamps produces empty phases
         const task = createStateTask({
             state: TaskState.PENDING,
             sentAt: MOCK_NOW,
@@ -35,9 +35,9 @@ describe("TaskLifetimeChart", () => {
         })
         render(<TaskLifetimeChart task={task} />)
 
-        // Should have 3 phase buttons (queue, worker, running)
+        // Should have exactly 3 phase buttons (queue, worker, running)
         const phaseButtons = screen.getAllByRole("button")
-        expect(phaseButtons.length).toBeGreaterThanOrEqual(3)
+        expect(phaseButtons).toHaveLength(3)
     })
 
     it("shows live indicator for active (non-terminal) tasks", () => {

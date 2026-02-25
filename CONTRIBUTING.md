@@ -159,6 +159,20 @@ uv run pytest                              # all tests
 uv run pytest server/tasks/model_test.py   # single file
 ```
 
+### Unit tests (Frontend)
+
+Frontend unit tests use [Vitest](https://vitest.dev/) with [Testing Library](https://testing-library.com/) and happy-dom.
+Tests are colocated next to the module they test, suffixed `_test.ts` or `_test.tsx` (e.g., `task-avatar.tsx` -> `task-avatar_test.tsx`).
+
+```shell
+cd frontend
+bun run test          # all tests (single run)
+bun run test:watch    # watch mode
+```
+
+- Use the custom `render` from `app/test-utils.tsx` instead of the raw Testing Library `render` — it wraps components with required providers.
+- Use factory helpers from `app/test-fixtures.ts` to create test data (`createServerTask`, `createStateTask`, `createServerWorker`).
+
 ### E2E tests (Playwright)
 
 E2E tests run against the full docker-compose stack (celery-insights + Celery workers + RabbitMQ + Redis + interactive API).
