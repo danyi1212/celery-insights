@@ -56,6 +56,7 @@ LOGGING_CONFIG = {
         "celery_app": {"level": "INFO"},
         "lifespan": {"level": "INFO"},
         "surrealdb_client": {"level": "INFO"},
+        "tasks.result_fetcher": {"level": "INFO"},
         # Third-party loggers
         "asyncio": {"level": "INFO"},
         "concurrent": {"level": "INFO"},

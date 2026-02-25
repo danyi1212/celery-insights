@@ -435,7 +435,7 @@ The broadcaster becomes a `SurrealDBIngester`:
 
 - **Event buffer backpressure**: if the async queue exceeds 10,000 pending events (e.g., SurrealDB is down), drop oldest events and log a warning. This prevents unbounded memory growth during outages. The backpressure threshold is logged so operators can tune `ingestion_batch_interval_ms` if they see drops.
 
-### [ ] 2b. Task result fetcher (`server/tasks/result_fetcher.py`)
+### [x] 2b. Task result fetcher (`server/tasks/result_fetcher.py`)
 
 - When a task reaches terminal state (SUCCESS, FAILURE, REVOKED, REJECTED, RETRY):
   - Fetch result/exception/traceback from Celery result backend via `AsyncResult` (in thread via `asyncio.to_thread`)
