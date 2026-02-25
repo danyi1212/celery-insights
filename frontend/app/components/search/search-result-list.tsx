@@ -82,7 +82,7 @@ const SearchResultList: React.FC<SearchResultsProps> = ({ query }) => {
                 <SearchResultListItem
                     key={task.id}
                     primary={task?.type || "Unknown"}
-                    secondary={"Sent at " + format(task.sent_at, "HH:mm:ss")}
+                    secondary={"Sent at " + format(task.sent_at * 1000, "HH:mm:ss")}
                     link={`/tasks/${task.id}`}
                     avatar={<TaskAvatar taskId={task.id} type={task.type} status={task.state} />}
                 />
