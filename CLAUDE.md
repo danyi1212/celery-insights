@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Frontend tests** (from `frontend/`): `bun run test`, `bun run test:watch`
 **Regenerate API client** (after any endpoint change): `cd frontend && bun run generate-client`
 
-Tests are colocated: `model.py` -> `model_test.py`, `task-avatar.tsx` -> `task-avatar_test.tsx`. Run one with `uv run pytest server/tasks/model_test.py` or `cd frontend && bunx vitest run app/components/task/task-avatar_test.tsx`.
+Tests are colocated: `model.py` -> `model_test.py`, `task-avatar.tsx` -> `task-avatar.test.tsx`. Run one with `uv run pytest server/tasks/model_test.py` or `cd frontend && bunx vitest run app/components/task/task-avatar.test.tsx`.
 
 ## Stack
 
@@ -31,7 +31,7 @@ Tests are colocated: `model.py` -> `model_test.py`, `task-avatar.tsx` -> `task-a
 - `frontend/app/components/` — organized by domain, mirrors backend modules
 - `frontend/app/lib/utils.ts` — `cn()` helper for Tailwind class merging
 - `frontend/components.json` — Shadcn UI config (style variant, path aliases, CSS location)
-- `frontend/vitest.config.ts` — Vitest configuration (happy-dom, colocated `_test` pattern)
+- `frontend/vitest.config.ts` — Vitest configuration (happy-dom, colocated `.test` pattern)
 - `frontend/app/test-utils.tsx` — Custom `render` that wraps components with required providers
 - `frontend/app/test-fixtures.ts` — Shared factory helpers (`createServerTask`, `createStateTask`, etc.)
 - `frontend/vite.config.ts` — Vite config with TanStack Router plugin and dev proxy rules
@@ -45,7 +45,7 @@ Tests are colocated: `model.py` -> `model_test.py`, `task-avatar.tsx` -> `task-a
 - **TypeScript**: Prettier (tabWidth 4, no semis, printWidth 120). Arrow functions. `useMemo` for derived state, never `useState`+`useEffect` for it. Path alias `@*` -> `app/*`.
 - **UI**: Shadcn UI components in `frontend/app/components/ui/`. Tailwind CSS v4 for styling (CSS-first config in `app/styles.css`). Lucide React for icons. Dark mode via `.dark` class on `<html>`. Use `cn()` from `@lib/utils` for conditional class merging.
 - **Tests (Python)**: Colocated, suffixed `_test.py` (not prefixed `test_`). Pythonpath is `server/`, so imports start from package root.
-- **Tests (Frontend)**: Colocated, suffixed `_test.ts` / `_test.tsx`. Vitest with happy-dom. Use custom `render` from `app/test-utils.tsx` (wraps providers). Shared factories in `app/test-fixtures.ts`.
+- **Tests (Frontend)**: Colocated, suffixed `.test.ts` / `.test.tsx`. Vitest with happy-dom. Use custom `render` from `app/test-utils.tsx` (wraps providers). Shared factories in `app/test-fixtures.ts`.
 
 ## Development
 
