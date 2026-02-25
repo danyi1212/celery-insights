@@ -36,12 +36,12 @@ The frontend currently has **zero testing infrastructure** — no test runner, n
 
 ## Phase 4: Tier 3 — Component Tests
 
-- [ ] 4.1 `app/components/task/task-status-icon_test.tsx` (~10 tests) — Parameterized: all 9 states → correct color class and tooltip text, className/iconClassName passthrough
-- [ ] 4.2 `app/components/task/task-avatar_test.tsx` (~7 tests) — Link to `/tasks/{taskId}` vs div when `disableLink`, background color from type, status badge, mock `@tanstack/react-router` Link
-- [ ] 4.3 `app/components/task/task-timer_test.tsx` (~6 tests) — Returns null when no eta/expires, ETA countdown, expiry warning colors, expired state, mock `useNow`
-- [ ] 4.4 `app/components/workflow/flow-chart_test.ts` (~8 tests) — Pure function `getFlowGraph` only: single node, parent-child edges, vertical centering, child sorting, cycle detection, missing root, deep trees
-- [ ] 4.5 `app/components/task/task-lifetime-chart_test.tsx` (~7 tests) — Empty phases message, 3 phase segments, live indicator, total duration header, legend toggle, mock `useNow`
-- [ ] 4.6 `app/components/explorer/facet_test.tsx` (~8 tests) — Title rendered, values sorted by count desc, selection add/remove, clear all, search filtering, custom valueFormatter
+- [x] 4.1 `app/components/task/task-status-icon_test.tsx` (~10 tests) — Parameterized: all 9 states → correct color class and tooltip text, className/iconClassName passthrough
+- [x] 4.2 `app/components/task/task-avatar_test.tsx` (~7 tests) — Link to `/tasks/{taskId}` vs div when `disableLink`, background color from type, status badge, mock `@tanstack/react-router` Link
+- [x] 4.3 `app/components/task/task-timer_test.tsx` (~6 tests) — Returns null when no eta/expires, ETA countdown, expiry warning colors, expired state, mock `useNow`
+- [x] 4.4 `app/components/workflow/flow-chart_test.ts` (~8 tests) — Pure function `getFlowGraph` only: single node, parent-child edges, vertical centering, child sorting, cycle detection, missing root, deep trees
+- [x] 4.5 `app/components/task/task-lifetime-chart_test.tsx` (~7 tests) — Empty phases message, 3 phase segments, live indicator, total duration header, legend toggle, mock `useNow`
+- [x] 4.6 `app/components/explorer/facet_test.tsx` (~8 tests) — Title rendered, values sorted by count desc, selection add/remove, clear all, search filtering, custom valueFormatter
 
 ---
 
