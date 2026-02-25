@@ -404,7 +404,7 @@ Bun runs schema migration **before** spawning Python or starting the leader elec
 
 ## [ ] Phase 2: Python Ingestion
 
-### [ ] 2a. Replace EventBroadcaster with SurrealDB ingester (`server/events/broadcaster.py`)
+### [x] 2a. Replace EventBroadcaster with SurrealDB ingester (`server/events/broadcaster.py`)
 
 Current flow: event → `state.event()` → `Task.from_celery_task()` → WebSocket broadcast
 New flow: event → async queue → batch accumulator → SurrealDB upsert
