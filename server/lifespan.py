@@ -8,7 +8,6 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 
 from celery_app import get_celery_app
-from events.broadcaster import EventBroadcaster
 from events.receiver import CeleryEventReceiver
 from settings import Settings
 
@@ -17,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_):
+    # TODO(2g): Start SurrealDBIngester, WorkerPoller, CleanupJob, ResultFetcher
     logger.info("Welcome to Celery Insights!")
     settings = Settings()
 
@@ -32,15 +32,10 @@ async def lifespan(_):
     event_consumer = CeleryEventReceiver(celery_app)
     event_consumer.start()
 
-    # Start broadcasting events
-    listener = EventBroadcaster(event_consumer.queue)
-    listener.start()
-
     try:
         yield
     except (KeyboardInterrupt, SystemExit, CancelledError):
         logger.info("Stopping server...")
     finally:
         event_consumer.stop()
-        listener.stop()
         logger.info("Goodbye! See you soon.")

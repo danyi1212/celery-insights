@@ -466,7 +466,7 @@ SurrealDB has no native TTL, cron, or retention policies. Cleanup must be trigge
 - All policies are optional — setting all to `None` disables cleanup entirely (data grows on disk)
 - Started/stopped in lifespan
 
-### [ ] 2e. Remove old state management
+### [x] 2e. Remove old state management
 
 - Remove `from celery.events.state import State` from receiver
 - EventReceiver still captures events and puts them on the asyncio Queue (this thread→async bridge stays)

@@ -5,7 +5,6 @@ import resource
 import time
 from typing import Self
 
-from celery.events.state import State
 from pydantic import BaseModel, Field
 from starlette.requests import Request
 
@@ -26,13 +25,12 @@ class ServerInfo(BaseModel):
     server_os: str = Field(description="Server OS")
     server_name: str = Field(description="Server Device Name")
     python_version: str = Field(description="Python Version")
-    task_count: int = Field(description="Number of tasks stored in state")
-    tasks_max_count: int = Field(description="Maximum number of tasks to store in state")
-    worker_count: int = Field(description="Number of workers running")
-    worker_max_count: int = Field(description="Maximum number of workers to store in state")
+    task_count: int = Field(description="Number of tasks stored")
+    worker_count: int = Field(description="Number of workers known")
 
     @classmethod
-    def create(cls, request: Request, state: State) -> Self:
+    def create(cls, request: Request) -> Self:
+        # TODO(2f): Query SurrealDB for task/worker counts
         rusage = resource.getrusage(resource.RUSAGE_SELF)
         return cls(
             cpu_usage=CPULoad(*os.getloadavg()),
@@ -44,10 +42,8 @@ class ServerInfo(BaseModel):
             server_os=platform.system(),
             server_name=platform.node(),
             python_version=platform.python_version(),
-            task_count=len(state.tasks),
-            tasks_max_count=state.max_tasks_in_memory,
-            worker_count=len(state.workers),
-            worker_max_count=state.max_workers_in_memory,
+            task_count=0,
+            worker_count=0,
         )
 
 
