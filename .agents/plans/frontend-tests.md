@@ -47,7 +47,7 @@ The frontend currently has **zero testing infrastructure** — no test runner, n
 
 ## Phase 5: Tier 4 — Hook Tests
 
-- [ ] 5.1 `app/hooks/use-now_test.ts` (~5 tests) — Returns current date initially, updates at specified interval, no updates without interval, clears on unmount, restarts on interval change, uses `vi.useFakeTimers()`
+- [x] 5.1 `app/hooks/use-now_test.ts` (~5 tests) — Returns current date initially, updates at specified interval, no updates without interval, clears on unmount, restarts on interval change, uses `vi.useFakeTimers()`
 
 ---
 
