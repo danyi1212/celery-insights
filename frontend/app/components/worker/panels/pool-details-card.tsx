@@ -43,14 +43,14 @@ const PoolDetailsCard: React.FC<PoolDetailsCardProps> = ({ hostname, ...props })
                     <DetailItem
                         label="Max Concurrency"
                         description="Maximum number of child parallelism (processes/threads)"
-                        value={stats?.pool?.["max-concurrency"] || "Unknown"}
+                        value={stats?.pool?.["max-concurrency"] ?? "Unknown"}
                     />
                 </div>
                 <div className="col-span-12 md:col-span-6">
                     <DetailItem
                         label="Recycle Limit"
                         description="Maximum number of tasks to be executed before child recycled"
-                        value={stats?.pool?.["max-tasks-per-child"] || "Unknown"}
+                        value={stats?.pool?.["max-tasks-per-child"] ?? "Unknown"}
                     />
                 </div>
                 <div className="col-span-12 md:col-span-6">
