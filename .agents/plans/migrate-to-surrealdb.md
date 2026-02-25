@@ -243,7 +243,7 @@ port: int = 8556
 
 Python no longer knows or cares about leader election, SurrealDB spawning, frontend passwords, or storage mode — Bun handles all of that.
 
-### [ ] 1b. Ingestion leader election (`frontend/bun-entry.ts`)
+### [x] 1b. Ingestion leader election (`frontend/bun-entry.ts`)
 
 When multiple Celery Insights instances share the same SurrealDB (e.g., HA deployment or multiple developers pointing at a shared DB), only one should run the ingestion pipeline. Otherwise events get written twice.
 

@@ -41,6 +41,7 @@
         "semver": "^7.6.3",
         "shiki": "^3.22.0",
         "string-to-color": "^2.2.2",
+        "surrealdb": "^2.0.0",
         "tailwind-merge": "^3.5.0",
         "tailwindcss": "^4.2.1",
         "tailwindcss-animate": "^1.0.7",
