@@ -55,6 +55,7 @@ LOGGING_CONFIG = {
         "server_info": {"level": "INFO"},
         "celery_app": {"level": "INFO"},
         "lifespan": {"level": "INFO"},
+        "surrealdb_client": {"level": "INFO"},
         # Third-party loggers
         "asyncio": {"level": "INFO"},
         "concurrent": {"level": "INFO"},
@@ -69,5 +70,9 @@ LOGGING_CONFIG = {
         "redis": {"level": "INFO"},
         "server": {"level": "INFO"},
         "tzlocal": {"level": "INFO"},
+        "aiohttp": {"level": "INFO"},
+        "charset_normalizer": {"level": "INFO"},
+        "requests": {"level": "INFO"},
+        "urllib3": {"level": "INFO"},
     },
 }

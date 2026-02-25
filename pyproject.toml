@@ -19,6 +19,7 @@ dependencies = [
     "pydantic-settings>=2",
     "colorlog",
     "redis>=5.0.8",
+    "surrealdb>=1.0.8",
 ]
 
 [dependency-groups]
