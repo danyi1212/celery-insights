@@ -532,7 +532,7 @@ Python no longer manages leader election, schema migration, or standby mode — 
 - Exposes `useSurrealDB()` hook for raw client access
 - **Connection status**: exposes `{ connected, reconnecting, error, ingestionStatus }` state for UI indicators
 
-### [ ] 3b. Generic `useLiveQuery` hook (`frontend/app/hooks/use-live-query.ts`)
+### [x] 3b. Generic `useLiveQuery` hook (`frontend/app/hooks/use-live-query.ts`)
 
 **Important**: SurrealDB `LIVE SELECT` does NOT support `ORDER BY`, `LIMIT`, or `GROUP BY`. The hook must work around this with a two-phase pattern:
 
