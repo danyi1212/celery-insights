@@ -570,7 +570,7 @@ Behavior:
 3. Show a brief toast notification: "Connection restored — data is up to date"
 4. During disconnection, show a subtle inline indicator on components using live data (e.g., dimmed overlay or "Data may be stale" badge)
 
-### [ ] 3c. Specific live query hooks (`frontend/app/hooks/use-live-*.ts`)
+### [x] 3c. Specific live query hooks (`frontend/app/hooks/use-live-*.ts`)
 
 Each hook wraps `useLiveQuery` with domain-specific queries:
 
