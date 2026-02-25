@@ -1,11 +1,10 @@
 import FlowChart from "@components/workflow/flow-chart"
 import TimelineChart from "@components/workflow/timeline-chart"
-import { useStateStore } from "@stores/use-state-store"
-import { StateTask } from "@utils/translate-server-models"
-import React, { useDeferredValue } from "react"
+import { useWorkflowTasks } from "@hooks/use-live-tasks"
+import { surrealToStateTask } from "@utils/translate-server-models"
+import React, { useDeferredValue, useMemo } from "react"
 import { ReactFlowProvider } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
-import { shallow } from "zustand/shallow"
 
 export enum WorkflowChartType {
     FLOWCHART = "flowchart",
@@ -19,13 +18,8 @@ interface WorkflowGraphProps {
 }
 
 const WorkflowGraph: React.FC<WorkflowGraphProps> = ({ chartType, rootTaskId, currentTaskId }) => {
-    const workflowTasks = useStateStore((state) => {
-        const workflow: StateTask[] = []
-        state.tasks.forEach((task) => {
-            if (task.rootId === rootTaskId || task.id === rootTaskId) workflow.push(task)
-        })
-        return workflow
-    }, shallow)
+    const { data: surrealTasks } = useWorkflowTasks(rootTaskId)
+    const workflowTasks = useMemo(() => surrealTasks.map(surrealToStateTask), [surrealTasks])
 
     const deferredTasks = useDeferredValue(workflowTasks)
     switch (chartType) {

@@ -2,43 +2,22 @@ import ListSkeleton from "@components/common/list-skeleton"
 import ErrorAlert from "@components/errors/error-alert"
 import SearchResultListItem from "@components/search/search-result-list-item"
 import TaskAvatar from "@components/task/task-avatar"
-import { useClient } from "@hooks/use-client"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
-import { SearchResults } from "@services/server"
+import { useSearch } from "@hooks/use-search"
+import { TaskState } from "@services/server"
 import useSettingsStore from "@stores/use-settings-store"
+import { extractId } from "@utils/translate-server-models"
 import { format } from "date-fns"
 import { Server } from "lucide-react"
-import React, { useEffect, useState } from "react"
+import React from "react"
 
 interface SearchResultsProps {
     query: string
 }
 
-const debounce = 500
 const SearchResultList: React.FC<SearchResultsProps> = ({ query }) => {
-    const client = useClient()
     const isDemo = useSettingsStore((state) => state.demo)
-    const [results, setResults] = useState<SearchResults>({ tasks: [], workers: [] })
-    const [error, setError] = useState<unknown | null>(null)
-    const [loading, setLoading] = useState<boolean>(false)
-
-    useEffect(() => {
-        setLoading(true)
-        setError(null)
-        if (query) {
-            const token = setTimeout(() => {
-                client.search
-                    .search(query)
-                    .then((results) => setResults(results))
-                    .catch((error) => setError(error))
-                    .finally(() => setLoading(false))
-            }, debounce)
-            return () => clearTimeout(token)
-        } else {
-            setLoading(false)
-            setResults({ tasks: [], workers: [] })
-        }
-    }, [query, client])
+    const { tasks, workers, isLoading, error } = useSearch(query)
 
     if (isDemo) {
         return (
@@ -47,13 +26,13 @@ const SearchResultList: React.FC<SearchResultsProps> = ({ query }) => {
             </p>
         )
     }
-    if (loading) {
+    if (isLoading) {
         return <ListSkeleton count={5} />
     }
     if (error) {
         return <ErrorAlert error={error} />
     }
-    if (results.workers.length === 0 && results.tasks.length === 0) {
+    if (workers.length === 0 && tasks.length === 0) {
         return (
             <p className="text-center text-sm text-muted-foreground py-4">
                 Sorry, we found no tasks or workers matching your search.
@@ -63,30 +42,43 @@ const SearchResultList: React.FC<SearchResultsProps> = ({ query }) => {
 
     return (
         <ul className="w-full py-1">
-            {results.workers.map((worker) => (
-                <SearchResultListItem
-                    key={worker.id}
-                    primary={worker.hostname}
-                    secondary={`PID ${worker.pid}`}
-                    link={`/workers/${worker.id}`}
-                    avatar={
-                        <Avatar>
-                            <AvatarFallback>
-                                <Server className="size-4" />
-                            </AvatarFallback>
-                        </Avatar>
-                    }
-                />
-            ))}
-            {results.tasks.map((task) => (
-                <SearchResultListItem
-                    key={task.id}
-                    primary={task?.type || "Unknown"}
-                    secondary={"Sent at " + format(task.sent_at * 1000, "HH:mm:ss")}
-                    link={`/tasks/${task.id}`}
-                    avatar={<TaskAvatar taskId={task.id} type={task.type} status={task.state} />}
-                />
-            ))}
+            {workers.map((worker) => {
+                const workerId = extractId(worker.id)
+                return (
+                    <SearchResultListItem
+                        key={workerId}
+                        primary={worker.hostname || workerId}
+                        secondary={`PID ${worker.pid ?? "Unknown"}`}
+                        link={`/workers/${workerId}`}
+                        avatar={
+                            <Avatar>
+                                <AvatarFallback>
+                                    <Server className="size-4" />
+                                </AvatarFallback>
+                            </Avatar>
+                        }
+                    />
+                )
+            })}
+            {tasks.map((task) => {
+                const taskId = extractId(task.id)
+                const sentAtDate = task.sent_at ? new Date(task.sent_at) : null
+                const sentAt =
+                    sentAtDate && !Number.isNaN(sentAtDate.getTime())
+                        ? format(sentAtDate, "HH:mm:ss")
+                        : "Unknown"
+                return (
+                    <SearchResultListItem
+                        key={taskId}
+                        primary={task?.type || "Unknown"}
+                        secondary={`Sent at ${sentAt}`}
+                        link={`/tasks/${taskId}`}
+                        avatar={
+                            <TaskAvatar taskId={taskId} type={task.type} status={task.state as TaskState} />
+                        }
+                    />
+                )
+            })}
         </ul>
     )
 }

@@ -1,6 +1,6 @@
 import Panel from "@components/common/panel"
 import useTaskResult from "@hooks/task/use-task-result"
-import useTaskState from "@hooks/task/use-task-state"
+import { useTask } from "@hooks/use-live-tasks"
 import { useIsDark } from "@hooks/use-is-dark"
 import { Button } from "@components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
@@ -32,7 +32,7 @@ const HelpMessage: React.FC = () => (
 
 const ArgumentPanel: React.FC<ArgumentPanelProps> = ({ taskId, ...props }) => {
     const isDark = useIsDark()
-    const { task } = useTaskState(taskId)
+    const { task } = useTask(taskId)
     const { taskResult, isLoading, error } = useTaskResult(taskId)
     const showHelp = !isLoading && (!taskResult?.args || !taskResult?.kwargs)
     return (

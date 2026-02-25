@@ -1,10 +1,10 @@
 import { RawEventRow } from "@components/raw_events/raw-event-row"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@components/ui/table"
-import { CeleryEvent } from "@hooks/use-raw-events"
+import type { SurrealEvent } from "@/types/surreal-records"
 import React from "react"
 
 interface RawEventsTableProps {
-    events: CeleryEvent[]
+    events: SurrealEvent[]
 }
 
 export const RawEventsTable: React.FC<RawEventsTableProps> = ({ events }) => {

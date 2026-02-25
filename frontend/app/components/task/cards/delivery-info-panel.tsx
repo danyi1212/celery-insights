@@ -1,6 +1,6 @@
 import DetailItem from "@components/common/detail-item"
 import Panel from "@components/common/panel"
-import useTaskState from "@hooks/task/use-task-state"
+import { useTask } from "@hooks/use-live-tasks"
 import React from "react"
 import { Link } from "@tanstack/react-router"
 
@@ -9,9 +9,9 @@ interface DeliveryInfoPanelProps {
 }
 
 const DeliveryInfoPanel: React.FC<DeliveryInfoPanelProps> = ({ taskId }) => {
-    const { task, loading, error } = useTaskState(taskId)
+    const { task, isLoading, error } = useTask(taskId)
     return (
-        <Panel title="Delivery Info" loading={loading} error={error}>
+        <Panel title="Delivery Info" loading={isLoading} error={error}>
             <div className="grid grid-cols-1 gap-2 p-2 md:grid-cols-2">
                 <div className="md:col-span-2">
                     <DetailItem
@@ -32,7 +32,7 @@ const DeliveryInfoPanel: React.FC<DeliveryInfoPanelProps> = ({ taskId }) => {
                 <DetailItem
                     label="Routing Key"
                     description="Routing key this task was sent with"
-                    value={task?.routingKey || "---"}
+                    value={task?.routing_key || "---"}
                 />
             </div>
         </Panel>
