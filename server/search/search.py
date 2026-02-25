@@ -13,5 +13,6 @@ def search_workers(query: Pattern):
 
 def search_tasks(query: Pattern):
     for task_id, task in state.tasks_by_time():
-        if query.search(task_id):
+        task_name = task.name or ""
+        if query.search(task_id) or (task_name and query.search(task_name)):
             yield Task.from_celery_task(task)

@@ -287,3 +287,7 @@ pyrightconfig.json
 
 # ralphex progress logs
 .ralphex/progress/
+
+# Playwright
+frontend/e2e/test-results/
+frontend/e2e/playwright-report/
