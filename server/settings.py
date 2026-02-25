@@ -13,11 +13,24 @@ class Settings(BaseSettings):
     timezone: str = "UTC"
 
     host: str = "0.0.0.0"
-    port: int = 8555
+    port: int = 8556
 
-    max_workers: int = 5000
-    max_tasks: int = 10_000
+    # SurrealDB connection (received from Bun)
+    surrealdb_url: str = "ws://localhost:8557/rpc"
+    surrealdb_ingester_pass: str = "changeme"
+    surrealdb_namespace: str = "celery_insights"
+    surrealdb_database: str = "main"
 
-    config_path: str = "/app/config.py"
+    # Celery connection (received from Bun)
     broker_url: str = "amqp://guest:guest@host.docker.internal/"
     result_backend: str = "redis://host.docker.internal:6379/0"
+    config_path: str = "/app/config.py"
+
+    # Data retention (received from Bun)
+    cleanup_interval_seconds: int = 60
+    task_max_count: int | None = 10_000
+    task_retention_hours: float | None = None
+    dead_worker_retention_hours: float | None = 24
+
+    # Ingestion performance (received from Bun)
+    ingestion_batch_interval_ms: int = 100
