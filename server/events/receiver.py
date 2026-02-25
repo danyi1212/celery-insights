@@ -5,16 +5,8 @@ from threading import Event, Thread
 
 from celery import Celery
 from celery.events import EventReceiver
-from celery.events.state import State
-
-from settings import Settings
 
 logger = logging.getLogger(__name__)
-
-state = State(
-    max_tasks_in_memory=Settings().task_max_count or 10_000,
-    max_workers_in_memory=5_000,
-)
 
 
 class CeleryEventReceiver(Thread):
@@ -54,7 +46,6 @@ class CeleryEventReceiver(Thread):
 
     def on_event(self, event: dict) -> None:
         logger.debug(f"Received event: {event}")
-        state.event(event)
         self.queue.put_nowait(event)
         if self._stop_signal.is_set():
             raise KeyboardInterrupt("Stop signal received")

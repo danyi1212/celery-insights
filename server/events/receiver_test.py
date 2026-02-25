@@ -2,7 +2,7 @@ import pytest
 from celery import Celery
 from pytest_mock import MockerFixture
 
-from events.receiver import CeleryEventReceiver, state
+from events.receiver import CeleryEventReceiver
 
 
 @pytest.fixture
@@ -33,9 +33,8 @@ def test_stop_without_receiver(receiver, mocker: MockerFixture):
 
 
 @pytest.mark.parametrize("should_stop", [True, False])
-def test_adds_event_to_queue(receiver, should_stop, mocker: MockerFixture):
+def test_adds_event_to_queue(receiver, should_stop):
     event = {"type": "task-succeeded", "task_id": "1234", "result": "foo"}
-    state_mock = mocker.patch.object(state, "event")
     if should_stop:
         receiver._stop_signal.set()
 
@@ -47,4 +46,3 @@ def test_adds_event_to_queue(receiver, should_stop, mocker: MockerFixture):
 
     assert not receiver.queue.empty()
     assert receiver.queue.get_nowait() == event
-    state_mock.assert_called_once_with(event)

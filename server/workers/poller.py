@@ -116,9 +116,9 @@ class WorkerPoller:
 
         # Handle offline detection for known workers
         try:
-            existing: list = await db.query(
+            existing: list = await db.query(  # ty: ignore[invalid-assignment]
                 "SELECT id, missed_polls FROM worker WHERE status = 'online'"
-            )  # ty: ignore[invalid-assignment]
+            )
             known_workers: list[dict] = existing[0] if existing and isinstance(existing[0], list) else []
         except Exception:
             logger.exception("Failed to query existing workers for offline detection")
