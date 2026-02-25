@@ -55,6 +55,12 @@ export default defineConfig({
                 changeOrigin: true,
                 secure: false,
             },
+            "/surreal": {
+                target: "ws://localhost:8557",
+                changeOrigin: true,
+                secure: false,
+                ws: true,
+            },
         },
     },
 })
