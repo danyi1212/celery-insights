@@ -9,7 +9,10 @@
         "start": "bun run bun-entry.ts",
         "lint": "eslint --max-warnings=0 app",
         "lint-fix": "eslint --max-warnings=0 app --fix",
-        "generate-client": "openapi --input http://localhost:8555/openapi.json --output ./app/services/server --client axios --name ServerClient"
+        "generate-client": "openapi --input http://localhost:8555/openapi.json --output ./app/services/server --client axios --name ServerClient",
+        "e2e": "playwright test --config e2e/playwright.config.ts",
+        "e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
+        "e2e:headed": "playwright test --config e2e/playwright.config.ts --headed"
     },
     "dependencies": {
         "@tailwindcss/vite": "^4.2.1",
@@ -31,6 +34,7 @@
         "react-dom": "^19.1",
         "react-joyride": "^2.8.2",
         "react-shiki": "^0.9.1",
+        "react-transition-group": "^4.4.5",
         "react-use-websocket": "^4.8.1",
         "semver": "^7.6.3",
         "shiki": "^3.22.0",
@@ -42,9 +46,11 @@
         "zustand": "^4.5.5"
     },
     "devDependencies": {
+        "@playwright/test": "^1.58.2",
         "@tanstack/router-plugin": "^1.162.9",
         "@types/react": "^19",
         "@types/react-dom": "^19",
+        "@types/react-transition-group": "^4.4.12",
         "@types/semver": "^7.5.8",
         "@types/uuid": "^10.0.0",
         "@typescript-eslint/eslint-plugin": "^8.1.0",

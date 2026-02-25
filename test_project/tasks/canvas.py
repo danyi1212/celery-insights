@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 @app.task()
-def step(name: str, value: int = 0) -> int:
+def step(value: int, name: str) -> int:
     """A generic pipeline step that increments a value. Used in chains and chords."""
     duration = random.uniform(0.3, 1.5)
     time.sleep(duration)

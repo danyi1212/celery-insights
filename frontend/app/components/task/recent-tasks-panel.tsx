@@ -25,7 +25,8 @@ const RecentTaskListItem: React.FC<{ taskId: string }> = ({ taskId }) => {
                 <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{task?.type || "Unknown"}</p>
                     <p className="text-sm text-muted-foreground">
-                        {task?.sentAt && "Sent at " + format(task?.sentAt, "HH:mm:ss")}
+                        {taskId.slice(0, 8)}
+                        {task?.sentAt ? ` • Sent at ${format(task?.sentAt, "HH:mm:ss")}` : ""}
                     </p>
                 </div>
                 <Tooltip>

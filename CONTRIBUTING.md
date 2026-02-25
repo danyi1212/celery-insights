@@ -152,7 +152,41 @@ Code should be test-covered as much as possible.
 Unit tests should be written close to the module they are testing, with the same module name.
 For example, tests for `models.py` should be at `models_test.py` in the same folder.
 
-Integration and end-to-end tests should be written in the tests project folder.
+### Unit tests (Python)
+
+```shell
+uv run pytest                              # all tests
+uv run pytest server/tasks/model_test.py   # single file
+```
+
+### E2E tests (Playwright)
+
+E2E tests run against the full docker-compose stack (celery-insights + Celery workers + RabbitMQ + Redis + interactive API).
+
+**Full lifecycle** (starts and stops docker-compose automatically):
+```shell
+cd frontend
+bun run e2e
+```
+
+**With the stack already running** (faster iteration):
+```shell
+cd test_project && docker compose --profile interactive up --build -d
+cd ../frontend
+E2E_SKIP_COMPOSE=1 bun run e2e
+```
+
+**Headed mode** (opens a browser so you can watch the tests run):
+```shell
+E2E_SKIP_COMPOSE=1 bun run e2e:headed
+```
+
+**Playwright UI mode** (interactive test runner with time-travel debugging):
+```shell
+E2E_SKIP_COMPOSE=1 bun run e2e:ui
+```
+
+> **Tip:** When iterating locally, keep the docker-compose stack running and use `E2E_SKIP_COMPOSE=1` to skip the slow build step. Use `--headed` to see what the tests are doing, or `--ui` for the full Playwright inspector.
 
 # License
 

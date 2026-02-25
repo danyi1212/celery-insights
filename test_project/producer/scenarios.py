@@ -33,10 +33,10 @@ def _build_scenarios() -> dict[str, callable]:
     """Build a mapping of scenario name -> callable that returns a Celery signature."""
 
     def scenario_chain() -> Signature:
-        return chain(step.s("A", 0), step.s("B"), step.s("C"))
+        return chain(step.s(0, "A"), step.s("B"), step.s("C"))
 
     def scenario_chord() -> Signature:
-        return chord([step.s("W1", 0), step.s("W2", 0), step.s("W3", 0)], accumulate.s())
+        return chord([step.s(0, "W1"), step.s(0, "W2"), step.s(0, "W3")], accumulate.s())
 
     def scenario_group() -> Signature:
         return group(random_sleep.s(0.5, 2.0) for _ in range(4))
