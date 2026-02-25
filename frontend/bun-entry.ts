@@ -11,6 +11,7 @@ import { spawn, type ChildProcess } from "node:child_process"
 import Surreal from "surrealdb"
 import { config } from "./src/config"
 import { LeaderElection, generateInstanceId, type IngestionStatus } from "./src/leader-election"
+import { runSchemaMigration } from "./src/surreal-schema"
 
 const PYTHON_PORT = 8556
 const PYTHON_BACKEND = `http://localhost:${PYTHON_PORT}`
@@ -172,7 +173,10 @@ if (managingSurrealDB) {
 // 2. Wait for SurrealDB to be ready
 await waitForSurrealDB()
 
-// 3. Connect to SurrealDB as ingester user
+// 3. Run schema migration (as root — creates namespace, database, tables, ingester user)
+await runSchemaMigration(config)
+
+// 4. Connect to SurrealDB as ingester user
 const db = new Surreal()
 const surrealdbBaseUrl = config.surrealdbUrl.replace(/\/rpc$/, "")
 
@@ -193,7 +197,7 @@ try {
     process.exit(1)
 }
 
-// 4. Run leader election (spawns Python if this instance becomes leader)
+// 5. Run leader election (spawns Python if this instance becomes leader)
 leaderElection = new LeaderElection({
     db,
     config,
@@ -212,7 +216,7 @@ leaderElection = new LeaderElection({
 
 ingestionStatus = await leaderElection.start()
 
-// 5. Start serving
+// 6. Start serving
 const server = Bun.serve({
     port: config.port,
     async fetch(req, server) {
