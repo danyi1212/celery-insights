@@ -494,7 +494,7 @@ Remaining Python REST endpoints (only served when Python is running):
 
 Note: Bun also responds to `/health` directly (always available, even in read-only mode) with subprocess statuses and leader election state. The Python `/health` is proxied via `/api/health` when Python is running.
 
-### [ ] 2g. Update Python lifespan (`server/lifespan.py`)
+### [x] 2g. Update Python lifespan (`server/lifespan.py`)
 
 Python's lifespan is now much simpler — Bun has already handled leader election and decided to spawn Python, so Python just starts ingesting:
 
