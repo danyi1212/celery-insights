@@ -1,3 +1,4 @@
+import json
 import zipfile
 from collections.abc import Generator
 from pathlib import Path
@@ -6,12 +7,18 @@ from typing import Any
 import pytest
 from aiopath import AsyncPath
 from pydantic import TypeAdapter
+from pytest_mock import MockerFixture
 
-from server_info.debug_bundle import DebugBundleData, dump_file, dump_model, generate_bundle_file
+from server_info.debug_bundle import (
+    DebugBundleData,
+    _query_state_dump,
+    dump_file,
+    dump_json,
+    dump_model,
+    generate_bundle_file,
+)
 from server_info.factories import ClientDebugInfoFactory, ServerInfoFactory, StateDumpFactory
 from settings import Settings
-from tasks.factories import TaskFactory
-from tasks.model import Task
 
 
 @pytest.fixture()
@@ -24,9 +31,7 @@ def zip_file(tmp_path: Path) -> Generator[zipfile.ZipFile, None, None]:
 @pytest.mark.parametrize(
     "model, model_type",
     [
-        (TaskFactory.build(), Task),
         (Settings(), Settings),
-        ([TaskFactory.build(), TaskFactory.build()], list[Task]),
     ],
 )
 def test_dump_model(zip_file: zipfile.ZipFile, model: Any, model_type: type, filename="test.json"):
@@ -114,3 +119,63 @@ async def test_generate_bundle_file(tmp_path: Path):
             "state.json",
             "server_info.json",
         }
+
+
+def test_dump_json(zip_file: zipfile.ZipFile):
+    data = {"tasks": [{"id": "task:1", "state": "SUCCESS"}]}
+    dump_json(zip_file, "test.json", data)
+
+    assert "test.json" in zip_file.namelist()
+    content = json.loads(zip_file.read("test.json"))
+    assert content == data
+
+
+def test_dump_json_with_datetime(zip_file: zipfile.ZipFile):
+    from datetime import datetime
+
+    data = {"timestamp": datetime(2024, 1, 1)}
+    dump_json(zip_file, "dates.json", data)
+
+    assert "dates.json" in zip_file.namelist()
+    content = json.loads(zip_file.read("dates.json"))
+    assert content["timestamp"] == "2024-01-01 00:00:00"
+
+
+class TestQueryStateDump:
+    @pytest.fixture()
+    def mock_db(self, mocker: MockerFixture):
+        mock = mocker.AsyncMock()
+        mocker.patch("server_info.debug_bundle.get_db", return_value=mock)
+        return mock
+
+    @pytest.mark.asyncio
+    async def test_returns_tasks_and_workers(self, mock_db):
+        mock_db.query.side_effect = [
+            [{"id": "task:1", "state": "SUCCESS"}],
+            [{"id": "worker:w1", "status": "online"}],
+        ]
+
+        dump = await _query_state_dump()
+
+        assert len(dump.tasks) == 1
+        assert dump.tasks[0]["id"] == "task:1"
+        assert len(dump.workers) == 1
+        assert dump.workers[0]["id"] == "worker:w1"
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_on_error(self, mock_db):
+        mock_db.query.side_effect = Exception("SurrealDB down")
+
+        dump = await _query_state_dump()
+
+        assert dump.tasks == []
+        assert dump.workers == []
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_on_empty_results(self, mock_db):
+        mock_db.query.side_effect = [[], []]
+
+        dump = await _query_state_dump()
+
+        assert dump.tasks == []
+        assert dump.workers == []

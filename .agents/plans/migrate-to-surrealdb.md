@@ -481,7 +481,7 @@ SurrealDB has no native TTL, cron, or retention policies. Cleanup must be trigge
   - `GET /api/search` — remove (frontend searches SurrealDB directly)
 - Remove `server/search/` module entirely (search moves to frontend)
 
-### [ ] 2f. Update settings / server info endpoints
+### [x] 2f. Update settings / server info endpoints
 
 Remaining Python REST endpoints (only served when Python is running):
 

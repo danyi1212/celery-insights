@@ -1,8 +1,8 @@
+from typing import ClassVar
+
 from polyfactory.factories.pydantic_factory import ModelFactory
 
 from server_info.models import ClientDebugInfo, ServerInfo, StateDump
-from tasks.factories import TaskFactory
-from workers.factories import WorkerFactory
 from workers.models import CPULoad
 
 
@@ -17,5 +17,5 @@ class ClientDebugInfoFactory(ModelFactory[ClientDebugInfo]):
 
 class StateDumpFactory(ModelFactory[StateDump]):
     __model__ = StateDump
-    tasks = list[TaskFactory]
-    workers = list[WorkerFactory]
+    tasks: ClassVar[list[dict]] = [{"id": "task:test-1", "state": "SUCCESS", "type": "app.add"}]
+    workers: ClassVar[list[dict]] = [{"id": "worker:test-1", "status": "online"}]

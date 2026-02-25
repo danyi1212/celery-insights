@@ -8,11 +8,21 @@ from typing import Self
 from pydantic import BaseModel, Field
 from starlette.requests import Request
 
-from tasks.model import Task
-from workers.models import CPULoad, Worker
+from surrealdb_client import get_db
+from workers.models import CPULoad
 
 logger = logging.getLogger(__name__)
 start_time = time.time()
+
+
+async def _query_count(db, table: str) -> int:
+    """Query SurrealDB for the count of records in a table."""
+    result = await db.query(f"SELECT count() AS count FROM {table} GROUP ALL")
+    if result and isinstance(result, list) and len(result) > 0:
+        first = result[0]
+        if isinstance(first, dict):
+            return first.get("count", 0)
+    return 0
 
 
 class ServerInfo(BaseModel):
@@ -29,8 +39,16 @@ class ServerInfo(BaseModel):
     worker_count: int = Field(description="Number of workers known")
 
     @classmethod
-    def create(cls, request: Request) -> Self:
-        # TODO(2f): Query SurrealDB for task/worker counts
+    async def create(cls, request: Request) -> Self:
+        task_count = 0
+        worker_count = 0
+        try:
+            db = get_db()
+            task_count = await _query_count(db, "task")
+            worker_count = await _query_count(db, "worker")
+        except Exception:
+            logger.exception("Failed to query SurrealDB for task/worker counts")
+
         rusage = resource.getrusage(resource.RUSAGE_SELF)
         return cls(
             cpu_usage=CPULoad(*os.getloadavg()),
@@ -42,8 +60,8 @@ class ServerInfo(BaseModel):
             server_os=platform.system(),
             server_name=platform.node(),
             python_version=platform.python_version(),
-            task_count=0,
-            worker_count=0,
+            task_count=task_count,
+            worker_count=worker_count,
         )
 
 
@@ -54,5 +72,5 @@ class ClientDebugInfo(BaseModel):
 
 
 class StateDump(BaseModel):
-    tasks: list[Task]
-    workers: list[Worker]
+    tasks: list[dict]
+    workers: list[dict]
