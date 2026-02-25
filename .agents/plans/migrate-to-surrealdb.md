@@ -444,7 +444,7 @@ The broadcaster becomes a `SurrealDBIngester`:
 - **Result size limit**: truncate results larger than 100KB before storing in SurrealDB, with a `result_truncated: true` flag. Celery results can be arbitrarily large (DataFrames, file contents); storing them all would bloat the database. The full result remains available in the Celery result backend.
 - Gracefully handle result backend unavailability (log warning, skip)
 
-### [ ] 2c. Worker periodic poller (`server/workers/poller.py`)
+### [x] 2c. Worker periodic poller (`server/workers/poller.py`)
 
 - Async loop running every N seconds (configurable, default 5s)
 - Calls Celery inspect API (via `asyncio.to_thread`): `inspect.stats()`, `inspect.active()`, `inspect.registered()`, `inspect.scheduled()`, `inspect.reserved()`, `inspect.active_queues()`
