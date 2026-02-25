@@ -360,7 +360,7 @@ Bun is now the full orchestrator — it manages both subprocesses and decides wh
 - Static assets with cache headers (same as current)
 - SPA fallback for all other routes
 
-### [ ] 1d. Vite dev proxy (`frontend/vite.config.ts`)
+### [x] 1d. Vite dev proxy (`frontend/vite.config.ts`)
 
 Add proxy rule: `/surreal` → `ws://localhost:8557` (for dev mode).
 
