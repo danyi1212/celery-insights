@@ -291,3 +291,4 @@ pyrightconfig.json
 # Playwright
 frontend/e2e/test-results/
 frontend/e2e/playwright-report/
+frontend/test-results/
