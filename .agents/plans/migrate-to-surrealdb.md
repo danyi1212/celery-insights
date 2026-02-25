@@ -385,7 +385,7 @@ Python-side SurrealDB client — used only by the ingestion pipeline:
 - Reconnection logic: on connection loss, retry with exponential backoff (1s, 2s, 4s, max 30s)
 - No schema migration here — Bun handles that before spawning Python
 
-### [ ] 1g. Schema migration and auth setup (runs in Bun)
+### [x] 1g. Schema migration and auth setup (runs in Bun)
 
 Bun runs schema migration **before** spawning Python or starting the leader election, using the SurrealDB JS SDK:
 
