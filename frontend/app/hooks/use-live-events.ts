@@ -9,13 +9,14 @@ const byTimestampAsc = (a: SurrealEvent, b: SurrealEvent) =>
     new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
 
 /** Raw events for the events page — ordered by timestamp descending with a limit. */
-export const useLiveEvents = (limit = 100) =>
+export const useLiveEvents = (limit = 100, enabled = true) =>
     useLiveQuery<SurrealEvent>({
         initialQuery: "SELECT * FROM event ORDER BY timestamp DESC LIMIT $limit",
         liveTable: "event",
         bindings: useMemo(() => ({ limit }), [limit]),
         orderBy: byTimestampDesc,
         limit,
+        enabled,
     })
 
 /** Events for a specific task — ordered by timestamp ascending (chronological). */

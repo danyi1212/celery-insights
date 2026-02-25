@@ -9,14 +9,15 @@ import RevokedTasksPanel from "@components/worker/panels/tasks/revoked-tasks-pan
 import ScheduledTasksPanel from "@components/worker/panels/tasks/scheduled-tasks-panel"
 import WorkerDetailsCard from "@components/worker/panels/worker-details-card"
 import { AlertCircle } from "lucide-react"
-import { useStateStore } from "@stores/use-state-store"
+import { useWorker } from "@hooks/use-live-workers"
 import { useTourChangeStepOnLoad } from "@stores/use-tour-store"
-import { useCallback, useMemo } from "react"
+import { useMemo } from "react"
 
 const WorkerPage = () => {
     const { workerId } = Route.useParams()
     const hostname = useMemo(() => workerId.substring(0, workerId.lastIndexOf("-")), [workerId])
-    const notFound = useStateStore(useCallback((state) => !state.workers.has(workerId), [workerId]))
+    const { worker, isLoading } = useWorker(workerId)
+    const notFound = !isLoading && worker === null
     useTourChangeStepOnLoad(8, !notFound)
 
     if (notFound)

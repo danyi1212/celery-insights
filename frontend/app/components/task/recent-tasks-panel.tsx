@@ -5,14 +5,17 @@ import Panel, { PanelProps } from "@components/common/panel"
 import TaskAvatar from "@components/task/task-avatar"
 import { Button } from "@components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
-import { useStateStore } from "@stores/use-state-store"
+import { useLiveTasks } from "@hooks/use-live-tasks"
+import { TaskState } from "@services/server"
+import { extractId } from "@utils/translate-server-models"
+import type { SurrealTask } from "@/types/surreal-records"
 import { format } from "date-fns"
 import { ChevronRight } from "lucide-react"
-import React, { useCallback } from "react"
+import React from "react"
 import { Link as RouterLink } from "@tanstack/react-router"
 
-const RecentTaskListItem: React.FC<{ taskId: string }> = ({ taskId }) => {
-    const task = useStateStore(useCallback((store) => store.tasks.get(taskId), [taskId]))
+const RecentTaskListItem: React.FC<{ task: SurrealTask }> = ({ task }) => {
+    const taskId = extractId(task.id)
     return (
         <AnimatedListItem disablePadding>
             <RouterLink
@@ -20,13 +23,13 @@ const RecentTaskListItem: React.FC<{ taskId: string }> = ({ taskId }) => {
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-accent"
             >
                 <div className="shrink-0">
-                    <TaskAvatar taskId={taskId} type={task?.type} status={task?.state} disableLink />
+                    <TaskAvatar taskId={taskId} type={task.type} status={task.state as TaskState} disableLink />
                 </div>
                 <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{task?.type || "Unknown"}</p>
+                    <p className="truncate font-medium">{task.type || "Unknown"}</p>
                     <p className="text-sm text-muted-foreground">
                         {taskId.slice(0, 8)}
-                        {task?.sentAt ? ` • Sent at ${format(task?.sentAt, "HH:mm:ss")}` : ""}
+                        {task.sent_at ? ` • Sent at ${format(new Date(task.sent_at), "HH:mm:ss")}` : ""}
                     </p>
                 </div>
                 <Tooltip>
@@ -43,7 +46,7 @@ const RecentTaskListItem: React.FC<{ taskId: string }> = ({ taskId }) => {
 }
 
 const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
-    const recentTaskIds = useStateStore((state) => state.recentTaskIds)
+    const { data: tasks } = useLiveTasks(30)
 
     return (
         <Panel
@@ -55,10 +58,10 @@ const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
             }
             {...props}
         >
-            {recentTaskIds.length ? (
+            {tasks.length ? (
                 <AnimatedList>
-                    {recentTaskIds.map((taskId) => (
-                        <RecentTaskListItem key={taskId} taskId={taskId} />
+                    {tasks.map((task) => (
+                        <RecentTaskListItem key={extractId(task.id)} task={task} />
                     ))}
                 </AnimatedList>
             ) : (

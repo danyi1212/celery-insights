@@ -4,10 +4,10 @@ import LinearProgressWithLabel from "@components/common/linear-progress-with-lab
 import Panel, { PanelProps } from "@components/common/panel"
 import WorkerStatus from "@components/worker/worker-status"
 import useWorkerStats from "@hooks/worker/use-worker-stats"
-import { useStateStore } from "@stores/use-state-store"
+import { useWorker } from "@hooks/use-live-workers"
 import { formatBytes } from "@utils/format-bytes"
 import { formatSecondsDurationLong } from "@utils/format-seconds-duration-long"
-import React, { useCallback } from "react"
+import React from "react"
 
 interface WorkerDetailsCardProps extends Omit<PanelProps, "title"> {
     workerId: string
@@ -15,8 +15,10 @@ interface WorkerDetailsCardProps extends Omit<PanelProps, "title"> {
 }
 
 const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, hostname, ...props }) => {
-    const worker = useStateStore(useCallback((state) => state.workers.get(workerId), [workerId]))
+    const { worker } = useWorker(workerId)
     const { stats, isLoading, error } = useWorkerStats(hostname)
+
+    const heartbeatExpires = worker?.heartbeat_expires ? new Date(worker.heartbeat_expires) : undefined
 
     return (
         <Panel title="Worker" loading={isLoading} error={error} actions={<CopyLinkButton />} {...props}>
@@ -28,7 +30,7 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, hostnam
                     <DetailItem
                         label="CPU Usage"
                         description="Percentage of CPU used by worker process"
-                        value={<LinearProgressWithLabel value={worker?.cpuLoad?.[2] || 0} percentageLabel />}
+                        value={<LinearProgressWithLabel value={worker?.cpu_load?.[2] || 0} percentageLabel />}
                     />
                 </div>
                 <div className="col-span-12 md:col-span-6">
@@ -49,22 +51,22 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, hostnam
                     <DetailItem label="Process ID" value={worker?.pid} />
                 </div>
                 <div className="col-span-12 md:col-span-6">
-                    <DetailItem label="Software Name" value={worker?.softwareIdentity} />
+                    <DetailItem label="Software Name" value={worker?.software_identity} />
                 </div>
                 <div className="col-span-12 md:col-span-6">
-                    <DetailItem label="Host OS" value={worker?.softwareSys} />
+                    <DetailItem label="Host OS" value={worker?.software_sys} />
                 </div>
                 <div className="col-span-12 md:col-span-6">
-                    <DetailItem label="Software Version" value={worker?.softwareVersion} />
+                    <DetailItem label="Software Version" value={worker?.software_version} />
                 </div>
                 <div className="col-span-12 md:col-span-6">
                     <DetailItem
                         label="Status"
                         description="Amount of time until the worker is considered offline"
-                        color={worker?.heartbeatExpires && worker?.heartbeatExpires < new Date() ? "danger" : "primary"}
+                        color={heartbeatExpires && heartbeatExpires < new Date() ? "danger" : "primary"}
                         value={
                             <div>
-                                <WorkerStatus heartbeatExpires={worker?.heartbeatExpires || new Date()} />
+                                <WorkerStatus heartbeatExpires={heartbeatExpires || new Date()} />
                             </div>
                         }
                     />

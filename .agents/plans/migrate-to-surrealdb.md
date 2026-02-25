@@ -703,7 +703,7 @@ The read-only mode banner is especially important — without it, users would wo
 
 Uses the `{ connected, reconnecting, error, ingestionStatus }` state from `SurrealDBProvider`.
 
-### [ ] 3f. Update components
+### [x] 3f. Update components
 
 Replace all `useStateStore` selectors with live query hooks:
 

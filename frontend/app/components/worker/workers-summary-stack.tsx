@@ -1,20 +1,22 @@
 import WorkerSummary from "@components/worker/worker-summary"
-import { useOnlineWorkerIds } from "@hooks/worker/use-online-worker-ids"
+import { useOnlineWorkers } from "@hooks/use-live-workers"
+import { extractId } from "@utils/translate-server-models"
 import React from "react"
 
 const WorkersSummaryStack: React.FC = () => {
-    const workerIds = useOnlineWorkerIds()
+    const { data: workers } = useOnlineWorkers()
 
     return (
         <div>
             <div className="flex min-h-16 items-center px-4">
                 <h4 className="truncate text-2xl font-semibold">Online Workers</h4>
             </div>
-            {workerIds.length ? (
+            {workers.length ? (
                 <div className="flex flex-col gap-5">
-                    {workerIds.map((workerId) => (
-                        <WorkerSummary key={workerId} workerId={workerId} />
-                    ))}
+                    {workers.map((worker) => {
+                        const workerId = extractId(worker.id)
+                        return <WorkerSummary key={workerId} workerId={workerId} />
+                    })}
                 </div>
             ) : (
                 <div className="my-10 text-center">
