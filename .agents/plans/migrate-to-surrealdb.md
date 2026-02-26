@@ -739,7 +739,7 @@ Replace all `useStateStore` selectors with live query hooks:
 - Remove `openapi-typescript-codegen` dev dependency (or keep if settings endpoints remain)
 - Consider removing TanStack Query if no REST endpoints remain that need it (settings/info may still use it)
 
-### [ ] 3h. Update data models
+### [x] 3h. Update data models
 
 - Rename `StateTask` → `Task`, fields come from SurrealDB records directly
 - Timestamps are SurrealDB `datetime` (ISO strings) → parse to `Date` in `useLiveQuery` or a transform layer

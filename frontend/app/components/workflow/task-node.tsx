@@ -1,9 +1,9 @@
 import TaskAvatar from "@components/task/task-avatar"
-import { StateTask } from "@/types/state-types"
+import type { Task } from "@/types/surreal-records"
 import React from "react"
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react"
 
-type TaskNodeType = Node<StateTask, "taskNode">
+type TaskNodeType = Node<Task, "taskNode">
 
 const TaskNode: React.FC<NodeProps<TaskNodeType>> = ({ data }) => {
     return (

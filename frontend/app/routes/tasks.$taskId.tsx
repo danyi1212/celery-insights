@@ -9,14 +9,14 @@ import TaskPageHeader from "@components/task/task-page-header"
 import WorkflowGraph, { WorkflowChartType } from "@components/workflow/workflow-graph"
 import { Skeleton } from "@components/ui/skeleton"
 import { useTask } from "@hooks/use-live-tasks"
-import { surrealToStateTask } from "@/types/state-types"
+import { parseTask } from "@/types/surreal-records"
 import { useTourChangeStepOnLoad } from "@stores/use-tour-store"
 import React, { useMemo } from "react"
 
 const TaskPage = () => {
     const { taskId } = Route.useParams()
     const { task: surrealTask } = useTask(taskId)
-    const task = useMemo(() => (surrealTask ? surrealToStateTask(surrealTask) : undefined), [surrealTask])
+    const task = useMemo(() => (surrealTask ? parseTask(surrealTask) : undefined), [surrealTask])
     const [chartType, setChartType] = React.useState<WorkflowChartType>(WorkflowChartType.FLOWCHART)
     useTourChangeStepOnLoad(2, task !== undefined)
 
@@ -34,7 +34,7 @@ const TaskPage = () => {
         <div>
             <div className="h-[50vh] w-full" id="workflow-chart">
                 {task ? (
-                    <WorkflowGraph chartType={chartType} rootTaskId={task.rootId || task.id} currentTaskId={task.id} />
+                    <WorkflowGraph chartType={chartType} rootTaskId={task.root_id || task.id} currentTaskId={task.id} />
                 ) : (
                     <Skeleton className="h-[450px] w-full" />
                 )}

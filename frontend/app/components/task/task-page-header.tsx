@@ -7,13 +7,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { ToggleGroup, ToggleGroupItem } from "@components/ui/toggle-group"
 import { WorkflowChartType } from "@components/workflow/workflow-graph"
 import { cn } from "@lib/utils"
-import { StateTask } from "@/types/state-types"
+import type { Task } from "@/types/surreal-records"
 import { GanttChart, GitBranch } from "lucide-react"
 import React, { useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 
 interface TaskPageHeaderProps {
-    task: StateTask | undefined
+    task: Task | undefined
     chartType: WorkflowChartType
     setChartType: (type: WorkflowChartType) => void
 }

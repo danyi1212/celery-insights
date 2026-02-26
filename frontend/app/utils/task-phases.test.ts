@@ -1,5 +1,5 @@
 import { TaskState } from "@/types/surreal-records"
-import { createStateTask } from "@test-fixtures"
+import { createTask } from "@test-fixtures"
 import {
     isTerminalState,
     getTaskEndTime,
@@ -32,62 +32,62 @@ describe("isTerminalState", () => {
 describe("getTaskEndTime", () => {
     const now = new Date("2024-01-01T12:00:00Z")
 
-    it("returns succeededAt when task succeeded", () => {
-        const task = createStateTask({ succeededAt: new Date("2024-01-01T11:00:00Z") })
+    it("returns succeeded_at when task succeeded", () => {
+        const task = createTask({ succeeded_at: new Date("2024-01-01T11:00:00Z") })
         expect(getTaskEndTime(task, now)).toEqual(new Date("2024-01-01T11:00:00Z"))
     })
 
-    it("returns failedAt when task failed", () => {
-        const task = createStateTask({ succeededAt: undefined, failedAt: new Date("2024-01-01T11:30:00Z") })
+    it("returns failed_at when task failed", () => {
+        const task = createTask({ succeeded_at: undefined, failed_at: new Date("2024-01-01T11:30:00Z") })
         expect(getTaskEndTime(task, now)).toEqual(new Date("2024-01-01T11:30:00Z"))
     })
 
-    it("returns retriedAt when task retried", () => {
-        const task = createStateTask({
-            succeededAt: undefined,
-            failedAt: undefined,
-            retriedAt: new Date("2024-01-01T11:15:00Z"),
+    it("returns retried_at when task retried", () => {
+        const task = createTask({
+            succeeded_at: undefined,
+            failed_at: undefined,
+            retried_at: new Date("2024-01-01T11:15:00Z"),
         })
         expect(getTaskEndTime(task, now)).toEqual(new Date("2024-01-01T11:15:00Z"))
     })
 
-    it("prioritizes succeededAt over other finish timestamps", () => {
-        const task = createStateTask({
-            succeededAt: new Date("2024-01-01T11:00:00Z"),
-            failedAt: new Date("2024-01-01T11:30:00Z"),
+    it("prioritizes succeeded_at over other finish timestamps", () => {
+        const task = createTask({
+            succeeded_at: new Date("2024-01-01T11:00:00Z"),
+            failed_at: new Date("2024-01-01T11:30:00Z"),
         })
         expect(getTaskEndTime(task, now)).toEqual(new Date("2024-01-01T11:00:00Z"))
     })
 
-    it("returns rejectedAt when only rejectedAt is set", () => {
-        const task = createStateTask({
-            succeededAt: undefined,
-            failedAt: undefined,
-            retriedAt: undefined,
-            rejectedAt: new Date("2024-01-01T11:20:00Z"),
-            revokedAt: undefined,
+    it("returns rejected_at when only rejected_at is set", () => {
+        const task = createTask({
+            succeeded_at: undefined,
+            failed_at: undefined,
+            retried_at: undefined,
+            rejected_at: new Date("2024-01-01T11:20:00Z"),
+            revoked_at: undefined,
         })
         expect(getTaskEndTime(task, now)).toEqual(new Date("2024-01-01T11:20:00Z"))
     })
 
-    it("returns revokedAt when only revokedAt is set", () => {
-        const task = createStateTask({
-            succeededAt: undefined,
-            failedAt: undefined,
-            retriedAt: undefined,
-            rejectedAt: undefined,
-            revokedAt: new Date("2024-01-01T11:25:00Z"),
+    it("returns revoked_at when only revoked_at is set", () => {
+        const task = createTask({
+            succeeded_at: undefined,
+            failed_at: undefined,
+            retried_at: undefined,
+            rejected_at: undefined,
+            revoked_at: new Date("2024-01-01T11:25:00Z"),
         })
         expect(getTaskEndTime(task, now)).toEqual(new Date("2024-01-01T11:25:00Z"))
     })
 
     it("falls back to now when no terminal timestamp exists", () => {
-        const task = createStateTask({
-            succeededAt: undefined,
-            failedAt: undefined,
-            retriedAt: undefined,
-            rejectedAt: undefined,
-            revokedAt: undefined,
+        const task = createTask({
+            succeeded_at: undefined,
+            failed_at: undefined,
+            retried_at: undefined,
+            rejected_at: undefined,
+            revoked_at: undefined,
         })
         expect(getTaskEndTime(task, now)).toEqual(now)
     })
@@ -97,12 +97,12 @@ describe("computeTaskPhases", () => {
     const now = new Date("2024-01-01T12:00:00Z")
 
     it("computes 3 phases for a full lifecycle task", () => {
-        const sentAt = new Date("2024-01-01T11:00:00Z")
-        const receivedAt = new Date("2024-01-01T11:00:01Z")
-        const startedAt = new Date("2024-01-01T11:00:02Z")
-        const succeededAt = new Date("2024-01-01T11:00:05Z")
+        const sent_at = new Date("2024-01-01T11:00:00Z")
+        const received_at = new Date("2024-01-01T11:00:01Z")
+        const started_at = new Date("2024-01-01T11:00:02Z")
+        const succeeded_at = new Date("2024-01-01T11:00:05Z")
 
-        const task = createStateTask({ sentAt, receivedAt, startedAt, succeededAt })
+        const task = createTask({ sent_at, received_at, started_at, succeeded_at })
         const phases = computeTaskPhases(task, now)
 
         expect(phases).toHaveLength(3)
@@ -117,13 +117,13 @@ describe("computeTaskPhases", () => {
         expect(phases[2].durationMs).toBe(3000)
     })
 
-    it("computes single queue phase for a task with only sentAt", () => {
-        const sentAt = new Date("2024-01-01T11:59:50Z")
-        const task = createStateTask({
-            sentAt,
-            receivedAt: undefined,
-            startedAt: undefined,
-            succeededAt: undefined,
+    it("computes single queue phase for a task with only sent_at", () => {
+        const sent_at = new Date("2024-01-01T11:59:50Z")
+        const task = createTask({
+            sent_at,
+            received_at: undefined,
+            started_at: undefined,
+            succeeded_at: undefined,
             state: TaskState.PENDING,
         })
         const phases = computeTaskPhases(task, now)
@@ -135,11 +135,11 @@ describe("computeTaskPhases", () => {
 
     it("handles zero-duration phases by omitting them", () => {
         const t = new Date("2024-01-01T11:00:00Z")
-        const task = createStateTask({
-            sentAt: t,
-            receivedAt: t,
-            startedAt: t,
-            succeededAt: new Date("2024-01-01T11:00:05Z"),
+        const task = createTask({
+            sent_at: t,
+            received_at: t,
+            started_at: t,
+            succeeded_at: new Date("2024-01-01T11:00:05Z"),
         })
         const phases = computeTaskPhases(task, now)
 
@@ -149,15 +149,15 @@ describe("computeTaskPhases", () => {
     })
 
     it("shows running task phases extending to now", () => {
-        const sentAt = new Date("2024-01-01T11:59:55Z")
-        const receivedAt = new Date("2024-01-01T11:59:56Z")
-        const startedAt = new Date("2024-01-01T11:59:57Z")
+        const sent_at = new Date("2024-01-01T11:59:55Z")
+        const received_at = new Date("2024-01-01T11:59:56Z")
+        const started_at = new Date("2024-01-01T11:59:57Z")
 
-        const task = createStateTask({
-            sentAt,
-            receivedAt,
-            startedAt,
-            succeededAt: undefined,
+        const task = createTask({
+            sent_at,
+            received_at,
+            started_at,
+            succeeded_at: undefined,
             state: TaskState.STARTED,
         })
         const phases = computeTaskPhases(task, now)
@@ -168,13 +168,13 @@ describe("computeTaskPhases", () => {
     })
 
     it("skips worker wait phase when task was not received", () => {
-        const sentAt = new Date("2024-01-01T11:00:00Z")
-        const task = createStateTask({
-            sentAt,
-            receivedAt: undefined,
-            startedAt: undefined,
-            succeededAt: undefined,
-            revokedAt: new Date("2024-01-01T11:00:05Z"),
+        const sent_at = new Date("2024-01-01T11:00:00Z")
+        const task = createTask({
+            sent_at,
+            received_at: undefined,
+            started_at: undefined,
+            succeeded_at: undefined,
+            revoked_at: new Date("2024-01-01T11:00:05Z"),
             state: TaskState.REVOKED,
         })
         const phases = computeTaskPhases(task, now)
@@ -186,16 +186,16 @@ describe("computeTaskPhases", () => {
         expect(labels).not.toContain("Waiting in Worker")
     })
 
-    it("handles revoked task with revokedAt as fallback", () => {
-        const sentAt = new Date("2024-01-01T11:00:00Z")
-        const revokedAt = new Date("2024-01-01T11:00:03Z")
+    it("handles revoked task with revoked_at as fallback", () => {
+        const sent_at = new Date("2024-01-01T11:00:00Z")
+        const revoked_at = new Date("2024-01-01T11:00:03Z")
 
-        const task = createStateTask({
-            sentAt,
-            receivedAt: undefined,
-            startedAt: undefined,
-            succeededAt: undefined,
-            revokedAt,
+        const task = createTask({
+            sent_at,
+            received_at: undefined,
+            started_at: undefined,
+            succeeded_at: undefined,
+            revoked_at,
             state: TaskState.REVOKED,
         })
         const phases = computeTaskPhases(task, now)

@@ -1,7 +1,7 @@
 import TaskNode from "@components/workflow/task-node"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { useIsDark } from "@hooks/use-is-dark"
-import { StateTask } from "@/types/state-types"
+import type { Task } from "@/types/surreal-records"
 import { Camera, Focus, Maximize2, Move, Navigation } from "lucide-react"
 import { toSvg } from "html-to-image"
 import React, { useCallback, useEffect, useState } from "react"
@@ -21,7 +21,7 @@ import {
     type XYPosition,
 } from "@xyflow/react"
 
-const createNode = (task: StateTask, x: number, y: number, nodeId?: string): Node => ({
+const createNode = (task: Task, x: number, y: number, nodeId?: string): Node => ({
     id: nodeId || task.id,
     type: "taskNode",
     position: { x: x * 180, y: y * 100 },
@@ -40,11 +40,11 @@ function createEdge(sourceId: string, targetId: string): Edge {
     }
 }
 
-const getChildMap = (tasks: StateTask[]): Map<string, StateTask[]> => {
-    const map = new Map<string, StateTask[]>()
+const getChildMap = (tasks: Task[]): Map<string, Task[]> => {
+    const map = new Map<string, Task[]>()
     for (const task of tasks)
-        if (task.parentId) {
-            const id = task.parentId
+        if (task.parent_id) {
+            const id = task.parent_id
             if (!map.has(id)) map.set(id, [])
 
             map.get(id)?.push(task)
@@ -53,7 +53,7 @@ const getChildMap = (tasks: StateTask[]): Map<string, StateTask[]> => {
 }
 
 export const getFlowGraph = (
-    tasks: StateTask[],
+    tasks: Task[],
     rootTaskId: string,
     initialPosition?: XYPosition,
 ): {
@@ -62,11 +62,11 @@ export const getFlowGraph = (
 } => {
     const nodes: Node[] = []
     const edges: Edge[] = []
-    const taskMap = new Map<string, StateTask>(tasks.map((task) => [task.id, task]))
+    const taskMap = new Map<string, Task>(tasks.map((task) => [task.id, task]))
     const childMap = getChildMap(tasks)
     const visited = new Set<string>()
 
-    function dfs(task: StateTask, x: number, y: number) {
+    function dfs(task: Task, x: number, y: number) {
         visited.add(task.id)
         nodes.push(createNode(task, x, y))
 
@@ -114,7 +114,7 @@ function downloadImage(dataUrl: string) {
 }
 
 interface FlowChartProps {
-    tasks: StateTask[]
+    tasks: Task[]
     rootTaskId: string
     currentTaskId?: string
 }

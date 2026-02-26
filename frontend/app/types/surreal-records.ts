@@ -155,3 +155,71 @@ export const parseWorkerInspect = (worker: SurrealWorker | null): WorkerInspectD
         return null
     }
 }
+
+// --- Parsed task type (SurrealDB fields with Date objects) ---
+
+const isoToDate = (iso: string | null | undefined): Date | undefined => (iso ? new Date(iso) : undefined)
+
+/** Parsed task — same shape as SurrealTask but with extracted id and Date timestamps */
+export interface Task {
+    id: string
+    type?: string
+    state: TaskState
+    sent_at: Date
+    received_at?: Date
+    started_at?: Date
+    succeeded_at?: Date
+    failed_at?: Date
+    retried_at?: Date
+    revoked_at?: Date
+    rejected_at?: Date
+    runtime?: number
+    last_updated: Date
+    args?: string
+    kwargs?: string
+    eta?: string
+    expires?: string
+    retries?: number
+    exchange?: string
+    routing_key?: string
+    root_id?: string
+    parent_id?: string
+    children: string[]
+    worker?: string
+    result?: string
+    result_truncated?: boolean
+    exception?: string
+    traceback?: string
+}
+
+/** Convert a raw SurrealDB task record to a parsed Task with Date objects */
+export const parseTask = (raw: SurrealTask): Task => ({
+    id: extractId(raw.id),
+    type: raw.type || undefined,
+    state: (raw.state as TaskState) || TaskState.PENDING,
+    sent_at: isoToDate(raw.sent_at) || new Date(),
+    received_at: isoToDate(raw.received_at),
+    started_at: isoToDate(raw.started_at),
+    succeeded_at: isoToDate(raw.succeeded_at),
+    failed_at: isoToDate(raw.failed_at),
+    retried_at: isoToDate(raw.retried_at),
+    revoked_at: isoToDate(raw.revoked_at),
+    rejected_at: isoToDate(raw.rejected_at),
+    runtime: raw.runtime ?? undefined,
+    last_updated: isoToDate(raw.last_updated) || new Date(),
+    args: raw.args || undefined,
+    kwargs: raw.kwargs || undefined,
+    eta: raw.eta || undefined,
+    expires: raw.expires || undefined,
+    retries: raw.retries ?? undefined,
+    exchange: raw.exchange || undefined,
+    routing_key: raw.routing_key || undefined,
+    root_id: raw.root_id || undefined,
+    parent_id: raw.parent_id || undefined,
+    children: raw.children,
+    worker: raw.worker || undefined,
+    result: raw.result || undefined,
+    result_truncated: raw.result_truncated,
+    exception: raw.exception || undefined,
+    traceback: raw.traceback || undefined,
+})

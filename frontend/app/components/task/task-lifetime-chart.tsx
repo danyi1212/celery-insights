@@ -1,6 +1,6 @@
 import { useNow } from "@hooks/use-now"
 import { cn } from "@lib/utils"
-import { StateTask } from "@/types/state-types"
+import type { Task } from "@/types/surreal-records"
 import {
     computeTaskPhases,
     formatDuration,
@@ -16,7 +16,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 const REALTIME_INTERVAL = 100
 
 interface TaskLifetimeChartProps {
-    task: StateTask
+    task: Task
     className?: string
     showTimeAxis?: boolean
     showLegend?: boolean
@@ -83,8 +83,8 @@ const TaskLifetimeChart: React.FC<TaskLifetimeChartProps> = ({
     }, [phases])
 
     const timelineStart = useMemo(
-        () => (phases.length > 0 ? phases[0].startMs : task.sentAt.getTime()),
-        [phases, task.sentAt],
+        () => (phases.length > 0 ? phases[0].startMs : task.sent_at.getTime()),
+        [phases, task.sent_at],
     )
 
     const timelineEnd = useMemo(() => getTaskEndTime(task, now).getTime(), [task, now])

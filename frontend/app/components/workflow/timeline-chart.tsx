@@ -1,8 +1,7 @@
 import TaskAvatar from "@components/task/task-avatar"
 import { useNow } from "@hooks/use-now"
 import { cn } from "@lib/utils"
-import { TaskState } from "@/types/surreal-records"
-import { StateTask } from "@/types/state-types"
+import { TaskState, type Task } from "@/types/surreal-records"
 import { formatDuration, formatTime, isTerminalState } from "@utils/task-phases"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { useTourChangeStepOnLoad } from "@stores/use-tour-store"
@@ -29,14 +28,14 @@ const TIME_AXIS_HEIGHT = 24
 const ROW_GAP = 4
 
 interface TimelineChartProps {
-    tasks: StateTask[]
+    tasks: Task[]
     currentTaskId?: string
 }
 
-const getTaskEnd = (task: StateTask, now: Date): Date =>
-    task.succeededAt || task.failedAt || task.retriedAt || task.rejectedAt || task.revokedAt || now
+const getTaskEnd = (task: Task, now: Date): Date =>
+    task.succeeded_at || task.failed_at || task.retried_at || task.rejected_at || task.revoked_at || now
 
-const TaskBarTooltip: React.FC<{ task: StateTask; durationMs: number }> = ({ task, durationMs }) => (
+const TaskBarTooltip: React.FC<{ task: Task; durationMs: number }> = ({ task, durationMs }) => (
     <div className="flex flex-col gap-1.5 py-0.5">
         <div className="flex items-center gap-1.5">
             <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: STATE_BAR_COLORS[task.state] }} />
@@ -48,11 +47,11 @@ const TaskBarTooltip: React.FC<{ task: StateTask; durationMs: number }> = ({ tas
             <span className="text-muted-foreground">Duration</span>
             <span className="font-mono font-medium tabular-nums">{formatDuration(durationMs)}</span>
             <span className="text-muted-foreground">Sent</span>
-            <span className="font-mono tabular-nums">{formatTime(task.sentAt, true)}</span>
-            {task.startedAt && (
+            <span className="font-mono tabular-nums">{formatTime(task.sent_at, true)}</span>
+            {task.started_at && (
                 <>
                     <span className="text-muted-foreground">Started</span>
-                    <span className="font-mono tabular-nums">{formatTime(task.startedAt, true)}</span>
+                    <span className="font-mono tabular-nums">{formatTime(task.started_at, true)}</span>
                 </>
             )}
             {task.worker && (
@@ -175,7 +174,7 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ tasks, currentTaskId }) =
                 {/* Task rows */}
                 <div className="flex flex-col" style={{ gap: ROW_GAP }}>
                     {sortedTasks.map((task) => {
-                        const startMs = task.sentAt.getTime()
+                        const startMs = task.sent_at.getTime()
                         const endMs = getTaskEnd(task, now).getTime()
                         const durationMs = endMs - startMs
                         const leftPct = timeRange > 0 ? ((startMs - timelineStart) / timeRange) * 100 : 0

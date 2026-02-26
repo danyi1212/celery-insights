@@ -1,5 +1,4 @@
-import { TaskState } from "@/types/surreal-records"
-import { StateTask } from "@/types/state-types"
+import { TaskState, type Task } from "@/types/surreal-records"
 
 export interface TaskPhase {
     label: string
@@ -20,14 +19,14 @@ const TERMINAL_STATES = new Set<TaskState>([
 
 export const isTerminalState = (state: TaskState): boolean => TERMINAL_STATES.has(state)
 
-const getFinishedAt = (task: StateTask): Date | undefined =>
-    task.succeededAt || task.failedAt || task.retriedAt || task.rejectedAt || task.revokedAt
+const getFinishedAt = (task: Task): Date | undefined =>
+    task.succeeded_at || task.failed_at || task.retried_at || task.rejected_at || task.revoked_at
 
-const getStartedAt = (task: StateTask): Date | undefined => task.startedAt || task.revokedAt || task.rejectedAt
+const getStartedAt = (task: Task): Date | undefined => task.started_at || task.revoked_at || task.rejected_at
 
-const getReceivedAt = (task: StateTask): Date | undefined => task.receivedAt || task.revokedAt
+const getReceivedAt = (task: Task): Date | undefined => task.received_at || task.revoked_at
 
-export const getTaskEndTime = (task: StateTask, now: Date): Date => getFinishedAt(task) || now
+export const getTaskEndTime = (task: Task, now: Date): Date => getFinishedAt(task) || now
 
 export const PHASE_COLORS = {
     queue: "#8b8b8b",
@@ -35,9 +34,9 @@ export const PHASE_COLORS = {
     running: "#4ade80",
 } as const
 
-export const computeTaskPhases = (task: StateTask, now: Date): TaskPhase[] => {
+export const computeTaskPhases = (task: Task, now: Date): TaskPhase[] => {
     const phases: TaskPhase[] = []
-    const sentMs = task.sentAt.getTime()
+    const sentMs = task.sent_at.getTime()
     const receivedMs = (getReceivedAt(task) || now).getTime()
     const startedMs = (getStartedAt(task) || now).getTime()
     const finishedMs = getTaskEndTime(task, now).getTime()
