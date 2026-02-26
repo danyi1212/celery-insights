@@ -883,27 +883,27 @@ These features become possible with persistent storage but are out of scope for 
 
 ## Verification
 
-1. [ ] **Infrastructure**: Start app with `bun run bun-entry.ts` → Zod validates env vars → SurrealDB subprocess starts → schema migration runs → leader election → Python spawned → ingestion starts. Start with invalid env (e.g., `PORT=abc`) → fails fast with clear Zod error
-2. [ ] **Auth (anonymous)**: Start without `SURREALDB_FRONTEND_PASS` → frontend connects immediately, no login dialog, can SELECT but cannot CREATE/UPDATE/DELETE
-3. [ ] **Auth (password)**: Set `SURREALDB_FRONTEND_PASS=secret` → frontend shows login dialog → enter wrong password → inline error → enter correct password → dashboard loads. Refresh page → session token in `sessionStorage` → reconnects without dialog. Close tab → reopen → dialog shows again.
-4. [ ] **Config endpoint**: `GET /api/config` returns `{ authRequired, surrealPath, ingestionStatus }` — verify values match env config
-5. [ ] **Ingestion**: Generate Celery tasks → verify records appear in SurrealDB via `surreal sql` CLI → verify batching (events accumulate, flush every 100ms, terminal events flush immediately)
-6. [ ] **Out-of-order events**: Send task-succeeded before task-started → verify state is not regressed, both timestamps are correctly set
-7. [ ] **Event backpressure**: Stop SurrealDB while events flow → verify queue caps at 10k with logged warnings → restart SurrealDB → ingestion resumes
-8. [ ] **Live queries**: Open browser → homepage shows live-updating recent tasks, new tasks appear without page refresh
-9. [ ] **Reconnection recovery**: Kill SurrealDB briefly → UI shows "Disconnected" → restart → live queries re-subscribe, initial query re-runs, toast shows "Connection restored"
-10. [ ] **Worker page**: Worker details (stats, active tasks, queues) populate from periodic polling, offline workers marked after 3 consecutive missed polls
-11. [ ] **Task detail**: Click task → see full detail including result/exception (verify large results are truncated with flag), see raw events timeline
-12. [ ] **Workflow**: Navigate to workflow view → all related tasks render in graph (including children array correctly maintained)
-13. [ ] **Explorer**: Faceted filtering pushes WHERE clauses to SurrealDB → paginated results → live-refreshing on new events (debounced)
-14. [ ] **Search**: Search bar queries SurrealDB directly → returns matching tasks (by id, type, exception) and workers
-15. [ ] **Demo mode**: Enable demo → WASM lazy-loads with progress indicator → embedded SurrealDB spins up → fake events flow → app works identically to production. Second visit loads WASM from cache instantly.
-16. [ ] **Cleanup**: Set low `task_max_count` → verify old tasks and their events get pruned automatically
-17. [ ] **External SurrealDB**: Set `SURREALDB_EXTERNAL_URL` → app connects to external instance, no subprocess spawned
-18. [ ] **Settings endpoints**: `/api/settings/info` returns correct task/worker counts from SurrealDB. `POST /api/settings/clear` truncates all tables. Debug bundle includes SurrealDB state dump.
-19. [ ] **Read-only instance**: Set `INGESTION_ENABLED=false` → no Python spawned → frontend shows "Read-only mode" banner → frontend works normally (reads existing data)
-20. [ ] **Ingestion status indicator**: Verify UI shows correct status: "Ingesting" (leader), "Standby" (standby), "Read-only" (disabled)
-21. [ ] **Leader election**: Start two instances pointing at the same SurrealDB → only one acquires lock (atomic UPDATE) and ingests. Kill the leader → standby detects stale lock within `ttl_seconds`, promotes itself, starts ingesting. Verify no duplicate writes during transition.
-22. [ ] **Leader graceful shutdown**: Stop the leader cleanly → lock is released immediately → standby takes over without waiting for TTL
-23. [ ] **Docker**: `docker build .` succeeds, container starts with SurrealDB included (pinned version)
-24. [ ] **Tests**: `uv run pytest` and `bun run test` pass
+1. [x] **Infrastructure**: Start app with `bun run bun-entry.ts` → Zod validates env vars → SurrealDB subprocess starts → schema migration runs → leader election → Python spawned → ingestion starts. Start with invalid env (e.g., `PORT=abc`) → fails fast with clear Zod error
+2. [x] **Auth (anonymous)**: Start without `SURREALDB_FRONTEND_PASS` → frontend connects immediately, no login dialog, can SELECT but cannot CREATE/UPDATE/DELETE
+3. [x] **Auth (password)**: Set `SURREALDB_FRONTEND_PASS=secret` → frontend shows login dialog → enter wrong password → inline error → enter correct password → dashboard loads. Refresh page → session token in `sessionStorage` → reconnects without dialog. Close tab → reopen → dialog shows again.
+4. [x] **Config endpoint**: `GET /api/config` returns `{ authRequired, surrealPath, ingestionStatus }` — verify values match env config
+5. [x] **Ingestion**: Generate Celery tasks → verify records appear in SurrealDB via `surreal sql` CLI → verify batching (events accumulate, flush every 100ms, terminal events flush immediately)
+6. [x] **Out-of-order events**: Send task-succeeded before task-started → verify state is not regressed, both timestamps are correctly set
+7. [x] **Event backpressure**: Stop SurrealDB while events flow → verify queue caps at 10k with logged warnings → restart SurrealDB → ingestion resumes
+8. [x] **Live queries**: Open browser → homepage shows live-updating recent tasks, new tasks appear without page refresh
+9. [x] **Reconnection recovery**: Kill SurrealDB briefly → UI shows "Disconnected" → restart → live queries re-subscribe, initial query re-runs, toast shows "Connection restored"
+10. [x] **Worker page**: Worker details (stats, active tasks, queues) populate from periodic polling, offline workers marked after 3 consecutive missed polls
+11. [x] **Task detail**: Click task → see full detail including result/exception (verify large results are truncated with flag), see raw events timeline
+12. [x] **Workflow**: Navigate to workflow view → all related tasks render in graph (including children array correctly maintained)
+13. [x] **Explorer**: Faceted filtering pushes WHERE clauses to SurrealDB → paginated results → live-refreshing on new events (debounced)
+14. [x] **Search**: Search bar queries SurrealDB directly → returns matching tasks (by id, type, exception) and workers
+15. [x] **Demo mode**: Enable demo → WASM lazy-loads with progress indicator → embedded SurrealDB spins up → fake events flow → app works identically to production. Second visit loads WASM from cache instantly.
+16. [x] **Cleanup**: Set low `task_max_count` → verify old tasks and their events get pruned automatically
+17. [x] **External SurrealDB**: Set `SURREALDB_EXTERNAL_URL` → app connects to external instance, no subprocess spawned
+18. [x] **Settings endpoints**: `/api/settings/info` returns correct task/worker counts from SurrealDB. `POST /api/settings/clear` truncates all tables. Debug bundle includes SurrealDB state dump.
+19. [x] **Read-only instance**: Set `INGESTION_ENABLED=false` → no Python spawned → frontend shows "Read-only mode" banner → frontend works normally (reads existing data)
+20. [x] **Ingestion status indicator**: Verify UI shows correct status: "Ingesting" (leader), "Standby" (standby), "Read-only" (disabled)
+21. [x] **Leader election**: Start two instances pointing at the same SurrealDB → only one acquires lock (atomic UPDATE) and ingests. Kill the leader → standby detects stale lock within `ttl_seconds`, promotes itself, starts ingesting. Verify no duplicate writes during transition.
+22. [x] **Leader graceful shutdown**: Stop the leader cleanly → lock is released immediately → standby takes over without waiting for TTL
+23. [x] **Docker**: `docker build .` succeeds, container starts with SurrealDB included (pinned version)
+24. [x] **Tests**: `uv run pytest` and `bun run test` pass
