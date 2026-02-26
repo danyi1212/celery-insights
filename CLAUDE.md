@@ -7,27 +7,40 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Backend** (from repo root): `uv run pytest`, `uv run ruff check server/`, `uv run ruff format server/`, `uv run ty check server/`
 **Frontend** (from `frontend/`): `bun dev`, `bun run build`, `bun run lint`, `bun run lint-fix`
 **Frontend tests** (from `frontend/`): `bun run test`, `bun run test:watch`
-**Regenerate API client** (after any endpoint change): `cd frontend && bun run generate-client`
+**Start all dev services** (from `frontend/`): `bun run dev:all` (starts SurrealDB, Python, and Vite concurrently)
+**Start SurrealDB only** (from `frontend/`): `bun run dev:surreal`
 
 Tests are colocated: `model.py` -> `model_test.py`, `task-avatar.tsx` -> `task-avatar.test.tsx`. Run one with `uv run pytest server/tasks/model_test.py` or `cd frontend && bunx vitest run app/components/task/task-avatar.test.tsx`.
 
 ## Stack
 
 - **Backend**: FastAPI, Python 3.12, Celery 5.4, Pydantic v2, uv, ty (type checker)
-- **Frontend**: React 19, TypeScript, Vite, TanStack Router (file-based, auto code-splitting), Bun, Shadcn UI, Tailwind CSS v4, Lucide React, Zustand, TanStack Query, TanStack Table, @xyflow/react v12
+- **Database**: SurrealDB (embedded subprocess or external) — single source of truth for tasks, workers, and events
+- **Frontend**: React 19, TypeScript, Vite, TanStack Router (file-based, auto code-splitting), Bun, Shadcn UI, Tailwind CSS v4, Lucide React, Zustand, TanStack Query, TanStack Table, @xyflow/react v12, SurrealDB JS SDK
 - **Frontend testing**: Vitest, Testing Library (React + user-event + jest-dom), happy-dom
-- **Real-time**: WebSockets — Celery events flow through a threaded receiver -> async queue -> broadcaster -> WebSocket -> Zustand stores
-- **Architecture**: Bun is the single entrypoint — serves the SPA, spawns the Python backend as a child process (on port 8556 internally), and reverse-proxies API/WS to it. External port is 8555.
+- **Real-time**: SurrealDB live queries — Celery events flow through a threaded receiver -> async queue -> SurrealDB ingester (batched writes) -> live queries -> React components
+- **Architecture**: Bun is the single entrypoint (port 8555) — orchestrates SurrealDB (port 8557), spawns Python ingester (port 8556) via leader election, proxies `/api/*` to Python and `/surreal/*` to SurrealDB, and serves the SPA. Python is a pure ingestion process. Frontend talks directly to SurrealDB via live queries.
 
 ## Repo Map
 
-- `server/` — backend. Each domain (`tasks/`, `workers/`, `events/`, `ws/`, `search/`, `server_info/`) has its own `model.py`, `router.py`, and `_test.py` files
-- `server/settings.py` — all config via env vars (`BROKER_URL`, `RESULT_BACKEND`, etc.), reads `server/.env`
-- `server/events/receiver.py` + `broadcaster.py` — the core real-time pipeline
+- `server/` — backend (pure ingestion). Domains: `tasks/`, `workers/`, `events/`, `server_info/`
+- `server/settings.py` — Python config via env vars (received from Bun), reads `server/.env`
+- `server/surrealdb_client.py` — Python SurrealDB client module
+- `server/events/receiver.py` + `ingester.py` — Celery event receiver + SurrealDB batched ingester
+- `server/tasks/result_fetcher.py` — fetches task results from Celery result backend
+- `server/workers/poller.py` — periodic worker status polling via Celery inspect API
+- `server/cleanup.py` — periodic data retention/pruning job
+- `frontend/src/config.ts` — Bun-owned settings (Zod-validated), the single source of truth for all config
+- `frontend/src/surreal-schema.ts` — SurrealDB schema migration (creates tables, users, permissions)
+- `frontend/src/leader-election.ts` — distributed leader election via SurrealDB atomic locks
+- `frontend/bun-entry.ts` — Production entry: orchestrates SurrealDB + Python subprocesses, runs leader election, serves SPA, proxies API/WS/SurrealDB
 - `frontend/app/` — frontend source (TanStack Router file-based routing)
 - `frontend/app/routes/` — file-based routes (auto code-split per route)
-- `frontend/app/stores/` — Zustand state (tasks, workers, WebSocket status, settings)
-- `frontend/app/services/server/` — auto-generated OpenAPI client, **never edit manually**
+- `frontend/app/hooks/use-live-query.ts` — generic SurrealDB live query hook
+- `frontend/app/hooks/use-live-tasks.ts`, `use-live-workers.ts`, `use-live-events.ts` — domain-specific live query hooks
+- `frontend/app/hooks/use-search.ts` — search via SurrealDB queries
+- `frontend/app/stores/` — Zustand state (settings, explorer config, tour)
+- `frontend/app/components/surrealdb-provider.tsx` — SurrealDB connection provider (remote + WASM demo mode)
 - `frontend/app/components/` — organized by domain, mirrors backend modules
 - `frontend/app/lib/utils.ts` — `cn()` helper for Tailwind class merging
 - `frontend/components.json` — Shadcn UI config (style variant, path aliases, CSS location)
@@ -35,7 +48,6 @@ Tests are colocated: `model.py` -> `model_test.py`, `task-avatar.tsx` -> `task-a
 - `frontend/app/test-utils.tsx` — Custom `render` that wraps components with required providers
 - `frontend/app/test-fixtures.ts` — Shared factory helpers (`createServerTask`, `createStateTask`, etc.)
 - `frontend/vite.config.ts` — Vite config with TanStack Router plugin and dev proxy rules
-- `frontend/bun-entry.ts` — Production entry: spawns Python, serves SPA, proxies API/WS
 - `CONTRIBUTING.md` — full code style guide and design guidelines
 - `CONFIGURATION.md` — all environment variables and setup options
 
@@ -49,14 +61,23 @@ Tests are colocated: `model.py` -> `model_test.py`, `task-avatar.tsx` -> `task-a
 
 ## Development
 
-1. **Terminal 1**: `cd server && python run.py` (Python backend on port 8555)
-2. **Terminal 2**: `cd frontend && bun dev` (Vite dev server on port 3000)
+The quickest way to start all three services:
 
-The Vite dev server handles HMR and proxies `/api/*` and `/ws/*` to Python at 8555.
+```
+cd frontend && bun run dev:all
+```
+
+Or run them in separate terminals:
+
+1. **Terminal 1**: `cd frontend && bun run dev:surreal` (SurrealDB on port 8557)
+2. **Terminal 2**: `cd server && python run.py` (Python ingester on port 8555)
+3. **Terminal 3**: `cd frontend && bun dev` (Vite dev server on port 3000)
+
+The Vite dev server handles HMR and proxies `/api/*` to Python at 8555, `/surreal/*` to SurrealDB at 8557.
 
 ## Deployment
 
-Published as a Docker container. After changing dependencies or the build pipeline, verify with `docker build .`.
+Published as a Docker container. SurrealDB (v2.1.4) is bundled in the image. Use `SURREALDB_STORAGE` to configure persistence (`memory` default, `rocksdb://path`, `surrealkv://path`). For scaled deployments, point multiple instances at an external SurrealDB via `SURREALDB_EXTERNAL_URL`. After changing dependencies or the build pipeline, verify with `docker build .`.
 
 ## Mindset
 

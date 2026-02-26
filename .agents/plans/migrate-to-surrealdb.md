@@ -795,7 +795,7 @@ Replace all `useStateStore` selectors with live query hooks:
 - Remove unused Python models that were only used by REST endpoints
 - Remove `server/workers/dependencies.py` (inspect dependency — now handled by poller)
 
-### [ ] 5b. Update documentation
+### [x] 5b. Update documentation
 
 - Update `CLAUDE.md`:
   - **Architecture section**: Bun is the orchestrator (owns settings, spawns SurrealDB + Python, runs leader election). Python is a pure ingester subprocess. Frontend talks directly to SurrealDB.
