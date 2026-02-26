@@ -762,7 +762,7 @@ Replace all `useStateStore` selectors with live query hooks:
 - The `SurrealDBProvider` detects demo mode and connects to embedded instead of remote
 - Run schema initialization in the browser (same DEFINE statements, minus auth since permissions are irrelevant locally)
 
-### [ ] 4b. Demo event generator (`frontend/app/components/demo-event-generator.ts`)
+### [x] 4b. Demo event generator (`frontend/app/components/demo-event-generator.ts`)
 
 - Replace current `DemoSimulator` component and simulator utilities
 - Generates fake Celery events (task-sent, task-received, task-started, task-succeeded, task-failed, worker-online, worker-heartbeat)
