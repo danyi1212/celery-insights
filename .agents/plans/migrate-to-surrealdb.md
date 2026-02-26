@@ -859,7 +859,7 @@ These features become possible with persistent storage but are out of scope for 
 - **Task duration histograms**: aggregate runtime by task type
 - **Worker load comparison**: tasks processed per worker over time
 
-### [ ] 6b. Data export
+### [x] 6b. Data export
 
 - Export filtered task data as CSV/JSON from the Explorer page
 - Full database backup/restore via SurrealDB's native export/import

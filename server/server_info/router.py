@@ -1,9 +1,11 @@
+import json
 import logging
 
-from fastapi import APIRouter, Body, Request
+from fastapi import APIRouter, Body, Request, UploadFile
 from fastapi_cache.decorator import cache
 from starlette.responses import StreamingResponse
 
+from server_info.backup import export_database, import_database
 from server_info.debug_bundle import create_debug_bundle
 from server_info.models import ClientDebugInfo, ServerInfo
 from surrealdb_client import get_db
@@ -37,3 +39,32 @@ async def download_debug_bundle(request: Request, client_info: ClientDebugInfo =
     return StreamingResponse(
         buffer, media_type="application/zip", headers={"Content-Disposition": "attachment; filename=debug_bundle.zip"}
     )
+
+
+@settings_router.get("/export")
+async def export_backup():
+    buffer = await export_database()
+    return StreamingResponse(
+        buffer,
+        media_type="application/json",
+        headers={"Content-Disposition": "attachment; filename=celery_insights_backup.json"},
+    )
+
+
+@settings_router.post("/import")
+async def import_backup(file: UploadFile):
+    content = await file.read()
+    try:
+        data = json.loads(content)
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        return {"success": False, "error": f"Invalid JSON file: {e}"}
+
+    try:
+        counts = await import_database(data)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception:
+        logger.exception("Database import failed")
+        return {"success": False, "error": "Import failed — check server logs"}
+
+    return {"success": True, "imported": counts}
