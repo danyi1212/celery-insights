@@ -80,8 +80,8 @@ class SurrealDBIngester:
         self._buffer: list[dict] = []
         self._has_terminal = False
         self._stop_event = asyncio.Event()
-        self._consume_task: asyncio.Task | None = None  # ty: ignore[invalid-assignment]
-        self._flush_task: asyncio.Task | None = None  # ty: ignore[invalid-assignment]
+        self._consume_task: asyncio.Task | None = None
+        self._flush_task: asyncio.Task | None = None
         self._dropped_count = 0
 
     def start(self) -> None:
