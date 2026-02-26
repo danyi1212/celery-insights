@@ -848,7 +848,7 @@ Replace all `useStateStore` selectors with live query hooks:
 - If any REST endpoints remain (settings), regenerate the OpenAPI client: `cd frontend && bun run generate-client`
 - If all data access is via SurrealDB and only `/health` + settings endpoints remain, evaluate whether the generated client is still needed
 
-## [ ] Phase 6: Future Enhancements (post-migration)
+## [x] Phase 6: Future Enhancements (post-migration)
 
 These features become possible with persistent storage but are out of scope for the initial migration:
 
@@ -870,7 +870,7 @@ These features become possible with persistent storage but are out of scope for 
 - Show database size and record counts
 - Manual cleanup trigger button
 
-### [ ] 6d. Task comparison
+### [x] 6d. Task comparison
 
 - Side-by-side comparison of two executions of the same task type
 - Show differences in args, duration, result, exception

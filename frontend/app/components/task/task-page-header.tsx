@@ -8,7 +8,7 @@ import { ToggleGroup, ToggleGroupItem } from "@components/ui/toggle-group"
 import { WorkflowChartType } from "@components/workflow/workflow-graph"
 import { cn } from "@lib/utils"
 import type { Task } from "@/types/surreal-records"
-import { GanttChart, GitBranch } from "lucide-react"
+import { ArrowLeftRight, GanttChart, GitBranch } from "lucide-react"
 import React, { useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 
@@ -67,6 +67,21 @@ const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setCha
                     }
                 >
                     Find similar tasks
+                </Button>
+                <Button
+                    variant="link"
+                    className="text-secondary"
+                    disabled={!task}
+                    onClick={() =>
+                        task &&
+                        navigate({
+                            to: "/tasks/compare",
+                            search: { left: task.id, type: task.type },
+                        })
+                    }
+                >
+                    <ArrowLeftRight className="mr-1 size-3.5" />
+                    Compare
                 </Button>
                 <ToggleGroup
                     type="single"
