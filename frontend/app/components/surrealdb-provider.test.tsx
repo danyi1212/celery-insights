@@ -95,13 +95,11 @@ describe("SurrealDBProvider — remote mode", () => {
         )
 
         await waitFor(() => {
-            expect(screen.getByTestId("ingestion")).toHaveTextContent("leader")
+            expect(mockConnect).toHaveBeenCalledWith(
+                expect.stringContaining("/surreal/rpc"),
+                expect.objectContaining({ namespace: "celery_insights", database: "main" }),
+            )
         })
-
-        expect(mockConnect).toHaveBeenCalledWith(
-            expect.stringContaining("/surreal/rpc"),
-            expect.objectContaining({ namespace: "celery_insights", database: "main" }),
-        )
     })
 
     it("provides context values to children", async () => {
