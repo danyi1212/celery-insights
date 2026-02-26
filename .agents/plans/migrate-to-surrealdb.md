@@ -773,7 +773,7 @@ Replace all `useStateStore` selectors with live query hooks:
 - Simulates realistic workflows (parent/child tasks, retries, different states)
 - Rest of the app uses the same live query hooks — no special demo code paths
 
-### [ ] 4c. Remove old demo infrastructure
+### [x] 4c. Remove old demo infrastructure
 
 - Remove `DemoClient` (`frontend/app/services/demo/demo-client.ts`) and related abstraction layers
 - Remove `useClient()` hook that switches between real/demo clients
