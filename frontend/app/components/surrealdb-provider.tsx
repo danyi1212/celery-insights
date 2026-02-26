@@ -1,5 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { Surreal, type ConnectionStatus } from "surrealdb"
+import useSettingsStore from "@stores/use-settings-store"
+import { Progress } from "@components/ui/progress"
+import { DEMO_SCHEMA } from "@lib/demo-schema"
 
 export type IngestionStatus = "leader" | "standby" | "read-only" | "disabled"
 
@@ -25,6 +28,8 @@ export const useSurrealDB = (): SurrealDBContextValue => {
 }
 
 const SESSION_TOKEN_KEY = "surrealdb_token"
+const NAMESPACE = "celery_insights"
+const DATABASE = "main"
 
 async function fetchConfig(): Promise<AppConfig> {
     const res = await fetch("/api/config")
@@ -64,14 +69,23 @@ async function signIn(db: Surreal, surrealPath: string, ns: string, database: st
     sessionStorage.setItem(SESSION_TOKEN_KEY, tokens.access)
 }
 
-const NAMESPACE = "celery_insights"
-const DATABASE = "main"
-
 interface SurrealDBProviderProps {
     children: React.ReactNode
 }
 
 const SurrealDBProvider = ({ children }: SurrealDBProviderProps) => {
+    const isDemo = useSettingsStore((state) => state.demo)
+
+    if (isDemo) {
+        return <DemoSurrealDBProvider>{children}</DemoSurrealDBProvider>
+    }
+
+    return <RemoteSurrealDBProvider>{children}</RemoteSurrealDBProvider>
+}
+
+// --- Remote (production) provider ---
+
+const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) => {
     const dbRef = useRef<Surreal>(new Surreal())
     const [status, setStatus] = useState<ConnectionStatus>("disconnected")
     const [ingestionStatus, setIngestionStatus] = useState<IngestionStatus>("disabled")
@@ -187,7 +201,7 @@ const SurrealDBProvider = ({ children }: SurrealDBProviderProps) => {
 
     // Loading state while fetching config
     if (!configLoaded) {
-        return <SurrealDBLoadingScreen />
+        return <RemoteLoadingScreen />
     }
 
     // Auth required and not authenticated — show login dialog
@@ -198,7 +212,106 @@ const SurrealDBProvider = ({ children }: SurrealDBProviderProps) => {
     return <SurrealDBContext.Provider value={contextValue}>{children}</SurrealDBContext.Provider>
 }
 
-const SurrealDBLoadingScreen = () => (
+// --- Demo (embedded WASM) provider ---
+
+type DemoLoadingStage = "downloading" | "initializing" | "ready"
+
+const DemoSurrealDBProvider = ({ children }: { children: React.ReactNode }) => {
+    const dbRef = useRef<Surreal | null>(null)
+    const [status, setStatus] = useState<ConnectionStatus>("disconnected")
+    const [error, setError] = useState<Error | null>(null)
+    const [loadingStage, setLoadingStage] = useState<DemoLoadingStage>("downloading")
+    const [ready, setReady] = useState(false)
+
+    useEffect(() => {
+        let cancelled = false
+
+        const initDemo = async () => {
+            try {
+                // Stage 1: Lazy-load the WASM engine module
+                setLoadingStage("downloading")
+                const { createWasmEngines } = await import("@surrealdb/wasm")
+                if (cancelled) return
+
+                // Stage 2: Initialize the embedded database
+                setLoadingStage("initializing")
+                const db = new Surreal({
+                    engines: createWasmEngines(),
+                })
+
+                // Subscribe to connection status events
+                db.subscribe("connected", () => {
+                    if (!cancelled) setStatus("connected")
+                })
+                db.subscribe("disconnected", () => {
+                    if (!cancelled) setStatus("disconnected")
+                })
+                db.subscribe("error", (err) => {
+                    if (!cancelled) setError(err)
+                })
+
+                await db.connect("mem://")
+                if (cancelled) {
+                    await db.close()
+                    return
+                }
+
+                // Set up namespace and database
+                await db.query(`DEFINE NAMESPACE IF NOT EXISTS ${NAMESPACE}`)
+                await db.use({ namespace: NAMESPACE })
+                await db.query(`DEFINE DATABASE IF NOT EXISTS ${DATABASE}`)
+                await db.use({ namespace: NAMESPACE, database: DATABASE })
+
+                // Apply demo schema (same tables/fields as production, FULL permissions)
+                await db.query(DEMO_SCHEMA)
+                if (cancelled) {
+                    await db.close()
+                    return
+                }
+
+                dbRef.current = db
+                setLoadingStage("ready")
+                setReady(true)
+            } catch (err) {
+                if (!cancelled) {
+                    setError(err instanceof Error ? err : new Error(String(err)))
+                }
+            }
+        }
+
+        initDemo()
+
+        return () => {
+            cancelled = true
+            dbRef.current?.close()
+            dbRef.current = null
+        }
+    }, [])
+
+    const contextValue = useMemo<SurrealDBContextValue | null>(
+        () =>
+            dbRef.current
+                ? {
+                      db: dbRef.current,
+                      status,
+                      ingestionStatus: "disabled" as IngestionStatus,
+                      error,
+                  }
+                : null,
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [status, error, ready],
+    )
+
+    if (!ready || !contextValue) {
+        return <DemoLoadingScreen stage={loadingStage} error={error} />
+    }
+
+    return <SurrealDBContext.Provider value={contextValue}>{children}</SurrealDBContext.Provider>
+}
+
+// --- Loading screens ---
+
+const RemoteLoadingScreen = () => (
     <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
         <div className="text-center">
             <div className="text-lg font-medium">Connecting...</div>
@@ -206,6 +319,33 @@ const SurrealDBLoadingScreen = () => (
         </div>
     </div>
 )
+
+const STAGE_PROGRESS: Record<DemoLoadingStage, number> = {
+    downloading: 30,
+    initializing: 70,
+    ready: 100,
+}
+
+const STAGE_LABELS: Record<DemoLoadingStage, string> = {
+    downloading: "Loading database engine...",
+    initializing: "Initializing demo database...",
+    ready: "Ready!",
+}
+
+const DemoLoadingScreen = ({ stage, error }: { stage: DemoLoadingStage; error: Error | null }) => (
+    <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        <div className="w-full max-w-sm text-center space-y-4">
+            <div>
+                <div className="text-lg font-medium">Demo Mode</div>
+                <div className="text-sm text-muted-foreground mt-1">{STAGE_LABELS[stage]}</div>
+            </div>
+            <Progress value={STAGE_PROGRESS[stage]} className="h-2" />
+            {error && <div className="text-sm text-destructive mt-2">Error: {error.message}</div>}
+        </div>
+    </div>
+)
+
+// --- Login dialog ---
 
 interface LoginDialogProps {
     onLogin: (password: string) => void
