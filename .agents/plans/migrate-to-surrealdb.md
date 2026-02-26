@@ -143,7 +143,7 @@ DEFINE FIELD ttl_seconds ON ingestion_lock TYPE int DEFAULT 30;
 
 Record IDs: `task:celery_task_uuid`, `worker:hostname_pid`, `event:ulid()`, `ingestion_lock:leader` (singleton).
 
-## [ ] Phase 1: Infrastructure
+## [x] Phase 1: Infrastructure
 
 ### [x] 1a. Settings
 
@@ -402,7 +402,7 @@ Bun runs schema migration **before** spawning Python or starting the leader elec
 **Files to create:** `server/surrealdb_client.py`, `frontend/src/config.ts` (Zod schema), `frontend/src/surreal-schema.ts`, `frontend/src/leader-election.ts`
 **Files to modify:** `server/settings.py`, `frontend/bun-entry.ts`, `frontend/vite.config.ts`, `Dockerfile`, `frontend/package.json` (dev:surreal script, surrealdb + zod + concurrently dependencies)
 
-## [ ] Phase 2: Python Ingestion
+## [x] Phase 2: Python Ingestion
 
 ### [x] 2a. Replace EventBroadcaster with SurrealDB ingester (`server/events/broadcaster.py`)
 
@@ -515,7 +515,7 @@ Python no longer manages leader election, schema migration, or standby mode — 
 **Files to modify:** `server/events/broadcaster.py`, `server/events/receiver.py`, `server/lifespan.py`, `server/server_info/router.py`, `server/server_info/models.py`, `server/server_info/debug_bundle.py`, `server/app.py` (remove routers)
 **Files to remove:** `server/ws/managers.py`, `server/ws/websocket_manager.py`, `server/ws/router.py`, `server/ws/models.py`, `server/tasks/router.py`, `server/workers/router.py`, `server/workers/dependencies.py`, `server/search/router.py`, `server/search/search.py`, `server/events/router.py`, `server/pagination.py`
 
-## [ ] Phase 3: Frontend Data Layer
+## [x] Phase 3: Frontend Data Layer
 
 ### [x] 3a. SurrealDB provider (`frontend/app/components/surrealdb-provider.tsx`)
 
@@ -750,7 +750,7 @@ Replace all `useStateStore` selectors with live query hooks:
 **Files to modify:** All route files, all components reading from state store, `__root.tsx`
 **Files to remove:** `use-state-store.ts`, `use-state-store.test.ts`, `celery-state-sync.tsx`, `translate-server-models.ts`, `use-raw-events.ts`, `use-client.ts`, `use-task-state.ts`, `use-task-result.ts`, `use-online-worker-ids.ts`, `use-worker-stats.ts`, `use-worker-queues.ts`, `use-worker-active-tasks.ts`, `use-worker-scheduled-tasks.ts`, `use-worker-reserved-tasks.ts`, `use-worker-revoked-tasks.ts`, `use-worker-registered-tasks.ts`, `demo-client.ts`, `web-socket-utils.ts`
 
-## [ ] Phase 4: Demo Mode
+## [x] Phase 4: Demo Mode
 
 ### [x] 4a. Embedded SurrealDB WASM (lazy-loaded)
 
