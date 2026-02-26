@@ -15,6 +15,7 @@ import { Route as ExplorerRouteImport } from './routes/explorer'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkersWorkerIdRouteImport } from './routes/workers.$workerId'
+import { Route as TasksCompareRouteImport } from './routes/tasks.compare'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
 
 const SettingsRoute = SettingsRouteImport.update({
@@ -47,6 +48,11 @@ const WorkersWorkerIdRoute = WorkersWorkerIdRouteImport.update({
   path: '/workers/$workerId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TasksCompareRoute = TasksCompareRouteImport.update({
+  id: '/tasks/compare',
+  path: '/tasks/compare',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
   id: '/tasks/$taskId',
   path: '/tasks/$taskId',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/raw_events': typeof Raw_eventsRoute
   '/settings': typeof SettingsRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/tasks/compare': typeof TasksCompareRoute
   '/workers/$workerId': typeof WorkersWorkerIdRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/raw_events': typeof Raw_eventsRoute
   '/settings': typeof SettingsRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/tasks/compare': typeof TasksCompareRoute
   '/workers/$workerId': typeof WorkersWorkerIdRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/raw_events': typeof Raw_eventsRoute
   '/settings': typeof SettingsRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/tasks/compare': typeof TasksCompareRoute
   '/workers/$workerId': typeof WorkersWorkerIdRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/raw_events'
     | '/settings'
     | '/tasks/$taskId'
+    | '/tasks/compare'
     | '/workers/$workerId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/raw_events'
     | '/settings'
     | '/tasks/$taskId'
+    | '/tasks/compare'
     | '/workers/$workerId'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/raw_events'
     | '/settings'
     | '/tasks/$taskId'
+    | '/tasks/compare'
     | '/workers/$workerId'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   Raw_eventsRoute: typeof Raw_eventsRoute
   SettingsRoute: typeof SettingsRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
+  TasksCompareRoute: typeof TasksCompareRoute
   WorkersWorkerIdRoute: typeof WorkersWorkerIdRoute
 }
 
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkersWorkerIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tasks/compare': {
+      id: '/tasks/compare'
+      path: '/tasks/compare'
+      fullPath: '/tasks/compare'
+      preLoaderRoute: typeof TasksCompareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks/$taskId': {
       id: '/tasks/$taskId'
       path: '/tasks/$taskId'
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   Raw_eventsRoute: Raw_eventsRoute,
   SettingsRoute: SettingsRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
+  TasksCompareRoute: TasksCompareRoute,
   WorkersWorkerIdRoute: WorkersWorkerIdRoute,
 }
 export const routeTree = rootRouteImport
