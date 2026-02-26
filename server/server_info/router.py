@@ -7,7 +7,7 @@ from starlette.responses import StreamingResponse
 
 from server_info.backup import export_database, import_database
 from server_info.debug_bundle import create_debug_bundle
-from server_info.models import ClientDebugInfo, ServerInfo
+from server_info.models import ClientDebugInfo, RecordCounts, RetentionInfo, RetentionSettings, ServerInfo
 from surrealdb_client import get_db
 
 logger = logging.getLogger(__name__)
@@ -68,3 +68,64 @@ async def import_backup(file: UploadFile):
         return {"success": False, "error": "Import failed — check server logs"}
 
     return {"success": True, "imported": counts}
+
+
+async def _query_table_count(table: str) -> int:
+    db = get_db()
+    result: list = await db.query(f"SELECT count() AS count FROM {table} GROUP ALL")  # ty: ignore[invalid-assignment]
+    rows: list[dict] = result[0] if result and isinstance(result[0], list) else []
+    return rows[0].get("count", 0) if rows else 0
+
+
+async def _get_record_counts() -> RecordCounts:
+    return RecordCounts(
+        tasks=await _query_table_count("task"),
+        events=await _query_table_count("event"),
+        workers=await _query_table_count("worker"),
+    )
+
+
+@settings_router.get("/retention")
+async def get_retention_settings(request: Request) -> RetentionInfo:
+    cleanup_job = request.app.state.cleanup_job
+    settings = RetentionSettings(
+        cleanup_interval_seconds=cleanup_job.interval_seconds,
+        task_max_count=cleanup_job.task_max_count,
+        task_retention_hours=cleanup_job.task_retention_hours,
+        dead_worker_retention_hours=cleanup_job.dead_worker_retention_hours,
+    )
+    counts = await _get_record_counts()
+    return RetentionInfo(settings=settings, counts=counts)
+
+
+@settings_router.put("/retention")
+async def update_retention_settings(request: Request, new_settings: RetentionSettings) -> RetentionInfo:
+    cleanup_job = request.app.state.cleanup_job
+    cleanup_job.task_max_count = new_settings.task_max_count
+    cleanup_job.task_retention_hours = new_settings.task_retention_hours
+    cleanup_job.dead_worker_retention_hours = new_settings.dead_worker_retention_hours
+    cleanup_job.interval_seconds = new_settings.cleanup_interval_seconds
+    logger.info(
+        "Retention settings updated: max_count=%s, retention_hours=%s, dead_worker_hours=%s, interval=%ds",
+        new_settings.task_max_count,
+        new_settings.task_retention_hours,
+        new_settings.dead_worker_retention_hours,
+        new_settings.cleanup_interval_seconds,
+    )
+    counts = await _get_record_counts()
+    return RetentionInfo(
+        settings=new_settings,
+        counts=counts,
+    )
+
+
+@settings_router.post("/cleanup")
+async def trigger_cleanup(request: Request) -> dict:
+    cleanup_job = request.app.state.cleanup_job
+    try:
+        await cleanup_job._run_cleanup()
+        counts = await _get_record_counts()
+        return {"success": True, "counts": counts.model_dump()}
+    except Exception:
+        logger.exception("Manual cleanup trigger failed")
+        return {"success": False, "error": "Cleanup failed — check server logs"}

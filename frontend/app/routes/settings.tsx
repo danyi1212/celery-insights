@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { DatabaseBackupPanel } from "@components/settings/database-backup-panel"
 import { DownloadDebugBundleButton } from "@components/settings/download-debug-bundle-button"
+import { RetentionPolicyPanel } from "@components/settings/retention-policy-panel"
 import { ServerInfoPanel } from "@components/settings/server-info-panel"
 import SettingsPanel from "@components/settings/settings-panel"
 
@@ -12,6 +13,9 @@ const SettingsPage = () => {
             </div>
             <div className="space-y-6 lg:col-span-4">
                 <ServerInfoPanel />
+            </div>
+            <div className="lg:col-span-4">
+                <RetentionPolicyPanel />
             </div>
             <div className="lg:col-span-4">
                 <DatabaseBackupPanel />
