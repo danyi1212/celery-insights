@@ -61,6 +61,9 @@ async def lifespan(_):
     )
     cleanup_job.start()
 
+    # Expose cleanup_job on app.state for the settings router
+    _.state.cleanup_job = cleanup_job
+
     try:
         yield
     except (KeyboardInterrupt, SystemExit, CancelledError):

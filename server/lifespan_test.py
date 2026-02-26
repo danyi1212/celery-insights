@@ -8,6 +8,8 @@ from lifespan import lifespan
 class TestLifespan:
     @pytest.fixture(autouse=True)
     def _setup_mocks(self):
+        self.mock_app = MagicMock()
+
         with (
             patch("lifespan.Settings") as mock_settings_cls,
             patch("lifespan.init_surrealdb", new_callable=AsyncMock) as init_surreal,
@@ -62,17 +64,17 @@ class TestLifespan:
 
     @pytest.mark.asyncio
     async def test_startup_initializes_surrealdb(self):
-        async with lifespan(None):
+        async with lifespan(self.mock_app):
             self.init_surrealdb.assert_called_once_with(self.settings)
 
     @pytest.mark.asyncio
     async def test_startup_connects_celery(self):
-        async with lifespan(None):
+        async with lifespan(self.mock_app):
             self.get_celery_app.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_startup_starts_all_services(self):
-        async with lifespan(None):
+        async with lifespan(self.mock_app):
             self.receiver.start.assert_called_once()
             self.ingester.start.assert_called_once()
             self.poller.start.assert_called_once()
@@ -80,7 +82,7 @@ class TestLifespan:
 
     @pytest.mark.asyncio
     async def test_shutdown_stops_services_and_closes_surrealdb(self):
-        async with lifespan(None):
+        async with lifespan(self.mock_app):
             pass
 
         self.cleanup.stop.assert_called_once()
@@ -91,23 +93,28 @@ class TestLifespan:
 
     @pytest.mark.asyncio
     async def test_ingester_receives_event_receiver_queue(self):
-        async with lifespan(None):
+        async with lifespan(self.mock_app):
             self.ingester_cls.assert_called_once()
             call_kwargs = self.ingester_cls.call_args
             assert call_kwargs.kwargs["queue"] is self.receiver.queue
 
     @pytest.mark.asyncio
     async def test_ingester_on_terminal_wired_to_result_fetcher(self):
-        async with lifespan(None):
+        async with lifespan(self.mock_app):
             call_kwargs = self.ingester_cls.call_args
             assert call_kwargs.kwargs["on_terminal"] is self.fetcher.fetch_and_store
 
     @pytest.mark.asyncio
     async def test_cleanup_job_uses_settings(self):
-        async with lifespan(None):
+        async with lifespan(self.mock_app):
             self.cleanup_cls.assert_called_once_with(
                 interval_seconds=self.settings.cleanup_interval_seconds,
                 task_max_count=self.settings.task_max_count,
                 task_retention_hours=self.settings.task_retention_hours,
                 dead_worker_retention_hours=self.settings.dead_worker_retention_hours,
             )
+
+    @pytest.mark.asyncio
+    async def test_exposes_cleanup_job_on_app_state(self):
+        async with lifespan(self.mock_app):
+            assert self.mock_app.state.cleanup_job is self.cleanup

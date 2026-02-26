@@ -864,7 +864,7 @@ These features become possible with persistent storage but are out of scope for 
 - Export filtered task data as CSV/JSON from the Explorer page
 - Full database backup/restore via SurrealDB's native export/import
 
-### [ ] 6c. Retention policy UI
+### [x] 6c. Retention policy UI
 
 - Settings panel where users can view/modify retention policies without restarting
 - Show database size and record counts

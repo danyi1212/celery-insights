@@ -71,6 +71,24 @@ class ServerInfo(BaseModel):
         )
 
 
+class RetentionSettings(BaseModel):
+    cleanup_interval_seconds: int = Field(description="How often the cleanup job runs (seconds)")
+    task_max_count: int | None = Field(description="Max tasks to keep (None = unlimited)")
+    task_retention_hours: float | None = Field(description="Delete tasks older than this (None = no limit)")
+    dead_worker_retention_hours: float | None = Field(description="Delete offline workers older than this")
+
+
+class RecordCounts(BaseModel):
+    tasks: int = Field(description="Number of task records")
+    events: int = Field(description="Number of event records")
+    workers: int = Field(description="Number of worker records")
+
+
+class RetentionInfo(BaseModel):
+    settings: RetentionSettings
+    counts: RecordCounts
+
+
 class ClientDebugInfo(BaseModel):
     settings: dict
     screen_width: int
