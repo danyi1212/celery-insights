@@ -1,6 +1,6 @@
 import { useNow } from "@hooks/use-now"
 import { cn } from "@lib/utils"
-import { StateTask } from "@utils/translate-server-models"
+import { StateTask } from "@/types/state-types"
 import {
     computeTaskPhases,
     formatDuration,

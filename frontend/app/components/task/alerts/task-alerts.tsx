@@ -2,7 +2,7 @@ import ExceptionAlert from "@components/task/alerts/exception-alert"
 import RetryAlert from "@components/task/alerts/retry-alert"
 import { Collapsible, CollapsibleContent } from "@components/ui/collapsible"
 import { useTask } from "@hooks/use-live-tasks"
-import { extractId } from "@utils/translate-server-models"
+import { extractId } from "@/types/surreal-records"
 import React from "react"
 
 interface TaskAlertsProps {

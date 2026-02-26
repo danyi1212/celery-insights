@@ -1,5 +1,5 @@
 import TaskListItem from "@components/worker/panels/tasks/task-list-item"
-import { TaskRequest } from "@services/server"
+import type { TaskRequest } from "@/types/surreal-records"
 import React from "react"
 
 interface ReservedTaskListItemProps {

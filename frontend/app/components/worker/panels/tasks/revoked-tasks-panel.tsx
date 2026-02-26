@@ -3,14 +3,14 @@ import AnimatedListItem from "@components/common/animated-list-item"
 import Panel, { PanelProps } from "@components/common/panel"
 import TaskAvatar from "@components/task/task-avatar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
-import useWorkerRevokedTasks from "@hooks/worker/use-worker-revoked-tasks"
+import { useWorkerRevokedTasks } from "@hooks/worker/use-worker-inspect"
+import { useTask } from "@hooks/use-live-tasks"
 import { ChevronRight } from "lucide-react"
-import { useStateStore } from "@stores/use-state-store"
-import React, { useCallback } from "react"
+import React from "react"
 import { Link } from "@tanstack/react-router"
 
 interface RevokedTasksPanelProps {
-    hostname: string
+    workerId: string
 }
 
 interface RevokedTaskListItemProps extends Omit<PanelProps, "title"> {
@@ -18,7 +18,7 @@ interface RevokedTaskListItemProps extends Omit<PanelProps, "title"> {
 }
 
 const RevokedTaskListItem: React.FC<RevokedTaskListItemProps> = ({ taskId }) => {
-    const task = useStateStore(useCallback((state) => state.tasks.get(taskId), [taskId]))
+    const { task } = useTask(taskId)
     return (
         <AnimatedListItem disablePadding>
             <Link
@@ -41,8 +41,8 @@ const RevokedTaskListItem: React.FC<RevokedTaskListItemProps> = ({ taskId }) => 
     )
 }
 
-const RevokedTasksPanel: React.FC<RevokedTasksPanelProps> = ({ hostname, ...props }) => {
-    const { tasks, isLoading, error } = useWorkerRevokedTasks(hostname)
+const RevokedTasksPanel: React.FC<RevokedTasksPanelProps> = ({ workerId, ...props }) => {
+    const { tasks, isLoading, error } = useWorkerRevokedTasks(workerId)
     return (
         <Panel title="Revoked Tasks" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (

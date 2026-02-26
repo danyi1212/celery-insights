@@ -1,4 +1,4 @@
-import { TaskState } from "@services/server"
+import { TaskState } from "@/types/surreal-records"
 import { createStateTask } from "@test-fixtures"
 import {
     isTerminalState,

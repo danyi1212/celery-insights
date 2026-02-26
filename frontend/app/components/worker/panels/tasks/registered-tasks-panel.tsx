@@ -2,8 +2,7 @@ import Panel, { PanelProps } from "@components/common/panel"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
 import { Badge } from "@components/ui/badge"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
-import useWorkerRegisteredTasks from "@hooks/worker/use-worker-registered-tasks"
-import useWorkerStats from "@hooks/worker/use-worker-stats"
+import { useWorkerRegisteredTasks, useWorkerStats } from "@hooks/worker/use-worker-inspect"
 import { ChevronRight } from "lucide-react"
 import React, { useMemo } from "react"
 import { useNavigate } from "@tanstack/react-router"
@@ -12,7 +11,6 @@ import { getBrightness } from "@utils/color-utils"
 
 interface RegisteredTasksPanelProps extends Omit<PanelProps, "title"> {
     workerId: string
-    hostname: string
 }
 
 const acronymize = (str: string): string => {
@@ -71,9 +69,9 @@ const TaskTypeListItem: React.FC<TaskTypeListItemProps> = ({ taskType, workerId,
     )
 }
 
-const RegisteredTasksPanel: React.FC<RegisteredTasksPanelProps> = ({ workerId, hostname, ...props }) => {
-    const { tasks, isLoading, error } = useWorkerRegisteredTasks(hostname)
-    const { stats } = useWorkerStats(hostname)
+const RegisteredTasksPanel: React.FC<RegisteredTasksPanelProps> = ({ workerId, ...props }) => {
+    const { tasks, isLoading, error } = useWorkerRegisteredTasks(workerId)
+    const { stats } = useWorkerStats(workerId)
     return (
         <Panel title="Registered Task Types" loading={isLoading} error={error} {...props}>
             {tasks && tasks.length > 0 ? (

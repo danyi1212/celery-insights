@@ -1,8 +1,8 @@
 import { getFlowGraph } from "@components/workflow/flow-chart"
 import TaskNode from "@components/workflow/task-node"
 import { useMediaQuery } from "@hooks/use-media-query"
-import { TaskState } from "@services/server"
-import { StateTask } from "@utils/translate-server-models"
+import { TaskState } from "@/types/surreal-records"
+import { StateTask } from "@/types/state-types"
 import React, { useMemo } from "react"
 import { ReactFlow, Background } from "@xyflow/react"
 

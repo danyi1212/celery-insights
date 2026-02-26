@@ -1,4 +1,4 @@
-import { StateTask } from "@utils/translate-server-models"
+import { StateTask } from "@/types/state-types"
 import { format } from "date-fns"
 import React from "react"
 import { create } from "zustand"

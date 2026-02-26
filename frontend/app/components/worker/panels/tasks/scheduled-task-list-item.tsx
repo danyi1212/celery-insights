@@ -1,6 +1,6 @@
 import TaskListItem from "@components/worker/panels/tasks/task-list-item"
 import { useNow } from "@hooks/use-now"
-import { ScheduledTask } from "@services/server"
+import type { ScheduledTask } from "@/types/surreal-records"
 import { formatDistanceStrict } from "date-fns"
 import React, { useMemo } from "react"
 

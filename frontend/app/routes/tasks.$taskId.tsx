@@ -9,7 +9,7 @@ import TaskPageHeader from "@components/task/task-page-header"
 import WorkflowGraph, { WorkflowChartType } from "@components/workflow/workflow-graph"
 import { Skeleton } from "@components/ui/skeleton"
 import { useTask } from "@hooks/use-live-tasks"
-import { surrealToStateTask } from "@utils/translate-server-models"
+import { surrealToStateTask } from "@/types/state-types"
 import { useTourChangeStepOnLoad } from "@stores/use-tour-store"
 import React, { useMemo } from "react"
 

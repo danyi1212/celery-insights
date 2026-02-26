@@ -3,7 +3,7 @@ import DetailItem from "@components/common/detail-item"
 import LinearProgressWithLabel from "@components/common/linear-progress-with-label"
 import Panel, { PanelProps } from "@components/common/panel"
 import WorkerStatus from "@components/worker/worker-status"
-import useWorkerStats from "@hooks/worker/use-worker-stats"
+import { useWorkerStats } from "@hooks/worker/use-worker-inspect"
 import { useWorker } from "@hooks/use-live-workers"
 import { formatBytes } from "@utils/format-bytes"
 import { formatSecondsDurationLong } from "@utils/format-seconds-duration-long"
@@ -11,12 +11,11 @@ import React from "react"
 
 interface WorkerDetailsCardProps extends Omit<PanelProps, "title"> {
     workerId: string
-    hostname: string
 }
 
-const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, hostname, ...props }) => {
+const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, ...props }) => {
     const { worker } = useWorker(workerId)
-    const { stats, isLoading, error } = useWorkerStats(hostname)
+    const { stats, isLoading, error } = useWorkerStats(workerId)
 
     const heartbeatExpires = worker?.heartbeat_expires ? new Date(worker.heartbeat_expires) : undefined
 

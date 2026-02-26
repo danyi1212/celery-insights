@@ -1,18 +1,17 @@
 import DetailItem from "@components/common/detail-item"
 import Panel, { PanelProps } from "@components/common/panel"
 import ProcessChip from "@components/worker/panels/process-chip"
-import useWorkerActiveTasks from "@hooks/worker/use-worker-active-tasks"
-import useWorkerStats from "@hooks/worker/use-worker-stats"
-import { TaskRequest } from "@services/server"
+import { useWorkerActiveTasks, useWorkerStats } from "@hooks/worker/use-worker-inspect"
+import type { TaskRequest } from "@/types/surreal-records"
 import { formatSecondsDuration } from "@utils/format-seconds-duration"
 import React, { startTransition, useEffect, useState } from "react"
 
 interface PoolDetailsCardProps extends Omit<PanelProps, "title"> {
-    hostname: string
+    workerId: string
 }
 
-function useTaskProcessMap(hostname: string): Map<number, TaskRequest> {
-    const { tasks } = useWorkerActiveTasks(hostname)
+function useTaskProcessMap(workerId: string): Map<number, TaskRequest> {
+    const { tasks } = useWorkerActiveTasks(workerId)
     const [map, setMap] = useState<Map<number, TaskRequest>>(new Map())
 
     useEffect(
@@ -32,9 +31,9 @@ function useTaskProcessMap(hostname: string): Map<number, TaskRequest> {
     return map
 }
 
-const PoolDetailsCard: React.FC<PoolDetailsCardProps> = ({ hostname, ...props }) => {
-    const { stats, isLoading, error } = useWorkerStats(hostname)
-    const taskProcessMap = useTaskProcessMap(hostname)
+const PoolDetailsCard: React.FC<PoolDetailsCardProps> = ({ workerId, ...props }) => {
+    const { stats, isLoading, error } = useWorkerStats(workerId)
+    const taskProcessMap = useTaskProcessMap(workerId)
 
     return (
         <Panel title="Process Pool" loading={isLoading} error={error} {...props}>

@@ -1,10 +1,14 @@
 import { Alert, AlertDescription, AlertTitle } from "@components/ui/alert"
 import { AlertCircle } from "lucide-react"
-import { ApiError } from "@services/server"
 import React from "react"
 import BadRequestAlert from "./bad-request-alert"
 import NotFoundAlert from "./not-found-alert"
 import ValidationErrorAlert from "./validation-error-alert"
+
+interface ApiError {
+    status: number
+    body: unknown
+}
 
 interface ApiErrorAlertProps {
     error: ApiError

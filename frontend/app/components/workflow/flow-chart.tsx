@@ -1,7 +1,7 @@
 import TaskNode from "@components/workflow/task-node"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { useIsDark } from "@hooks/use-is-dark"
-import { StateTask } from "@utils/translate-server-models"
+import { StateTask } from "@/types/state-types"
 import { Camera, Focus, Maximize2, Move, Navigation } from "lucide-react"
 import { toSvg } from "html-to-image"
 import React, { useCallback, useEffect, useState } from "react"

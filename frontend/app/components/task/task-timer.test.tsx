@@ -1,6 +1,6 @@
 import { render, screen } from "@test-utils"
 import { createStateTask } from "@test-fixtures"
-import { TaskState } from "@services/server"
+import { TaskState } from "@/types/surreal-records"
 import TaskTimer from "./task-timer"
 
 vi.mock("@hooks/use-now", () => ({

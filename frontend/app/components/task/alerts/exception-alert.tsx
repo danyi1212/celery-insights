@@ -6,10 +6,10 @@ import { Button } from "@components/ui/button"
 import { Collapsible, CollapsibleContent } from "@components/ui/collapsible"
 import { cn } from "@lib/utils"
 import { useMediaQuery } from "@hooks/use-media-query"
-import { useStateStore } from "@stores/use-state-store"
-import { StateTask } from "@utils/translate-server-models"
+import { useLiveTasks } from "@hooks/use-live-tasks"
+import { extractId } from "@/types/surreal-records"
 import { AlertCircle, ChevronDown, ChevronUp } from "lucide-react"
-import React, { useCallback, useState } from "react"
+import React, { useMemo, useState } from "react"
 
 interface ExceptionTracebackProps extends React.ComponentProps<"div"> {
     exception: string
@@ -26,19 +26,11 @@ const ExceptionTraceback: React.FC<ExceptionTracebackProps> = ({
 }) => {
     const [expanded, setExpanded] = useState(false)
     const largeScreen = useMediaQuery("(min-width: 640px)")
-    const similarTasks = useStateStore(
-        useCallback(
-            (state) => {
-                const similar: StateTask[] = []
-                if (largeScreen)
-                    state.tasks.forEach((task) => {
-                        if (task.id !== currentTaskId && task.exception === exception) similar.push(task)
-                    })
-                return similar
-            },
-            [largeScreen, currentTaskId, exception],
-        ),
-    )
+    const { data: tasks } = useLiveTasks(30)
+    const similarTasks = useMemo(() => {
+        if (!largeScreen || !tasks) return []
+        return tasks.filter((task) => extractId(task.id) !== currentTaskId && task.exception === exception)
+    }, [largeScreen, tasks, currentTaskId, exception])
     const showSimilar = similarTasks.length > 0 && largeScreen
 
     return (
@@ -51,7 +43,12 @@ const ExceptionTraceback: React.FC<ExceptionTracebackProps> = ({
                         <span>Similar:</span>
                         <AvatarGroup>
                             {similarTasks.map((task) => (
-                                <TaskAvatar key={task.id} taskId={task.id} type={task.type} className="size-6" />
+                                <TaskAvatar
+                                    key={extractId(task.id)}
+                                    taskId={extractId(task.id)}
+                                    type={task.type || undefined}
+                                    className="size-6"
+                                />
                             ))}
                         </AvatarGroup>
                     </div>

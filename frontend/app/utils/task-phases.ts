@@ -1,5 +1,5 @@
-import { TaskState } from "@services/server"
-import { StateTask } from "@utils/translate-server-models"
+import { TaskState } from "@/types/surreal-records"
+import { StateTask } from "@/types/state-types"
 
 export interface TaskPhase {
     label: string

@@ -1,17 +1,17 @@
 import DetailItem from "@components/common/detail-item"
 import Panel, { PanelProps } from "@components/common/panel"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
-import useWorkerStats from "@hooks/worker/use-worker-stats"
+import { useWorkerStats } from "@hooks/worker/use-worker-inspect"
 import { Lock, LockOpen } from "lucide-react"
 import { formatSecondsDuration } from "@utils/format-seconds-duration"
 import React from "react"
 
 interface BrokerDetailsCardProps extends Omit<PanelProps, "title"> {
-    hostname: string
+    workerId: string
 }
 
-const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ hostname, ...props }) => {
-    const { stats, isLoading, error } = useWorkerStats(hostname)
+const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ workerId, ...props }) => {
+    const { stats, isLoading, error } = useWorkerStats(workerId)
     return (
         <Panel title="Broker" loading={isLoading} error={error} {...props}>
             <div className="grid grid-cols-12 gap-2 p-2">

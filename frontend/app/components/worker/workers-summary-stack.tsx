@@ -1,6 +1,6 @@
 import WorkerSummary from "@components/worker/worker-summary"
 import { useOnlineWorkers } from "@hooks/use-live-workers"
-import { extractId } from "@utils/translate-server-models"
+import { extractId } from "@/types/surreal-records"
 import React from "react"
 
 const WorkersSummaryStack: React.FC = () => {

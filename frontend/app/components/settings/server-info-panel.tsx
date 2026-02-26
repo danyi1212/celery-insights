@@ -4,13 +4,11 @@ import Panel from "@components/common/panel"
 import VersionCheckIcon from "@components/settings/version-check-icon"
 import { Button } from "@components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
-import { useClient } from "@hooks/use-client"
-import { resetState } from "@stores/use-state-store"
 import { useQuery } from "@tanstack/react-query"
 import { formatBytes } from "@utils/format-bytes"
 import { formatSecondsDurationLong } from "@utils/format-seconds-duration-long"
 import { Loader2, RotateCw } from "lucide-react"
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 
 const LinkButton: React.FC<{ href: string; children?: React.ReactNode }> = ({ href, children }) => (
     <Button variant="outline" asChild disabled={Boolean(import.meta.env.VITE_DEMO_MODE)}>
@@ -20,24 +18,32 @@ const LinkButton: React.FC<{ href: string; children?: React.ReactNode }> = ({ hr
     </Button>
 )
 
+const fetchServerInfo = async () => {
+    const res = await fetch("/api/settings/info")
+    if (!res.ok) throw new Error(`Server info request failed: ${res.status}`)
+    return res.json()
+}
+
+const clearServerState = async (force: boolean) => {
+    const res = await fetch(`/api/settings/clear?force=${force}`, { method: "POST" })
+    if (!res.ok) throw new Error(`Clear state request failed: ${res.status}`)
+    return res.json()
+}
+
 export const ServerInfoPanel: React.FC = () => {
-    const client = useClient()
-    const getServerInfo = useCallback(() => client.settings.getServerInfo(), [client])
     const { data, isLoading, error, refetch } = useQuery({
         queryKey: ["server-info"],
-        queryFn: getServerInfo,
+        queryFn: fetchServerInfo,
     })
 
     const [isReset, setIsReset] = useState<boolean | null>(null)
     const [isResetLoading, setIsResetLoading] = useState(false)
     const handleResetState = () => {
         setIsResetLoading(true)
-        client.settings
-            .clearState(isReset === true)
+        clearServerState(isReset === true)
             .then((res) => {
                 setIsReset(res)
                 if (res) {
-                    resetState()
                     refetch().then()
                 }
             })
@@ -98,7 +104,7 @@ export const ServerInfoPanel: React.FC = () => {
                     <DetailItem
                         label="CPU Usage"
                         description="CPU usage by the server process"
-                        value={<LinearProgressWithLabel value={data?.cpu_usage[2] || 0} percentageLabel />}
+                        value={<LinearProgressWithLabel value={data?.cpu_usage?.[2] || 0} percentageLabel />}
                     />
                 </div>
                 <DetailItem

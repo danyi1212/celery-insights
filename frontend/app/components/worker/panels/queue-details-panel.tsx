@@ -1,7 +1,7 @@
 import DetailItem from "@components/common/detail-item"
 import Panel from "@components/common/panel"
 import { Switch } from "@components/ui/switch"
-import { QueueInfo } from "@services/server"
+import type { QueueInfo } from "@/types/surreal-records"
 import React from "react"
 
 interface QueueDetailsPanelProps {

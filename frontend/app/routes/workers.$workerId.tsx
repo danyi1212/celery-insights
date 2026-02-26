@@ -11,11 +11,9 @@ import WorkerDetailsCard from "@components/worker/panels/worker-details-card"
 import { AlertCircle } from "lucide-react"
 import { useWorker } from "@hooks/use-live-workers"
 import { useTourChangeStepOnLoad } from "@stores/use-tour-store"
-import { useMemo } from "react"
 
 const WorkerPage = () => {
     const { workerId } = Route.useParams()
-    const hostname = useMemo(() => workerId.substring(0, workerId.lastIndexOf("-")), [workerId])
     const { worker, isLoading } = useWorker(workerId)
     const notFound = !isLoading && worker === null
     useTourChangeStepOnLoad(8, !notFound)
@@ -33,31 +31,31 @@ const WorkerPage = () => {
     return (
         <div className="grid grid-cols-12 gap-3 px-3">
             <div className="col-span-12 lg:col-span-6 xl:col-span-4">
-                <WorkerDetailsCard workerId={workerId} hostname={hostname} id="worker-details" />
+                <WorkerDetailsCard workerId={workerId} id="worker-details" />
             </div>
             <div className="col-span-12 lg:col-span-6 xl:col-span-4">
-                <BrokerDetailsCard hostname={hostname} />
+                <BrokerDetailsCard workerId={workerId} />
             </div>
             <div className="col-span-12 lg:col-span-6 xl:col-span-4">
-                <PoolDetailsCard hostname={hostname} id="worker-pool" />
+                <PoolDetailsCard workerId={workerId} id="worker-pool" />
             </div>
             <div className="col-span-12">
-                <QueueDetails hostname={hostname} />
+                <QueueDetails workerId={workerId} />
             </div>
             <div className="col-span-12 lg:col-span-6 xl:col-span-4">
-                <ActiveTasksPanel hostname={hostname} />
+                <ActiveTasksPanel workerId={workerId} />
             </div>
             <div className="col-span-12 lg:col-span-6 xl:col-span-4">
-                <ReservedTasksPanel hostname={hostname} />
+                <ReservedTasksPanel workerId={workerId} />
             </div>
             <div className="col-span-12 lg:col-span-6 xl:col-span-4">
-                <ScheduledTasksPanel hostname={hostname} />
+                <ScheduledTasksPanel workerId={workerId} />
             </div>
             <div className="col-span-12 xl:col-span-6">
-                <RegisteredTasksPanel workerId={workerId} hostname={hostname} id="registered-tasks" />
+                <RegisteredTasksPanel workerId={workerId} id="registered-tasks" />
             </div>
             <div className="col-span-12 xl:col-span-6">
-                <RevokedTasksPanel hostname={hostname} />
+                <RevokedTasksPanel workerId={workerId} />
             </div>
         </div>
     )

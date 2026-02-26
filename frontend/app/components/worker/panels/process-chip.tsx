@@ -2,7 +2,7 @@ import TaskAvatar from "@components/task/task-avatar"
 import { Badge } from "@components/ui/badge"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { Clock } from "lucide-react"
-import { TaskRequest } from "@services/server"
+import type { TaskRequest } from "@/types/surreal-records"
 import React from "react"
 
 interface ProcessChipProps {

@@ -2,8 +2,7 @@ import TaskAvatar from "@components/task/task-avatar"
 import { Button } from "@components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@components/ui/table"
 import { useExplorerColumns } from "@stores/use-explorer-config"
-import { TaskState } from "@services/server"
-import { extractId } from "@utils/translate-server-models"
+import { TaskState, extractId } from "@/types/surreal-records"
 import type { SurrealTask } from "@/types/surreal-records"
 import type { SortConfig } from "@hooks/use-explorer-tasks"
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
@@ -156,12 +155,7 @@ const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, sort, setSort, page,
                     <span className="text-sm text-muted-foreground">
                         Page {page} of {totalPages}
                     </span>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage(page + 1)}
-                        disabled={page >= totalPages}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>
                         <ChevronRight className="size-4" />
                     </Button>
                 </div>

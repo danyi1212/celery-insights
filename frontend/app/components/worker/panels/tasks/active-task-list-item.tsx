@@ -1,6 +1,6 @@
 import TaskListItem from "@components/worker/panels/tasks/task-list-item"
 import { useNow } from "@hooks/use-now"
-import { TaskRequest } from "@services/server"
+import type { TaskRequest } from "@/types/surreal-records"
 import { formatDurationExact } from "@utils/format-duration-exact"
 import React, { useMemo } from "react"
 

@@ -3,7 +3,7 @@ import { Button } from "@components/ui/button"
 import { Card, CardContent, CardFooter } from "@components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import useSettingsStore from "@stores/use-settings-store"
-import { useStateStore } from "@stores/use-state-store"
+import { useLiveTasks } from "@hooks/use-live-tasks"
 import { useTourStore } from "@stores/use-tour-store"
 import React from "react"
 import { TooltipRenderProps } from "react-joyride"
@@ -18,7 +18,8 @@ const TourTooltip: React.FC<TooltipRenderProps> = ({
     closeProps,
     isLastStep,
 }) => {
-    const hasTasks = useStateStore((store) => store.tasks.size > 0)
+    const { data: tasks } = useLiveTasks(1)
+    const hasTasks = tasks.length > 0
     const isDemo = useSettingsStore((state) => state.demo)
     return (
         <div className="animate-in zoom-in-75 fade-in duration-200">

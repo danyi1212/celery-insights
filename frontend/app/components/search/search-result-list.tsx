@@ -4,9 +4,8 @@ import SearchResultListItem from "@components/search/search-result-list-item"
 import TaskAvatar from "@components/task/task-avatar"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
 import { useSearch } from "@hooks/use-search"
-import { TaskState } from "@services/server"
+import { TaskState, extractId } from "@/types/surreal-records"
 import useSettingsStore from "@stores/use-settings-store"
-import { extractId } from "@utils/translate-server-models"
 import { format } from "date-fns"
 import { Server } from "lucide-react"
 import React from "react"
@@ -64,18 +63,14 @@ const SearchResultList: React.FC<SearchResultsProps> = ({ query }) => {
                 const taskId = extractId(task.id)
                 const sentAtDate = task.sent_at ? new Date(task.sent_at) : null
                 const sentAt =
-                    sentAtDate && !Number.isNaN(sentAtDate.getTime())
-                        ? format(sentAtDate, "HH:mm:ss")
-                        : "Unknown"
+                    sentAtDate && !Number.isNaN(sentAtDate.getTime()) ? format(sentAtDate, "HH:mm:ss") : "Unknown"
                 return (
                     <SearchResultListItem
                         key={taskId}
                         primary={task?.type || "Unknown"}
                         secondary={`Sent at ${sentAt}`}
                         link={`/tasks/${taskId}`}
-                        avatar={
-                            <TaskAvatar taskId={taskId} type={task.type} status={task.state as TaskState} />
-                        }
+                        avatar={<TaskAvatar taskId={taskId} type={task.type} status={task.state as TaskState} />}
                     />
                 )
             })}
