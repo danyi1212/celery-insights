@@ -785,7 +785,7 @@ Replace all `useStateStore` selectors with live query hooks:
 **Files to modify:** `frontend/app/components/surrealdb-provider.tsx`, `__root.tsx`
 **Files to remove:** `demo-simulator.tsx`, `demo-client.ts`, `frontend/app/utils/simulator/*`, `use-client.ts`
 
-## [ ] Phase 5: Cleanup & Polish
+## [x] Phase 5: Cleanup & Polish
 
 ### [x] 5a. Remove dead code
 
@@ -843,7 +843,7 @@ Replace all `useStateStore` selectors with live query hooks:
   - Component tests — update to use new hooks instead of state store
   - Search hook — debounce, query execution
 
-### [ ] 5e. Regenerate OpenAPI client
+### [x] 5e. Regenerate OpenAPI client
 
 - If any REST endpoints remain (settings), regenerate the OpenAPI client: `cd frontend && bun run generate-client`
 - If all data access is via SurrealDB and only `/health` + settings endpoints remain, evaluate whether the generated client is still needed
