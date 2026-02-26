@@ -752,7 +752,7 @@ Replace all `useStateStore` selectors with live query hooks:
 
 ## [ ] Phase 4: Demo Mode
 
-### [ ] 4a. Embedded SurrealDB WASM (lazy-loaded)
+### [x] 4a. Embedded SurrealDB WASM (lazy-loaded)
 
 - Use `surrealdb` JS SDK with `Surreal.connect("mem://")` for in-browser embedded mode
 - **Lazy-load the WASM module** (5-10MB) only when demo mode is activated — do not include in the main bundle
