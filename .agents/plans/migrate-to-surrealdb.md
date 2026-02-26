@@ -825,7 +825,7 @@ Replace all `useStateStore` selectors with live query hooks:
 - Remove or keep `openapi-typescript-codegen` (depends on whether remaining settings endpoints justify it)
 - Remove `@tanstack/react-query` if no REST endpoints remain that use it (evaluate — settings/info endpoint may still benefit from it)
 
-### [ ] 5d. Update tests
+### [x] 5d. Update tests
 
 - **Backend (Python)**: Remove tests for deleted routers/models. Add tests for:
   - `SurrealDBIngester` — event batching, task upsert, worker upsert, children array handling
