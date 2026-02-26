@@ -18,7 +18,7 @@ const FacetValue: React.FC<FacetValueProps> = ({ value, count, selected, onSelec
             onClick={onSelect}
         >
             <Checkbox
-                checked={selected.size === 0 || selected.has(value)}
+                checked={selected.size > 0 && selected.has(value)}
                 tabIndex={-1}
                 className="pointer-events-none"
             />
