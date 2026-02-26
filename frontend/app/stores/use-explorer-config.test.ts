@@ -4,7 +4,7 @@ import { useExplorerConfig, useExplorerColumns, useExplorerFacets } from "./use-
 describe("useExplorerConfig", () => {
     it("has the expected default column order", () => {
         const state = useExplorerConfig.getState()
-        expect(state.columnOrder).toEqual(["lastUpdated", "state", "id", "type", "worker"])
+        expect(state.columnOrder).toEqual(["last_updated", "state", "id", "type", "worker"])
     })
 
     it("has the expected default facet order", () => {
@@ -43,6 +43,6 @@ describe("useExplorerFacets", () => {
         const { result } = renderHook(() => useExplorerFacets())
 
         const properties = result.current.map((facet) => facet.property)
-        expect(properties).not.toContain("lastUpdated")
+        expect(properties).not.toContain("last_updated")
     })
 })

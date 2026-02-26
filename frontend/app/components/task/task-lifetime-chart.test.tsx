@@ -1,5 +1,5 @@
 import { render, screen } from "@test-utils"
-import { createStateTask } from "@test-fixtures"
+import { createTask } from "@test-fixtures"
 import { TaskState } from "@/types/surreal-records"
 import TaskLifetimeChart from "./task-lifetime-chart"
 
@@ -11,13 +11,13 @@ vi.mock("@hooks/use-now", () => ({
 
 describe("TaskLifetimeChart", () => {
     it("shows empty message when task has no lifecycle data", () => {
-        // A task with sentAt equal to now and no further timestamps produces empty phases
-        const task = createStateTask({
+        // A task with sent_at equal to now and no further timestamps produces empty phases
+        const task = createTask({
             state: TaskState.PENDING,
-            sentAt: MOCK_NOW,
-            receivedAt: undefined,
-            startedAt: undefined,
-            succeededAt: undefined,
+            sent_at: MOCK_NOW,
+            received_at: undefined,
+            started_at: undefined,
+            succeeded_at: undefined,
         })
         render(<TaskLifetimeChart task={task} />)
         expect(screen.getByText("No lifecycle data available")).toBeInTheDocument()
@@ -25,12 +25,12 @@ describe("TaskLifetimeChart", () => {
 
     it("renders phase segments for a completed task", () => {
         const base = MOCK_NOW.getTime() - 10000
-        const task = createStateTask({
+        const task = createTask({
             state: TaskState.SUCCESS,
-            sentAt: new Date(base),
-            receivedAt: new Date(base + 2000),
-            startedAt: new Date(base + 4000),
-            succeededAt: new Date(base + 10000),
+            sent_at: new Date(base),
+            received_at: new Date(base + 2000),
+            started_at: new Date(base + 4000),
+            succeeded_at: new Date(base + 10000),
             runtime: 6.0,
         })
         render(<TaskLifetimeChart task={task} />)
@@ -41,36 +41,36 @@ describe("TaskLifetimeChart", () => {
     })
 
     it("shows live indicator for active (non-terminal) tasks", () => {
-        const task = createStateTask({
+        const task = createTask({
             state: TaskState.STARTED,
-            sentAt: new Date(MOCK_NOW.getTime() - 5000),
-            receivedAt: new Date(MOCK_NOW.getTime() - 4000),
-            startedAt: new Date(MOCK_NOW.getTime() - 3000),
-            succeededAt: undefined,
+            sent_at: new Date(MOCK_NOW.getTime() - 5000),
+            received_at: new Date(MOCK_NOW.getTime() - 4000),
+            started_at: new Date(MOCK_NOW.getTime() - 3000),
+            succeeded_at: undefined,
         })
         render(<TaskLifetimeChart task={task} />)
         expect(screen.getByText("Live")).toBeInTheDocument()
     })
 
     it("does not show live indicator for terminal tasks", () => {
-        const task = createStateTask({
+        const task = createTask({
             state: TaskState.SUCCESS,
-            sentAt: new Date(MOCK_NOW.getTime() - 10000),
-            receivedAt: new Date(MOCK_NOW.getTime() - 9000),
-            startedAt: new Date(MOCK_NOW.getTime() - 8000),
-            succeededAt: new Date(MOCK_NOW.getTime() - 5000),
+            sent_at: new Date(MOCK_NOW.getTime() - 10000),
+            received_at: new Date(MOCK_NOW.getTime() - 9000),
+            started_at: new Date(MOCK_NOW.getTime() - 8000),
+            succeeded_at: new Date(MOCK_NOW.getTime() - 5000),
         })
         render(<TaskLifetimeChart task={task} />)
         expect(screen.queryByText("Live")).not.toBeInTheDocument()
     })
 
     it("displays total duration in the header", () => {
-        const task = createStateTask({
+        const task = createTask({
             state: TaskState.SUCCESS,
-            sentAt: new Date(MOCK_NOW.getTime() - 5000),
-            receivedAt: new Date(MOCK_NOW.getTime() - 4000),
-            startedAt: new Date(MOCK_NOW.getTime() - 3000),
-            succeededAt: MOCK_NOW,
+            sent_at: new Date(MOCK_NOW.getTime() - 5000),
+            received_at: new Date(MOCK_NOW.getTime() - 4000),
+            started_at: new Date(MOCK_NOW.getTime() - 3000),
+            succeeded_at: MOCK_NOW,
         })
         render(<TaskLifetimeChart task={task} />)
         // Total duration should be displayed with "Total:" prefix
@@ -78,12 +78,12 @@ describe("TaskLifetimeChart", () => {
     })
 
     it("renders legend items", () => {
-        const task = createStateTask({
+        const task = createTask({
             state: TaskState.SUCCESS,
-            sentAt: new Date(MOCK_NOW.getTime() - 5000),
-            receivedAt: new Date(MOCK_NOW.getTime() - 4000),
-            startedAt: new Date(MOCK_NOW.getTime() - 3000),
-            succeededAt: MOCK_NOW,
+            sent_at: new Date(MOCK_NOW.getTime() - 5000),
+            received_at: new Date(MOCK_NOW.getTime() - 4000),
+            started_at: new Date(MOCK_NOW.getTime() - 3000),
+            succeeded_at: MOCK_NOW,
         })
         render(<TaskLifetimeChart task={task} />)
         expect(screen.getByText("Waiting in Queue")).toBeInTheDocument()
@@ -92,12 +92,12 @@ describe("TaskLifetimeChart", () => {
     })
 
     it("hides legend when showLegend is false", () => {
-        const task = createStateTask({
+        const task = createTask({
             state: TaskState.SUCCESS,
-            sentAt: new Date(MOCK_NOW.getTime() - 5000),
-            receivedAt: new Date(MOCK_NOW.getTime() - 4000),
-            startedAt: new Date(MOCK_NOW.getTime() - 3000),
-            succeededAt: MOCK_NOW,
+            sent_at: new Date(MOCK_NOW.getTime() - 5000),
+            received_at: new Date(MOCK_NOW.getTime() - 4000),
+            started_at: new Date(MOCK_NOW.getTime() - 3000),
+            succeeded_at: MOCK_NOW,
         })
         render(<TaskLifetimeChart task={task} showLegend={false} />)
         expect(screen.queryByText("Waiting in Queue")).not.toBeInTheDocument()

@@ -1,7 +1,7 @@
 import FlowChart from "@components/workflow/flow-chart"
 import TimelineChart from "@components/workflow/timeline-chart"
 import { useWorkflowTasks } from "@hooks/use-live-tasks"
-import { surrealToStateTask } from "@/types/state-types"
+import { parseTask } from "@/types/surreal-records"
 import React, { useDeferredValue, useMemo } from "react"
 import { ReactFlowProvider } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
@@ -19,7 +19,7 @@ interface WorkflowGraphProps {
 
 const WorkflowGraph: React.FC<WorkflowGraphProps> = ({ chartType, rootTaskId, currentTaskId }) => {
     const { data: surrealTasks } = useWorkflowTasks(rootTaskId)
-    const workflowTasks = useMemo(() => surrealTasks.map(surrealToStateTask), [surrealTasks])
+    const workflowTasks = useMemo(() => surrealTasks.map(parseTask), [surrealTasks])
 
     const deferredTasks = useDeferredValue(workflowTasks)
     switch (chartType) {

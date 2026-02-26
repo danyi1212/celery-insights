@@ -2,13 +2,13 @@ import TimeSince from "@components/common/distance-timer"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { cn } from "@lib/utils"
 import { useNow } from "@hooks/use-now"
-import { StateTask } from "@/types/state-types"
+import type { Task } from "@/types/surreal-records"
 import { differenceInMinutes, format } from "date-fns"
 import { AlarmClock, Clock, LucideIcon } from "lucide-react"
 import React, { useMemo } from "react"
 
 interface TaskTimerProps extends React.ComponentProps<"span"> {
-    task: StateTask
+    task: Task
 }
 
 interface TimerInfo {

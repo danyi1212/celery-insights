@@ -1,4 +1,4 @@
-import { StateTask } from "@/types/state-types"
+import type { Task } from "@/types/surreal-records"
 import { format } from "date-fns"
 import React from "react"
 import { create } from "zustand"
@@ -18,17 +18,17 @@ type Configuration<T> = {
 }
 
 export interface ExplorerConfig {
-    configs: Configuration<StateTask>
-    columnOrder: (keyof StateTask)[]
-    facetOrder: (keyof StateTask)[]
+    configs: Configuration<Task>
+    columnOrder: (keyof Task)[]
+    facetOrder: (keyof Task)[]
 }
 
 export const useExplorerConfig = create<ExplorerConfig>(() => ({
-    columnOrder: ["lastUpdated", "state", "id", "type", "worker"],
+    columnOrder: ["last_updated", "state", "id", "type", "worker"],
     facetOrder: ["state", "type", "result", "worker"],
     configs: {
-        lastUpdated: {
-            property: "lastUpdated",
+        last_updated: {
+            property: "last_updated",
             label: "Last Updated",
             columnWidth: 160,
             showColumn: true,
