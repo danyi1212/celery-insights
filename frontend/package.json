@@ -37,6 +37,7 @@
         "react-joyride": "^2.8.2",
         "react-shiki": "^0.9.1",
         "react-transition-group": "^4.4.5",
+        "recharts": "^3.7.0",
         "semver": "^7.6.3",
         "shiki": "^3.22.0",
         "string-to-color": "^2.2.2",

@@ -13,7 +13,7 @@ import {
     useSidebar,
 } from "@components/ui/sidebar"
 import MenuItem, { MenuLink } from "@layout/menu/menu-item"
-import { LayoutDashboard, Rss, Search, Settings } from "lucide-react"
+import { BarChart3, LayoutDashboard, Rss, Search, Settings } from "lucide-react"
 import { useIsDark } from "@hooks/use-is-dark"
 import { Link } from "@tanstack/react-router"
 import React from "react"
@@ -35,6 +35,12 @@ const menuLinks: MenuLink[] = [
         label: "Live Events",
         icon: <Rss />,
         to: "/raw_events",
+        external: false,
+    },
+    {
+        label: "Analytics",
+        icon: <BarChart3 />,
+        to: "/analytics",
         external: false,
     },
 ]

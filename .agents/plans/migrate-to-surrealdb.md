@@ -852,7 +852,7 @@ Replace all `useStateStore` selectors with live query hooks:
 
 These features become possible with persistent storage but are out of scope for the initial migration:
 
-### [ ] 6a. Historical analytics
+### [x] 6a. Historical analytics
 
 - **Task throughput chart**: `SELECT count(), time::group('minute', last_updated) FROM task GROUP BY time::group('minute', last_updated)` — tasks/minute over time
 - **Failure rate trends**: success/failure ratio over configurable time periods
