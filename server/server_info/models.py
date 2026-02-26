@@ -3,13 +3,19 @@ import os
 import platform
 import resource
 import time
-from typing import Self
+from typing import NamedTuple, Self
 
 from pydantic import BaseModel, Field
 from starlette.requests import Request
 
 from surrealdb_client import get_db
-from workers.models import CPULoad
+
+
+class CPULoad(NamedTuple):
+    avg_1min: float
+    avg_5min: float
+    avg_15min: float
+
 
 logger = logging.getLogger(__name__)
 start_time = time.time()

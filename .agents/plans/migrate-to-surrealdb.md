@@ -787,7 +787,7 @@ Replace all `useStateStore` selectors with live query hooks:
 
 ## [ ] Phase 5: Cleanup & Polish
 
-### [ ] 5a. Remove dead code
+### [x] 5a. Remove dead code
 
 - Remove all Python REST endpoint files and their tests (tasks, workers, events, search routers)
 - Remove WebSocket-related server code and tests

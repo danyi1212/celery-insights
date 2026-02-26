@@ -2,8 +2,7 @@ from typing import ClassVar
 
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from server_info.models import ClientDebugInfo, ServerInfo, StateDump
-from workers.models import CPULoad
+from server_info.models import CPULoad, ClientDebugInfo, ServerInfo, StateDump
 
 
 class ServerInfoFactory(ModelFactory[ServerInfo]):
