@@ -3,6 +3,7 @@ import { Surreal, type ConnectionStatus } from "surrealdb"
 import useSettingsStore from "@stores/use-settings-store"
 import { Progress } from "@components/ui/progress"
 import { DEMO_SCHEMA } from "@lib/demo-schema"
+import { DemoEventGenerator } from "@lib/demo-event-generator"
 
 export type IngestionStatus = "leader" | "standby" | "read-only" | "disabled"
 
@@ -218,6 +219,7 @@ type DemoLoadingStage = "downloading" | "initializing" | "ready"
 
 const DemoSurrealDBProvider = ({ children }: { children: React.ReactNode }) => {
     const dbRef = useRef<Surreal | null>(null)
+    const generatorRef = useRef<DemoEventGenerator | null>(null)
     const [status, setStatus] = useState<ConnectionStatus>("disconnected")
     const [error, setError] = useState<Error | null>(null)
     const [loadingStage, setLoadingStage] = useState<DemoLoadingStage>("downloading")
@@ -270,6 +272,12 @@ const DemoSurrealDBProvider = ({ children }: { children: React.ReactNode }) => {
                 }
 
                 dbRef.current = db
+
+                // Start demo event generator
+                const generator = new DemoEventGenerator(db)
+                generatorRef.current = generator
+                generator.start()
+
                 setLoadingStage("ready")
                 setReady(true)
             } catch (err) {
@@ -283,6 +291,8 @@ const DemoSurrealDBProvider = ({ children }: { children: React.ReactNode }) => {
 
         return () => {
             cancelled = true
+            generatorRef.current?.stop()
+            generatorRef.current = null
             dbRef.current?.close()
             dbRef.current = null
         }
