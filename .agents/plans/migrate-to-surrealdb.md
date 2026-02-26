@@ -817,7 +817,7 @@ Replace all `useStateStore` selectors with live query hooks:
   - Update "Run dev server" to three processes
   - Note that settings are Bun-owned, Python receives via env vars
 
-### [ ] 5c. Update dependencies
+### [x] 5c. Update dependencies
 
 - Add `surrealdb` to `pyproject.toml`
 - Add `surrealdb` to frontend `package.json` (via `bun add surrealdb`)
