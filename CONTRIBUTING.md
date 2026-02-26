@@ -32,10 +32,6 @@ To contribute to the project, follow these steps:
 1. Fork the repository.
 2. Create a branch with a descriptive name, using prefixes like `feature/` or `bug/` for the branch names.
 3. Make your changes in the branch.
-   > For server API changes, make sure to run `bun run generate-client` in the frontend folder to update the Server
-   Client SDK.
-   >
-   > You can use the provided PyCharm run configuration `generate-client`
 4. Make sure to run linters and formatters:
    - For Python code: [ruff](https://github.com/charliermarsh/ruff)
    - For TypeScript code: [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/)
@@ -48,6 +44,7 @@ To contribute to the project, follow these steps:
 
 - Python 3.12+
 - [Bun](https://bun.sh/)
+- [SurrealDB](https://surrealdb.com/install) (v2.1+)
 - An IDE (we suggest PyCharm, but you can use your preferred IDE)
 
 ### Create dev environment
@@ -91,21 +88,39 @@ To contribute to the project, follow these steps:
 
 ### Run dev server
 
-1. Start the server (provided PyCharm run configuration `run server`)
+The quickest way to start all services at once:
+
+```shell
+cd frontend/
+bun run dev:all
+```
+
+Or run them in separate terminals:
+
+1. Start SurrealDB
+
+    ```shell
+   cd frontend/
+   bun run dev:surreal
+   ```
+
+2. Start the Python ingester (provided PyCharm run configuration `run server`)
 
     ```shell
    cd server/
    python run.py
    ```
 
-2. Start the frontend dev server (provided PyCharm run configuration `dev`)
+3. Start the frontend dev server (provided PyCharm run configuration `dev`)
 
     ```shell
    cd frontend/
    bun dev
    ```
 
-3. Open browser to <http://localhost:3000>
+4. Open browser to <http://localhost:3000>
+
+> **Note:** All application settings are owned by Bun (`frontend/src/config.ts`) and passed to Python via env vars. When adding new configuration, define it in the Bun config schema first.
 
 ## Code Styles
 
