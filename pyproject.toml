@@ -16,6 +16,7 @@ dependencies = [
     "colorlog",
     "redis>=5.0.8",
     "surrealdb>=1.0.8",
+    "python-multipart>=0.0.22",
 ]
 
 [dependency-groups]

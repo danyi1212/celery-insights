@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import CopyLinkButton from "@components/common/copy-link-button"
+import ExportButton from "@components/explorer/export-button"
 import ExplorerGrid from "@components/explorer/explorer-grid"
 import FacetSet from "@components/explorer/facet-set"
 import { useExplorerTasks, type ExplorerFilters, type SortConfig } from "@hooks/use-explorer-tasks"
@@ -34,6 +35,7 @@ const ExplorerPage = () => {
             }
             actions={
                 <>
+                    <ExportButton filters={filters} sort={sort} total={total} />
                     <CopyLinkButton />
                     <span className="text-sm text-muted-foreground">{total} Tasks found</span>
                 </>
