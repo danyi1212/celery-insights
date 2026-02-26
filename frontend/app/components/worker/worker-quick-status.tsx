@@ -1,7 +1,7 @@
 import LinearProgressWithLabel from "@components/common/linear-progress-with-label"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import type { SurrealWorker } from "@/types/surreal-records"
-import { extractId } from "@utils/translate-server-models"
+import { extractId } from "@/types/surreal-records"
 import React from "react"
 
 interface WorkerQuickStatusProps {

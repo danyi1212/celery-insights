@@ -1,6 +1,6 @@
 import { render, screen } from "@test-utils"
 import { createStateTask } from "@test-fixtures"
-import { TaskState } from "@services/server"
+import { TaskState } from "@/types/surreal-records"
 import TaskLifetimeChart from "./task-lifetime-chart"
 
 const MOCK_NOW = new Date("2025-06-15T12:00:00Z")

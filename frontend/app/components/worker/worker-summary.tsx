@@ -4,10 +4,10 @@ import TaskAvatar from "@components/task/task-avatar"
 import { AvatarGroup } from "@components/ui/avatar"
 import { Button } from "@components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
-import { TaskState } from "@services/server"
+import { TaskState } from "@/types/surreal-records"
 import { useWorker } from "@hooks/use-live-workers"
 import { useWorkerTasks } from "@hooks/use-live-tasks"
-import { extractId } from "@utils/translate-server-models"
+import { extractId } from "@/types/surreal-records"
 import React, { useMemo } from "react"
 import { Link } from "@tanstack/react-router"
 
@@ -18,14 +18,8 @@ interface WorkerSummaryProps {
 const WorkerSummary: React.FC<WorkerSummaryProps> = ({ workerId }) => {
     const { worker } = useWorker(workerId)
     const { data: tasks } = useWorkerTasks(workerId)
-    const startedTasks = useMemo(
-        () => tasks.filter((task) => task.state === TaskState.STARTED),
-        [tasks],
-    )
-    const receivedTasks = useMemo(
-        () => tasks.filter((task) => task.state === TaskState.RECEIVED),
-        [tasks],
-    )
+    const startedTasks = useMemo(() => tasks.filter((task) => task.state === TaskState.STARTED), [tasks])
+    const receivedTasks = useMemo(() => tasks.filter((task) => task.state === TaskState.RECEIVED), [tasks])
 
     if (worker === null) return <></>
 

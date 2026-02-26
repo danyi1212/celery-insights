@@ -5,18 +5,11 @@ import { Button } from "@components/ui/button"
 import { Switch } from "@components/ui/switch"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import useSettingsStore, { resetSettings, useIsDefaultSettings } from "@stores/use-settings-store"
-import { useStateStore } from "@stores/use-state-store"
 import React from "react"
 
 const SettingsPanel = () => {
     const hideWelcomeBanner = useSettingsStore((state) => state.hideWelcomeBanner)
     const isDemo = useSettingsStore((state) => state.demo)
-    const [taskCount, taskMax, workerCount, workerMax] = useStateStore((state) => [
-        state.tasks.size,
-        state.tasks.max,
-        state.workers.size,
-        state.workers.max,
-    ])
     const isDefaultSettings = useIsDefaultSettings()
 
     return (
@@ -65,16 +58,6 @@ const SettingsPanel = () => {
                             <TooltipContent side="right">{isDemo ? "Simulator" : "Real Server"}</TooltipContent>
                         </Tooltip>
                     }
-                />
-                <DetailItem
-                    label="Tasks Memory"
-                    description="Number of tasks keeped in the browser memory."
-                    value={`${taskCount} / ${taskMax}`}
-                />
-                <DetailItem
-                    label="Workers Memory"
-                    description="Number of workers keeped in the browser memory."
-                    value={`${workerCount} / ${workerMax}`}
                 />
             </div>
         </Panel>

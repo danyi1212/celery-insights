@@ -1,7 +1,10 @@
 import { Alert, AlertDescription, AlertTitle } from "@components/ui/alert"
 import { AlertCircle } from "lucide-react"
-import { HTTPValidationError } from "@services/server"
 import React from "react"
+
+interface HTTPValidationError {
+    detail?: Array<{ loc: (string | number)[]; msg: string; type: string }>
+}
 
 interface ValidationErrorAlertProps {
     error: HTTPValidationError

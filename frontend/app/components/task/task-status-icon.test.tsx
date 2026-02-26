@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@test-utils"
 import userEvent from "@testing-library/user-event"
-import { TaskState } from "@services/server"
+import { TaskState } from "@/types/surreal-records"
 import TaskStatusIcon from "./task-status-icon"
 
 describe("TaskStatusIcon", () => {

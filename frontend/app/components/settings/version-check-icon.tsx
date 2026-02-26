@@ -11,8 +11,8 @@ interface VersionCheckIconProps {
 const VersionCheckIcon: React.FC<VersionCheckIconProps> = ({ currentVersion }) => {
     const { data, isLoading, error } = useGithubLatestRelease()
     const isUpdateAvailable = useMemo(
-        () => data?.data.tag_name && currentVersion && semver.gt(data.data.tag_name, currentVersion),
-        [data?.data.tag_name, currentVersion],
+        () => data?.tag_name && currentVersion && semver.gt(data.tag_name, currentVersion),
+        [data?.tag_name, currentVersion],
     )
     if (isLoading)
         return (
@@ -32,7 +32,7 @@ const VersionCheckIcon: React.FC<VersionCheckIconProps> = ({ currentVersion }) =
                 <TooltipContent>Error while checking for updates</TooltipContent>
             </Tooltip>
         )
-    if (currentVersion === undefined || data?.data.tag_name === undefined)
+    if (currentVersion === undefined || data?.tag_name === undefined)
         return (
             <Tooltip>
                 <TooltipTrigger asChild>
@@ -47,7 +47,7 @@ const VersionCheckIcon: React.FC<VersionCheckIconProps> = ({ currentVersion }) =
                 <TooltipTrigger asChild>
                     <AlertCircle className="mx-1 size-4 text-yellow-500" />
                 </TooltipTrigger>
-                <TooltipContent>{`Update is available! ${currentVersion} => ${data.data.tag_name}`}</TooltipContent>
+                <TooltipContent>{`Update is available! ${currentVersion} => ${data.tag_name}`}</TooltipContent>
             </Tooltip>
         )
     } else {

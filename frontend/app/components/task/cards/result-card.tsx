@@ -1,7 +1,7 @@
 import Panel from "@components/common/panel"
-import useTaskResult from "@hooks/task/use-task-result"
+import { useTask } from "@hooks/use-live-tasks"
 import { useIsDark } from "@hooks/use-is-dark"
-import { TaskResult } from "@services/server"
+import type { SurrealTask } from "@/types/surreal-records"
 import JsonView from "@uiw/react-json-view"
 import { githubDarkTheme } from "@uiw/react-json-view/githubDark"
 import { githubLightTheme } from "@uiw/react-json-view/githubLight"
@@ -12,7 +12,7 @@ interface ResultCardProps {
 }
 
 interface CardContentProps {
-    result?: TaskResult
+    task?: SurrealTask | null
 }
 
 const normalizeJsonViewValue = (value: unknown): object => {
@@ -22,32 +22,26 @@ const normalizeJsonViewValue = (value: unknown): object => {
     return { result: value }
 }
 
-const CardContent: React.FC<CardContentProps> = ({ result }) => {
+const tryParseJson = (str: string): unknown => {
+    try {
+        return JSON.parse(str)
+    } catch {
+        return str
+    }
+}
+
+const CardContent: React.FC<CardContentProps> = ({ task }) => {
     const isDark = useIsDark()
 
-    if (!result) return <p>Could not find task result.</p>
+    if (!task) return <p>Could not find task result.</p>
 
-    if (result.ignored)
-        return (
-            <p>
-                Task is configured to{" "}
-                <a
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    href="https://docs.celeryq.dev/en/stable/userguide/tasks.html#Task.ignore_result"
-                    className="text-primary underline hover:opacity-80"
-                >
-                    ignore result
-                </a>
-                .
-            </p>
-        )
+    if (!task.result) return <p>No result available.</p>
 
-    if (result.result == null) return <p>No result available.</p>
+    const parsed = tryParseJson(task.result)
 
     return (
         <JsonView
-            value={normalizeJsonViewValue(result.result)}
+            value={normalizeJsonViewValue(parsed)}
             style={isDark ? githubDarkTheme : githubLightTheme}
             collapsed={2}
             displayDataTypes={false}
@@ -57,10 +51,10 @@ const CardContent: React.FC<CardContentProps> = ({ result }) => {
 }
 
 const ResultCard: React.FC<ResultCardProps> = ({ taskId }) => {
-    const { taskResult, isLoading, error } = useTaskResult(taskId)
+    const { task, isLoading, error } = useTask(taskId)
     return (
         <Panel title="Result" loading={isLoading} error={error}>
-            <CardContent result={taskResult} />
+            <CardContent task={task} />
         </Panel>
     )
 }

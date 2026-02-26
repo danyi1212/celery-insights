@@ -1,7 +1,7 @@
 import WorkerQuickStatus from "@components/worker/worker-quick-status"
 import { Separator } from "@components/ui/separator"
 import { useOnlineWorkers } from "@hooks/use-live-workers"
-import { extractId } from "@utils/translate-server-models"
+import { extractId } from "@/types/surreal-records"
 import React from "react"
 
 const WorkerQuickStatusList: React.FC = () => {

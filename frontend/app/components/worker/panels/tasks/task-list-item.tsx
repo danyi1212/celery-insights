@@ -2,7 +2,7 @@ import AnimatedListItem from "@components/common/animated-list-item"
 import TaskAvatar from "@components/task/task-avatar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { CheckCircle, ChevronRight, XCircle } from "lucide-react"
-import { TaskRequest } from "@services/server"
+import type { TaskRequest } from "@/types/surreal-records"
 import React from "react"
 import { Link } from "@tanstack/react-router"
 

@@ -720,7 +720,7 @@ Replace all `useStateStore` selectors with live query hooks:
 | Online workers check | `useOnlineWorkerIds()` | `useOnlineWorkers()` |
 | Search | `GET /api/search` via React Query | `useSearch(query)` direct to SurrealDB |
 
-### [ ] 3g. Remove old sync layer
+### [x] 3g. Remove old sync layer
 
 - Remove `frontend/app/stores/use-state-store.ts` + `use-state-store.test.ts`
 - Remove `frontend/app/components/celery-state-sync.tsx`

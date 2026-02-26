@@ -1,13 +1,10 @@
 import { createRootRoute, Outlet, Link as RouterLink } from "@tanstack/react-router"
 import { ReadOnlyBanner } from "@components/connection-status"
-import CeleryStateSync from "@components/celery-state-sync"
-import DemoSimulator from "@components/demo-simulator"
 import SurrealDBProvider from "@components/surrealdb-provider"
 import { useDarkMode } from "@hooks/use-dark-mode"
 import Header from "@layout/header/header"
 import JoyrideTour from "@layout/joyride-tour"
 import Menu from "@layout/menu/menu"
-import useSettingsStore from "@stores/use-settings-store"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { SidebarInset, SidebarProvider } from "@components/ui/sidebar"
 import { TooltipProvider } from "@components/ui/tooltip"
@@ -15,11 +12,9 @@ import { TooltipProvider } from "@components/ui/tooltip"
 const queryClient = new QueryClient()
 
 const RootComponent = () => {
-    const isDemo = useSettingsStore((state) => state.demo)
     useDarkMode()
     return (
         <QueryClientProvider client={queryClient}>
-            {isDemo ? <DemoSimulator /> : <CeleryStateSync />}
             <SurrealDBProvider>
                 <SidebarProvider>
                     <Menu />

@@ -1,7 +1,7 @@
 import FlowChart from "@components/workflow/flow-chart"
 import TimelineChart from "@components/workflow/timeline-chart"
 import { useWorkflowTasks } from "@hooks/use-live-tasks"
-import { surrealToStateTask } from "@utils/translate-server-models"
+import { surrealToStateTask } from "@/types/state-types"
 import React, { useDeferredValue, useMemo } from "react"
 import { ReactFlowProvider } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"

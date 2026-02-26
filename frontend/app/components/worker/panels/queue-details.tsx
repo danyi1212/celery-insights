@@ -1,15 +1,15 @@
 import ErrorAlert from "@components/errors/error-alert"
 import QueueDetailsPanel from "@components/worker/panels/queue-details-panel"
-import useWorkerQueues from "@hooks/worker/use-worker-queues"
+import { useWorkerQueues } from "@hooks/worker/use-worker-inspect"
 import { Loader2 } from "lucide-react"
 import React from "react"
 
 interface QueueDetailsProps {
-    hostname: string
+    workerId: string
 }
 
-const QueueDetails: React.FC<QueueDetailsProps> = ({ hostname }) => {
-    const { queues, isLoading, error } = useWorkerQueues(hostname)
+const QueueDetails: React.FC<QueueDetailsProps> = ({ workerId }) => {
+    const { queues, isLoading, error } = useWorkerQueues(workerId)
     if (isLoading) {
         return (
             <div className="flex h-full w-full items-center justify-center">

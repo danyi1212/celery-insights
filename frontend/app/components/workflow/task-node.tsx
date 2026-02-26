@@ -1,5 +1,5 @@
 import TaskAvatar from "@components/task/task-avatar"
-import { StateTask } from "@utils/translate-server-models"
+import { StateTask } from "@/types/state-types"
 import React from "react"
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react"
 

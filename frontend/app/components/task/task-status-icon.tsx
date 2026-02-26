@@ -1,6 +1,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { cn } from "@lib/utils"
-import { TaskState } from "@services/server"
+import { TaskState } from "@/types/surreal-records"
 import {
     Ban,
     CheckCircle2,

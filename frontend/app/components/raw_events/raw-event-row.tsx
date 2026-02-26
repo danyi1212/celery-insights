@@ -55,9 +55,7 @@ export const RawEventRow: React.FC<RawEventRowProps> = ({ event }) => {
                         <TaskAvatar taskId="worker" type={hostname} />
                     )}
                 </TableCell>
-                <TableCell>
-                    {timestampLabel}
-                </TableCell>
+                <TableCell>{timestampLabel}</TableCell>
                 <TableCell>{eventType || "Unknown"}</TableCell>
                 <TableCell>{taskName || hostname || "Unknown"}</TableCell>
                 <TableCell>
