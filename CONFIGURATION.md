@@ -60,6 +60,7 @@ Enables Celery Insights to run in debug mode, that includes hot-reload, response
 Default: `pretty`
 
 Log output format. Options:
+
 - `pretty` — human-readable with ISO 8601 timestamps, colored level, and `[service]` prefix (colors auto-disabled in non-TTY environments like Docker)
 - `json` — single-line JSON objects for log aggregation pipelines (e.g., `{"ts":"...","level":"info","service":"python","msg":"..."}`)
 
@@ -122,6 +123,7 @@ Port for the embedded SurrealDB subprocess. Ignored when `SURREALDB_EXTERNAL_URL
 Default: `memory`
 
 Storage engine for the embedded SurrealDB subprocess. Options:
+
 - `memory` — in-memory, data lost on restart (fastest, good for development)
 - `rocksdb://path` — persistent storage using RocksDB
 - `surrealkv://path` — persistent storage using SurrealKV
@@ -250,6 +252,79 @@ For high availability or scaled deployments, run multiple Celery Insights instan
 
 For read-only dashboards (e.g., wall displays), set `INGESTION_ENABLED=false` to skip ingestion entirely.
 
+# Prometheus Metrics
+
+Celery Insights exposes Prometheus/OpenMetrics endpoints for external monitoring systems (Prometheus, Grafana, Datadog). Three tiered endpoints let you choose between scrape cost and detail level.
+
+## Endpoints
+
+### `GET /metrics` — Core Celery metrics (low cardinality, ~10 series)
+
+| Metric | Type | Labels |
+|--------|------|--------|
+| `celery_tasks_total` | Gauge | — |
+| `celery_tasks_by_state` | Gauge | `state` |
+| `celery_workers_total` | Gauge | — |
+| `celery_workers_online` | Gauge | — |
+| `celery_workers_offline` | Gauge | — |
+| `celery_task_runtime_seconds` | Histogram | — |
+| `celery_tasks_succeeded_total` | Gauge | — |
+| `celery_tasks_failed_total` | Gauge | — |
+| `celery_tasks_retried_total` | Gauge | — |
+
+### `GET /metrics/verbose` — Detailed metrics (higher cardinality, includes all core metrics)
+
+| Metric | Type | Labels |
+|--------|------|--------|
+| _(all core metrics above)_ | | |
+| `celery_tasks_by_type` | Gauge | `task_type` |
+| `celery_tasks_by_worker` | Gauge | `worker` |
+| `celery_task_runtime_seconds_by_type` | Histogram | `task_type` |
+| `celery_exceptions_by_type` | Gauge | `exception` |
+| `celery_worker_active_tasks` | Gauge | `worker` |
+| `celery_worker_processed_tasks` | Gauge | `worker` |
+
+### `GET /metrics/system` — Celery Insights internal metrics
+
+| Metric | Type | Labels |
+|--------|------|--------|
+| `celery_insights_uptime_seconds` | Gauge | — |
+| `celery_insights_cpu_load` | Gauge | `interval` (1m, 5m, 15m) |
+| `celery_insights_memory_rss_bytes` | Gauge | — |
+| `celery_insights_events_ingested_total` | Gauge | — |
+| `celery_insights_events_dropped_total` | Gauge | — |
+| `celery_insights_flushes_total` | Gauge | — |
+| `celery_insights_buffer_size` | Gauge | — |
+| `celery_insights_queue_size` | Gauge | — |
+| `celery_insights_db_tasks_count` | Gauge | — |
+| `celery_insights_db_workers_count` | Gauge | — |
+| `celery_insights_db_events_count` | Gauge | — |
+
+## Example Prometheus scrape config
+
+```yaml
+scrape_configs:
+  - job_name: "celery-insights"
+    scrape_interval: 15s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["localhost:8555"]
+
+  # Optional: scrape verbose metrics less frequently
+  - job_name: "celery-insights-verbose"
+    scrape_interval: 60s
+    metrics_path: /metrics/verbose
+    static_configs:
+      - targets: ["localhost:8555"]
+
+  # Optional: scrape system metrics
+  - job_name: "celery-insights-system"
+    scrape_interval: 30s
+    metrics_path: /metrics/system
+    static_configs:
+      - targets: ["localhost:8555"]
+```
+
 # Embedded Reverse Proxy
 
 The standalone Docker image ships with an embedded reverse proxy as the public entrypoint.
@@ -269,37 +344,37 @@ For v1, the embedded proxy is HTTP-only inside the container boundary. If you re
 
 ### Serializers
 
-* :heavy_check_mark: auth
-* :heavy_check_mark: msgpack
-* :heavy_check_mark: yaml
+- :heavy_check_mark: auth
+- :heavy_check_mark: msgpack
+- :heavy_check_mark: yaml
 
 ### Brokers
 
-* :white_check_mark: RabbitMQ
-* :white_check_mark: Redis
-* :x: Amazon SQS
-* :heavy_check_mark: Zookeeper
+- :white_check_mark: RabbitMQ
+- :white_check_mark: Redis
+- :x: Amazon SQS
+- :heavy_check_mark: Zookeeper
 
 ### Result Backends
 
-* :white_check_mark: Redis
-* :ballot_box_with_check: RPC
-* :heavy_check_mark: Memcache
-* :heavy_check_mark: SQLAlchemy
-* :heavy_check_mark: MongoDB
-* :x: Casandra
-* :x: IronCache
-* :heavy_check_mark: S3
-* :heavy_check_mark: Azure Block Blob
-* :heavy_check_mark: ElasticSearch
-* :heavy_check_mark: AWS DynamoDB
-* :x: Couchbase
-* :heavy_check_mark: CouchDB
-* :heavy_check_mark: ArangoDB
-* :heavy_check_mark: CosmoDB
-* :ballot_box_with_check: File-System
-* :heavy_check_mark: Consul
-* :heavy_check_mark: Riak
-* :x: Django ORM
+- :white_check_mark: Redis
+- :ballot_box_with_check: RPC
+- :heavy_check_mark: Memcache
+- :heavy_check_mark: SQLAlchemy
+- :heavy_check_mark: MongoDB
+- :x: Casandra
+- :x: IronCache
+- :heavy_check_mark: S3
+- :heavy_check_mark: Azure Block Blob
+- :heavy_check_mark: ElasticSearch
+- :heavy_check_mark: AWS DynamoDB
+- :x: Couchbase
+- :heavy_check_mark: CouchDB
+- :heavy_check_mark: ArangoDB
+- :heavy_check_mark: CosmoDB
+- :ballot_box_with_check: File-System
+- :heavy_check_mark: Consul
+- :heavy_check_mark: Riak
+- :x: Django ORM
 
 Feel free to [submit a feature request](CONTRIBUTING.md) to support more setups.

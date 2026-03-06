@@ -5,6 +5,7 @@ from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
 from lifespan import lifespan
+from metrics.router import metrics_router
 from server_info.router import settings_router
 from settings import Settings
 
@@ -46,3 +47,4 @@ async def health_check():
 
 
 app.include_router(settings_router)
+app.include_router(metrics_router)

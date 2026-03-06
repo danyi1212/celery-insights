@@ -117,6 +117,7 @@ def build_logging_config() -> dict:
             "tasks.result_fetcher": {"level": log_level},
             "workers.poller": {"level": log_level},
             "cleanup": {"level": log_level},
+            "metrics": {"level": log_level},
             # Third-party loggers (keep quiet)
             "asyncio": {"level": "WARNING"},
             "concurrent": {"level": "WARNING"},
@@ -135,6 +136,7 @@ def build_logging_config() -> dict:
             "aiohttp": {"level": "WARNING"},
             "charset_normalizer": {"level": "WARNING"},
             "requests": {"level": "WARNING"},
+            "httpx": {"level": "WARNING"},
             "urllib3": {"level": "WARNING"},
         },
     }

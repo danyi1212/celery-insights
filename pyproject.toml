@@ -17,6 +17,7 @@ dependencies = [
     "redis>=5.0.8",
     "surrealdb>=1.0.8",
     "python-multipart>=0.0.22",
+    "prometheus-client>=0.20",
 ]
 
 [dependency-groups]
@@ -32,6 +33,7 @@ dev = [
     "ty",
     "ipython",
     "pre-commit",
+    "httpx>=0.28.1",
 ]
 all = [
     "cryptography",
