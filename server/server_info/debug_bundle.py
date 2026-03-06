@@ -85,14 +85,10 @@ async def _query_state_dump() -> StateDump:
         db = get_db()
         task_result = await db.query("SELECT * FROM task")
         if task_result and isinstance(task_result, list):
-            tasks = (
-                task_result[0] if isinstance(task_result[0], list) else task_result
-            )  # ty: ignore[invalid-assignment]
+            tasks = task_result[0] if isinstance(task_result[0], list) else task_result  # ty: ignore[invalid-assignment]
         worker_result = await db.query("SELECT * FROM worker")
         if worker_result and isinstance(worker_result, list):
-            workers = (
-                worker_result[0] if isinstance(worker_result[0], list) else worker_result
-            )  # ty: ignore[invalid-assignment]
+            workers = worker_result[0] if isinstance(worker_result[0], list) else worker_result  # ty: ignore[invalid-assignment]
     except Exception:
         logger.exception("Failed to query SurrealDB for debug bundle state dump")
     return StateDump(tasks=tasks, workers=workers)

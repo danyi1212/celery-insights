@@ -68,7 +68,7 @@ async def lifespan(_):
 
     try:
         yield
-    except (KeyboardInterrupt, SystemExit, CancelledError):
+    except KeyboardInterrupt, SystemExit, CancelledError:
         logger.info("Stopping server...")
     finally:
         # Shutdown in reverse order — await async tasks before closing DB

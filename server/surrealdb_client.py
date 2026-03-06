@@ -58,7 +58,7 @@ async def init_surrealdb(settings: Settings | None = None) -> AsyncTemplate:
             try:
                 _db = await connect_surrealdb(settings)
                 return _db
-            except (OSError, ConnectionError, RuntimeError):
+            except OSError, ConnectionError, RuntimeError:
                 logger.warning("Failed to connect to SurrealDB, retrying in %.0fs...", delay, exc_info=True)
                 await asyncio.sleep(delay)
                 delay = min(delay * 2, max_delay)
