@@ -17,11 +17,17 @@ interface ApiErrorAlertProps {
 const ApiErrorAlert: React.FC<ApiErrorAlertProps> = (props) => {
     switch (props.error.status) {
         case 400:
-            return <BadRequestAlert error={props.error.body} />
+            return <BadRequestAlert error={props.error.body as string} />
         case 404:
-            return <NotFoundAlert error={props.error.body} />
+            return <NotFoundAlert error={props.error.body as string} />
         case 422:
-            return <ValidationErrorAlert error={props.error.body} />
+            return (
+                <ValidationErrorAlert
+                    error={
+                        props.error.body as { detail?: Array<{ loc: (string | number)[]; msg: string; type: string }> }
+                    }
+                />
+            )
         default:
             console.error(props.error)
             return (

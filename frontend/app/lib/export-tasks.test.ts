@@ -96,8 +96,8 @@ describe("downloadFile", () => {
     it("creates and clicks an anchor element", () => {
         const createObjectURL = vi.fn(() => "blob:test-url")
         const revokeObjectURL = vi.fn()
-        global.URL.createObjectURL = createObjectURL
-        global.URL.revokeObjectURL = revokeObjectURL
+        globalThis.URL.createObjectURL = createObjectURL
+        globalThis.URL.revokeObjectURL = revokeObjectURL
 
         const mockAnchor = {
             href: "",

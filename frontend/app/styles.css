@@ -66,7 +66,7 @@
 
     --sidebar: oklch(0.84 0.12 120);
     --sidebar-foreground: oklch(0.18 0.015 120);
-    --sidebar-accent: oklch(0.87 0.10 120);
+    --sidebar-accent: oklch(0.87 0.1 120);
     --sidebar-accent-foreground: oklch(0.18 0.015 120);
     --sidebar-border: oklch(0.78 0.12 120);
     --sidebar-ring: oklch(0.79 0.16 119);
@@ -77,7 +77,7 @@
     --chart-2: oklch(0.59 0.13 55);
     --chart-3: oklch(0.55 0.15 200);
     --chart-4: oklch(0.65 0.18 310);
-    --chart-5: oklch(0.70 0.14 170);
+    --chart-5: oklch(0.7 0.14 170);
 }
 
 /* Dark theme — matches MUI: bg #141716, surfaces brightened to match elevation overlays */
@@ -94,15 +94,15 @@
     --accent-foreground: oklch(0.93 0.005 120);
     --destructive: oklch(0.55 0.22 29);
     --destructive-foreground: oklch(0.98 0.01 0);
-    --border: oklch(0.30 0.005 155);
-    --input: oklch(0.30 0.005 155);
+    --border: oklch(0.3 0.005 155);
+    --input: oklch(0.3 0.005 155);
     --ring: oklch(0.79 0.16 119);
 
-    --sidebar: oklch(0.20 0.005 155);
+    --sidebar: oklch(0.2 0.005 155);
     --sidebar-foreground: oklch(0.93 0.005 120);
     --sidebar-accent: oklch(0.26 0.005 155);
     --sidebar-accent-foreground: oklch(0.93 0.005 120);
-    --sidebar-border: oklch(0.30 0.005 155);
+    --sidebar-border: oklch(0.3 0.005 155);
     --sidebar-ring: oklch(0.79 0.16 119);
     --sidebar-primary: oklch(0.79 0.16 119);
     --sidebar-primary-foreground: oklch(0.18 0.015 120);
@@ -111,7 +111,7 @@
     --chart-2: oklch(0.59 0.13 55);
     --chart-3: oklch(0.55 0.15 200);
     --chart-4: oklch(0.65 0.18 310);
-    --chart-5: oklch(0.70 0.14 170);
+    --chart-5: oklch(0.7 0.14 170);
 }
 
 @layer base {
@@ -128,7 +128,7 @@
     background: linear-gradient(to right, oklch(0.79 0.16 119) 0px, var(--card) min(1000px, 85%));
 }
 .dark .banner-gradient {
-    background: linear-gradient(to right, oklch(0.50 0.10 119) 0px, var(--card) min(1000px, 85%));
+    background: linear-gradient(to right, oklch(0.5 0.1 119) 0px, var(--card) min(1000px, 85%));
 }
 
 /* Shiki dual-theme: switch to dark colors when .dark class is applied */

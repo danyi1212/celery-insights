@@ -3,7 +3,7 @@
         "target": "ES2022",
         "useDefineForClassFields": true,
         "lib": ["DOM", "DOM.Iterable", "ES2022"],
-        "types": ["vitest/globals"],
+        "types": ["vitest/globals", "@testing-library/jest-dom/vitest"],
         "allowJs": false,
         "skipLibCheck": true,
         "esModuleInterop": true,

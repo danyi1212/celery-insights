@@ -1,7 +1,14 @@
 import { renderHook, act, waitFor } from "@testing-library/react"
 import { useExceptionsSummary } from "./use-exceptions-summary"
 
-vi.mock("surrealdb", () => ({}))
+vi.mock("surrealdb", () => ({
+    Table: class {
+        name: string
+        constructor(name: string) {
+            this.name = name
+        }
+    },
+}))
 
 type LiveMessage = {
     queryId: unknown
@@ -87,7 +94,7 @@ describe("useExceptionsSummary", () => {
         renderHook(() => useExceptionsSummary())
 
         await waitFor(() => {
-            expect(mockLive).toHaveBeenCalledWith("task")
+            expect(mockLive).toHaveBeenCalledWith(expect.objectContaining({ name: "task" }))
         })
     })
 

@@ -35,7 +35,7 @@ const WorkerSummary: React.FC<WorkerSummaryProps> = ({ workerId }) => {
                     <TooltipContent>{worker.hostname}</TooltipContent>
                 </Tooltip>
                 <Button variant="outline" asChild>
-                    <Link to={`/workers/${workerDisplayId}`}>View</Link>
+                    <Link to={`/workers/${workerDisplayId}` as string}>View</Link>
                 </Button>
             </div>
             <Tooltip>

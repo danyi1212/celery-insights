@@ -3,7 +3,7 @@ import type { Task } from "@/types/surreal-records"
 import React from "react"
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react"
 
-type TaskNodeType = Node<Task, "taskNode">
+type TaskNodeType = Node<Task & Record<string, unknown>, "taskNode">
 
 const TaskNode: React.FC<NodeProps<TaskNodeType>> = ({ data }) => {
     return (

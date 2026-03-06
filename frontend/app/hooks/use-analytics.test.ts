@@ -1,7 +1,14 @@
 import { renderHook, act, waitFor } from "@testing-library/react"
 import { useAnalytics } from "./use-analytics"
 
-vi.mock("surrealdb", () => ({}))
+vi.mock("surrealdb", () => ({
+    Table: class {
+        name: string
+        constructor(name: string) {
+            this.name = name
+        }
+    },
+}))
 
 type LiveMessage = {
     queryId: unknown
@@ -123,7 +130,7 @@ describe("useAnalytics", () => {
         renderHook(() => useAnalytics("24h"))
 
         await waitFor(() => {
-            expect(mockLive).toHaveBeenCalledWith("task")
+            expect(mockLive).toHaveBeenCalledWith(expect.objectContaining({ name: "task" }))
         })
     })
 

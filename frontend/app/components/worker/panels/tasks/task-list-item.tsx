@@ -15,7 +15,7 @@ const TaskListItem: React.FC<TaskListItemProps> = ({ task, subtitle }) => {
     return (
         <AnimatedListItem disablePadding>
             <Link
-                to={`/tasks/${task.id}`}
+                to={`/tasks/${task.id}` as string}
                 className="flex w-full items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-accent"
             >
                 <TaskAvatar taskId={task.id} type={task.type} disableLink />

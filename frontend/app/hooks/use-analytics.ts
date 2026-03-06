@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import type { ConnectionStatus, LiveMessage, LiveSubscription } from "surrealdb"
+import { Table, type ConnectionStatus, type LiveMessage, type LiveSubscription } from "surrealdb"
 import { useSurrealDB } from "@components/surrealdb-provider"
 
 const DEBOUNCE_MS = 2000
@@ -186,7 +186,7 @@ export const useAnalytics = (timeRange: TimeRange = "24h") => {
                     }
                 }
 
-                const subscription = await db.live<Record<string, unknown>>("task")
+                const subscription = await db.live<Record<string, unknown>>(new Table("task"))
                 subscriptionRef.current = subscription
                 const unsubscribe = subscription.subscribe(handleLiveMessage)
 

@@ -10,8 +10,11 @@ test_project := project / "test_project"
 
 # ─── Check ────────────────────────────────────────────────────
 
-# Run all linters
-check:
+# Run all checks (typecheck, lint, format, tests)
+check: typecheck lint format test
+
+# Run pre-commit hooks on all files
+check-hooks:
     pre-commit run --all-files
 
 # ─── Development ──────────────────────────────────────────────
@@ -68,6 +71,19 @@ logs-insights:
 start-test-interactive: build-docker
     docker compose -f {{test_project}}/docker-compose.yml --profile interactive up --build
 
+# ─── Typecheck ────────────────────────────────────────────────
+
+# Run all type checks (frontend + backend)
+typecheck: typecheck-frontend typecheck-backend
+
+# Type-check frontend (tsc)
+typecheck-frontend:
+    cd {{frontend}} && bun run typecheck
+
+# Type-check backend (ty)
+typecheck-backend:
+    cd {{project}} && uv run ty check {{server}}/
+
 # ─── Lint & Format ───────────────────────────────────────────
 
 # Run all linters
@@ -85,13 +101,24 @@ lint-backend:
 lint-fix-frontend:
     cd {{frontend}} && bun run lint-fix
 
-# Format backend (Ruff)
+# Run all formatters (check mode)
+format: format-frontend format-backend-check
+
+# Check frontend formatting (Prettier)
+format-frontend:
+    cd {{frontend}} && bun run format
+
+# Fix frontend formatting (Prettier)
+format-fix-frontend:
+    cd {{frontend}} && bun run format-fix
+
+# Check backend formatting (Ruff)
+format-backend-check:
+    cd {{project}} && uv run ruff format --check {{server}}/
+
+# Fix backend formatting (Ruff)
 format-backend:
     cd {{project}} && uv run ruff format {{server}}/
-
-# Type-check backend
-typecheck-backend:
-    cd {{project}} && uv run ty check {{server}}/
 
 # ─── Tests ────────────────────────────────────────────────────
 

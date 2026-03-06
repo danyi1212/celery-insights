@@ -1,7 +1,14 @@
 import { renderHook, waitFor } from "@testing-library/react"
 import { useExplorerTasks, type ExplorerFilters, type SortConfig } from "./use-explorer-tasks"
 
-vi.mock("surrealdb", () => ({}))
+vi.mock("surrealdb", () => ({
+    Table: class {
+        name: string
+        constructor(name: string) {
+            this.name = name
+        }
+    },
+}))
 
 const mockQuery = vi.fn()
 const mockLive = vi.fn()
@@ -139,7 +146,7 @@ describe("useExplorerTasks", () => {
         renderHook(() => useExplorerTasks(filters))
 
         await waitFor(() => {
-            expect(mockLive).toHaveBeenCalledWith("task")
+            expect(mockLive).toHaveBeenCalledWith(expect.objectContaining({ name: "task" }))
         })
     })
 

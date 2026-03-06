@@ -1,11 +1,15 @@
 import { DemoEventGenerator } from "./demo-event-generator"
 
+type MockCall = [string, Record<string, unknown>]
+
 // Mock Surreal db
 function createMockDb() {
     return {
         query: vi.fn().mockResolvedValue([]),
     }
 }
+
+const calls = (db: ReturnType<typeof createMockDb>) => db.query.mock.calls as MockCall[]
 
 describe("DemoEventGenerator", () => {
     let mockDb: ReturnType<typeof createMockDb>
@@ -26,14 +30,14 @@ describe("DemoEventGenerator", () => {
         await generator.start()
 
         // Should have UPSERT queries for 3 workers
-        const workerUpserts = mockDb.query.mock.calls.filter(
-            ([q]: [string]) =>
+        const workerUpserts = calls(mockDb).filter(
+            ([q]: MockCall) =>
                 typeof q === "string" && q.includes("UPSERT type::record('worker'") && q.includes("status = 'online'"),
         )
         expect(workerUpserts.length).toBe(3)
 
         // Check worker hostnames
-        const workerIds = workerUpserts.map(([, params]: [string, Record<string, unknown>]) => params.id)
+        const workerIds = workerUpserts.map(([, params]: MockCall) => params.id)
         expect(workerIds).toContain("celery@worker-1")
         expect(workerIds).toContain("celery@worker-2")
         expect(workerIds).toContain("celery@worker-3")
@@ -43,8 +47,8 @@ describe("DemoEventGenerator", () => {
         await generator.start()
 
         // Should have UPSERT queries for task records (from seeded tasks)
-        const taskUpserts = mockDb.query.mock.calls.filter(
-            ([q]: [string]) => typeof q === "string" && q.includes("UPSERT type::record('task'"),
+        const taskUpserts = calls(mockDb).filter(
+            ([q]: MockCall) => typeof q === "string" && q.includes("UPSERT type::record('task'"),
         )
         // 25 individual tasks + 2 workflows + 3 in-progress tasks = lots of task events
         // Each task lifecycle generates multiple events (sent, received, started, succeeded/failed)
@@ -54,8 +58,8 @@ describe("DemoEventGenerator", () => {
     it("creates raw events for each task event", async () => {
         await generator.start()
 
-        const eventCreates = mockDb.query.mock.calls.filter(
-            ([q]: [string]) => typeof q === "string" && q.startsWith("CREATE event SET"),
+        const eventCreates = calls(mockDb).filter(
+            ([q]: MockCall) => typeof q === "string" && q.startsWith("CREATE event SET"),
         )
         // Should have raw events matching task upserts
         expect(eventCreates.length).toBeGreaterThan(50)
@@ -64,8 +68,8 @@ describe("DemoEventGenerator", () => {
     it("generates tasks with valid states", async () => {
         await generator.start()
 
-        const taskUpserts = mockDb.query.mock.calls.filter(
-            ([q]: [string]) => typeof q === "string" && q.includes("UPSERT type::record('task'"),
+        const taskUpserts = calls(mockDb).filter(
+            ([q]: MockCall) => typeof q === "string" && q.includes("UPSERT type::record('task'"),
         )
 
         const validStates = ["PENDING", "RECEIVED", "STARTED", "SUCCESS", "FAILURE", "RETRY"]
@@ -80,8 +84,8 @@ describe("DemoEventGenerator", () => {
         await generator.start()
 
         // Check for children array updates (workflow parents)
-        const childrenUpdates = mockDb.query.mock.calls.filter(
-            ([q]: [string]) => typeof q === "string" && q.includes("array::union(children"),
+        const childrenUpdates = calls(mockDb).filter(
+            ([q]: MockCall) => typeof q === "string" && q.includes("array::union(children"),
         )
         // 2 seeded workflows, each with 2-3 children
         expect(childrenUpdates.length).toBeGreaterThanOrEqual(4)
@@ -96,8 +100,8 @@ describe("DemoEventGenerator", () => {
         // Advance 5 seconds for heartbeat
         await vi.advanceTimersByTimeAsync(5000)
 
-        const heartbeats = mockDb.query.mock.calls.filter(
-            ([q]: [string]) =>
+        const heartbeats = calls(mockDb).filter(
+            ([q]: MockCall) =>
                 typeof q === "string" && q.includes("UPDATE type::record('worker'") && q.includes("missed_polls = 0"),
         )
         expect(heartbeats.length).toBe(3) // 3 workers
@@ -113,8 +117,8 @@ describe("DemoEventGenerator", () => {
         await vi.advanceTimersByTimeAsync(10_000)
 
         // Should have generated at least 1-2 new tasks (2-5s intervals)
-        const newTaskUpserts = mockDb.query.mock.calls.filter(
-            ([q]: [string]) => typeof q === "string" && q.includes("UPSERT type::record('task'"),
+        const newTaskUpserts = calls(mockDb).filter(
+            ([q]: MockCall) => typeof q === "string" && q.includes("UPSERT type::record('task'"),
         )
         expect(newTaskUpserts.length).toBeGreaterThan(0)
     })
@@ -129,7 +133,7 @@ describe("DemoEventGenerator", () => {
         await vi.advanceTimersByTimeAsync(30_000)
 
         // No new queries after stop (only heartbeats might have been mid-flight)
-        expect(mockDb.query.mock.calls.length).toBe(0)
+        expect(calls(mockDb).length).toBe(0)
     })
 
     it("handles db errors gracefully during seeding", async () => {
@@ -158,8 +162,8 @@ describe("DemoEventGenerator", () => {
         await generator.start()
 
         // Find task-sent events (they carry task metadata)
-        const sentEvents = mockDb.query.mock.calls.filter(
-            ([q, params]: [string, Record<string, unknown> | undefined]) =>
+        const sentEvents = calls(mockDb).filter(
+            ([q, params]: MockCall) =>
                 typeof q === "string" && q.includes("UPSERT type::record('task'") && params?.taskType,
         )
         expect(sentEvents.length).toBeGreaterThan(0)
@@ -176,8 +180,8 @@ describe("DemoEventGenerator", () => {
         await generator.start()
 
         // Find failed task events
-        const failedEvents = mockDb.query.mock.calls.filter(
-            ([q, params]: [string, Record<string, unknown> | undefined]) =>
+        const failedEvents = calls(mockDb).filter(
+            ([q, params]: MockCall) =>
                 typeof q === "string" && q.includes("UPSERT type::record('task'") && params?.exception,
         )
         // With ~30 tasks and 12% failure rate + 6% retry rate, we should have some failures
@@ -192,8 +196,8 @@ describe("DemoEventGenerator", () => {
     it("sets worker inspect data with stats and registered tasks", async () => {
         await generator.start()
 
-        const workerUpserts = mockDb.query.mock.calls.filter(
-            ([q]: [string]) =>
+        const workerUpserts = calls(mockDb).filter(
+            ([q]: MockCall) =>
                 typeof q === "string" && q.includes("UPSERT type::record('worker'") && q.includes("inspect"),
         )
 
