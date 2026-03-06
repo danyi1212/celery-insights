@@ -68,7 +68,7 @@ async def import_backup(file: UploadFile):
         return {"success": False, "error": f"File too large (max {MAX_IMPORT_SIZE // (1024 * 1024)}MB)"}
     try:
         data = json.loads(content)
-    except (json.JSONDecodeError, UnicodeDecodeError):
+    except json.JSONDecodeError, UnicodeDecodeError:
         return {"success": False, "error": "Invalid JSON file"}
 
     try:

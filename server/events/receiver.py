@@ -25,7 +25,7 @@ class CeleryEventReceiver(Thread):
         while not self._stop_signal.is_set():
             try:
                 self.consume_events()
-            except (KeyboardInterrupt, SystemExit):
+            except KeyboardInterrupt, SystemExit:
                 break
             except Exception as e:
                 logger.exception(f"Failed to capture events: '{e}', trying again in 10 seconds.")

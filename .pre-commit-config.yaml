@@ -1,7 +1,7 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 ci:
-  skip: [ty, eslint]
+  skip: [ty, eslint, prettier, tsc, vitest]
 exclude: ^frontend/app/services/server
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -21,7 +21,7 @@ repos:
         args: [ --fix=lf ]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.7.1
+    rev: v0.15.2
     hooks:
       - id: ruff
         files: \.py$
@@ -45,6 +45,30 @@ repos:
       - id: eslint
         name: eslint
         entry: bun run --cwd frontend eslint --max-warnings=0 app
+        language: system
+        files: ^frontend/app/.*\.[jt]sx?$
+        types: [ file ]
+        pass_filenames: false
+
+      - id: prettier
+        name: prettier
+        entry: bun run --cwd frontend prettier --check app
+        language: system
+        files: ^frontend/app/.*\.[jt]sx?$
+        types: [ file ]
+        pass_filenames: false
+
+      - id: tsc
+        name: tsc
+        entry: bun run --cwd frontend tsc --noEmit
+        language: system
+        files: ^frontend/app/.*\.[jt]sx?$
+        types: [ file ]
+        pass_filenames: false
+
+      - id: vitest
+        name: vitest
+        entry: bun run --cwd frontend vitest run
         language: system
         files: ^frontend/app/.*\.[jt]sx?$
         types: [ file ]
