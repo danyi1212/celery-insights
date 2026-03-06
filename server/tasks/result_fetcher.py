@@ -75,7 +75,7 @@ class ResultFetcher:
                 params[key] = value
                 set_clauses.append(f"{key} = ${key}")
 
-            query = f"UPDATE type::thing('task', $task_id) SET {', '.join(set_clauses)}"
+            query = f"UPDATE type::record('task', $task_id) SET {', '.join(set_clauses)}"
             await db.query(query, params)
             logger.debug("Updated result for task %s (%s)", task_id, reprlib.repr(data))
         except Exception:

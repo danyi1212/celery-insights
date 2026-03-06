@@ -367,7 +367,7 @@ const server = Bun.serve({
                 surrealPath: "/surreal/rpc",
                 ingestionStatus: leaderElection?.status ?? ingestionStatus,
                 // When auth is not required, pass viewer credentials so the frontend
-                // can authenticate as a read-only DB user. SurrealDB v2 requires
+                // can authenticate as a read-only DB user. SurrealDB requires
                 // authentication even for tables with FULL select permissions.
                 ...(authRequired
                     ? {}

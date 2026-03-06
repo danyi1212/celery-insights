@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM python:3.12-slim AS python-base
+FROM python:3.14-slim AS python-base
 
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
@@ -58,8 +58,8 @@ RUN curl -fsSL https://bun.sh/install | bash \
     && mv /root/.bun/bin/bun /usr/local/bin/bun \
     && rm -rf /root/.bun
 
-# Install SurrealDB binary (pinned v2.1.x)
-ARG SURREALDB_VERSION=v2.1.4
+# Install SurrealDB binary (pinned v3.0.x)
+ARG SURREALDB_VERSION=v3.0.2
 RUN curl -fsSL https://install.surrealdb.com | sh -s -- --version ${SURREALDB_VERSION} \
     && command -v surreal
 

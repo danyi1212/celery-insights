@@ -79,7 +79,7 @@ The Vite dev server handles HMR and proxies `/api/*` to Python at 8556, `/surrea
 
 ## Deployment
 
-Published as a Docker container. SurrealDB (v2.1.4) is bundled in the image. Use `SURREALDB_STORAGE` to configure persistence (`memory` default, `rocksdb://path`, `surrealkv://path`). For scaled deployments, point multiple instances at an external SurrealDB via `SURREALDB_EXTERNAL_URL`. After changing dependencies or the build pipeline, verify with `docker build .`.
+Published as a Docker container. SurrealDB (v3.0.2) is bundled in the image. Use `SURREALDB_STORAGE` to configure persistence (`memory` default, `rocksdb://path`, `surrealkv://path`). For scaled deployments, point multiple instances at an external SurrealDB via `SURREALDB_EXTERNAL_URL`. After changing dependencies or the build pipeline, verify with `docker build .`.
 
 ## Mindset
 

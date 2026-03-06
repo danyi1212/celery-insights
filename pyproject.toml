@@ -3,15 +3,14 @@ name = "celery-insights"
 version = "0.2.0"
 description = "Modern Real-Time Monitor for Celery"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
-    "fastapi>=0.112",
+    "fastapi>=0.135",
     "python-dotenv>=1",
-    "uvicorn>=0.30",
-    "celery~=5.4",
+    "uvicorn>=0.41",
+    "celery~=5.6",
     "fastapi-cache2",
-    "aiopath",
-    "pydantic>=2",
+    "pydantic>=2.12",
     "pydantic-settings>=2",
     "dans-log-formatter",
     "redis>=5.0.8",
@@ -22,7 +21,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "pytest>=7",
+    "pytest>=9",
     "pytest-xdist",
     "pytest-mock",
     "pytest-asyncio",
@@ -80,7 +79,7 @@ select = [
 ban-relative-imports = "all"
 
 [tool.ty.environment]
-python-version = "3.12"
+python-version = "3.14"
 extra-paths = ["server"]
 
 [tool.ty.terminal]

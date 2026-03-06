@@ -42,9 +42,9 @@ To contribute to the project, follow these steps:
 
 ### Prerequisites
 
-- Python 3.12+
+- Python 3.14+
 - [Bun](https://bun.sh/)
-- [SurrealDB](https://surrealdb.com/install) (v2.1+)
+- [SurrealDB](https://surrealdb.com/install) (v3.0+)
 - An IDE (we suggest PyCharm, but you can use your preferred IDE)
 
 ### Create dev environment

@@ -1,7 +1,8 @@
+import asyncio
 import importlib.util
 import logging
+from pathlib import Path
 
-from aiopath import AsyncPath
 from celery import Celery
 
 from settings import Settings
@@ -17,8 +18,8 @@ async def get_celery_app(settings: Settings | None = None):
 
     settings = settings or Settings()
 
-    config_path = AsyncPath(settings.config_file)
-    if not await config_path.exists():
+    config_path = Path(settings.config_file)
+    if not await asyncio.to_thread(config_path.exists):
         logger.info("Loading celery app config from environment variables")
         app = Celery(
             broker=settings.broker_url,
@@ -28,7 +29,7 @@ async def get_celery_app(settings: Settings | None = None):
         _celery_app_cache = app
         return app
 
-    if not await config_path.is_file():
+    if not await asyncio.to_thread(config_path.is_file):
         raise RuntimeError(f"Config file path is not a file: {settings.config_file!r}")
 
     logger.info(f"Loading celery app config from {settings.config_file!r}")

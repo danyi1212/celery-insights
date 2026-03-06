@@ -28,7 +28,7 @@ class TestBuildTaskUpsert:
         }
         query, params = build_task_upsert(event, 0)
 
-        assert "UPSERT type::thing('task', $t0_id)" in query
+        assert "UPSERT type::record('task', $t0_id)" in query
         assert "state = IF last_updated IS NONE" in query
         assert "sent_at = IF sent_at IS NONE" in query
         assert params["t0_id"] == "abc-123"
@@ -127,7 +127,7 @@ class TestBuildChildrenUpdate:
         query, params = build_children_update(event, 0)
 
         assert "array::union" in query
-        assert "type::thing('task', $ch0_parent)" in query
+        assert "type::record('task', $ch0_parent)" in query
         assert params["ch0_parent"] == "parent-1"
         assert params["ch0_child"] == "child-1"
 
@@ -169,7 +169,7 @@ class TestBuildWorkerUpsert:
         }
         query, params = build_worker_upsert(event, 0)
 
-        assert "UPSERT type::thing('worker', $w0_id)" in query
+        assert "UPSERT type::record('worker', $w0_id)" in query
         assert "$w0_status" in query
         assert "missed_polls" in query
         assert params["w0_id"] == "celery@host1"
@@ -274,7 +274,7 @@ class TestSurrealDBIngester:
         query_str = mock_db.query.call_args[0][0]
         assert "BEGIN TRANSACTION" in query_str
         assert "COMMIT TRANSACTION" in query_str
-        assert "UPSERT type::thing('task'" in query_str
+        assert "UPSERT type::record('task'" in query_str
         assert "CREATE event SET" in query_str
 
     @pytest.mark.asyncio
@@ -382,8 +382,8 @@ class TestSurrealDBIngester:
         await ingester._flush()
 
         query_str = mock_db.query.call_args[0][0]
-        assert "type::thing('task'" in query_str
-        assert "type::thing('worker'" in query_str
+        assert "type::record('task'" in query_str
+        assert "type::record('worker'" in query_str
 
     @pytest.mark.asyncio
     async def test_children_update_included_in_batch(self, mock_db, queue):
