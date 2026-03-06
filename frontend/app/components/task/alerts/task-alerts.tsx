@@ -15,7 +15,7 @@ const TaskAlerts: React.FC<TaskAlertsProps> = ({ taskId }) => {
         <>
             <Collapsible open={Boolean(task?.retries)}>
                 <CollapsibleContent>
-                    <RetryAlert retries={task?.retries} className="m-3" />
+                    <RetryAlert retries={task?.retries ?? undefined} className="m-3" />
                 </CollapsibleContent>
             </Collapsible>
             <Collapsible open={Boolean(task?.exception)}>

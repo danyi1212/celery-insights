@@ -22,7 +22,7 @@ const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, type, disableLi
     const Wrapper = disableLink ? "div" : Link
 
     return (
-        <Wrapper {...(!disableLink ? { to: `/tasks/${taskId}` } : {})}>
+        <Wrapper {...(!disableLink ? { to: `/tasks/${taskId}` as string } : {})}>
             <Tooltip>
                 <TooltipTrigger asChild>
                     <div className="relative inline-flex">

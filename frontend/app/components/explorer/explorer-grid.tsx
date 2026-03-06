@@ -57,7 +57,7 @@ const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, sort, setSort, page,
                     id: columnConfig.property as string,
                     accessorFn: (row) => {
                         const surrealField = SURREAL_FIELD_MAP[columnConfig.property as string] || columnConfig.property
-                        return (row as Record<string, unknown>)[surrealField as string]
+                        return (row as unknown as Record<string, unknown>)[surrealField as string]
                     },
                     header: columnConfig.label,
                     size: columnConfig.columnWidth,

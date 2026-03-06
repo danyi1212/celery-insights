@@ -18,7 +18,10 @@ const DeliveryInfoPanel: React.FC<DeliveryInfoPanelProps> = ({ taskId }) => {
                         label="Worker"
                         description="Worker that consumed this task"
                         value={
-                            <Link to={`/workers/${task?.worker}`} className="text-primary underline hover:opacity-80">
+                            <Link
+                                to={`/workers/${task?.worker}` as string}
+                                className="text-primary underline hover:opacity-80"
+                            >
                                 {task?.worker || "Unknown"}
                             </Link>
                         }

@@ -13,8 +13,8 @@ const TaskComparePage = () => {
     const { left, right, type } = Route.useSearch()
     const navigate = useNavigate()
 
-    const setLeft = (id: string) => navigate({ search: (prev) => ({ ...prev, left: id }) })
-    const setRight = (id: string) => navigate({ search: (prev) => ({ ...prev, right: id }) })
+    const setLeft = (id: string) => navigate({ to: "/tasks/compare", search: (prev) => ({ ...prev, left: id }) })
+    const setRight = (id: string) => navigate({ to: "/tasks/compare", search: (prev) => ({ ...prev, right: id }) })
 
     if (left && right) {
         return (

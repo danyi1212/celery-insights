@@ -18,7 +18,7 @@ const RecentTaskListItem: React.FC<{ task: SurrealTask }> = ({ task }) => {
     return (
         <AnimatedListItem disablePadding>
             <RouterLink
-                to={`/tasks/${taskId}`}
+                to={`/tasks/${taskId}` as string}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-accent"
             >
                 <div className="shrink-0">

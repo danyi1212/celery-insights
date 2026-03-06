@@ -72,7 +72,7 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ tasks, currentTaskId }) =
     const [containerWidth, setContainerWidth] = useState(0)
     const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null)
 
-    const sortedTasks = useMemo(() => [...tasks].sort((a, b) => a.sentAt.getTime() - b.sentAt.getTime()), [tasks])
+    const sortedTasks = useMemo(() => [...tasks].sort((a, b) => a.sent_at.getTime() - b.sent_at.getTime()), [tasks])
 
     const isRealtime = useMemo(() => sortedTasks.some((task) => !isTerminalState(task.state)), [sortedTasks])
     const now = useNow(isRealtime ? REALTIME_INTERVAL : undefined)
@@ -93,7 +93,7 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ tasks, currentTaskId }) =
 
     const { timelineStart, timelineEnd, timeRange } = useMemo(() => {
         if (sortedTasks.length === 0) return { timelineStart: 0, timelineEnd: 0, timeRange: 0 }
-        const start = sortedTasks[0].sentAt.getTime()
+        const start = sortedTasks[0].sent_at.getTime()
         const end = Math.max(...sortedTasks.map((t) => getTaskEnd(t, now).getTime()))
         // Add 2% padding on each side for visual breathing room
         const range = end - start

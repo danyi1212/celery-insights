@@ -61,13 +61,13 @@ const DurationByTypeChart = ({ data, isLoading }: { data: DurationByType[]; isLo
                                     borderRadius: "8px",
                                     color: "var(--popover-foreground)",
                                 }}
-                                formatter={(value: number, name: string) => {
+                                formatter={(value, name) => {
                                     const labels: Record<string, string> = {
                                         avg_runtime: "Avg",
                                         min_runtime: "Min",
                                         max_runtime: "Max",
                                     }
-                                    return [`${value}s`, labels[name] ?? name]
+                                    return [`${value}s`, labels[name as string] ?? name]
                                 }}
                             />
                             <Bar dataKey="avg_runtime" name="avg_runtime" fill="var(--chart-3)" radius={[0, 4, 4, 0]} />

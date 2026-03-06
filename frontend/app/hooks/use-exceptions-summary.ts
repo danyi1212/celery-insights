@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import type { ConnectionStatus, LiveMessage, LiveSubscription } from "surrealdb"
+import { Table, type ConnectionStatus, type LiveMessage, type LiveSubscription } from "surrealdb"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import type { ExceptionSummary } from "@/types/surreal-records"
 
@@ -74,7 +74,7 @@ export const useExceptionsSummary = () => {
                     }
                 }
 
-                const subscription = await db.live<Record<string, unknown>>("task")
+                const subscription = await db.live<Record<string, unknown>>(new Table("task"))
                 subscriptionRef.current = subscription
                 const unsubscribe = subscription.subscribe(handleLiveMessage)
 

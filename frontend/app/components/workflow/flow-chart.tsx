@@ -25,7 +25,7 @@ const createNode = (task: Task, x: number, y: number, nodeId?: string): Node => 
     id: nodeId || task.id,
     type: "taskNode",
     position: { x: x * 180, y: y * 100 },
-    data: task,
+    data: task as Task & Record<string, unknown>,
     connectable: false,
     deletable: false,
 })
@@ -124,8 +124,8 @@ const nodeTypes = {
 }
 const FlowChart: React.FC<FlowChartProps> = ({ tasks, rootTaskId, currentTaskId }) => {
     const flow = useReactFlow()
-    const [nodes, setNodes, onNodesChange] = useNodesState([])
-    const [edges, setEdges, onEdgesChange] = useEdgesState([])
+    const [nodes, setNodes, onNodesChange] = useNodesState([] as Node[])
+    const [edges, setEdges, onEdgesChange] = useEdgesState([] as Edge[])
     const [locked, setLocked] = useState<boolean>(true)
     const [isInitialized, setInitialized] = useState<boolean>(false)
     const isDark = useIsDark()
@@ -172,7 +172,7 @@ const FlowChart: React.FC<FlowChartProps> = ({ tasks, rootTaskId, currentTaskId 
 
     const handleDownloadImage = useCallback(() => {
         const nodesBounds = getNodesBounds(nodes)
-        const viewport = getViewportForBounds(nodesBounds, EXPORT_IMAGE_WIDTH, EXPORT_IMAGE_HEIGHT, 0.5, 2)
+        const viewport = getViewportForBounds(nodesBounds, EXPORT_IMAGE_WIDTH, EXPORT_IMAGE_HEIGHT, 0.5, 2, 0)
         const element = document.querySelector(".react-flow__viewport") as HTMLElement
         if (!element) return
 

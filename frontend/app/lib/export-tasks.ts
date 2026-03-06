@@ -46,7 +46,7 @@ function taskToCsvRow(task: SurrealTask): string {
     return CSV_FIELDS.map((field) => {
         if (field === "id") return escapeCsvValue(extractId(task.id))
         if (field === "children") return escapeCsvValue(task.children?.join(";") ?? "")
-        return escapeCsvValue((task as Record<string, unknown>)[field])
+        return escapeCsvValue((task as unknown as Record<string, unknown>)[field])
     }).join(",")
 }
 

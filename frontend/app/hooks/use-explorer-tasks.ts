@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import type { ConnectionStatus, LiveSubscription } from "surrealdb"
+import { Table, type ConnectionStatus, type LiveSubscription } from "surrealdb"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import type { SurrealTask } from "@/types/surreal-records"
 
@@ -161,7 +161,7 @@ export const useExplorerTasks = (
                     }
                 }
 
-                const subscription = await db.live<Record<string, unknown>>("task")
+                const subscription = await db.live<Record<string, unknown>>(new Table("task"))
                 if (cancelled) {
                     subscription.kill().catch(() => {})
                     return
