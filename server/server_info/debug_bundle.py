@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import zipfile
@@ -9,7 +8,6 @@ from aiopath import AsyncPath
 from pydantic_core import to_json
 from starlette.requests import Request
 
-from logging_config import LOG_FILE_PATH
 from server_info.models import ClientDebugInfo, ServerInfo, StateDump
 from settings import Settings
 from surrealdb_client import get_db
@@ -44,7 +42,6 @@ async def dump_file(file: zipfile.ZipFile, filename: str, path: AsyncPath) -> No
 
 class DebugBundleData(NamedTuple):
     settings: Settings
-    log_path: str
     client_info: ClientDebugInfo
     state_dump: StateDump
     server_info: ServerInfo
@@ -58,19 +55,14 @@ async def _read_file_safe(path: AsyncPath) -> str | None:
 
 
 async def generate_bundle_file(data: DebugBundleData) -> BytesIO:
-    # Read async file contents concurrently
-    config_content, log_content = await asyncio.gather(
-        _read_file_safe(AsyncPath(data.settings.config_file)),
-        _read_file_safe(AsyncPath(data.log_path)),
-    )
+    # Read async file contents
+    config_content = await _read_file_safe(AsyncPath(data.settings.config_file))
 
     # Write to ZIP sequentially (zipfile is not thread-safe)
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as file:
         if config_content:
             file.writestr("config.py", config_content)
-        if log_content:
-            file.writestr("app.log", log_content)
         redacted_settings = data.settings.model_dump()
         for key in ("surrealdb_ingester_pass", "broker_url", "result_backend"):
             if key in redacted_settings:
@@ -111,7 +103,6 @@ async def create_debug_bundle(request: Request, client_info: ClientDebugInfo) ->
     return await generate_bundle_file(
         DebugBundleData(
             settings=Settings(),
-            log_path=LOG_FILE_PATH,
             client_info=client_info,
             state_dump=state_dump,
             server_info=server_info,

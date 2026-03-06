@@ -319,7 +319,7 @@ source = { editable = "." }
 dependencies = [
     { name = "aiopath" },
     { name = "celery" },
-    { name = "colorlog" },
+    { name = "dans-log-formatter" },
     { name = "fastapi" },
     { name = "fastapi-cache2" },
     { name = "pydantic" },
@@ -354,7 +354,7 @@ dev = [
 requires-dist = [
     { name = "aiopath" },
     { name = "celery", specifier = "~=5.4" },
-    { name = "colorlog" },
+    { name = "dans-log-formatter" },
     { name = "fastapi", specifier = ">=0.112" },
     { name = "fastapi-cache2" },
     { name = "pydantic", specifier = ">=2" },
@@ -585,18 +585,6 @@ wheels = [
 ]
 
 [[package]]
-name = "colorlog"
-version = "6.10.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a2/61/f083b5ac52e505dfc1c624eafbf8c7589a0d7f32daa398d2e7590efa5fda/colorlog-6.10.1.tar.gz", hash = "sha256:eb4ae5cb65fe7fec7773c2306061a8e63e02efc2c72eba9d27b0fa23c94f1321", size = 17162, upload-time = "2025-10-16T16:14:11.978Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6d/c1/e419ef3723a074172b68aaa89c9f3de486ed4c2399e2dbd8113a4fdcaf9e/colorlog-6.10.1-py3-none-any.whl", hash = "sha256:2d7e8348291948af66122cff006c9f8da6255d224e7cf8e37d8de2df3bad8c9c", size = 11743, upload-time = "2025-10-16T16:14:10.512Z" },
-]
-
-[[package]]
 name = "coverage"
 version = "7.13.4"
 source = { registry = "https://pypi.org/simple" }
@@ -731,6 +719,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/96/93/682d2b43c1d5f1406ed048f377c0fc9fc8f7b0447a478d5c65ab3d3a66eb/cryptography-46.0.5-cp38-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:ced80795227d70549a411a4ab66e8ce307899fad2220ce5ab2f296e687eacde9", size = 4667123, upload-time = "2026-02-10T19:18:15.886Z" },
     { url = "https://files.pythonhosted.org/packages/45/2d/9c5f2926cb5300a8eefc3f4f0b3f3df39db7f7ce40c8365444c49363cbda/cryptography-46.0.5-cp38-abi3-win32.whl", hash = "sha256:02f547fce831f5096c9a567fd41bc12ca8f11df260959ecc7c3202555cc47a72", size = 3010220, upload-time = "2026-02-10T19:18:17.361Z" },
     { url = "https://files.pythonhosted.org/packages/48/ef/0c2f4a8e31018a986949d34a01115dd057bf536905dca38897bacd21fac3/cryptography-46.0.5-cp38-abi3-win_amd64.whl", hash = "sha256:556e106ee01aa13484ce9b0239bca667be5004efb0aabbed28d353df86445595", size = 3467050, upload-time = "2026-02-10T19:18:18.899Z" },
+]
+
+[[package]]
+name = "dans-log-formatter"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/17/c6/c4d09d86940ea36253f27a73e5e17c4f42b391c0116014a2d3f717e98258/dans_log_formatter-0.2.0.tar.gz", hash = "sha256:e7622d01a31bcdfa779fe7730f2597a11e6eb542efa08ab3852a61219faa67b5", size = 14770, upload-time = "2025-02-06T16:32:28.679Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/45/89/5acfb92a91361df747483cb5ea90afb028ef65726982be8cbd807524bc6c/dans_log_formatter-0.2.0-py3-none-any.whl", hash = "sha256:b68cfe9e70735a56772c72aa87c52377b01006a97b0d64ed443cf012033d75ed", size = 17410, upload-time = "2025-02-06T16:32:27.574Z" },
 ]
 
 [[package]]

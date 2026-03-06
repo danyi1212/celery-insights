@@ -53,6 +53,22 @@ Default: `false`
 
 Enables Celery Insights to run in debug mode, that includes hot-reload, response tracebacks and Celery event logs.
 
+## Logging
+
+### LOG_FORMAT
+
+Default: `pretty`
+
+Log output format. Options:
+- `pretty` — human-readable with ISO 8601 timestamps, colored level, and `[service]` prefix (colors auto-disabled in non-TTY environments like Docker)
+- `json` — single-line JSON objects for log aggregation pipelines (e.g., `{"ts":"...","level":"info","service":"python","msg":"..."}`)
+
+### LOG_LEVEL
+
+Default: `info`
+
+Minimum log level. Options: `debug`, `info`, `warn`, `error`. Applies to both Bun and Python processes.
+
 ## Celery Connection
 
 ### BROKER_URL

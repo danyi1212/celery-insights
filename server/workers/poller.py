@@ -64,11 +64,12 @@ class WorkerPoller:
             MISSED_POLLS_THRESHOLD,
         )
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         logger.info("Stopping worker poller...")
         self._stop_event.set()
         if self._task and not self._task.done():
             self._task.cancel()
+            await asyncio.gather(self._task, return_exceptions=True)
 
     async def _poll_loop(self) -> None:
         while not self._stop_event.is_set():

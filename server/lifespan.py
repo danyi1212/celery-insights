@@ -70,10 +70,10 @@ async def lifespan(_):
     except (KeyboardInterrupt, SystemExit, CancelledError):
         logger.info("Stopping server...")
     finally:
-        # Shutdown in reverse order
-        cleanup_job.stop()
-        worker_poller.stop()
-        ingester.stop()
+        # Shutdown in reverse order — await async tasks before closing DB
+        await cleanup_job.stop()
+        await worker_poller.stop()
+        await ingester.stop()
         event_receiver.stop()
         await close_surrealdb()
         logger.info("Goodbye! See you soon.")

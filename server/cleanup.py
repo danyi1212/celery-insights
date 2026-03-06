@@ -41,11 +41,12 @@ class CleanupJob:
         policy_str = ", ".join(policies) if policies else "none (cleanup disabled)"
         logger.info("Cleanup job started (interval=%ds, policies: %s)", self.interval_seconds, policy_str)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         logger.info("Stopping cleanup job...")
         self._stop_event.set()
         if self._task and not self._task.done():
             self._task.cancel()
+            await asyncio.gather(self._task, return_exceptions=True)
 
     async def _cleanup_loop(self) -> None:
         while not self._stop_event.is_set():

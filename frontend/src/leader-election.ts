@@ -1,6 +1,8 @@
 import { Surreal } from "surrealdb"
 import { hostname } from "node:os"
 import type { Config } from "./config"
+import type { Logger } from "./logger"
+import { bunLogger } from "./logger"
 
 export type IngestionStatus = "leader" | "standby" | "read-only" | "disabled"
 
@@ -10,6 +12,7 @@ export interface LeaderElectionOptions {
     instanceId: string
     onBecomeLeader: () => void
     onLoseLeadership: () => void
+    logger?: Logger
 }
 
 export function generateInstanceId(): string {
@@ -31,6 +34,7 @@ export class LeaderElection {
     private instanceId: string
     private onBecomeLeader: () => void
     private onLoseLeadership: () => void
+    private log: Logger
     private heartbeatTimer: ReturnType<typeof setInterval> | null = null
     private standbyTimer: ReturnType<typeof setInterval> | null = null
     private _isLeader = false
@@ -43,6 +47,7 @@ export class LeaderElection {
         this.instanceId = options.instanceId
         this.onBecomeLeader = options.onBecomeLeader
         this.onLoseLeadership = options.onLoseLeadership
+        this.log = options.logger ?? bunLogger
     }
 
     get isLeader(): boolean {
@@ -60,14 +65,14 @@ export class LeaderElection {
     async start(): Promise<IngestionStatus> {
         if (!this.config.ingestionEnabled) {
             this._status = "read-only"
-            console.log("Ingestion disabled — read-only mode")
+            this.log.info("Ingestion disabled — read-only mode")
             return this._status
         }
 
         if (!this.config.ingestionLeaderElection) {
             this._isLeader = true
             this._status = "leader"
-            console.log("Leader election disabled — assuming leader role")
+            this.log.info("Leader election disabled — assuming leader role")
             this.onBecomeLeader()
             return this._status
         }
@@ -130,7 +135,7 @@ export class LeaderElection {
 
             return false
         } catch (err) {
-            console.error("Failed to acquire ingestion lock:", err)
+            this.log.error(`Failed to acquire ingestion lock: ${err}`)
             return false
         }
     }
@@ -139,7 +144,7 @@ export class LeaderElection {
         this._isLeader = true
         this._status = "leader"
         this.clearTimers()
-        console.log(`Leader elected — instance ${this.instanceId} is ingesting`)
+        this.log.info(`Leader elected — instance ${this.instanceId} is ingesting`)
         this.startHeartbeat()
         this.onBecomeLeader()
     }
@@ -150,7 +155,7 @@ export class LeaderElection {
         this.clearTimers()
 
         const currentLeader = await this.getCurrentLeader()
-        console.log(`Standby mode — instance ${currentLeader ?? "unknown"} is ingesting`)
+        this.log.info(`Standby mode — instance ${currentLeader ?? "unknown"} is ingesting`)
 
         this.startStandbyPolling()
     }
@@ -166,14 +171,14 @@ export class LeaderElection {
                     .collect<[{ holder: string }[]]>()
 
                 if (!result || result.length === 0 || result[0].holder !== this.instanceId) {
-                    console.warn("Lost ingestion lock — another instance may have taken over")
+                    this.log.warn("Lost ingestion lock — another instance may have taken over")
                     this._isLeader = false
                     this.clearTimers()
                     this.onLoseLeadership()
                     await this.enterStandby()
                 }
             } catch (err) {
-                console.error("Failed to refresh heartbeat:", err)
+                this.log.error(`Failed to refresh heartbeat: ${err}`)
             }
         }, this.config.ingestionLockHeartbeatSeconds * 1000)
     }
@@ -183,7 +188,7 @@ export class LeaderElection {
             if (this.stopped) return
             const acquired = await this.tryAcquireLock()
             if (acquired) {
-                console.log("Promoted to leader — starting ingestion")
+                this.log.info("Promoted to leader — starting ingestion")
                 this.promoteToLeader()
             }
         }, this.config.ingestionLockTtlSeconds * 1000)
@@ -196,9 +201,9 @@ export class LeaderElection {
                     id: this.instanceId,
                 })
                 .collect()
-            console.log("Released ingestion lock")
+            this.log.info("Released ingestion lock")
         } catch (err) {
-            console.error("Failed to release ingestion lock:", err)
+            this.log.error(`Failed to release ingestion lock: ${err}`)
         }
     }
 

@@ -29,6 +29,11 @@ server {
         proxy_pass http://surrealdb_app/;
     }
 
+    location = /health {
+        access_log off;
+        proxy_pass http://bun_app;
+    }
+
     location / {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;

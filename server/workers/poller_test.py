@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from pytest_mock import MockerFixture
 
@@ -204,16 +206,14 @@ class TestWorkerPoller:
 
         mock_create_task.assert_called_once()
 
-    def test_stop_sets_event_and_cancels(self, celery_app, mocker: MockerFixture):
-        mock_task = mocker.MagicMock()
-        mock_task.done.return_value = False
-
+    @pytest.mark.asyncio
+    async def test_stop_sets_event_and_cancels(self, celery_app):
         poller = WorkerPoller(celery_app)
-        poller._task = mock_task
-        poller.stop()
+        poller._task = asyncio.create_task(asyncio.sleep(999))
+        await poller.stop()
 
         assert poller._stop_event.is_set()
-        mock_task.cancel.assert_called_once()
+        assert poller._task.cancelled()
 
     @pytest.mark.asyncio
     async def test_poll_loop_stops_on_event(self, mock_db, celery_app, mocker: MockerFixture):
