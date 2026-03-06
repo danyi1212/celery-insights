@@ -1,16 +1,11 @@
 import { test as base } from "@playwright/test"
 import { ScenarioClient } from "../helpers/scenario-client"
 
-const INSIGHTS_API = "http://localhost:8555/api"
+const SURREAL_API = "http://localhost:8555/surreal"
 
 type TaskState = "PENDING" | "RECEIVED" | "STARTED" | "SUCCESS" | "FAILURE" | "RETRY" | "REVOKED"
-type TaskSummary = {
-    id: string
-    root_id?: string | null
-    parent_id?: string | null
-    children?: string[] | null
-}
-type Paginated<T> = { results: T[] }
+type SurrealStateResult = { result?: Array<{ state?: TaskState }> }
+type SurrealTaskResult = { result?: Array<Record<string, unknown>> }
 
 export const test = base.extend<{
     scenario: ScenarioClient
@@ -26,12 +21,22 @@ export const test = base.extend<{
             const timeout = opts?.timeout ?? 15_000
             const interval = opts?.interval ?? 500
             const deadline = Date.now() + timeout
+            const query = `USE NS celery_insights DB main; SELECT state FROM task:⟨${taskId}⟩`
+
             while (Date.now() < deadline) {
                 try {
-                    const res = await fetch(`${INSIGHTS_API}/tasks/${taskId}`)
+                    const res = await fetch(`${SURREAL_API}/sql`, {
+                        method: "POST",
+                        headers: {
+                            Accept: "application/json",
+                            Authorization: "Basic " + btoa("root:root"),
+                        },
+                        body: query,
+                    })
                     if (res.ok) {
-                        const data = await res.json()
-                        if (states.includes(data.state)) return
+                        const data = (await res.json()) as SurrealStateResult[]
+                        const state = data?.[1]?.result?.[0]?.state
+                        if (state && states.includes(state)) return
                     }
                 } catch {
                     // not available yet
@@ -47,21 +52,21 @@ export const test = base.extend<{
             const timeout = opts?.timeout ?? 15_000
             const interval = opts?.interval ?? 500
             const deadline = Date.now() + timeout
+            const query = `USE NS celery_insights DB main; SELECT id, root_id, parent_id, children FROM task WHERE id = task:⟨${taskId}⟩ OR root_id = '${taskId}' OR parent_id = '${taskId}' OR '${taskId}' IN children`
+
             while (Date.now() < deadline) {
                 try {
-                    const res = await fetch(`${INSIGHTS_API}/tasks/${taskId}`)
-                    if (res.ok) return
-                    const listRes = await fetch(`${INSIGHTS_API}/tasks?limit=1000`)
-                    if (listRes.ok) {
-                        const data = (await listRes.json()) as Paginated<TaskSummary>
-                        const relatedTask = data.results?.some(
-                            (task) =>
-                                task.id === taskId ||
-                                task.root_id === taskId ||
-                                task.parent_id === taskId ||
-                                task.children?.includes(taskId),
-                        )
-                        if (relatedTask) return
+                    const res = await fetch(`${SURREAL_API}/sql`, {
+                        method: "POST",
+                        headers: {
+                            Accept: "application/json",
+                            Authorization: "Basic " + btoa("root:root"),
+                        },
+                        body: query,
+                    })
+                    if (res.ok) {
+                        const data = (await res.json()) as SurrealTaskResult[]
+                        if (data?.[1]?.result?.length > 0) return
                     }
                 } catch {
                     // not available yet

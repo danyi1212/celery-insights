@@ -17,7 +17,7 @@ async def get_celery_app(settings: Settings | None = None):
 
     settings = settings or Settings()
 
-    config_path = AsyncPath(settings.config_path)
+    config_path = AsyncPath(settings.config_file)
     if not await config_path.exists():
         logger.info("Loading celery app config from environment variables")
         app = Celery(
@@ -29,18 +29,18 @@ async def get_celery_app(settings: Settings | None = None):
         return app
 
     if not await config_path.is_file():
-        raise RuntimeError(f"Config file path is not a file: {settings.config_path!r}")
+        raise RuntimeError(f"Config file path is not a file: {settings.config_file!r}")
 
-    logger.info(f"Loading celery app config from {settings.config_path!r}")
+    logger.info(f"Loading celery app config from {settings.config_file!r}")
     app = Celery()
     try:
         spec = importlib.util.spec_from_file_location("config", str(config_path))
         if spec is None or spec.loader is None:
-            raise RuntimeError(f"Could not load module spec for config at {settings.config_path!r}")
+            raise RuntimeError(f"Could not load module spec for config at {settings.config_file!r}")
         config = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(config)
         app.config_from_object(config)
     except Exception as e:
-        raise RuntimeError(f"Failed to load celery app config from {settings.config_path!r}") from e
+        raise RuntimeError(f"Failed to load celery app config from {settings.config_file!r}") from e
     _celery_app_cache = app
     return app

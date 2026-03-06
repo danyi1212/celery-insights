@@ -3,11 +3,15 @@ import { test, expect } from "../fixtures/base"
 test.describe("Worker Detail", () => {
     test("navigating to worker shows details", async ({ page }) => {
         await page.goto("/")
-        await expect(page.getByText("Online Workers")).toBeVisible()
+        await expect(page.getByTestId("app-connection-loading")).toBeHidden({ timeout: 30_000 })
+        await expect(page.getByRole("heading", { name: "Online Workers", exact: true })).toBeVisible()
 
         // Click the first worker link
         const workerLink = page.getByRole("link", { name: "View", exact: true }).first()
-        await expect(workerLink).toBeVisible()
+        await expect(async () => {
+            await page.reload()
+            await expect(workerLink).toBeVisible()
+        }).toPass({ timeout: 30_000 })
         await workerLink.click()
 
         await expect(page).toHaveURL(/\/workers\//)
@@ -17,17 +21,26 @@ test.describe("Worker Detail", () => {
 
     test("worker page shows pool and registered tasks", async ({ page }) => {
         await page.goto("/")
+        await expect(page.getByTestId("app-connection-loading")).toBeHidden({ timeout: 30_000 })
         const workerLink = page.getByRole("link", { name: "View", exact: true }).first()
-        await expect(workerLink).toBeVisible()
+        await expect(async () => {
+            await page.reload()
+            await expect(workerLink).toBeVisible()
+        }).toPass({ timeout: 30_000 })
         await workerLink.click()
 
         await expect(page.locator("#worker-pool")).toBeVisible()
         await expect(page.locator("#registered-tasks")).toBeVisible()
-        await expect(page.locator("#registered-tasks")).toContainText("tasks.basic")
+        // Worker poller runs on a 5s interval; reload to re-fetch data if not yet populated
+        await expect(async () => {
+            await page.reload()
+            await expect(page.locator("#registered-tasks")).toContainText("tasks.basic")
+        }).toPass({ timeout: 30_000 })
     })
 
     test("unknown worker shows not-found message", async ({ page }) => {
         await page.goto("/workers/celery@nonexistent-worker-xyz")
+        await expect(page.getByTestId("app-connection-loading")).toBeHidden({ timeout: 30_000 })
         await expect(page.getByText("Could not find worker")).toBeVisible()
     })
 })

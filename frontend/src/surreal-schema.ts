@@ -1,4 +1,4 @@
-import Surreal from "surrealdb"
+import { Surreal } from "surrealdb"
 import type { Config } from "./config"
 
 /**
@@ -12,6 +12,10 @@ export function assertIdent(name: string, label: string): string {
         )
     }
     return name
+}
+
+function toSurrealStrand(value: string): string {
+    return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`
 }
 
 /**
@@ -84,7 +88,7 @@ DEFINE TABLE IF NOT EXISTS ingestion_lock SCHEMAFULL
     FOR select FULL
     FOR create, update, delete NONE;
 
-DEFINE FIELD OVERWRITE holder ON ingestion_lock TYPE string;
+DEFINE FIELD OVERWRITE holder ON ingestion_lock TYPE option<string>;
 DEFINE FIELD OVERWRITE acquired_at ON ingestion_lock TYPE datetime;
 DEFINE FIELD OVERWRITE heartbeat ON ingestion_lock TYPE datetime;
 DEFINE FIELD OVERWRITE ttl_seconds ON ingestion_lock TYPE int DEFAULT 30;
@@ -136,16 +140,19 @@ export async function runSchemaMigration(config: Config): Promise<void> {
         await db.use({ namespace: ns, database: dbName })
 
         // Create ingester DB user (OVERWRITE updates password if changed)
-        await db
-            .query(`DEFINE USER OVERWRITE ingester ON DATABASE PASSWORD $pass ROLES OWNER`, {
-                pass: config.surrealdbIngesterPass,
-            })
-            .collect()
+        await db.query(
+            `DEFINE USER OVERWRITE ingester ON DATABASE PASSWORD ${toSurrealStrand(config.surrealdbIngesterPass)} ROLES OWNER`,
+        ).collect()
 
         // Apply core schema (tables, fields, indexes, permissions)
         await db.query(CORE_SCHEMA).collect()
 
-        // Conditional frontend auth setup
+        // Always create a read-only viewer user for the frontend.
+        // SurrealDB v2 requires authentication even for tables with FULL select permissions —
+        // anonymous (unauthenticated) connections cannot query anything.
+        await db.query(`DEFINE USER OVERWRITE viewer ON DATABASE PASSWORD 'viewer' ROLES VIEWER`).collect()
+
+        // Conditional frontend auth setup (password-protected access)
         if (config.surrealdbFrontendPass) {
             await db.query(FRONTEND_AUTH_SCHEMA).collect()
             await db
@@ -158,7 +165,7 @@ export async function runSchemaMigration(config: Config): Promise<void> {
             // Clean up frontend auth if previously configured
             await db.query(`REMOVE ACCESS IF EXISTS frontend ON DATABASE`).collect()
             await db.query(`REMOVE TABLE IF EXISTS viewer`).collect()
-            console.log("Schema migration completed (anonymous access)")
+            console.log("Schema migration completed (anonymous access via viewer user)")
         }
     } finally {
         await db.close()

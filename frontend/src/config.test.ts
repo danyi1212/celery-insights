@@ -44,10 +44,20 @@ describe("parseConfig", () => {
         expect(config.timezone).toBe("America/New_York")
     })
 
-    it("accepts optional SurrealDB external URL", () => {
+    it("propagates external URL to surrealdbUrl when surrealdbUrl is default", () => {
         const config = parseConfig({
             SURREALDB_EXTERNAL_URL: "ws://external-surreal:8557/rpc",
         })
+        expect(config.surrealdbExternalUrl).toBe("ws://external-surreal:8557/rpc")
+        expect(config.surrealdbUrl).toBe("ws://external-surreal:8557/rpc")
+    })
+
+    it("preserves explicit surrealdbUrl when both are set", () => {
+        const config = parseConfig({
+            SURREALDB_URL: "ws://custom-internal:9000/rpc",
+            SURREALDB_EXTERNAL_URL: "ws://external-surreal:8557/rpc",
+        })
+        expect(config.surrealdbUrl).toBe("ws://custom-internal:9000/rpc")
         expect(config.surrealdbExternalUrl).toBe("ws://external-surreal:8557/rpc")
     })
 

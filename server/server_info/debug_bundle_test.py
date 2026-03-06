@@ -101,7 +101,7 @@ async def test_generate_bundle_file(tmp_path: Path):
     log_path.write_text("sample content")
 
     data = DebugBundleData(
-        settings=Settings(config_path=str(config_path)),
+        settings=Settings(config_file=str(config_path)),
         log_path=str(log_path),
         client_info=ClientDebugInfoFactory.build(),
         state_dump=StateDumpFactory.build(),

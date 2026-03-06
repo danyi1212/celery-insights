@@ -5,6 +5,8 @@ import type { SurrealTask } from "@/types/surreal-records"
 
 const DEBOUNCE_MS = 500
 
+const ALLOWED_SORT_FIELDS = new Set(["last_updated", "state", "type", "worker", "runtime", "sent_at", "started_at"])
+
 export interface ExplorerFilters {
     states?: string[]
     types?: string[]
@@ -93,7 +95,7 @@ export const useExplorerTasks = (
                     { worker: string; count: number }[],
                 ]
             >(
-                `SELECT * FROM task${clause} ORDER BY ${sort.field} ${sort.direction} LIMIT $pageSize START $offset;` +
+                `SELECT * FROM task${clause} ORDER BY ${ALLOWED_SORT_FIELDS.has(sort.field) ? sort.field : "last_updated"} ${sort.direction === "ASC" ? "ASC" : "DESC"} LIMIT $pageSize START $offset;` +
                     `SELECT count() AS count FROM task${clause} GROUP ALL;` +
                     `SELECT state, count() AS count FROM task${clause} GROUP BY state;` +
                     `SELECT type, count() AS count FROM task${clause} WHERE type != NONE GROUP BY type;` +

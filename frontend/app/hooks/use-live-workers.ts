@@ -1,9 +1,12 @@
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
+import { RecordId } from "surrealdb"
 import { useLiveQuery } from "./use-live-query"
-import type { SurrealWorker } from "@/types/surreal-records"
+import { extractId, type SurrealWorker } from "@/types/surreal-records"
 
 const byLastUpdatedDesc = (a: SurrealWorker, b: SurrealWorker) =>
     new Date(b.last_updated).getTime() - new Date(a.last_updated).getTime()
+
+const isOnline = (w: SurrealWorker) => w.status === "online"
 
 /** All workers ordered by last_updated descending. */
 export const useLiveWorkers = () =>
@@ -15,12 +18,14 @@ export const useLiveWorkers = () =>
 
 /** Single worker detail by ID. */
 export const useWorker = (workerId: string) => {
-    const bindings = useMemo(() => ({ workerId }), [workerId])
+    const bindings = useMemo(() => ({ rid: new RecordId("worker", workerId) }), [workerId])
+    const filter = useCallback((w: SurrealWorker) => extractId(w.id) === workerId, [workerId])
 
     const result = useLiveQuery<SurrealWorker>({
-        initialQuery: "SELECT * FROM type::thing('worker', $workerId)",
+        initialQuery: "SELECT * FROM $rid",
         liveTable: "worker",
         bindings,
+        filter,
         enabled: !!workerId,
     })
 
@@ -31,19 +36,10 @@ export const useWorker = (workerId: string) => {
 }
 
 /** Online workers only — filtered by status field set by the backend poller. */
-export const useOnlineWorkers = () => {
-    const result = useLiveQuery<SurrealWorker>({
+export const useOnlineWorkers = () =>
+    useLiveQuery<SurrealWorker>({
         initialQuery: "SELECT * FROM worker WHERE status = 'online' ORDER BY last_updated DESC",
         liveTable: "worker",
         orderBy: byLastUpdatedDesc,
+        filter: isOnline,
     })
-
-    // Client-side filter: live notifications include all worker records,
-    // so we filter to only include those with status = "online"
-    const onlineData = useMemo(() => result.data.filter((w) => w.status === "online"), [result.data])
-
-    return {
-        ...result,
-        data: onlineData,
-    }
-}

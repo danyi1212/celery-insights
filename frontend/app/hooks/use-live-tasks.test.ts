@@ -1,11 +1,19 @@
 import { renderHook, waitFor } from "@testing-library/react"
 import { useLiveTasks, useWorkerTasks, useWorkflowTasks, useTask } from "./use-live-tasks"
 
-vi.mock("surrealdb", () => ({}))
+vi.mock("surrealdb", () => ({
+    RecordId: class RecordId {
+        constructor(
+            public tb: string,
+            public id: string,
+        ) {}
+    },
+}))
 
 const mockQuery = vi.fn()
-const mockLive = vi.fn()
-const mockDb = { query: mockQuery, live: mockLive }
+const mockLiveOf = vi.fn()
+const MOCK_LIVE_UUID = "mock-live-uuid"
+const mockDb = { query: mockQuery, liveOf: mockLiveOf }
 let mockStatus = "connected"
 
 vi.mock("@components/surrealdb-provider", () => ({
@@ -17,10 +25,20 @@ vi.mock("@components/surrealdb-provider", () => ({
     }),
 }))
 
+/** Set mockQuery to return the given result for initial queries and a UUID for LIVE SELECT */
+function setInitialQueryResult(result: unknown) {
+    mockQuery.mockImplementation((query: string) => {
+        if (typeof query === "string" && query.startsWith("LIVE SELECT")) {
+            return Promise.resolve([MOCK_LIVE_UUID])
+        }
+        return Promise.resolve(result)
+    })
+}
+
 function createMockSubscription() {
     const subscription = {
-        id: "test-uuid",
-        isManaged: true,
+        id: MOCK_LIVE_UUID,
+        isManaged: false,
         isAlive: true,
         resource: "task",
         kill: vi.fn().mockResolvedValue(undefined),
@@ -34,9 +52,9 @@ describe("useLiveTasks", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockStatus = "connected"
-        mockQuery.mockResolvedValue([[]])
+        setInitialQueryResult([[]])
         const { subscription } = createMockSubscription()
-        mockLive.mockResolvedValue(subscription)
+        mockLiveOf.mockResolvedValue(subscription)
     })
 
     it("queries with ORDER BY last_updated DESC and LIMIT", async () => {
@@ -59,11 +77,12 @@ describe("useLiveTasks", () => {
         })
     })
 
-    it("subscribes to the task table", async () => {
+    it("subscribes to the task table via LIVE SELECT", async () => {
         renderHook(() => useLiveTasks())
 
         await waitFor(() => {
-            expect(mockLive).toHaveBeenCalledWith("task")
+            expect(mockQuery).toHaveBeenCalledWith("LIVE SELECT * FROM task")
+            expect(mockLiveOf).toHaveBeenCalledWith(MOCK_LIVE_UUID)
         })
     })
 })
@@ -72,9 +91,9 @@ describe("useWorkerTasks", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockStatus = "connected"
-        mockQuery.mockResolvedValue([[]])
+        setInitialQueryResult([[]])
         const { subscription } = createMockSubscription()
-        mockLive.mockResolvedValue(subscription)
+        mockLiveOf.mockResolvedValue(subscription)
     })
 
     it("queries tasks filtered by worker ID", async () => {
@@ -101,9 +120,9 @@ describe("useWorkflowTasks", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockStatus = "connected"
-        mockQuery.mockResolvedValue([[]])
+        setInitialQueryResult([[]])
         const { subscription } = createMockSubscription()
-        mockLive.mockResolvedValue(subscription)
+        mockLiveOf.mockResolvedValue(subscription)
     })
 
     it("queries tasks by root_id or matching task ID", async () => {
@@ -111,9 +130,11 @@ describe("useWorkflowTasks", () => {
 
         await waitFor(() => {
             expect(mockQuery).toHaveBeenCalledWith(
-                "SELECT * FROM task WHERE root_id = $rootId OR id = type::thing('task', $rootId)",
-                { rootId: "abc-123", rootRecordId: "task:abc-123" },
+                "SELECT * FROM task WHERE root_id = $rootId OR id = $rootRid",
+                expect.objectContaining({ rootId: "abc-123" }),
             )
+            const bindings = mockQuery.mock.calls[0][1]
+            expect(bindings.rootRid).toEqual(expect.objectContaining({ tb: "task", id: "abc-123" }))
         })
     })
 
@@ -130,24 +151,22 @@ describe("useTask", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockStatus = "connected"
-        mockQuery.mockResolvedValue([[]])
+        setInitialQueryResult([[]])
         const { subscription } = createMockSubscription()
-        mockLive.mockResolvedValue(subscription)
+        mockLiveOf.mockResolvedValue(subscription)
     })
 
-    it("queries a single task by ID", async () => {
+    it("queries a single task by ID using RecordId binding", async () => {
         renderHook(() => useTask("my-task-id"))
 
         await waitFor(() => {
-            expect(mockQuery).toHaveBeenCalledWith("SELECT * FROM type::thing('task', $taskId)", {
-                taskId: "my-task-id",
-            })
+            expect(mockQuery).toHaveBeenCalledWith("SELECT * FROM $rid", expect.objectContaining({}))
+            const bindings = mockQuery.mock.calls[0][1]
+            expect(bindings.rid).toEqual(expect.objectContaining({ tb: "task", id: "my-task-id" }))
         })
     })
 
     it("returns task as null when data is empty", async () => {
-        mockQuery.mockResolvedValue([[]])
-
         const { result } = renderHook(() => useTask("my-task-id"))
 
         await waitFor(() => {
@@ -164,7 +183,27 @@ describe("useTask", () => {
             last_updated: "2024-01-01T00:00:00Z",
             children: [],
         }
-        mockQuery.mockResolvedValue([[taskRecord]])
+        setInitialQueryResult([[taskRecord]])
+
+        const { result } = renderHook(() => useTask("my-task-id"))
+
+        await waitFor(() => {
+            expect(result.current.isLoading).toBe(false)
+        })
+
+        expect(result.current.task).toEqual(taskRecord)
+    })
+
+    it("returns task when SDK returns single object (record-specific SELECT)", async () => {
+        const taskRecord = {
+            id: "task:my-task-id",
+            state: "SUCCESS",
+            last_updated: "2024-01-01T00:00:00Z",
+            children: [],
+        }
+        // SurrealDB JS SDK v2 returns a single object (not array) for
+        // SELECT * FROM $rid (record-specific SELECT) — useLiveQuery normalizes it to an array
+        setInitialQueryResult([taskRecord])
 
         const { result } = renderHook(() => useTask("my-task-id"))
 

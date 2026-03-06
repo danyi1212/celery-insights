@@ -80,8 +80,8 @@ describe("useAnalytics", () => {
         })
 
         const bindings = mockQuery.mock.calls[0][1] as Record<string, unknown>
-        expect(bindings.cutoffSeconds).toBe(3600)
-        expect(bindings.bucketMinutes).toBe(1)
+        expect(bindings.cutoffDuration).toBe("3600s")
+        expect(bindings.bucketDuration).toBe("1m")
     })
 
     it("passes correct bindings for 7d time range", async () => {
@@ -92,8 +92,8 @@ describe("useAnalytics", () => {
         })
 
         const bindings = mockQuery.mock.calls[0][1] as Record<string, unknown>
-        expect(bindings.cutoffSeconds).toBe(604800)
-        expect(bindings.bucketMinutes).toBe(360)
+        expect(bindings.cutoffDuration).toBe("604800s")
+        expect(bindings.bucketDuration).toBe("360m")
     })
 
     it("returns analytics data from query results", async () => {

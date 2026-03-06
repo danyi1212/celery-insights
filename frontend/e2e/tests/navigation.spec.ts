@@ -3,9 +3,10 @@ import { test, expect } from "../fixtures/base"
 test.describe("Navigation", () => {
     test("sidebar links navigate between pages", async ({ page }) => {
         await page.goto("/")
-        await expect(page.getByText("Online Workers")).toBeVisible()
+        await expect(page.getByTestId("app-connection-loading")).toBeHidden({ timeout: 30_000 })
+        await expect(page.getByRole("heading", { name: "Online Workers", exact: true })).toBeVisible()
 
-        await page.getByRole("link", { name: "Explorer" }).click()
+        await page.getByRole("link", { name: "Tasks Explorer" }).click()
         await expect(page).toHaveURL(/\/explorer/)
 
         await page.getByRole("link", { name: "Live Events" }).click()
@@ -24,9 +25,10 @@ test.describe("Navigation", () => {
         await expect(page.getByText("Back Home")).toBeVisible()
     })
 
-    test("deep-link to task detail page", async ({ page, scenario, waitForTask }) => {
+    test("deep-link to task detail page", async ({ page, scenario, waitForTask, waitForTaskVisible }) => {
         const { task_id } = await scenario.triggerScenario("noop")
         await waitForTask(task_id, ["SUCCESS"])
+        await waitForTaskVisible(task_id)
 
         await page.goto(`/tasks/${task_id}`)
         await expect(page.getByText(task_id.slice(0, 8))).toBeVisible()

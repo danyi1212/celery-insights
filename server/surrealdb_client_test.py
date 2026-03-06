@@ -36,7 +36,14 @@ async def test_connect_surrealdb_calls_signin_and_use():
         result = await surrealdb_client.connect_surrealdb(settings)
 
     assert result is mock_db
-    mock_db.signin.assert_awaited_once_with({"username": "ingester", "password": "testpass"})
+    mock_db.signin.assert_awaited_once_with(
+        {
+            "namespace": "test_ns",
+            "database": "test_db",
+            "username": "ingester",
+            "password": "testpass",
+        }
+    )
     mock_db.use.assert_awaited_once_with("test_ns", "test_db")
 
 

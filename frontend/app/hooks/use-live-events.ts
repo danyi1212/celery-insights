@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
 import { useLiveQuery } from "./use-live-query"
 import type { SurrealEvent } from "@/types/surreal-records"
 
@@ -20,11 +20,14 @@ export const useLiveEvents = (limit = 100, enabled = true) =>
     })
 
 /** Events for a specific task — ordered by timestamp ascending (chronological). */
-export const useTaskEvents = (taskId: string) =>
-    useLiveQuery<SurrealEvent>({
+export const useTaskEvents = (taskId: string) => {
+    const filter = useCallback((e: SurrealEvent) => e.task_id === taskId, [taskId])
+    return useLiveQuery<SurrealEvent>({
         initialQuery: "SELECT * FROM event WHERE task_id = $taskId ORDER BY timestamp",
         liveTable: "event",
         bindings: useMemo(() => ({ taskId }), [taskId]),
         orderBy: byTimestampAsc,
+        filter,
         enabled: !!taskId,
     })
+}

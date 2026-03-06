@@ -178,55 +178,19 @@ const LifetimeComparison: React.FC<{ left: Task; right: Task }> = ({ left, right
 const MetadataComparison: React.FC<{ left: Task; right: Task }> = ({ left, right }) => {
     const rows: {
         label: string
-        getLeft: (t: Task) => React.ReactNode
-        getRight: (t: Task) => React.ReactNode
+        format: (t: Task) => React.ReactNode
         key: keyof Task
     }[] = [
-        {
-            label: "State",
-            getLeft: (t) => <StateValue state={t.state} />,
-            getRight: (t) => <StateValue state={t.state} />,
-            key: "state",
-        },
-        { label: "Worker", getLeft: (t) => t.worker || "---", getRight: (t) => t.worker || "---", key: "worker" },
-        {
-            label: "Runtime",
-            getLeft: (t) => formatRuntimeMs(t.runtime),
-            getRight: (t) => formatRuntimeMs(t.runtime),
-            key: "runtime",
-        },
-        {
-            label: "Retries",
-            getLeft: (t) => String(t.retries ?? 0),
-            getRight: (t) => String(t.retries ?? 0),
-            key: "retries",
-        },
-        {
-            label: "Exchange",
-            getLeft: (t) => t.exchange || "---",
-            getRight: (t) => t.exchange || "---",
-            key: "exchange",
-        },
-        {
-            label: "Routing Key",
-            getLeft: (t) => t.routing_key || "---",
-            getRight: (t) => t.routing_key || "---",
-            key: "routing_key",
-        },
-        {
-            label: "Sent At",
-            getLeft: (t) => formatDate(t.sent_at),
-            getRight: (t) => formatDate(t.sent_at),
-            key: "sent_at",
-        },
-        {
-            label: "Started At",
-            getLeft: (t) => formatDate(t.started_at),
-            getRight: (t) => formatDate(t.started_at),
-            key: "started_at",
-        },
-        { label: "ETA", getLeft: (t) => t.eta || "---", getRight: (t) => t.eta || "---", key: "eta" },
-        { label: "Expires", getLeft: (t) => t.expires || "---", getRight: (t) => t.expires || "---", key: "expires" },
+        { label: "State", format: (t) => <StateValue state={t.state} />, key: "state" },
+        { label: "Worker", format: (t) => t.worker || "---", key: "worker" },
+        { label: "Runtime", format: (t) => formatRuntimeMs(t.runtime), key: "runtime" },
+        { label: "Retries", format: (t) => String(t.retries ?? 0), key: "retries" },
+        { label: "Exchange", format: (t) => t.exchange || "---", key: "exchange" },
+        { label: "Routing Key", format: (t) => t.routing_key || "---", key: "routing_key" },
+        { label: "Sent At", format: (t) => formatDate(t.sent_at), key: "sent_at" },
+        { label: "Started At", format: (t) => formatDate(t.started_at), key: "started_at" },
+        { label: "ETA", format: (t) => t.eta || "---", key: "eta" },
+        { label: "Expires", format: (t) => t.expires || "---", key: "expires" },
     ]
 
     return (
@@ -246,8 +210,8 @@ const MetadataComparison: React.FC<{ left: Task; right: Task }> = ({ left, right
                         <ComparisonRow
                             key={row.label}
                             label={row.label}
-                            left={row.getLeft(left)}
-                            right={row.getRight(right)}
+                            left={row.format(left)}
+                            right={row.format(right)}
                             highlight={isDifferent(left[row.key], right[row.key]) ? "different" : "none"}
                         />
                     ))}

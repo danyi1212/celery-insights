@@ -4,8 +4,9 @@ import { useLiveEvents, useTaskEvents } from "./use-live-events"
 vi.mock("surrealdb", () => ({}))
 
 const mockQuery = vi.fn()
-const mockLive = vi.fn()
-const mockDb = { query: mockQuery, live: mockLive }
+const mockLiveOf = vi.fn()
+const MOCK_LIVE_UUID = "mock-live-uuid"
+const mockDb = { query: mockQuery, liveOf: mockLiveOf }
 let mockStatus = "connected"
 
 vi.mock("@components/surrealdb-provider", () => ({
@@ -19,8 +20,8 @@ vi.mock("@components/surrealdb-provider", () => ({
 
 function createMockSubscription() {
     const subscription = {
-        id: "test-uuid",
-        isManaged: true,
+        id: MOCK_LIVE_UUID,
+        isManaged: false,
         isAlive: true,
         resource: "event",
         kill: vi.fn().mockResolvedValue(undefined),
@@ -30,13 +31,23 @@ function createMockSubscription() {
     return { subscription }
 }
 
+/** Set mockQuery to return the given result for initial queries and a UUID for LIVE SELECT */
+function setInitialQueryResult(result: unknown) {
+    mockQuery.mockImplementation((query: string) => {
+        if (typeof query === "string" && query.startsWith("LIVE SELECT")) {
+            return Promise.resolve([MOCK_LIVE_UUID])
+        }
+        return Promise.resolve(result)
+    })
+}
+
 describe("useLiveEvents", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockStatus = "connected"
-        mockQuery.mockResolvedValue([[]])
+        setInitialQueryResult([[]])
         const { subscription } = createMockSubscription()
-        mockLive.mockResolvedValue(subscription)
+        mockLiveOf.mockResolvedValue(subscription)
     })
 
     it("queries events with ORDER BY timestamp DESC and LIMIT", async () => {
@@ -59,11 +70,12 @@ describe("useLiveEvents", () => {
         })
     })
 
-    it("subscribes to the event table", async () => {
+    it("subscribes to the event table via LIVE SELECT", async () => {
         renderHook(() => useLiveEvents())
 
         await waitFor(() => {
-            expect(mockLive).toHaveBeenCalledWith("event")
+            expect(mockQuery).toHaveBeenCalledWith("LIVE SELECT * FROM event")
+            expect(mockLiveOf).toHaveBeenCalledWith(MOCK_LIVE_UUID)
         })
     })
 })
@@ -72,9 +84,9 @@ describe("useTaskEvents", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockStatus = "connected"
-        mockQuery.mockResolvedValue([[]])
+        setInitialQueryResult([[]])
         const { subscription } = createMockSubscription()
-        mockLive.mockResolvedValue(subscription)
+        mockLiveOf.mockResolvedValue(subscription)
     })
 
     it("queries events for a specific task ordered by timestamp ASC", async () => {

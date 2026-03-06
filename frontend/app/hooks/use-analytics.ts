@@ -6,21 +6,21 @@ const DEBOUNCE_MS = 2000
 
 export type TimeRange = "1h" | "6h" | "24h" | "7d" | "30d"
 
-const timeRangeToSeconds: Record<TimeRange, number> = {
-    "1h": 3600,
-    "6h": 21600,
-    "24h": 86400,
-    "7d": 604800,
-    "30d": 2592000,
+const timeRangeToCutoffDuration: Record<TimeRange, string> = {
+    "1h": "3600s",
+    "6h": "21600s",
+    "24h": "86400s",
+    "7d": "604800s",
+    "30d": "2592000s",
 }
 
-/** Bucket size in minutes for each time range */
-const timeRangeToBucketMinutes: Record<TimeRange, number> = {
-    "1h": 1,
-    "6h": 10,
-    "24h": 30,
-    "7d": 360,
-    "30d": 1440,
+/** Bucket size as duration for each time range */
+const timeRangeToBucketDuration: Record<TimeRange, string> = {
+    "1h": "1m",
+    "6h": "10m",
+    "24h": "30m",
+    "7d": "360m",
+    "30d": "1440m",
 }
 
 export interface ThroughputPoint {
@@ -80,10 +80,10 @@ export const useAnalytics = (timeRange: TimeRange = "24h") => {
     const initializedRef = useRef(false)
     const prevStatusRef = useRef<ConnectionStatus>(status)
 
-    const cutoffSeconds = timeRangeToSeconds[timeRange]
-    const bucketMinutes = timeRangeToBucketMinutes[timeRange]
+    const cutoffDuration = timeRangeToCutoffDuration[timeRange]
+    const bucketDuration = timeRangeToBucketDuration[timeRange]
 
-    const bindings = useMemo(() => ({ cutoffSeconds, bucketMinutes }), [cutoffSeconds, bucketMinutes])
+    const bindings = useMemo(() => ({ cutoffDuration, bucketDuration }), [cutoffDuration, bucketDuration])
 
     const runQueries = useCallback(async () => {
         try {
@@ -92,21 +92,21 @@ export const useAnalytics = (timeRange: TimeRange = "24h") => {
             >(
                 // Task throughput: tasks per bucket over time
                 `SELECT
-                    time::format(time::floor(last_updated, $bucketMinutes * 1m), '%Y-%m-%dT%H:%M') AS bucket,
+                    time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket,
                     count() AS count
                 FROM task
-                WHERE last_updated > time::now() - $cutoffSeconds * 1s
+                WHERE last_updated > time::now() - <duration>$cutoffDuration
                 GROUP BY bucket
                 ORDER BY bucket ASC;` +
                     // Failure rate: success vs failure per bucket
                     `SELECT
-                    time::format(time::floor(last_updated, $bucketMinutes * 1m), '%Y-%m-%dT%H:%M') AS bucket,
+                    time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket,
                     math::sum(IF state = 'SUCCESS' THEN 1 ELSE 0 END) AS success,
                     math::sum(IF state = 'FAILURE' THEN 1 ELSE 0 END) AS failure,
                     count() AS total,
                     math::sum(IF state = 'FAILURE' THEN 1 ELSE 0 END) / count() * 100 AS failure_rate
                 FROM task
-                WHERE last_updated > time::now() - $cutoffSeconds * 1s
+                WHERE last_updated > time::now() - <duration>$cutoffDuration
                     AND state IN ['SUCCESS', 'FAILURE']
                 GROUP BY bucket
                 ORDER BY bucket ASC;` +
@@ -118,7 +118,7 @@ export const useAnalytics = (timeRange: TimeRange = "24h") => {
                     math::max(runtime) AS max_runtime,
                     count() AS count
                 FROM task
-                WHERE last_updated > time::now() - $cutoffSeconds * 1s
+                WHERE last_updated > time::now() - <duration>$cutoffDuration
                     AND runtime != NONE
                     AND type != NONE
                 GROUP BY type
@@ -129,7 +129,7 @@ export const useAnalytics = (timeRange: TimeRange = "24h") => {
                     worker,
                     count() AS count
                 FROM task
-                WHERE last_updated > time::now() - $cutoffSeconds * 1s
+                WHERE last_updated > time::now() - <duration>$cutoffDuration
                     AND worker != NONE
                 GROUP BY worker
                 ORDER BY count DESC;`,

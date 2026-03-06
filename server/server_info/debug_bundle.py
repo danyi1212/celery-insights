@@ -50,16 +50,35 @@ class DebugBundleData(NamedTuple):
     server_info: ServerInfo
 
 
+async def _read_file_safe(path: AsyncPath) -> str | None:
+    if not await path.is_file():
+        logger.info(f"Unable to find file at {path.name!r}, skipping...")
+        return None
+    return await path.read_text(encoding="utf-8")
+
+
 async def generate_bundle_file(data: DebugBundleData) -> BytesIO:
+    # Read async file contents concurrently
+    config_content, log_content = await asyncio.gather(
+        _read_file_safe(AsyncPath(data.settings.config_file)),
+        _read_file_safe(AsyncPath(data.log_path)),
+    )
+
+    # Write to ZIP sequentially (zipfile is not thread-safe)
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as file:
-        async with asyncio.TaskGroup() as tg:
-            tg.create_task(dump_file(file, "config.py", AsyncPath(data.settings.config_path)))
-            tg.create_task(dump_file(file, "app.log", AsyncPath(data.log_path)))
-            dump_model(file, "settings.json", data.settings)
-            dump_model(file, "client_info.json", data.client_info)
-            dump_json(file, "state.json", {"tasks": data.state_dump.tasks, "workers": data.state_dump.workers})
-            dump_model(file, "server_info.json", data.server_info)
+        if config_content:
+            file.writestr("config.py", config_content)
+        if log_content:
+            file.writestr("app.log", log_content)
+        redacted_settings = data.settings.model_dump()
+        for key in ("surrealdb_ingester_pass", "broker_url", "result_backend"):
+            if key in redacted_settings:
+                redacted_settings[key] = "***REDACTED***"
+        dump_json(file, "settings.json", redacted_settings)
+        dump_model(file, "client_info.json", data.client_info)
+        dump_json(file, "state.json", {"tasks": data.state_dump.tasks, "workers": data.state_dump.workers})
+        dump_model(file, "server_info.json", data.server_info)
 
     buffer.seek(0)
     return buffer
@@ -73,10 +92,14 @@ async def _query_state_dump() -> StateDump:
         db = get_db()
         task_result = await db.query("SELECT * FROM task")
         if task_result and isinstance(task_result, list):
-            tasks = task_result  # ty: ignore[invalid-assignment]
+            tasks = (
+                task_result[0] if isinstance(task_result[0], list) else task_result
+            )  # ty: ignore[invalid-assignment]
         worker_result = await db.query("SELECT * FROM worker")
         if worker_result and isinstance(worker_result, list):
-            workers = worker_result  # ty: ignore[invalid-assignment]
+            workers = (
+                worker_result[0] if isinstance(worker_result[0], list) else worker_result
+            )  # ty: ignore[invalid-assignment]
     except Exception:
         logger.exception("Failed to query SurrealDB for debug bundle state dump")
     return StateDump(tasks=tasks, workers=workers)

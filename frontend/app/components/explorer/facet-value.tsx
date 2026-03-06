@@ -12,10 +12,17 @@ interface FacetValueProps {
 
 const FacetValue: React.FC<FacetValueProps> = ({ value, count, selected, onSelect, label }) => (
     <li className="flex items-center">
-        <button
-            type="button"
+        <div
+            role="button"
+            tabIndex={0}
             className="flex w-full items-center gap-2 px-2 py-1 text-left hover:bg-accent/50 transition-colors"
             onClick={onSelect}
+            onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault()
+                    onSelect()
+                }
+            }}
         >
             <Checkbox
                 checked={selected.size > 0 && selected.has(value)}
@@ -29,7 +36,7 @@ const FacetValue: React.FC<FacetValueProps> = ({ value, count, selected, onSelec
                 <TooltipContent side="right">{value}</TooltipContent>
             </Tooltip>
             <span className="ml-auto text-sm text-muted-foreground">{count}</span>
-        </button>
+        </div>
     </li>
 )
 export default FacetValue

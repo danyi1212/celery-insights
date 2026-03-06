@@ -4,7 +4,10 @@ const HEALTH_TIMEOUT = 60_000
 const HEALTH_INTERVAL = 2_000
 const EVENT_WARMUP_TIMEOUT = 60_000
 const INSIGHTS_API = "http://localhost:8555/api"
+const SURREAL_API = "http://localhost:8555/surreal"
 const INTERACTIVE_API = "http://localhost:8000"
+
+type SurrealTaskResult = { result?: Array<Record<string, unknown>> }
 
 async function pollHealth(url: string, label: string) {
     const deadline = Date.now() + HEALTH_TIMEOUT
@@ -25,10 +28,26 @@ async function pollHealth(url: string, label: string) {
 
 async function waitForTaskVisible(taskId: string, timeout: number) {
     const deadline = Date.now() + timeout
+    // Use ⟨ ⟩ brackets to match SurrealDB UUID record IDs in this env.
+    const query = `USE NS celery_insights DB main; SELECT * FROM task:⟨${taskId}⟩`
+
     while (Date.now() < deadline) {
         try {
-            const res = await fetch(`${INSIGHTS_API}/tasks/${taskId}`)
-            if (res.ok) return true
+            const res = await fetch(`${SURREAL_API}/sql`, {
+                method: "POST",
+                headers: {
+                    Accept: "application/json",
+                    Authorization: "Basic " + btoa("root:root"),
+                },
+                body: query,
+            })
+            if (res.ok) {
+                const data = (await res.json()) as SurrealTaskResult[]
+                // The result for the SELECT will be in the second element of the array (after USE)
+                if (data?.[1]?.result?.[0]) {
+                    return true
+                }
+            }
         } catch {
             // event stream not ready yet
         }
@@ -57,6 +76,41 @@ async function warmupEventStream() {
     throw new Error(`Event stream did not become ready within ${EVENT_WARMUP_TIMEOUT / 1000}s`)
 }
 
+async function waitForSurrealRpcReady() {
+    const deadline = Date.now() + HEALTH_TIMEOUT
+
+    while (Date.now() < deadline) {
+        try {
+            await new Promise<void>((resolve, reject) => {
+                const ws = new WebSocket("ws://localhost:8555/surreal/rpc", "json")
+                const timeout = setTimeout(() => {
+                    ws.close()
+                    reject(new Error("websocket timeout"))
+                }, 5_000)
+
+                ws.onopen = () => {
+                    clearTimeout(timeout)
+                    ws.close()
+                    resolve()
+                }
+                ws.onerror = () => {
+                    clearTimeout(timeout)
+                    reject(new Error("websocket error"))
+                }
+                ws.onclose = () => {
+                    clearTimeout(timeout)
+                }
+            })
+            console.log("  surreal rpc websocket is ready")
+            return
+        } catch {
+            await new Promise((r) => setTimeout(r, HEALTH_INTERVAL))
+        }
+    }
+
+    throw new Error(`Surreal RPC websocket did not become ready within ${HEALTH_TIMEOUT / 1000}s`)
+}
+
 export default async function globalSetup() {
     composeUp()
 
@@ -65,6 +119,7 @@ export default async function globalSetup() {
         pollHealth(`${INSIGHTS_API}/settings/info`, "celery-insights"),
         pollHealth(`${INTERACTIVE_API}/scenarios`, "interactive API"),
     ])
+    await waitForSurrealRpcReady()
     await warmupEventStream()
     console.log("All services healthy. Starting tests.")
 }

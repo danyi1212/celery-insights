@@ -18,15 +18,15 @@ async def export_database() -> BytesIO:
     try:
         task_result = await db.query("SELECT * FROM task")
         if task_result and isinstance(task_result, list):
-            tasks = task_result
+            tasks = task_result[0] if isinstance(task_result[0], list) else task_result
 
         event_result = await db.query("SELECT * FROM event")
         if event_result and isinstance(event_result, list):
-            events = event_result
+            events = event_result[0] if isinstance(event_result[0], list) else event_result
 
         worker_result = await db.query("SELECT * FROM worker")
         if worker_result and isinstance(worker_result, list):
-            workers = worker_result
+            workers = worker_result[0] if isinstance(worker_result[0], list) else worker_result
     except Exception:
         logger.exception("Failed to query SurrealDB for database export")
         raise
@@ -47,7 +47,8 @@ async def export_database() -> BytesIO:
 async def import_database(data: dict) -> dict[str, int]:
     """Import tasks, events, and workers into SurrealDB from an export file.
 
-    Clears existing data before importing. Returns counts of imported records.
+    Clears existing data and imports all records in a single transaction so a partial
+    failure rolls back completely instead of leaving the database empty.
     """
     db = get_db()
 
@@ -59,53 +60,33 @@ async def import_database(data: dict) -> dict[str, int]:
     events = data.get("events", [])
     workers = data.get("workers", [])
 
-    # Clear existing data
-    await db.query("DELETE FROM task; DELETE FROM event; DELETE FROM worker;")
+    # Build all queries and params for a single atomic transaction
+    queries = ["DELETE FROM task", "DELETE FROM event", "DELETE FROM worker"]
+    params: dict = {}
+    counts = {"tasks": 0, "events": 0, "workers": 0}
 
-    imported = {"tasks": 0, "events": 0, "workers": 0}
-
-    # Import tasks
-    for task in tasks:
-        try:
-            task_id = task.pop("id", None)
-            if task_id is None:
+    for table, records, key in [("task", tasks, "tasks"), ("event", events, "events"), ("worker", workers, "workers")]:
+        if table not in _ALLOWED_TABLES:
+            raise ValueError(f"Invalid table name: {table}")
+        for i, record in enumerate(records):
+            record_copy = {**record}
+            record_id = record_copy.pop("id", None)
+            if record_id is None:
                 continue
-            # Extract plain ID from SurrealDB RecordId format
-            id_str = str(task_id)
+            id_str = str(record_id)
             if ":" in id_str:
-                id_str = id_str.split(":", 1)[1]
-            await db.query("CREATE task:$id CONTENT $data", {"id": id_str, "data": task})
-            imported["tasks"] += 1
-        except (OSError, RuntimeError, ValueError, KeyError):
-            logger.warning("Failed to import task %s", task_id, exc_info=True)
+                id_str = id_str.split(":", 1)[1].strip("⟨⟩")
+            p = f"{table}_{i}"
+            params[f"{p}_id"] = id_str
+            params[f"{p}_data"] = record_copy
+            queries.append(f"CREATE type::thing('{table}', ${p}_id) CONTENT ${p}_data")
+            counts[key] += 1
 
-    # Import events
-    for event in events:
-        try:
-            event_id = event.pop("id", None)
-            if event_id is None:
-                continue
-            id_str = str(event_id)
-            if ":" in id_str:
-                id_str = id_str.split(":", 1)[1]
-            await db.query("CREATE event:$id CONTENT $data", {"id": id_str, "data": event})
-            imported["events"] += 1
-        except (OSError, RuntimeError, ValueError, KeyError):
-            logger.warning("Failed to import event %s", event_id, exc_info=True)
+    full_query = "BEGIN TRANSACTION;\n" + ";\n".join(queries) + ";\nCOMMIT TRANSACTION;"
+    await db.query(full_query, params)
 
-    # Import workers
-    for worker in workers:
-        try:
-            worker_id = worker.pop("id", None)
-            if worker_id is None:
-                continue
-            id_str = str(worker_id)
-            if ":" in id_str:
-                id_str = id_str.split(":", 1)[1]
-            await db.query("CREATE worker:$id CONTENT $data", {"id": id_str, "data": worker})
-            imported["workers"] += 1
-        except (OSError, RuntimeError, ValueError, KeyError):
-            logger.warning("Failed to import worker %s", worker_id, exc_info=True)
+    logger.info("Database import complete: %s", counts)
+    return counts
 
-    logger.info("Database import complete: %s", imported)
-    return imported
+
+_ALLOWED_TABLES = frozenset({"task", "event", "worker"})

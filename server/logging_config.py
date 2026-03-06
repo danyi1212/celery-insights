@@ -1,7 +1,5 @@
 import os
 
-from settings import Settings
-
 LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "app.log")
 LOGGING_CONFIG = {
     "version": 1,
@@ -50,8 +48,7 @@ LOGGING_CONFIG = {
         "tasks": {"level": "INFO"},
         "workers": {"level": "INFO"},
         "events": {"level": "INFO"},
-        "events.subscriber": {"level": "DEBUG" if Settings().debug else "INFO"},
-        "ws": {"level": "INFO"},
+        "events.ingester": {"level": "INFO"},
         "server_info": {"level": "INFO"},
         "celery_app": {"level": "INFO"},
         "lifespan": {"level": "INFO"},

@@ -26,7 +26,7 @@ class TestLifespan:
             settings.timezone = "UTC"
             settings.ingestion_batch_interval_ms = 100
             settings.cleanup_interval_seconds = 60
-            settings.task_max_count = 10_000
+            settings.task_max_count = None
             settings.task_retention_hours = None
             settings.dead_worker_retention_hours = 24
 

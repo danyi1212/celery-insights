@@ -133,7 +133,8 @@ class CleanupJob:
         db = get_db()
 
         # Extract task ID strings for event lookup (e.g., "task:abc123" -> "abc123")
-        task_id_strings = [str(tid).removeprefix("task:") for tid in task_ids]
+        # SurrealDB may wrap IDs with special chars in angle brackets (e.g., "task:⟨uuid⟩")
+        task_id_strings = [str(tid).removeprefix("task:").strip("⟨⟩") for tid in task_ids]
 
         try:
             await db.query(

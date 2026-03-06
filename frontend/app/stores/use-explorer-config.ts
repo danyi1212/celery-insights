@@ -17,6 +17,12 @@ type Configuration<T> = {
     [P in keyof Partial<T>]: ColumnConfig<T, P>
 }
 
+const formatDateValue = (value: unknown): string => {
+    if (!value) return "NaT"
+    const date = value instanceof Date ? value : new Date(String(value))
+    return Number.isNaN(date.getTime()) ? "NaT" : format(date, "MMM dd  hh:mm:ss.SSS")
+}
+
 export interface ExplorerConfig {
     configs: Configuration<Task>
     columnOrder: (keyof Task)[]
@@ -33,7 +39,7 @@ export const useExplorerConfig = create<ExplorerConfig>(() => ({
             columnWidth: 160,
             showColumn: true,
             noFacet: true,
-            valueFormatter: (value) => (value ? format(value, "MMM dd  hh:mm:ss.SSS") : "NaT"),
+            valueFormatter: (value) => formatDateValue(value),
         },
         state: {
             property: "state",

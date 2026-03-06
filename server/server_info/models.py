@@ -21,13 +21,25 @@ logger = logging.getLogger(__name__)
 start_time = time.time()
 
 
-async def _query_count(db, table: str) -> int:
-    """Query SurrealDB for the count of records in a table."""
+_ALLOWED_TABLES = frozenset({"task", "event", "worker"})
+
+
+async def query_table_count(db, table: str) -> int:
+    """Query SurrealDB for the count of records in a table.
+
+    Handles both SDK response formats:
+    - Direct dict: [{"count": N}]
+    - Nested list: [[{"count": N}]]
+    """
+    if table not in _ALLOWED_TABLES:
+        raise ValueError(f"Invalid table name: {table}")
     result = await db.query(f"SELECT count() AS count FROM {table} GROUP ALL")
     if result and isinstance(result, list) and len(result) > 0:
         first = result[0]
         if isinstance(first, dict):
             return first.get("count", 0)
+        if isinstance(first, list) and len(first) > 0 and isinstance(first[0], dict):
+            return first[0].get("count", 0)
     return 0
 
 
@@ -50,8 +62,8 @@ class ServerInfo(BaseModel):
         worker_count = 0
         try:
             db = get_db()
-            task_count = await _query_count(db, "task")
-            worker_count = await _query_count(db, "worker")
+            task_count = await query_table_count(db, "task")
+            worker_count = await query_table_count(db, "worker")
         except Exception:
             logger.exception("Failed to query SurrealDB for task/worker counts")
 

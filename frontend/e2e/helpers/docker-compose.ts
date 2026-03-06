@@ -1,4 +1,4 @@
-import { execSync } from "child_process"
+import { execFileSync } from "child_process"
 import { dirname, resolve } from "path"
 import { fileURLToPath } from "url"
 
@@ -11,9 +11,10 @@ export function composeUp() {
         return
     }
     console.log("Starting docker compose stack...")
-    execSync(
-        `docker compose -f ${COMPOSE_FILE} --profile interactive up -d --build --wait`,
-        { stdio: "inherit", timeout: 180_000 },
+    execFileSync(
+        "docker",
+        ["compose", "-f", COMPOSE_FILE, "--profile", "interactive", "up", "-d", "--build", "--wait"],
+        { stdio: "inherit", timeout: 600_000 },
     )
 }
 
@@ -24,8 +25,9 @@ export function composeDown() {
     }
     console.log("Stopping docker compose stack...")
     try {
-        execSync(
-            `docker compose -f ${COMPOSE_FILE} --profile interactive down -v --remove-orphans`,
+        execFileSync(
+            "docker",
+            ["compose", "-f", COMPOSE_FILE, "--profile", "interactive", "down", "-v", "--remove-orphans"],
             { stdio: "inherit", timeout: 60_000 },
         )
     } catch (e) {

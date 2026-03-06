@@ -33,7 +33,7 @@ async def test_config_from_settings(caplog: pytest.LogCaptureFixture):
 
 @pytest.mark.asyncio()
 async def test_config_path_not_file(tmp_path):
-    settings = Settings(config_path=str(tmp_path))
+    settings = Settings(config_file=str(tmp_path))
 
     with pytest.raises(RuntimeError, match=f"Config file path is not a file: {str(tmp_path)!r}"):
         await get_celery_app(settings)
@@ -44,7 +44,7 @@ async def test_config_from_module(tmp_path, caplog: pytest.LogCaptureFixture):
     config_path = tmp_path / "config" / "config.py"
     config_path.parent.mkdir(parents=True)
     config_path.write_text(fake_config)
-    settings = Settings(config_path=str(config_path))
+    settings = Settings(config_file=str(config_path))
 
     app = await get_celery_app(settings)
 

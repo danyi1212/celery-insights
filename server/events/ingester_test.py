@@ -170,8 +170,8 @@ class TestBuildWorkerUpsert:
         query, params = build_worker_upsert(event, 0)
 
         assert "UPSERT type::thing('worker', $w0_id)" in query
-        assert "status = $w0_status" in query
-        assert "missed_polls = 0" in query
+        assert "$w0_status" in query
+        assert "missed_polls" in query
         assert params["w0_id"] == "celery@host1"
         assert params["w0_status"] == "online"
         assert params["w0_sw_ident"] == "py-celery"
@@ -315,23 +315,28 @@ class TestSurrealDBIngester:
         callback.assert_called_once_with(["task-1", "task-2"])
 
     @pytest.mark.asyncio
-    async def test_backpressure_drops_oldest(self, mock_db, queue):  # noqa: ARG002
+    async def test_backpressure_drops_incoming_event(self, mock_db, queue):  # noqa: ARG002
         ingester = SurrealDBIngester(queue)
         ingester._buffer = [
             {"type": "task-sent", "uuid": f"task-{i}", "timestamp": 1700000000.0 + i}
             for i in range(BACKPRESSURE_THRESHOLD)
         ]
 
-        # Simulate what _consume_loop does when buffer is at threshold
-        if len(ingester._buffer) >= BACKPRESSURE_THRESHOLD:
-            ingester._buffer.pop(0)
-            ingester._dropped_count += 1
-        ingester._buffer.append({"type": "task-sent", "uuid": "new-task", "timestamp": 2000000000.0})
+        # Put a new event into the queue and run one iteration of the consume loop
+        new_event = {"type": "task-sent", "uuid": "new-task", "timestamp": 2000000000.0}
+        await queue.put(new_event)
 
+        ingester.start()
+        # Give the consume loop time to process the event
+        await asyncio.sleep(0.1)
+        ingester.stop()
+
+        # The incoming event should have been dropped (buffer stays at threshold)
         assert len(ingester._buffer) == BACKPRESSURE_THRESHOLD
         assert ingester._dropped_count == 1
-        assert ingester._buffer[-1]["uuid"] == "new-task"
-        assert ingester._buffer[0]["uuid"] == "task-1"
+        # Buffer should contain only original events (new-task was dropped)
+        assert ingester._buffer[0]["uuid"] == "task-0"
+        assert ingester._buffer[-1]["uuid"] == f"task-{BACKPRESSURE_THRESHOLD - 1}"
 
     @pytest.mark.asyncio
     async def test_flush_clears_buffer_and_terminal_flag(self, mock_db, queue):  # noqa: ARG002
@@ -350,13 +355,15 @@ class TestSurrealDBIngester:
     async def test_flush_handles_db_error_gracefully(self, mock_db, queue):
         mock_db.query.side_effect = Exception("Connection lost")
         ingester = SurrealDBIngester(queue)
-        ingester._buffer = [
+        events = [
             {"type": "task-sent", "uuid": "abc", "timestamp": 1700000000.0},
         ]
+        ingester._buffer = list(events)
 
         await ingester._flush()
 
-        assert ingester._buffer == []
+        # Events are re-queued for retry on failure
+        assert ingester._buffer == events
 
     @pytest.mark.asyncio
     async def test_empty_flush_is_noop(self, mock_db, queue):

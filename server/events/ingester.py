@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
@@ -54,6 +55,7 @@ BACKPRESSURE_THRESHOLD = 10_000
 BUFFER_SIZE_THRESHOLD = 500
 
 _WORKER_SKIP_FIELDS = frozenset({"type", "hostname", "timestamp", "local_received", "clock"})
+_SAFE_IDENT = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
 def _epoch_to_iso(ts: float) -> str:
@@ -104,7 +106,6 @@ class SurrealDBIngester:
                 break
 
             if len(self._buffer) >= BACKPRESSURE_THRESHOLD:
-                self._buffer.pop(0)
                 self._dropped_count += 1
                 if self._dropped_count % 100 == 1:
                     logger.warning(
@@ -113,6 +114,7 @@ class SurrealDBIngester:
                         self._dropped_count,
                         BACKPRESSURE_THRESHOLD,
                     )
+                continue
 
             self._buffer.append(event)
 
@@ -185,6 +187,8 @@ class SurrealDBIngester:
                 logger.debug("Flushed %d events (%d queries) to SurrealDB", len(events), len(queries))
             except Exception:
                 logger.exception("Failed to flush %d events to SurrealDB", len(events))
+                self._buffer = events + self._buffer
+                return
 
         if terminal_task_ids and self.on_terminal:
             try:
@@ -261,7 +265,12 @@ def build_children_update(event: dict, idx: int) -> tuple[str, dict]:
 
     p = f"ch{idx}"
     params = {f"{p}_parent": parent_id, f"{p}_child": child_id}
-    query = f"UPDATE type::thing('task', ${p}_parent) SET children = array::union(children ?? [], [${p}_child])"
+    query = (
+        f"UPSERT type::thing('task', ${p}_parent) SET "
+        f"children = array::union(children ?? [], [${p}_child]), "
+        f"state = state ?? 'PENDING', "
+        f"last_updated = last_updated ?? time::now()"
+    )
     return query, params
 
 
@@ -284,16 +293,19 @@ def build_worker_upsert(event: dict, idx: int) -> tuple[str, dict]:
     }
 
     set_clauses = [
-        f"status = ${p}_status",
-        f"last_updated = <datetime>${p}_ts",
-        "missed_polls = 0",
+        f"status = IF last_updated IS NONE OR <datetime>${p}_ts >= last_updated THEN ${p}_status ELSE status END",
+        f"last_updated = IF last_updated IS NONE OR <datetime>${p}_ts > last_updated"
+        f" THEN <datetime>${p}_ts ELSE last_updated END",
+        f"missed_polls = IF last_updated IS NONE OR <datetime>${p}_ts >= last_updated THEN 0 ELSE missed_polls END",
     ]
 
     for key, value in event.items():
-        if key not in _WORKER_SKIP_FIELDS and value is not None:
+        if key not in _WORKER_SKIP_FIELDS and value is not None and _SAFE_IDENT.match(key):
             pname = f"{p}_{key}"
             params[pname] = value
-            set_clauses.append(f"`{key}` = ${pname}")
+            set_clauses.append(
+                f"`{key}` = IF last_updated IS NONE OR <datetime>${p}_ts >= last_updated THEN ${pname} ELSE `{key}` END"
+            )
 
     query = f"UPSERT type::thing('worker', ${p}_id) SET " + ", ".join(set_clauses)
     return query, params

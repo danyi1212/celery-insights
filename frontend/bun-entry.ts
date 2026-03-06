@@ -1,14 +1,14 @@
 /**
  * Custom Bun entry point for production.
  * Orchestrates SurrealDB subprocess, leader election, Python ingester spawning,
- * serves static SPA files, and proxies API/WS/SurrealDB requests.
+ * serves static SPA files and proxies API/WS requests to Python.
  *
  * Usage: bun run bun-entry.ts
  * (after building with `bun run build`)
  */
 import path from "node:path"
 import { spawn, type ChildProcess } from "node:child_process"
-import Surreal from "surrealdb"
+import { Surreal } from "surrealdb"
 import { config } from "./src/config"
 import { LeaderElection, generateInstanceId, type IngestionStatus } from "./src/leader-election"
 import { runSchemaMigration } from "./src/surreal-schema"
@@ -69,7 +69,7 @@ function spawnSurrealDB(): ChildProcess {
  */
 async function waitForSurrealDB(maxWaitMs = 30000): Promise<void> {
     const surrealHttpUrl = config.surrealdbExternalUrl
-        ? config.surrealdbExternalUrl.replace(/\/rpc$/, "")
+        ? config.surrealdbExternalUrl.replace(/\/rpc$/, "").replace(/^ws(s?):\/\//, "http$1://")
         : `http://localhost:${config.surrealdbPort}`
     const healthUrl = `${surrealHttpUrl}/health`
     const startTime = Date.now()
@@ -94,6 +94,10 @@ async function waitForSurrealDB(maxWaitMs = 30000): Promise<void> {
 
 // --- Python subprocess management ---
 
+const PYTHON_BACKOFF_BASE_MS = 1000
+const PYTHON_BACKOFF_MAX_MS = 30000
+let pythonRestartAttempts = 0
+
 function spawnPython(): ChildProcess {
     console.log("Spawning Python ingester subprocess")
     const proc = spawn("python", ["run.py"], {
@@ -111,10 +115,11 @@ function spawnPython(): ChildProcess {
             TIMEZONE: config.timezone,
             DEBUG: String(config.debug),
             CLEANUP_INTERVAL_SECONDS: String(config.cleanupIntervalSeconds),
-            TASK_MAX_COUNT: config.taskMaxCount != null ? String(config.taskMaxCount) : "",
-            TASK_RETENTION_HOURS: config.taskRetentionHours != null ? String(config.taskRetentionHours) : "",
-            DEAD_WORKER_RETENTION_HOURS:
-                config.deadWorkerRetentionHours != null ? String(config.deadWorkerRetentionHours) : "",
+            ...(config.taskMaxCount != null ? { TASK_MAX_COUNT: String(config.taskMaxCount) } : {}),
+            ...(config.taskRetentionHours != null ? { TASK_RETENTION_HOURS: String(config.taskRetentionHours) } : {}),
+            ...(config.deadWorkerRetentionHours != null
+                ? { DEAD_WORKER_RETENTION_HOURS: String(config.deadWorkerRetentionHours) }
+                : {}),
             INGESTION_BATCH_INTERVAL_MS: String(config.ingestionBatchIntervalMs),
         },
         stdio: "inherit",
@@ -123,10 +128,17 @@ function spawnPython(): ChildProcess {
     proc.on("exit", (code) => {
         if (shuttingDown) return
         console.error(`Python ingester exited with code ${code}`)
-        // If we're still leader, restart Python
+        pythonProcess = null
+        // If we're still leader, restart Python with backoff
         if (leaderElection?.isLeader) {
-            console.log("Restarting Python ingester (leader still holds lock)")
-            pythonProcess = spawnPython()
+            const backoffMs = Math.min(PYTHON_BACKOFF_BASE_MS * 2 ** pythonRestartAttempts, PYTHON_BACKOFF_MAX_MS)
+            pythonRestartAttempts++
+            console.log(`Restarting Python ingester in ${backoffMs}ms (attempt ${pythonRestartAttempts})`)
+            setTimeout(() => {
+                if (!shuttingDown && leaderElection?.isLeader) {
+                    pythonProcess = spawnPython()
+                }
+            }, backoffMs)
         }
     })
 
@@ -145,14 +157,24 @@ async function shutdown(signal: string): Promise<void> {
         await leaderElection.stop()
     }
 
-    // 2. Kill Python subprocess (if running)
+    // 2. Kill child processes and wait for them to exit (with timeout)
+    const exitPromises: Promise<void>[] = []
+
     if (pythonProcess) {
-        pythonProcess.kill(signal === "SIGTERM" ? "SIGTERM" : "SIGINT")
+        const proc = pythonProcess
+        exitPromises.push(new Promise<void>((resolve) => proc.on("exit", () => resolve())))
+        proc.kill(signal === "SIGTERM" ? "SIGTERM" : "SIGINT")
     }
 
-    // 3. Kill SurrealDB subprocess (if managed)
     if (surrealProcess) {
-        surrealProcess.kill("SIGTERM")
+        const proc = surrealProcess
+        exitPromises.push(new Promise<void>((resolve) => proc.on("exit", () => resolve())))
+        proc.kill("SIGTERM")
+    }
+
+    // Wait for child processes with a 10-second timeout
+    if (exitPromises.length > 0) {
+        await Promise.race([Promise.all(exitPromises), Bun.sleep(10000)])
     }
 
     process.exit(0)
@@ -178,8 +200,6 @@ await runSchemaMigration(config)
 
 // 4. Connect to SurrealDB as ingester user
 const db = new Surreal()
-const surrealdbBaseUrl = config.surrealdbUrl.replace(/\/rpc$/, "")
-
 try {
     await db.connect(config.surrealdbUrl, {
         namespace: config.surrealdbNamespace,
@@ -203,6 +223,7 @@ leaderElection = new LeaderElection({
     config,
     instanceId,
     onBecomeLeader() {
+        pythonRestartAttempts = 0
         pythonProcess = spawnPython()
     },
     onLoseLeadership() {
@@ -233,10 +254,22 @@ const server = Bun.serve({
 
         // Bun-served endpoint: frontend configuration
         if (url.pathname === "/api/config") {
+            const authRequired = config.surrealdbFrontendPass != null
             return Response.json({
-                authRequired: config.surrealdbFrontendPass != null,
+                authRequired,
                 surrealPath: "/surreal/rpc",
                 ingestionStatus: leaderElection?.status ?? ingestionStatus,
+                // When auth is not required, pass viewer credentials so the frontend
+                // can authenticate as a read-only DB user. SurrealDB v2 requires
+                // authentication even for tables with FULL select permissions.
+                ...(authRequired
+                    ? {}
+                    : {
+                          viewerUser: "viewer",
+                          viewerPass: "viewer",
+                          viewerNs: config.surrealdbNamespace,
+                          viewerDb: config.surrealdbDatabase,
+                      }),
             })
         }
 
@@ -252,36 +285,6 @@ const server = Bun.serve({
                     : "external",
                 python: pythonProcess ? "running" : "not running",
             })
-        }
-
-        // Proxy /surreal/* to SurrealDB (always active — frontend data access)
-        if (url.pathname.startsWith("/surreal/")) {
-            const surrealPath = url.pathname.replace(/^\/surreal/, "")
-            const targetUrl = `${surrealdbBaseUrl}${surrealPath}${url.search}`
-
-            // Handle WebSocket upgrade for SurrealDB RPC
-            if (req.headers.get("upgrade")?.toLowerCase() === "websocket") {
-                const success = server.upgrade(req, {
-                    data: { targetPath: url.pathname + url.search, isSurreal: true },
-                })
-                if (success) return undefined
-                return new Response("SurrealDB WebSocket upgrade failed", { status: 500 })
-            }
-
-            try {
-                const proxyRes = await fetch(targetUrl, {
-                    method: req.method,
-                    headers: req.headers,
-                    body: req.body,
-                })
-                return new Response(proxyRes.body, {
-                    status: proxyRes.status,
-                    statusText: proxyRes.statusText,
-                    headers: proxyRes.headers,
-                })
-            } catch {
-                return new Response("SurrealDB unavailable", { status: 502 })
-            }
         }
 
         // Proxy API, docs, etc. to Python backend (only if Python is running)
@@ -335,34 +338,17 @@ const server = Bun.serve({
     },
     websocket: {
         open(ws) {
-            const data = ws.data as { targetPath: string; isSurreal?: boolean }
+            const data = ws.data as { targetPath: string }
+            ws._pendingMessages = [] as (string | Buffer)[]
 
-            if (data.isSurreal) {
-                // Proxy to SurrealDB
-                const surrealWsUrl = config.surrealdbUrl.replace(/^http/, "ws")
-                const backendWs = new WebSocket(surrealWsUrl)
-
-                backendWs.onopen = () => {
-                    // @ts-expect-error attach backend ws for message relay
-                    ws._backendWs = backendWs
-                }
-
-                backendWs.onmessage = (event) => {
-                    ws.send(event.data as string)
-                }
-
-                backendWs.onclose = () => ws.close()
-                backendWs.onerror = () => ws.close()
-                return
-            }
-
-            // Proxy to Python backend
-            const targetUrl = `${PYTHON_WS_BACKEND}${data.targetPath}`
-            const backendWs = new WebSocket(targetUrl)
+            const backendWs = new WebSocket(`${PYTHON_WS_BACKEND}${data.targetPath}`)
 
             backendWs.onopen = () => {
-                // @ts-expect-error attach backend ws for message relay
                 ws._backendWs = backendWs
+                // Flush any messages that arrived before backend connected
+                const pending = ws._pendingMessages as (string | Buffer)[]
+                for (const msg of pending) backendWs.send(msg)
+                pending.length = 0
             }
 
             backendWs.onmessage = (event) => {
@@ -373,14 +359,15 @@ const server = Bun.serve({
             backendWs.onerror = () => ws.close()
         },
         message(ws, message) {
-            // @ts-expect-error relay messages to backend
             const backendWs = ws._backendWs as WebSocket | undefined
             if (backendWs && backendWs.readyState === WebSocket.OPEN) {
                 backendWs.send(message)
+            } else {
+                // Buffer messages until backend connects
+                ;(ws._pendingMessages as (string | Buffer)[] | undefined)?.push(message)
             }
         },
         close(ws) {
-            // @ts-expect-error clean up backend ws
             const backendWs = ws._backendWs as WebSocket | undefined
             if (backendWs && backendWs.readyState === WebSocket.OPEN) {
                 backendWs.close()

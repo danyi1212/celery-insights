@@ -18,7 +18,7 @@ function createMockDb() {
 let mockDb: ReturnType<typeof createMockDb>
 
 vi.mock("surrealdb", () => ({
-    default: vi.fn(function () {
+    Surreal: vi.fn(function () {
         return mockDb
     }),
 }))
@@ -107,10 +107,11 @@ describe("runSchemaMigration", () => {
     it("creates ingester user with OVERWRITE and correct password", async () => {
         await runSchemaMigration(createConfig({ surrealdbIngesterPass: "my-secret" }))
 
-        expect(mockDb.query).toHaveBeenCalledWith(
-            "DEFINE USER OVERWRITE ingester ON DATABASE PASSWORD $pass ROLES OWNER",
-            { pass: "my-secret" },
-        )
+        const queries = mockDb.query.mock.calls.map((c) => c[0] as string)
+        const ingesterQuery = queries.find((q) => q.includes("DEFINE USER OVERWRITE ingester"))
+        expect(ingesterQuery).toBeDefined()
+        expect(ingesterQuery).toContain("ROLES OWNER")
+        expect(ingesterQuery).toContain("PASSWORD 'my-secret'")
     })
 
     it("applies core schema with all tables", async () => {
@@ -143,7 +144,7 @@ describe("runSchemaMigration", () => {
         expect(coreSchema).toContain("DEFINE FIELD OVERWRITE missed_polls ON worker TYPE int DEFAULT 0")
 
         // Ingestion lock fields
-        expect(coreSchema).toContain("DEFINE FIELD OVERWRITE holder ON ingestion_lock TYPE string")
+        expect(coreSchema).toContain("DEFINE FIELD OVERWRITE holder ON ingestion_lock TYPE option<string>")
         expect(coreSchema).toContain("DEFINE FIELD OVERWRITE ttl_seconds ON ingestion_lock TYPE int DEFAULT 30")
 
         // Task indexes
@@ -187,16 +188,25 @@ describe("runSchemaMigration", () => {
         it("upserts viewer record with hashed password", async () => {
             await runSchemaMigration(createConfig({ surrealdbFrontendPass: "secret123" }))
 
-            expect(mockDb.query).toHaveBeenCalledWith(
-                expect.stringContaining("UPSERT viewer:frontend"),
-                { pass: "secret123" },
-            )
+            expect(mockDb.query).toHaveBeenCalledWith(expect.stringContaining("UPSERT viewer:frontend"), {
+                pass: "secret123",
+            })
 
             const upsertCall = mockDb.query.mock.calls.find(
                 (c) => typeof c[0] === "string" && c[0].includes("UPSERT viewer:frontend"),
             )!
             expect(upsertCall[0]).toContain("crypto::argon2::generate($pass)")
         })
+    })
+
+    it("creates viewer DB user with VIEWER role and fixed password", async () => {
+        await runSchemaMigration(createConfig())
+
+        const queries = mockDb.query.mock.calls.map((c) => c[0] as string)
+        const viewerQuery = queries.find((q) => q.includes("DEFINE USER OVERWRITE viewer"))
+        expect(viewerQuery).toBeDefined()
+        expect(viewerQuery).toContain("ROLES VIEWER")
+        expect(viewerQuery).toContain("PASSWORD 'viewer'")
     })
 
     describe("frontend auth disabled", () => {

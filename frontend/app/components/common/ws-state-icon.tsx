@@ -1,7 +1,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { CheckCircle2, AlertCircle, RotateCw, Zap } from "lucide-react"
 import React, { useEffect, useState } from "react"
-import { ReadyState } from "react-use-websocket"
+import { ReadyState } from "@/types/ready-state"
 
 interface Meta {
     description: string

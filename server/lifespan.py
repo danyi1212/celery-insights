@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import time
@@ -40,7 +41,7 @@ async def lifespan(_):
     # 3. Start services: EventReceiver -> SurrealDBIngester -> WorkerPoller -> CleanupJob
     result_fetcher = ResultFetcher(celery_app)
 
-    event_receiver = CeleryEventReceiver(celery_app)
+    event_receiver = CeleryEventReceiver(celery_app, asyncio.get_running_loop())
     event_receiver.start()
 
     ingester = SurrealDBIngester(

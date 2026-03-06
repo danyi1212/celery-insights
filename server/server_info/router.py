@@ -7,7 +7,14 @@ from starlette.responses import StreamingResponse
 
 from server_info.backup import export_database, import_database
 from server_info.debug_bundle import create_debug_bundle
-from server_info.models import ClientDebugInfo, RecordCounts, RetentionInfo, RetentionSettings, ServerInfo
+from server_info.models import (
+    ClientDebugInfo,
+    RecordCounts,
+    RetentionInfo,
+    RetentionSettings,
+    ServerInfo,
+    query_table_count,
+)
 from surrealdb_client import get_db
 
 logger = logging.getLogger(__name__)
@@ -51,9 +58,14 @@ async def export_backup():
     )
 
 
+MAX_IMPORT_SIZE = 100 * 1024 * 1024  # 100 MB
+
+
 @settings_router.post("/import")
 async def import_backup(file: UploadFile):
-    content = await file.read()
+    content = await file.read(MAX_IMPORT_SIZE + 1)
+    if len(content) > MAX_IMPORT_SIZE:
+        return {"success": False, "error": f"File too large (max {MAX_IMPORT_SIZE // (1024 * 1024)}MB)"}
     try:
         data = json.loads(content)
     except (json.JSONDecodeError, UnicodeDecodeError) as e:
@@ -70,18 +82,12 @@ async def import_backup(file: UploadFile):
     return {"success": True, "imported": counts}
 
 
-async def _query_table_count(table: str) -> int:
-    db = get_db()
-    result: list = await db.query(f"SELECT count() AS count FROM {table} GROUP ALL")  # ty: ignore[invalid-assignment]
-    rows: list[dict] = result[0] if result and isinstance(result[0], list) else []
-    return rows[0].get("count", 0) if rows else 0
-
-
 async def _get_record_counts() -> RecordCounts:
+    db = get_db()
     return RecordCounts(
-        tasks=await _query_table_count("task"),
-        events=await _query_table_count("event"),
-        workers=await _query_table_count("worker"),
+        tasks=await query_table_count(db, "task"),
+        events=await query_table_count(db, "event"),
+        workers=await query_table_count(db, "worker"),
     )
 
 

@@ -13,9 +13,10 @@ type LiveMessage = {
 
 // Mock the surrealdb-provider module with a STABLE db reference
 const mockQuery = vi.fn()
-const mockLive = vi.fn()
+const mockLiveOf = vi.fn()
+const MOCK_LIVE_UUID = "mock-live-uuid"
 // Stable object reference — must not be recreated between renders
-const mockDb = { query: mockQuery, live: mockLive }
+const mockDb = { query: mockQuery, liveOf: mockLiveOf }
 let mockStatus = "connected"
 
 vi.mock("@components/surrealdb-provider", () => ({
@@ -29,11 +30,21 @@ vi.mock("@components/surrealdb-provider", () => ({
 
 type TestRecord = { id: string; name: string; score: number }
 
+/** Set mockQuery to return the given result for initial queries and a UUID for LIVE SELECT */
+function setInitialQueryResult(result: unknown) {
+    mockQuery.mockImplementation((query: string) => {
+        if (typeof query === "string" && query.startsWith("LIVE SELECT")) {
+            return Promise.resolve([MOCK_LIVE_UUID])
+        }
+        return Promise.resolve(result)
+    })
+}
+
 function createMockSubscription() {
     const handlers: Array<(message: LiveMessage) => void> = []
     const subscription = {
-        id: "test-uuid",
-        isManaged: true,
+        id: MOCK_LIVE_UUID,
+        isManaged: false,
         isAlive: true,
         resource: "task",
         kill: vi.fn().mockResolvedValue(undefined),
@@ -54,7 +65,7 @@ function createMockSubscription() {
 
 function makeLiveMessage(action: "CREATE" | "UPDATE" | "DELETE", record: TestRecord): LiveMessage {
     return {
-        queryId: "test-uuid",
+        queryId: MOCK_LIVE_UUID,
         action,
         recordId: record.id,
         value: record as unknown as Record<string, unknown>,
@@ -65,9 +76,9 @@ describe("useLiveQuery", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockStatus = "connected"
-        mockQuery.mockResolvedValue([[]])
+        setInitialQueryResult([[]])
         const { subscription } = createMockSubscription()
-        mockLive.mockResolvedValue(subscription)
+        mockLiveOf.mockResolvedValue(subscription)
     })
 
     it("runs initial query and returns data", async () => {
@@ -75,7 +86,7 @@ describe("useLiveQuery", () => {
             { id: "task:1", name: "alpha", score: 10 },
             { id: "task:2", name: "beta", score: 20 },
         ]
-        mockQuery.mockResolvedValue([records])
+        setInitialQueryResult([records])
 
         const { result } = renderHook(() =>
             useLiveQuery<TestRecord>({
@@ -94,8 +105,6 @@ describe("useLiveQuery", () => {
     })
 
     it("passes bindings to the initial query", async () => {
-        mockQuery.mockResolvedValue([[]])
-
         const bindings = { workerId: "worker:abc" }
         renderHook(() =>
             useLiveQuery<TestRecord>({
@@ -111,8 +120,6 @@ describe("useLiveQuery", () => {
     })
 
     it("starts a live subscription on the specified table", async () => {
-        mockQuery.mockResolvedValue([[]])
-
         renderHook(() =>
             useLiveQuery<TestRecord>({
                 initialQuery: "SELECT * FROM task",
@@ -121,14 +128,14 @@ describe("useLiveQuery", () => {
         )
 
         await waitFor(() => {
-            expect(mockLive).toHaveBeenCalledWith("task")
+            expect(mockQuery).toHaveBeenCalledWith("LIVE SELECT * FROM task")
+            expect(mockLiveOf).toHaveBeenCalledWith(MOCK_LIVE_UUID)
         })
     })
 
     it("handles CREATE notifications by adding records", async () => {
-        mockQuery.mockResolvedValue([[]])
         const mock = createMockSubscription()
-        mockLive.mockResolvedValue(mock.subscription)
+        mockLiveOf.mockResolvedValue(mock.subscription)
 
         const { result } = renderHook(() =>
             useLiveQuery<TestRecord>({
@@ -151,9 +158,9 @@ describe("useLiveQuery", () => {
 
     it("handles UPDATE notifications by replacing records", async () => {
         const initial: TestRecord[] = [{ id: "task:1", name: "alpha", score: 10 }]
-        mockQuery.mockResolvedValue([initial])
+        setInitialQueryResult([initial])
         const mock = createMockSubscription()
-        mockLive.mockResolvedValue(mock.subscription)
+        mockLiveOf.mockResolvedValue(mock.subscription)
 
         const { result } = renderHook(() =>
             useLiveQuery<TestRecord>({
@@ -175,9 +182,8 @@ describe("useLiveQuery", () => {
     })
 
     it("handles UPDATE for records not in current list by adding them", async () => {
-        mockQuery.mockResolvedValue([[]])
         const mock = createMockSubscription()
-        mockLive.mockResolvedValue(mock.subscription)
+        mockLiveOf.mockResolvedValue(mock.subscription)
 
         const { result } = renderHook(() =>
             useLiveQuery<TestRecord>({
@@ -203,9 +209,9 @@ describe("useLiveQuery", () => {
             { id: "task:1", name: "alpha", score: 10 },
             { id: "task:2", name: "beta", score: 20 },
         ]
-        mockQuery.mockResolvedValue([initial])
+        setInitialQueryResult([initial])
         const mock = createMockSubscription()
-        mockLive.mockResolvedValue(mock.subscription)
+        mockLiveOf.mockResolvedValue(mock.subscription)
 
         const { result } = renderHook(() =>
             useLiveQuery<TestRecord>({
@@ -227,9 +233,9 @@ describe("useLiveQuery", () => {
 
     it("does not duplicate records on CREATE if already present", async () => {
         const initial: TestRecord[] = [{ id: "task:1", name: "alpha", score: 10 }]
-        mockQuery.mockResolvedValue([initial])
+        setInitialQueryResult([initial])
         const mock = createMockSubscription()
-        mockLive.mockResolvedValue(mock.subscription)
+        mockLiveOf.mockResolvedValue(mock.subscription)
 
         const { result } = renderHook(() =>
             useLiveQuery<TestRecord>({
@@ -251,9 +257,9 @@ describe("useLiveQuery", () => {
 
     it("applies orderBy after live patches", async () => {
         const initial: TestRecord[] = [{ id: "task:1", name: "alpha", score: 10 }]
-        mockQuery.mockResolvedValue([initial])
+        setInitialQueryResult([initial])
         const mock = createMockSubscription()
-        mockLive.mockResolvedValue(mock.subscription)
+        mockLiveOf.mockResolvedValue(mock.subscription)
 
         const { result } = renderHook(() =>
             useLiveQuery<TestRecord>({
@@ -280,9 +286,9 @@ describe("useLiveQuery", () => {
             { id: "task:1", name: "alpha", score: 10 },
             { id: "task:2", name: "beta", score: 20 },
         ]
-        mockQuery.mockResolvedValue([initial])
+        setInitialQueryResult([initial])
         const mock = createMockSubscription()
-        mockLive.mockResolvedValue(mock.subscription)
+        mockLiveOf.mockResolvedValue(mock.subscription)
 
         const { result } = renderHook(() =>
             useLiveQuery<TestRecord>({
@@ -338,7 +344,7 @@ describe("useLiveQuery", () => {
         })
 
         expect(mockQuery).not.toHaveBeenCalled()
-        expect(mockLive).not.toHaveBeenCalled()
+        expect(mockLiveOf).not.toHaveBeenCalled()
         expect(result.current.data).toEqual([])
     })
 
@@ -355,13 +361,12 @@ describe("useLiveQuery", () => {
         // Should stay in loading state since we never connect
         expect(result.current.isLoading).toBe(true)
         expect(mockQuery).not.toHaveBeenCalled()
-        expect(mockLive).not.toHaveBeenCalled()
+        expect(mockLiveOf).not.toHaveBeenCalled()
     })
 
     it("kills subscription on unmount", async () => {
         const mock = createMockSubscription()
-        mockLive.mockResolvedValue(mock.subscription)
-        mockQuery.mockResolvedValue([[]])
+        mockLiveOf.mockResolvedValue(mock.subscription)
 
         const { unmount } = renderHook(() =>
             useLiveQuery<TestRecord>({
@@ -371,7 +376,7 @@ describe("useLiveQuery", () => {
         )
 
         await waitFor(() => {
-            expect(mockLive).toHaveBeenCalled()
+            expect(mockLiveOf).toHaveBeenCalled()
         })
 
         unmount()
@@ -379,11 +384,53 @@ describe("useLiveQuery", () => {
         expect(mock.subscription.kill).toHaveBeenCalled()
     })
 
+    it("normalizes single-object result from record-specific SELECT", async () => {
+        // SurrealDB JS SDK v2 returns a single object (not array) for
+        // SELECT * FROM $rid (record-specific SELECT) — useLiveQuery normalizes it to an array
+        const singleRecord: TestRecord = { id: "task:abc", name: "single", score: 42 }
+        setInitialQueryResult([singleRecord])
+
+        const bindings = { rid: "task:abc" }
+        const { result } = renderHook(() =>
+            useLiveQuery<TestRecord>({
+                initialQuery: "SELECT * FROM $rid",
+                liveTable: "task",
+                bindings,
+            }),
+        )
+
+        await waitFor(() => {
+            expect(result.current.isLoading).toBe(false)
+        })
+
+        expect(result.current.data).toEqual([singleRecord])
+    })
+
+    it("returns empty array when record-specific SELECT returns null/undefined", async () => {
+        // When the record doesn't exist, the SDK returns undefined for the statement result
+        setInitialQueryResult([undefined])
+
+        const bindings = { rid: "task:nonexistent" }
+        const { result } = renderHook(() =>
+            useLiveQuery<TestRecord>({
+                initialQuery: "SELECT * FROM $rid",
+                liveTable: "task",
+                bindings,
+            }),
+        )
+
+        await waitFor(() => {
+            expect(result.current.isLoading).toBe(false)
+        })
+
+        expect(result.current.data).toEqual([])
+    })
+
     it("handles DELETE for non-existent records without changing data", async () => {
         const initial: TestRecord[] = [{ id: "task:1", name: "alpha", score: 10 }]
-        mockQuery.mockResolvedValue([initial])
+        setInitialQueryResult([initial])
         const mock = createMockSubscription()
-        mockLive.mockResolvedValue(mock.subscription)
+        mockLiveOf.mockResolvedValue(mock.subscription)
 
         const { result } = renderHook(() =>
             useLiveQuery<TestRecord>({
