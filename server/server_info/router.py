@@ -68,13 +68,13 @@ async def import_backup(file: UploadFile):
         return {"success": False, "error": f"File too large (max {MAX_IMPORT_SIZE // (1024 * 1024)}MB)"}
     try:
         data = json.loads(content)
-    except (json.JSONDecodeError, UnicodeDecodeError) as e:
-        return {"success": False, "error": f"Invalid JSON file: {e}"}
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return {"success": False, "error": "Invalid JSON file"}
 
     try:
         counts = await import_database(data)
-    except ValueError as e:
-        return {"success": False, "error": str(e)}
+    except ValueError:
+        return {"success": False, "error": "Invalid backup format"}
     except Exception:
         logger.exception("Database import failed")
         return {"success": False, "error": "Import failed — check server logs"}

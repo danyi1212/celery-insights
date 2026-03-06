@@ -104,13 +104,8 @@ const SAMPLE_RESULTS = [
 
 // --- Utilities ---
 
-let _idCounter = 0
-
 function generateTaskId(): string {
-    _idCounter++
-    const hex = (n: number) => n.toString(16).padStart(4, "0")
-    const r = () => Math.floor(Math.random() * 0xffff)
-    return `${hex(r())}-${hex(_idCounter)}-${hex(r())}-${hex(r())}-${hex(r())}${hex(r())}${hex(r())}`
+    return crypto.randomUUID()
 }
 
 function randomChoice<T>(arr: readonly T[]): T {
