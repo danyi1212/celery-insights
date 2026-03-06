@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from aiopath import AsyncPath
 from pydantic import TypeAdapter
 from pytest_mock import MockerFixture
 
@@ -22,7 +21,7 @@ from settings import Settings
 
 
 @pytest.fixture()
-def zip_file(tmp_path: Path) -> Generator[zipfile.ZipFile, None, None]:
+def zip_file(tmp_path: Path) -> Generator[zipfile.ZipFile]:
     zip_path = tmp_path / "test.zip"
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
         yield zip_file
@@ -63,8 +62,8 @@ def test_dump_model_non_serializable_type(zip_file: zipfile.ZipFile, caplog: pyt
 @pytest.mark.asyncio
 @pytest.mark.parametrize("encoding", ["utf-8"])
 async def test_dump_file(zip_file: zipfile.ZipFile, tmp_path: Path, encoding: str):
-    test_file = AsyncPath(tmp_path) / "test.txt"
-    await test_file.write_text("sample content", encoding=encoding)
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("sample content", encoding=encoding)
 
     await dump_file(zip_file, "test.txt", test_file)
     assert "test.txt" in zip_file.namelist()
@@ -75,7 +74,7 @@ async def test_dump_file(zip_file: zipfile.ZipFile, tmp_path: Path, encoding: st
 
 @pytest.mark.asyncio
 async def test_dump_file_nonexistent_path(zip_file: zipfile.ZipFile, tmp_path: Path, caplog: pytest.LogCaptureFixture):
-    non_existent_file = AsyncPath(tmp_path) / "nonexistent.txt"
+    non_existent_file = tmp_path / "nonexistent.txt"
 
     await dump_file(zip_file, "nonexistent.txt", non_existent_file)
     assert "nonexistent.txt" not in zip_file.namelist()
@@ -84,8 +83,8 @@ async def test_dump_file_nonexistent_path(zip_file: zipfile.ZipFile, tmp_path: P
 
 @pytest.mark.asyncio
 async def test_dump_file_not_a_file(zip_file: zipfile.ZipFile, tmp_path: Path, caplog: pytest.LogCaptureFixture):
-    not_a_file = AsyncPath(tmp_path) / "some_folder"
-    await not_a_file.mkdir(exist_ok=True, parents=True)
+    not_a_file = tmp_path / "some_folder"
+    not_a_file.mkdir(exist_ok=True, parents=True)
 
     await dump_file(zip_file, "some_folder", not_a_file)
     assert "some_folder" not in zip_file.namelist()

@@ -5,7 +5,6 @@ import { Button } from "@components/ui/button"
 import { Switch } from "@components/ui/switch"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import useSettingsStore, { resetSettings, useIsDefaultSettings } from "@stores/use-settings-store"
-import React from "react"
 
 const SettingsPanel = () => {
     const hideWelcomeBanner = useSettingsStore((state) => state.hideWelcomeBanner)

@@ -2,6 +2,7 @@ import type { Task } from "@/types/surreal-records"
 import { format } from "date-fns"
 import React from "react"
 import { create } from "zustand"
+import { useShallow } from "zustand/shallow"
 
 interface ColumnConfig<T, P extends keyof T> {
     property: P
@@ -81,15 +82,19 @@ export const useExplorerConfig = create<ExplorerConfig>(() => ({
 const removeUndefined = <T>(arr: (T | undefined)[]): T[] => arr.filter((item): item is T => item !== undefined)
 
 export const useExplorerFacets = () =>
-    useExplorerConfig((state) =>
-        removeUndefined(state.facetOrder.map((facet) => state.configs[facet])).filter(
-            (facetConfig) => !facetConfig.noFacet && facetConfig.showFacet,
+    useExplorerConfig(
+        useShallow((state) =>
+            removeUndefined(state.facetOrder.map((facet) => state.configs[facet])).filter(
+                (facetConfig) => !facetConfig.noFacet && facetConfig.showFacet,
+            ),
         ),
     )
 
 export const useExplorerColumns = () =>
-    useExplorerConfig((state) =>
-        removeUndefined(state.columnOrder.map((column) => state.configs[column])).filter(
-            (columnConfig) => columnConfig.showColumn,
+    useExplorerConfig(
+        useShallow((state) =>
+            removeUndefined(state.columnOrder.map((column) => state.configs[column])).filter(
+                (columnConfig) => columnConfig.showColumn,
+            ),
         ),
     )

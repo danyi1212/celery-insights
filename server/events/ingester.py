@@ -281,7 +281,7 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
             f"worker = IF last_updated IS NONE OR <datetime>${p}_ts >= last_updated THEN ${p}_worker ELSE worker END"
         )
 
-    query = f"UPSERT type::thing('task', ${p}_id) SET " + ", ".join(set_clauses)
+    query = f"UPSERT type::record('task', ${p}_id) SET " + ", ".join(set_clauses)
     return query, params
 
 
@@ -297,7 +297,7 @@ def build_children_update(event: dict, idx: int) -> tuple[str, dict]:
     p = f"ch{idx}"
     params = {f"{p}_parent": parent_id, f"{p}_child": child_id}
     query = (
-        f"UPSERT type::thing('task', ${p}_parent) SET "
+        f"UPSERT type::record('task', ${p}_parent) SET "
         f"children = array::union(children ?? [], [${p}_child]), "
         f"state = state ?? 'PENDING', "
         f"last_updated = last_updated ?? time::now()"
@@ -338,7 +338,7 @@ def build_worker_upsert(event: dict, idx: int) -> tuple[str, dict]:
                 f"`{key}` = IF last_updated IS NONE OR <datetime>${p}_ts >= last_updated THEN ${pname} ELSE `{key}` END"
             )
 
-    query = f"UPSERT type::thing('worker', ${p}_id) SET " + ", ".join(set_clauses)
+    query = f"UPSERT type::record('worker', ${p}_id) SET " + ", ".join(set_clauses)
     return query, params
 
 

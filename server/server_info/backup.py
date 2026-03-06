@@ -79,7 +79,7 @@ async def import_database(data: dict) -> dict[str, int]:
             p = f"{table}_{i}"
             params[f"{p}_id"] = id_str
             params[f"{p}_data"] = record_copy
-            queries.append(f"CREATE type::thing('{table}', ${p}_id) CONTENT ${p}_data")
+            queries.append(f"CREATE type::record('{table}', ${p}_id) CONTENT ${p}_data")
             counts[key] += 1
 
     full_query = "BEGIN TRANSACTION;\n" + ";\n".join(queries) + ";\nCOMMIT TRANSACTION;"

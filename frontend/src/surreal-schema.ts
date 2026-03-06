@@ -151,7 +151,7 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
         await db.query(CORE_SCHEMA).collect()
 
         // Always create a read-only viewer user for the frontend.
-        // SurrealDB v2 requires authentication even for tables with FULL select permissions —
+        // SurrealDB requires authentication even for tables with FULL select permissions —
         // anonymous (unauthenticated) connections cannot query anything.
         await db.query(`DEFINE USER OVERWRITE viewer ON DATABASE PASSWORD 'viewer' ROLES VIEWER`).collect()
 

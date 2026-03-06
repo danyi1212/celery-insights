@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { create } from "zustand"
+import { useShallow } from "zustand/shallow"
 
 interface TourStore {
     tourActive: boolean
@@ -21,7 +22,7 @@ export const nextStep = () => useTourStore.setState((state) => ({ run: true, ste
 export const backStep = () => useTourStore.setState((state) => ({ run: true, stepIndex: state.stepIndex - 1 }))
 export const setStep = (stepIndex: number) => useTourStore.setState({ run: true, stepIndex })
 export const useTourChangeStepOnLoad = (stepIndex: number, condition = true) => {
-    const tour = useTourStore()
+    const tour = useTourStore(useShallow((state) => state))
 
     useEffect(() => {
         if (condition && tour.run && tour.stepIndex === stepIndex - 1) {

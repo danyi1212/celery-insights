@@ -11,7 +11,7 @@ interface AppConfig {
     authRequired: boolean
     surrealPath: string
     ingestionStatus: IngestionStatus
-    /** Viewer credentials for anonymous mode (SurrealDB v2 requires authentication) */
+    /** Viewer credentials for anonymous mode (SurrealDB requires authentication) */
     viewerUser?: string
     viewerPass?: string
     viewerNs?: string
@@ -55,13 +55,13 @@ async function connectAsViewer(
     const url = `${protocol}//${window.location.host}${surrealPath}`
 
     if (!viewerUser || !viewerPass) {
-        console.warn("No viewer credentials provided — SurrealDB v2 requires authentication for all queries")
+        console.warn("No viewer credentials provided — SurrealDB requires authentication for all queries")
     }
 
     await db.connect(url, {
         namespace: ns,
         database,
-        // SurrealDB v2 requires authentication — anonymous connections cannot query anything.
+        // SurrealDB requires authentication — anonymous connections cannot query anything.
         // Authenticate as the read-only viewer DB user when credentials are provided.
         ...(viewerUser && viewerPass
             ? {

@@ -1,10 +1,11 @@
+import asyncio
 import json
 import logging
 import zipfile
 from io import BytesIO
+from pathlib import Path
 from typing import Any, NamedTuple
 
-from aiopath import AsyncPath
 from pydantic_core import to_json
 from starlette.requests import Request
 
@@ -31,12 +32,12 @@ def dump_json(file: zipfile.ZipFile, filename: str, data: Any) -> None:
         logger.exception(f"Failed to dump JSON to file {filename!r}: {e}")
 
 
-async def dump_file(file: zipfile.ZipFile, filename: str, path: AsyncPath) -> None:
-    if not await path.is_file():
+async def dump_file(file: zipfile.ZipFile, filename: str, path: Path) -> None:
+    if not await asyncio.to_thread(path.is_file):
         logger.info(f"Unable to find file at {path.name!r}, skipping...")
         return
 
-    content = await path.read_text(encoding="utf-8")
+    content = await asyncio.to_thread(path.read_text, encoding="utf-8")
     file.writestr(filename, content)
 
 
@@ -47,16 +48,16 @@ class DebugBundleData(NamedTuple):
     server_info: ServerInfo
 
 
-async def _read_file_safe(path: AsyncPath) -> str | None:
-    if not await path.is_file():
+async def _read_file_safe(path: Path) -> str | None:
+    if not await asyncio.to_thread(path.is_file):
         logger.info(f"Unable to find file at {path.name!r}, skipping...")
         return None
-    return await path.read_text(encoding="utf-8")
+    return await asyncio.to_thread(path.read_text, encoding="utf-8")
 
 
 async def generate_bundle_file(data: DebugBundleData) -> BytesIO:
     # Read async file contents
-    config_content = await _read_file_safe(AsyncPath(data.settings.config_file))
+    config_content = await _read_file_safe(Path(data.settings.config_file))
 
     # Write to ZIP sequentially (zipfile is not thread-safe)
     buffer = BytesIO()

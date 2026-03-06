@@ -105,7 +105,7 @@ class WorkerPoller:
                     "data": json.dumps(data),
                 }
                 query = (
-                    "UPSERT type::thing('worker', $id) SET "
+                    "UPSERT type::record('worker', $id) SET "
                     "status = 'online', "
                     "last_updated = <datetime>$ts, "
                     "missed_polls = 0, "
@@ -140,14 +140,14 @@ class WorkerPoller:
             try:
                 if missed >= MISSED_POLLS_THRESHOLD:
                     await db.query(
-                        "UPDATE type::thing('worker', $id) SET "
+                        "UPDATE type::record('worker', $id) SET "
                         "status = 'offline', missed_polls = $missed, last_updated = <datetime>$ts",
                         {"id": hostname, "missed": missed, "ts": now},
                     )
                     logger.info("Worker %s marked offline after %d missed polls", hostname, missed)
                 else:
                     await db.query(
-                        "UPDATE type::thing('worker', $id) SET missed_polls = $missed",
+                        "UPDATE type::record('worker', $id) SET missed_polls = $missed",
                         {"id": hostname, "missed": missed},
                     )
             except Exception:

@@ -119,7 +119,7 @@ class TestResultFetcher:
 
         mock_db.query.assert_called_once()
         query_str = mock_db.query.call_args[0][0]
-        assert "UPDATE type::thing('task', $task_id)" in query_str
+        assert "UPDATE type::record('task', $task_id)" in query_str
         assert "result = $result" in query_str
         params = mock_db.query.call_args[0][1]
         assert params["task_id"] == "task-1"

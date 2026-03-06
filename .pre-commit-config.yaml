@@ -38,17 +38,12 @@ repos:
         types: [file]
         pass_filenames: false
 
-  - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.13.0
+  - repo: local
     hooks:
       - id: eslint
-        files: \.[jt]sx?$  # *.js, *.jsx, *.ts and *.tsx
+        name: eslint
+        entry: bun run --cwd frontend eslint --max-warnings=0 app
+        language: system
+        files: ^frontend/app/.*\.[jt]sx?$
         types: [ file ]
-        additional_dependencies:
-          - "eslint@8.54.0"
-          - "eslint-plugin-jsx-a11y@6.8.0"
-          - "eslint-plugin-prettier@5.0.1"
-          - "eslint-plugin-react@7.33.2"
-          - "eslint-plugin-react-hooks@4.6.0"
-          - "@typescript-eslint/eslint-plugin@6.11.0"
-          - "@typescript-eslint/parser@6.11.0"
+        pass_filenames: false

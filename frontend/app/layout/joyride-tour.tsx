@@ -2,6 +2,7 @@ import TourTooltip from "@layout/tour-tooltip"
 import useSettingsStore from "@stores/use-settings-store"
 import { backStep, nextStep, stopTour, useTourStore } from "@stores/use-tour-store"
 import React, { useMemo } from "react"
+import { useShallow } from "zustand/shallow"
 import Joyride, { ACTIONS, CallBackProps, EVENTS, STATUS, Step } from "react-joyride"
 
 const createSteps = (): Step[] => [
@@ -205,7 +206,7 @@ const createSteps = (): Step[] => [
 ]
 
 const JoyrideTour: React.FC = () => {
-    const state = useTourStore()
+    const state = useTourStore(useShallow((s) => s))
     const steps = useMemo(() => createSteps(), [])
 
     const handleCallback = (data: CallBackProps) => {
