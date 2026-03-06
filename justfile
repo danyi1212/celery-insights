@@ -8,6 +8,12 @@ frontend := project / "frontend"
 server := project / "server"
 test_project := project / "test_project"
 
+# ─── Check ────────────────────────────────────────────────────
+
+# Run all linters
+check:
+    pre-commit run --all-files
+
 # ─── Development ──────────────────────────────────────────────
 
 # Start all dev services (SurrealDB + Python ingester + Vite)

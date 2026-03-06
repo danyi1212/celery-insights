@@ -397,6 +397,7 @@ const server = Bun.serve({
         // Proxy API, docs, etc. to Python backend (only if Python is running)
         if (
             url.pathname.startsWith("/api") ||
+            url.pathname.startsWith("/metrics") ||
             url.pathname === "/docs" ||
             url.pathname === "/redoc" ||
             url.pathname === "/openapi.json"

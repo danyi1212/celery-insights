@@ -62,7 +62,8 @@ async def lifespan(_):
     )
     cleanup_job.start()
 
-    # Expose cleanup_job on app.state for the settings router
+    # Expose services on app.state for other routers
+    _.state.ingester = ingester
     _.state.cleanup_job = cleanup_job
 
     try:
