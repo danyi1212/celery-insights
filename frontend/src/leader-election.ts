@@ -1,4 +1,4 @@
-import Surreal from "surrealdb"
+import { Surreal } from "surrealdb"
 import { hostname } from "node:os"
 import type { Config } from "./config"
 
@@ -59,7 +59,7 @@ export class LeaderElection {
      */
     async start(): Promise<IngestionStatus> {
         if (!this.config.ingestionEnabled) {
-            this._status = "disabled"
+            this._status = "read-only"
             console.log("Ingestion disabled — read-only mode")
             return this._status
         }
@@ -108,7 +108,7 @@ export class LeaderElection {
         try {
             const [result] = await this.db
                 .query<[{ holder: string }[]]>(
-                    `UPDATE ingestion_lock:leader SET
+                    `UPSERT ingestion_lock:leader SET
                         holder = $id,
                         acquired_at = time::now(),
                         heartbeat = time::now(),

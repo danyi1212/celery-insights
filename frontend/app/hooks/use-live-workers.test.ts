@@ -1,11 +1,19 @@
 import { renderHook, waitFor } from "@testing-library/react"
 import { useLiveWorkers, useWorker, useOnlineWorkers } from "./use-live-workers"
 
-vi.mock("surrealdb", () => ({}))
+vi.mock("surrealdb", () => ({
+    RecordId: class RecordId {
+        constructor(
+            public tb: string,
+            public id: string,
+        ) {}
+    },
+}))
 
 const mockQuery = vi.fn()
-const mockLive = vi.fn()
-const mockDb = { query: mockQuery, live: mockLive }
+const mockLiveOf = vi.fn()
+const MOCK_LIVE_UUID = "mock-live-uuid"
+const mockDb = { query: mockQuery, liveOf: mockLiveOf }
 let mockStatus = "connected"
 
 vi.mock("@components/surrealdb-provider", () => ({
@@ -17,10 +25,20 @@ vi.mock("@components/surrealdb-provider", () => ({
     }),
 }))
 
+/** Set mockQuery to return the given result for initial queries and a UUID for LIVE SELECT */
+function setInitialQueryResult(result: unknown) {
+    mockQuery.mockImplementation((query: string) => {
+        if (typeof query === "string" && query.startsWith("LIVE SELECT")) {
+            return Promise.resolve([MOCK_LIVE_UUID])
+        }
+        return Promise.resolve(result)
+    })
+}
+
 function createMockSubscription() {
     const subscription = {
-        id: "test-uuid",
-        isManaged: true,
+        id: MOCK_LIVE_UUID,
+        isManaged: false,
         isAlive: true,
         resource: "worker",
         kill: vi.fn().mockResolvedValue(undefined),
@@ -34,9 +52,9 @@ describe("useLiveWorkers", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockStatus = "connected"
-        mockQuery.mockResolvedValue([[]])
+        setInitialQueryResult([[]])
         const { subscription } = createMockSubscription()
-        mockLive.mockResolvedValue(subscription)
+        mockLiveOf.mockResolvedValue(subscription)
     })
 
     it("queries all workers ordered by last_updated DESC", async () => {
@@ -47,11 +65,12 @@ describe("useLiveWorkers", () => {
         })
     })
 
-    it("subscribes to the worker table", async () => {
+    it("subscribes to the worker table via LIVE SELECT", async () => {
         renderHook(() => useLiveWorkers())
 
         await waitFor(() => {
-            expect(mockLive).toHaveBeenCalledWith("worker")
+            expect(mockQuery).toHaveBeenCalledWith("LIVE SELECT * FROM worker")
+            expect(mockLiveOf).toHaveBeenCalledWith(MOCK_LIVE_UUID)
         })
     })
 })
@@ -60,24 +79,22 @@ describe("useWorker", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockStatus = "connected"
-        mockQuery.mockResolvedValue([[]])
+        setInitialQueryResult([[]])
         const { subscription } = createMockSubscription()
-        mockLive.mockResolvedValue(subscription)
+        mockLiveOf.mockResolvedValue(subscription)
     })
 
-    it("queries a single worker by ID", async () => {
+    it("queries a single worker by ID using RecordId binding", async () => {
         renderHook(() => useWorker("celery@myhost"))
 
         await waitFor(() => {
-            expect(mockQuery).toHaveBeenCalledWith("SELECT * FROM type::thing('worker', $workerId)", {
-                workerId: "celery@myhost",
-            })
+            expect(mockQuery).toHaveBeenCalledWith("SELECT * FROM $rid", expect.objectContaining({}))
+            const bindings = mockQuery.mock.calls[0][1]
+            expect(bindings.rid).toEqual(expect.objectContaining({ tb: "worker", id: "celery@myhost" }))
         })
     })
 
     it("returns worker as null when data is empty", async () => {
-        mockQuery.mockResolvedValue([[]])
-
         const { result } = renderHook(() => useWorker("celery@myhost"))
 
         await waitFor(() => {
@@ -93,7 +110,26 @@ describe("useWorker", () => {
             status: "online",
             last_updated: "2024-01-01T00:00:00Z",
         }
-        mockQuery.mockResolvedValue([[workerRecord]])
+        setInitialQueryResult([[workerRecord]])
+
+        const { result } = renderHook(() => useWorker("celery@myhost"))
+
+        await waitFor(() => {
+            expect(result.current.isLoading).toBe(false)
+        })
+
+        expect(result.current.worker).toEqual(workerRecord)
+    })
+
+    it("returns worker when SDK returns single object (record-specific SELECT)", async () => {
+        const workerRecord = {
+            id: "worker:celery@myhost",
+            status: "online",
+            last_updated: "2024-01-01T00:00:00Z",
+        }
+        // SurrealDB JS SDK v2 returns a single object (not array) for
+        // SELECT * FROM $rid (record-specific SELECT) — useLiveQuery normalizes it to an array
+        setInitialQueryResult([workerRecord])
 
         const { result } = renderHook(() => useWorker("celery@myhost"))
 
@@ -117,9 +153,9 @@ describe("useOnlineWorkers", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockStatus = "connected"
-        mockQuery.mockResolvedValue([[]])
+        setInitialQueryResult([[]])
         const { subscription } = createMockSubscription()
-        mockLive.mockResolvedValue(subscription)
+        mockLiveOf.mockResolvedValue(subscription)
     })
 
     it("queries workers with status online", async () => {
@@ -133,12 +169,10 @@ describe("useOnlineWorkers", () => {
         })
     })
 
-    it("filters data to only include online workers", async () => {
-        const workers = [
-            { id: "worker:1", status: "online", last_updated: "2024-01-01T00:00:00Z" },
-            { id: "worker:2", status: "offline", last_updated: "2024-01-01T00:00:00Z" },
-        ]
-        mockQuery.mockResolvedValue([workers])
+    it("returns only online workers from initial query", async () => {
+        // The initial query has WHERE status = 'online', so only online workers are returned
+        const workers = [{ id: "worker:1", status: "online", last_updated: "2024-01-01T00:00:00Z" }]
+        setInitialQueryResult([workers])
 
         const { result } = renderHook(() => useOnlineWorkers())
 
@@ -146,7 +180,6 @@ describe("useOnlineWorkers", () => {
             expect(result.current.isLoading).toBe(false)
         })
 
-        // Client-side filter should remove the offline worker
         expect(result.current.data).toHaveLength(1)
         expect(result.current.data[0].id).toBe("worker:1")
     })

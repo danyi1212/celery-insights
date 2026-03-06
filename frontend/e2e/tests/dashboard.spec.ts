@@ -3,8 +3,9 @@ import { test, expect } from "../fixtures/base"
 test.describe("Dashboard", () => {
     test("shows online workers", async ({ page }) => {
         await page.goto("/")
-        await expect(page.getByText("Online Workers")).toBeVisible()
-        await expect(page.locator("[data-testid='worker-card'], .worker-card, #recent-tasks").first()).toBeVisible()
+        await expect(page.getByTestId("app-connection-loading")).toBeHidden({ timeout: 30_000 })
+        await expect(page.getByRole("heading", { name: "Online Workers", exact: true })).toBeVisible()
+        await expect(page.locator("#recent-tasks")).toBeVisible()
     })
 
     test("triggered task appears in recent tasks", async ({ page, scenario, waitForTask }) => {

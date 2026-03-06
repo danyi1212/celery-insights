@@ -15,6 +15,11 @@ export default defineConfig({
         }),
         react(),
     ],
+    // Keep the WASM loader path intact for demo mode.
+    optimizeDeps: {
+        exclude: ["@surrealdb/wasm"],
+    },
+    assetsInclude: ["**/*.wasm"],
     define: {
         // react-joyrider uses the global object, even though it doesn't exist in the browser.
         // https://github.com/vitejs/vite/discussions/5912
@@ -25,33 +30,33 @@ export default defineConfig({
         port: 3000,
         proxy: {
             "/api": {
-                target: "http://localhost:8555",
+                target: "http://localhost:8556",
                 changeOrigin: true,
                 secure: false,
             },
             "/ws": {
-                target: "ws://localhost:8555",
+                target: "ws://localhost:8556",
                 changeOrigin: true,
                 secure: false,
                 ws: true,
             },
             "/docs": {
-                target: "http://localhost:8555",
+                target: "http://localhost:8556",
                 changeOrigin: true,
                 secure: false,
             },
             "/redoc": {
-                target: "http://localhost:8555",
+                target: "http://localhost:8556",
                 changeOrigin: true,
                 secure: false,
             },
             "/openapi.json": {
-                target: "http://localhost:8555",
+                target: "http://localhost:8556",
                 changeOrigin: true,
                 secure: false,
             },
             "/health": {
-                target: "http://localhost:8555",
+                target: "http://localhost:8556",
                 changeOrigin: true,
                 secure: false,
             },
@@ -60,6 +65,7 @@ export default defineConfig({
                 changeOrigin: true,
                 secure: false,
                 ws: true,
+                rewrite: (path) => path.replace(/^\/surreal/, ""),
             },
         },
     },

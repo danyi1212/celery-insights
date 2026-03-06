@@ -70,10 +70,10 @@ cd frontend && bun run dev:all
 Or run them in separate terminals:
 
 1. **Terminal 1**: `cd frontend && bun run dev:surreal` (SurrealDB on port 8557)
-2. **Terminal 2**: `cd server && python run.py` (Python ingester on port 8555)
+2. **Terminal 2**: `cd server && python run.py` (Python ingester on port 8556)
 3. **Terminal 3**: `cd frontend && bun dev` (Vite dev server on port 3000)
 
-The Vite dev server handles HMR and proxies `/api/*` to Python at 8555, `/surreal/*` to SurrealDB at 8557.
+The Vite dev server handles HMR and proxies `/api/*` to Python at 8556, `/surreal/*` to SurrealDB at 8557.
 
 ## Deployment
 

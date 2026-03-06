@@ -24,11 +24,11 @@ class Settings(BaseSettings):
     # Celery connection (received from Bun)
     broker_url: str = "amqp://guest:guest@host.docker.internal/"
     result_backend: str = "redis://host.docker.internal:6379/0"
-    config_path: str = "/app/config.py"
+    config_file: str = "/app/config.py"
 
     # Data retention (received from Bun)
     cleanup_interval_seconds: int = 60
-    task_max_count: int | None = 10_000
+    task_max_count: int | None = None
     task_retention_hours: float | None = None
     dead_worker_retention_hours: float | None = 24
 

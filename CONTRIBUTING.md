@@ -83,8 +83,9 @@ To contribute to the project, follow these steps:
 6. Create `.env` file
 
     ```shell
-   cd ../server/
-   cp .env.example .env
+    cd ../server/
+    cp .env.example .env
+    ```
 
 ### Run dev server
 

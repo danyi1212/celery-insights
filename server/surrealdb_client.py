@@ -20,7 +20,14 @@ _lock = asyncio.Lock()
 async def connect_surrealdb(settings: Settings) -> AsyncTemplate:
     """Connect to SurrealDB as the ingester user. Returns the connected client."""
     db = AsyncSurreal(settings.surrealdb_url)
-    await db.signin({"username": "ingester", "password": settings.surrealdb_ingester_pass})
+    await db.signin(
+        {
+            "namespace": settings.surrealdb_namespace,
+            "database": settings.surrealdb_database,
+            "username": "ingester",
+            "password": settings.surrealdb_ingester_pass,
+        }
+    )
     await db.use(settings.surrealdb_namespace, settings.surrealdb_database)
     logger.info(
         "Connected to SurrealDB at %s (ns=%s, db=%s)",

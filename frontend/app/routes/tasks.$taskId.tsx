@@ -15,12 +15,12 @@ import React, { useMemo } from "react"
 
 const TaskPage = () => {
     const { taskId } = Route.useParams()
-    const { task: surrealTask } = useTask(taskId)
+    const { task: surrealTask, isLoading } = useTask(taskId)
     const task = useMemo(() => (surrealTask ? parseTask(surrealTask) : undefined), [surrealTask])
     const [chartType, setChartType] = React.useState<WorkflowChartType>(WorkflowChartType.FLOWCHART)
     useTourChangeStepOnLoad(2, task !== undefined)
 
-    if (task === undefined)
+    if (!isLoading && task === undefined)
         return (
             <div className="flex h-full flex-col items-center justify-center">
                 <div className="flex items-center">

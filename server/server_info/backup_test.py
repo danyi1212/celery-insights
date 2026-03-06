@@ -68,9 +68,13 @@ class TestImportDatabase:
         result = await import_database(data)
 
         assert result == {"tasks": 1, "events": 1, "workers": 1}
-        # Should have cleared tables first
-        clear_call = mock_db.query.call_args_list[0]
-        assert "DELETE FROM task" in clear_call[0][0]
+        # Everything in a single transactional query
+        mock_db.query.assert_called_once()
+        query = mock_db.query.call_args[0][0]
+        assert "BEGIN TRANSACTION" in query
+        assert "DELETE FROM task" in query
+        assert "CREATE" in query
+        assert "COMMIT TRANSACTION" in query
 
     @pytest.mark.asyncio
     async def test_clears_existing_data_before_import(self, mock_db):
@@ -78,10 +82,11 @@ class TestImportDatabase:
 
         await import_database(data)
 
-        first_call = mock_db.query.call_args_list[0]
-        assert "DELETE FROM task" in first_call[0][0]
-        assert "DELETE FROM event" in first_call[0][0]
-        assert "DELETE FROM worker" in first_call[0][0]
+        mock_db.query.assert_called_once()
+        query = mock_db.query.call_args[0][0]
+        assert "DELETE FROM task" in query
+        assert "DELETE FROM event" in query
+        assert "DELETE FROM worker" in query
 
     @pytest.mark.asyncio
     async def test_rejects_unsupported_version(self, mock_db):  # noqa: ARG002
@@ -122,15 +127,12 @@ class TestImportDatabase:
 
         await import_database(data)
 
-        # Find the CREATE call for the task (after the DELETE call)
-        create_calls = [c for c in mock_db.query.call_args_list if "CREATE" in str(c)]
-        assert len(create_calls) == 1
-        # Bindings are passed as second positional arg (dict)
-        bindings = create_calls[0][0][1]
-        assert bindings["id"] == "abc-123"
+        mock_db.query.assert_called_once()
+        params = mock_db.query.call_args[0][1]
+        assert params["task_0_id"] == "abc-123"
 
     @pytest.mark.asyncio
-    async def test_continues_on_individual_record_failure(self, mock_db):
+    async def test_transaction_failure_raises(self, mock_db):
         data = {
             "version": 1,
             "tasks": [
@@ -141,10 +143,7 @@ class TestImportDatabase:
             "workers": [],
         }
 
-        # First call is DELETE, then first CREATE fails, second succeeds
-        mock_db.query.side_effect = [None, RuntimeError("insert error"), None]
+        mock_db.query.side_effect = RuntimeError("transaction failed")
 
-        result = await import_database(data)
-
-        # First task failed, second succeeded
-        assert result["tasks"] == 1
+        with pytest.raises(RuntimeError, match="transaction failed"):
+            await import_database(data)

@@ -11,7 +11,7 @@ import useSettingsStore from "@stores/use-settings-store"
 import { countUniqueProperties } from "@utils/count-unique-properties"
 import { Loader2 } from "lucide-react"
 import type { SurrealEvent } from "@/types/surreal-records"
-import { ReadyState } from "react-use-websocket"
+import { ReadyState } from "@/types/ready-state"
 import React, { useEffect, useMemo, useState } from "react"
 
 interface PlaceholderProps {
@@ -77,7 +77,7 @@ const RawEventsPage = () => {
                 facets={
                     <Facet
                         title="Event types"
-                        counts={groups.get("type") || new Map()}
+                        counts={groups.get("event_type") || new Map()}
                         selected={new Set(selectedTypes)}
                         setSelected={(values) => setSelectedTypes([...values.values()])}
                     />

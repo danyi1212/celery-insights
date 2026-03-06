@@ -13,11 +13,12 @@ const ErrorAlert: React.FC<ErrorAlertProps> = (props) => {
         return <ApiErrorAlert error={err as { status: number; body: unknown }} />
     }
     console.error(props.error)
+    const message = err instanceof Error ? err.message : "We have encountered an unknown error"
     return (
         <Alert variant="destructive">
             <AlertCircle className="size-4" />
-            <AlertTitle>Unhandled Error</AlertTitle>
-            <AlertDescription>We have encountered an unknown error</AlertDescription>
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{message}</AlertDescription>
         </Alert>
     )
 }

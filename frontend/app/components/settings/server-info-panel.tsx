@@ -121,15 +121,11 @@ export const ServerInfoPanel: React.FC = () => {
                 <DetailItem label="Port" value={data?.server_port || "???"} />
                 <DetailItem label="Server OS" value={data?.server_os || "???"} />
                 <DetailItem label="Python Version" value={data?.python_version || "???"} />
-                <DetailItem
-                    label="Tasks"
-                    description="Number of tasks stored in state / limit"
-                    value={`${data?.task_count || 0} / ${data?.tasks_max_count || "Unknown"}`}
-                />
+                <DetailItem label="Tasks" description="Number of tasks stored in state" value={data?.task_count ?? 0} />
                 <DetailItem
                     label="Workers"
-                    description="Number of workers stored in state / limit"
-                    value={`${data?.worker_count || 0} / ${data?.worker_max_count || "Unknown"}`}
+                    description="Number of workers stored in state"
+                    value={data?.worker_count ?? 0}
                 />
                 <div className="flex justify-around gap-4 md:col-span-2">
                     <LinkButton href="/docs">API Explorer</LinkButton>

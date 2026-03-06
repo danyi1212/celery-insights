@@ -3,9 +3,18 @@ import userEvent from "@testing-library/user-event"
 import useSettingsStore from "@stores/use-settings-store"
 import SurrealDBProvider, { useSurrealDB } from "./surrealdb-provider"
 
-// Mock Surreal class
-const mockSubscribe = vi.fn(() => vi.fn())
-const mockConnect = vi.fn().mockResolvedValue(true)
+// Mock Surreal class — auto-trigger "connected" callback so the provider transitions past loading
+const subscribedCallbacks = new Map<string, () => void>()
+const mockSubscribe = vi.fn((event: string, callback: () => void) => {
+    subscribedCallbacks.set(event, callback)
+    return vi.fn()
+})
+const mockConnect = vi.fn().mockImplementation(async () => {
+    // Simulate SurrealDB firing the "connected" event after connect resolves
+    const connectedCb = subscribedCallbacks.get("connected")
+    if (connectedCb) connectedCb()
+    return true
+})
 const mockClose = vi.fn().mockResolvedValue(true)
 const mockAuthenticate = vi.fn().mockResolvedValue(undefined)
 const mockSignin = vi.fn().mockResolvedValue({ access: "test-token" })
@@ -54,16 +63,21 @@ const ConsumerComponent = () => {
 describe("SurrealDBProvider — remote mode", () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        subscribedCallbacks.clear()
         sessionStorage.clear()
         // Ensure demo mode is off
         useSettingsStore.setState({ demo: false })
-        // Default: anonymous config response
+        // Default: anonymous config response with viewer credentials
         vi.spyOn(globalThis, "fetch").mockResolvedValue(
             new Response(
                 JSON.stringify({
                     authRequired: false,
                     surrealPath: "/surreal/rpc",
                     ingestionStatus: "leader",
+                    viewerUser: "viewer",
+                    viewerPass: "viewer",
+                    viewerNs: "celery_insights",
+                    viewerDb: "main",
                 }),
                 { status: 200, headers: { "Content-Type": "application/json" } },
             ),
@@ -84,10 +98,10 @@ describe("SurrealDBProvider — remote mode", () => {
             </SurrealDBProvider>,
         )
 
-        expect(screen.getByText("Connecting...")).toBeInTheDocument()
+        expect(screen.getByText("Starting...")).toBeInTheDocument()
     })
 
-    it("connects anonymously when auth is not required", async () => {
+    it("connects as viewer user when auth is not required", async () => {
         render(
             <SurrealDBProvider>
                 <ConsumerComponent />
@@ -97,7 +111,16 @@ describe("SurrealDBProvider — remote mode", () => {
         await waitFor(() => {
             expect(mockConnect).toHaveBeenCalledWith(
                 expect.stringContaining("/surreal/rpc"),
-                expect.objectContaining({ namespace: "celery_insights", database: "main" }),
+                expect.objectContaining({
+                    namespace: "celery_insights",
+                    database: "main",
+                    authentication: {
+                        namespace: "celery_insights",
+                        database: "main",
+                        username: "viewer",
+                        password: "viewer",
+                    },
+                }),
             )
         })
     })

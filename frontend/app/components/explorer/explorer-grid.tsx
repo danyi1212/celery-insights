@@ -63,8 +63,9 @@ const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, sort, setSort, page,
                     size: columnConfig.columnWidth,
                     cell: ({ getValue }) => {
                         const value = getValue()
-                        if (columnConfig.property === "lastUpdated" && typeof value === "string") {
-                            return new Date(value).toLocaleString()
+                        if (columnConfig.property === "last_updated" && typeof value === "string") {
+                            const date = new Date(value)
+                            return Number.isNaN(date.getTime()) ? "NaT" : date.toLocaleString()
                         }
                         return columnConfig.valueFormatter
                             ? columnConfig.valueFormatter(value as never)

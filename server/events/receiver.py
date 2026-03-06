@@ -12,11 +12,12 @@ logger = logging.getLogger(__name__)
 class CeleryEventReceiver(Thread):
     """Thread for consuming events from a Celery cluster."""
 
-    def __init__(self, app: Celery):
-        super().__init__()
+    def __init__(self, app: Celery, loop: asyncio.AbstractEventLoop):
+        super().__init__(daemon=True)
         self.app = app
+        self._loop = loop
         self._stop_signal = Event()
-        self.queue = asyncio.Queue()
+        self.queue: asyncio.Queue[dict] = asyncio.Queue()
         self.receiver: EventReceiver | None = None
 
     def run(self) -> None:
@@ -46,7 +47,9 @@ class CeleryEventReceiver(Thread):
 
     def on_event(self, event: dict) -> None:
         logger.debug(f"Received event: {event}")
-        self.queue.put_nowait(event)
+        # asyncio.Queue is not thread-safe; use call_soon_threadsafe to schedule
+        # the put from this receiver thread onto the asyncio event loop.
+        self._loop.call_soon_threadsafe(self.queue.put_nowait, event)
         if self._stop_signal.is_set():
             raise KeyboardInterrupt("Stop signal received")
 
@@ -55,4 +58,4 @@ class CeleryEventReceiver(Thread):
         if self.receiver is not None:
             self.receiver.should_stop = True
         self._stop_signal.set()
-        self.join()
+        self.join(timeout=10)

@@ -136,7 +136,7 @@ interface TaskLifecycleEvent {
 async function insertWorkerOnline(db: Surreal, hostname: string, ts: Date): Promise<void> {
     const iso = ts.toISOString()
     await db.query(
-        `UPSERT type::thing('worker', $id) SET
+        `UPSERT type::record('worker', $id) SET
             status = 'online',
             last_updated = <datetime>$ts,
             missed_polls = 0,
@@ -166,7 +166,7 @@ async function insertWorkerOnline(db: Surreal, hostname: string, ts: Date): Prom
 async function insertWorkerHeartbeat(db: Surreal, hostname: string, ts: Date): Promise<void> {
     const iso = ts.toISOString()
     await db.query(
-        `UPDATE type::thing('worker', $id) SET
+        `UPDATE type::record('worker', $id) SET
             last_updated = <datetime>$ts,
             missed_polls = 0`,
         { id: hostname, ts: iso },
@@ -305,13 +305,13 @@ async function insertTaskEvent(
         params.retries = extra.retries
     }
 
-    const query = `UPSERT type::thing('task', $id) SET ${setClauses.join(", ")}`
+    const query = `UPSERT type::record('task', $id) SET ${setClauses.join(", ")}`
     await db.query(query, params)
 
     // Update parent's children array if this is a child task
     if (task.parentId && (eventType === "task-sent" || eventType === "task-received")) {
         await db.query(
-            `UPDATE type::thing('task', $parentId) SET children = array::union(children ?? [], [$childId])`,
+            `UPDATE type::record('task', $parentId) SET children = array::union(children ?? [], [$childId])`,
             { parentId: task.parentId, childId: task.taskId },
         )
     }

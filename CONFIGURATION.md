@@ -24,8 +24,14 @@ of `localhost`.
 
 Default: `8555`
 
-Specify the port Bun serves on externally.
-In production, the Python ingester runs on an internal port (8556) managed by Bun automatically.
+Specify the external port served by the embedded reverse proxy.
+In production, Bun and Python run on internal ports managed automatically.
+
+### BUN_INTERNAL_PORT
+
+Default: `8554`
+
+Internal Bun service port used behind the embedded reverse proxy. You typically do not need to change this.
 
 ### HOST
 
@@ -73,6 +79,7 @@ For instructions on how to set it up, refer to the [Setup with Config File](#set
 ## SurrealDB
 
 Celery Insights uses SurrealDB as its data store. By default, an embedded SurrealDB subprocess is started automatically.
+The embedded reverse proxy routes `/surreal/*` traffic directly to SurrealDB (including WebSocket RPC at `/surreal/rpc`).
 
 ### SURREALDB_URL
 
@@ -226,6 +233,16 @@ For high availability or scaled deployments, run multiple Celery Insights instan
 4. If the leader goes down, a standby instance automatically takes over within `INGESTION_LOCK_TTL_SECONDS`
 
 For read-only dashboards (e.g., wall displays), set `INGESTION_ENABLED=false` to skip ingestion entirely.
+
+# Embedded Reverse Proxy
+
+The standalone Docker image ships with an embedded reverse proxy as the public entrypoint.
+
+- `/surreal/*` is routed directly to SurrealDB (HTTP + WebSocket)
+- `/api/*`, `/docs`, `/openapi.json`, and SPA routes are routed to Bun
+- Bun continues orchestrating SurrealDB + Python ingestion processes internally
+
+For v1, the embedded proxy is HTTP-only inside the container boundary. If you require HTTPS, terminate TLS externally (for example with your infrastructure ingress, load balancer, or an edge proxy in front of the container).
 
 ## Support chart
 

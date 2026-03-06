@@ -45,6 +45,14 @@ const configSchema = z
         timezone: z.string().default("UTC"),
         debug: booleanFromEnv.default(false),
     })
+    .transform((c) => ({
+        ...c,
+        // When SURREALDB_EXTERNAL_URL is set and SURREALDB_URL is still the default,
+        // use the external URL for all connections
+        surrealdbUrl: c.surrealdbExternalUrl && c.surrealdbUrl === "ws://localhost:8557/rpc"
+            ? c.surrealdbExternalUrl
+            : c.surrealdbUrl,
+    }))
     .refine((c) => c.ingestionLockHeartbeatSeconds < c.ingestionLockTtlSeconds, {
         message: "INGESTION_LOCK_HEARTBEAT_SECONDS must be less than INGESTION_LOCK_TTL_SECONDS",
     })

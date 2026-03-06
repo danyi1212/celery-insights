@@ -130,7 +130,8 @@ class WorkerPoller:
                 continue
 
             # Extract hostname from record ID (e.g., "worker:hostname" -> "hostname")
-            hostname = str(worker_id).removeprefix("worker:")
+            # SurrealDB may wrap IDs with special chars in angle brackets (e.g., "worker:⟨host@name⟩")
+            hostname = str(worker_id).removeprefix("worker:").strip("⟨⟩")
             if hostname in responding_hostnames:
                 continue
 

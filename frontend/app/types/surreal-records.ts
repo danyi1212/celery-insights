@@ -83,7 +83,22 @@ export interface ExceptionSummary {
 export const extractId = (recordId: unknown): string => {
     const str = String(recordId)
     const colonIdx = str.indexOf(":")
-    return colonIdx >= 0 ? str.substring(colonIdx + 1) : str
+    const rawId = colonIdx >= 0 ? str.substring(colonIdx + 1) : str
+
+    // Surreal can serialize record IDs as table:<id> for non-simple IDs.
+    // Normalize these wrappers so routing/query bindings always use plain IDs.
+    if (rawId.length >= 2) {
+        if (
+            (rawId.startsWith("<") && rawId.endsWith(">")) ||
+            (rawId.startsWith("⟨") && rawId.endsWith("⟩")) ||
+            (rawId.startsWith("'") && rawId.endsWith("'")) ||
+            (rawId.startsWith('"') && rawId.endsWith('"'))
+        ) {
+            return rawId.slice(1, -1)
+        }
+    }
+
+    return rawId
 }
 
 // --- Worker inspect types (data stored as JSON on worker.inspect field) ---
@@ -197,7 +212,7 @@ export const parseTask = (raw: SurrealTask): Task => ({
     id: extractId(raw.id),
     type: raw.type || undefined,
     state: (raw.state as TaskState) || TaskState.PENDING,
-    sent_at: isoToDate(raw.sent_at) || new Date(),
+    sent_at: isoToDate(raw.sent_at) || isoToDate(raw.last_updated) || new Date(0),
     received_at: isoToDate(raw.received_at),
     started_at: isoToDate(raw.started_at),
     succeeded_at: isoToDate(raw.succeeded_at),

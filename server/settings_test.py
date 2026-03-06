@@ -22,9 +22,9 @@ def test_default_settings(monkeypatch: pytest.MonkeyPatch):
     assert settings.surrealdb_database == "main"
     assert settings.broker_url == "amqp://guest:guest@host.docker.internal/"
     assert settings.result_backend == "redis://host.docker.internal:6379/0"
-    assert settings.config_path == "/app/config.py"
+    assert settings.config_file == "/app/config.py"
     assert settings.cleanup_interval_seconds == 60
-    assert settings.task_max_count == 10_000
+    assert settings.task_max_count is None
     assert settings.task_retention_hours is None
     assert settings.dead_worker_retention_hours == 24
     assert settings.ingestion_batch_interval_ms == 100

@@ -81,13 +81,13 @@ describe("LeaderElection", () => {
     }
 
     describe("ingestion disabled", () => {
-        it("returns disabled status without querying SurrealDB", async () => {
+        it("returns read-only status without querying SurrealDB", async () => {
             const election = createElection({ ingestionEnabled: false })
             const status = await election.start()
 
-            expect(status).toBe("disabled")
+            expect(status).toBe("read-only")
             expect(election.isLeader).toBe(false)
-            expect(election.status).toBe("disabled")
+            expect(election.status).toBe("read-only")
             expect(mockDb.query).not.toHaveBeenCalled()
             expect(onBecomeLeader).not.toHaveBeenCalled()
             await election.stop()
