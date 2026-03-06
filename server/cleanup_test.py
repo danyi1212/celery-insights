@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from pytest_mock import MockerFixture
 
@@ -200,16 +202,15 @@ class TestCleanupJob:
         job.start()
         mock_create_task.assert_called_once()
 
-    def test_stop_sets_event_and_cancels(self, mocker: MockerFixture):
-        mock_task = mocker.MagicMock()
-        mock_task.done.return_value = False
-
+    @pytest.mark.asyncio
+    async def test_stop_sets_event_and_cancels(self):
         job = CleanupJob()
-        job._task = mock_task
-        job.stop()
+        # Create a real task that blocks until cancelled
+        job._task = asyncio.create_task(asyncio.sleep(999))
+        await job.stop()
 
         assert job._stop_event.is_set()
-        mock_task.cancel.assert_called_once()
+        assert job._task.cancelled()
 
     @pytest.mark.asyncio
     async def test_cleanup_loop_stops_on_event(self, mock_db):

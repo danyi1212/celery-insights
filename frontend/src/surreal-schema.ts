@@ -1,5 +1,7 @@
 import { Surreal } from "surrealdb"
 import type { Config } from "./config"
+import type { Logger } from "./logger"
+import { bunLogger } from "./logger"
 
 /**
  * Validates that a string is a safe SurrealDB identifier.
@@ -118,7 +120,8 @@ DEFINE ACCESS OVERWRITE frontend ON DATABASE TYPE RECORD
  * Must run before any other connections — creates the namespace, database,
  * ingester user, all tables/fields/indexes, and optional frontend auth.
  */
-export async function runSchemaMigration(config: Config): Promise<void> {
+export async function runSchemaMigration(config: Config, logger?: Logger): Promise<void> {
+    const log = logger ?? bunLogger
     const ns = assertIdent(config.surrealdbNamespace, "namespace")
     const dbName = assertIdent(config.surrealdbDatabase, "database")
 
@@ -160,12 +163,12 @@ export async function runSchemaMigration(config: Config): Promise<void> {
                     pass: config.surrealdbFrontendPass,
                 })
                 .collect()
-            console.log("Schema migration completed (frontend auth enabled)")
+            log.info("Schema migration completed (frontend auth enabled)")
         } else {
             // Clean up frontend auth if previously configured
             await db.query(`REMOVE ACCESS IF EXISTS frontend ON DATABASE`).collect()
             await db.query(`REMOVE TABLE IF EXISTS viewer`).collect()
-            console.log("Schema migration completed (anonymous access via viewer user)")
+            log.info("Schema migration completed (anonymous access via viewer user)")
         }
     } finally {
         await db.close()

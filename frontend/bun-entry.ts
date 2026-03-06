@@ -7,11 +7,76 @@
  * (after building with `bun run build`)
  */
 import path from "node:path"
+import readline from "node:readline"
 import { spawn, type ChildProcess } from "node:child_process"
 import { Surreal } from "surrealdb"
 import { config } from "./src/config"
+import { bunLogger, surrealLogger } from "./src/logger"
 import { LeaderElection, generateInstanceId, type IngestionStatus } from "./src/leader-election"
 import { runSchemaMigration } from "./src/surreal-schema"
+
+const LOGO = `
+  ░██████             ░██                                ░██████                      ░██           ░██           ░██
+ ░██   ░██            ░██                                  ░██                                      ░██           ░██
+░██         ░███████  ░██  ░███████  ░██░████ ░██    ░██   ░██  ░████████   ░███████  ░██ ░████████ ░████████  ░████████  ░███████
+░██        ░██    ░██ ░██ ░██    ░██ ░███     ░██    ░██   ░██  ░██    ░██ ░██        ░██░██    ░██ ░██    ░██    ░██    ░██
+░██        ░█████████ ░██ ░█████████ ░██      ░██    ░██   ░██  ░██    ░██  ░███████  ░██░██    ░██ ░██    ░██    ░██     ░███████
+ ░██   ░██ ░██        ░██ ░██        ░██      ░██   ░███   ░██  ░██    ░██        ░██ ░██░██   ░███ ░██    ░██    ░██           ░██
+  ░██████   ░███████  ░██  ░███████  ░██       ░█████░██ ░██████░██    ░██  ░███████  ░██ ░█████░██ ░██    ░██     ░████  ░███████
+                                                     ░██                                        ░██
+                                               ░███████                                   ░███████
+
+`.trim();
+
+
+// --- Startup banner ---
+
+function printBanner(): void {
+    if (config.logFormat !== "pretty") return
+
+    const isTTY = process.stdout.isTTY === true
+    const c = isTTY
+        ? { reset: "\x1b[0m", dim: "\x1b[2m", bold: "\x1b[1m", green: "\x1b[32m" }
+        : { reset: "", dim: "", bold: "", green: "" }
+
+    const logo = `${c.green}${c.bold}${LOGO}${c.reset}\n`
+
+    const surrealInfo = config.surrealdbExternalUrl
+        ? `external (${config.surrealdbExternalUrl})`
+        : `managed (${config.surrealdbStorage}) on port ${config.surrealdbPort}`
+
+    const ingestionInfo = !config.ingestionEnabled
+        ? "disabled"
+        : config.ingestionLeaderElection
+          ? "enabled (leader election)"
+          : "enabled (standalone)"
+
+    const retention: string[] = []
+    if (config.taskMaxCount != null) retention.push(`max ${config.taskMaxCount} tasks`)
+    if (config.taskRetentionHours != null) retention.push(`tasks: ${config.taskRetentionHours}h`)
+    if (config.deadWorkerRetentionHours != null) retention.push(`dead workers: ${config.deadWorkerRetentionHours}h`)
+
+    const lines = [
+        `  ${c.dim}Server${c.reset}      http://localhost:${config.port}`,
+        `  ${c.dim}Broker${c.reset}      ${config.brokerUrl}`,
+        `  ${c.dim}Backend${c.reset}     ${config.resultBackend}`,
+        `  ${c.dim}SurrealDB${c.reset}   ${surrealInfo}`,
+        `  ${c.dim}Ingestion${c.reset}   ${ingestionInfo}`,
+        `  ${c.dim}Log level${c.reset}   ${config.logLevel}`,
+    ]
+
+    if (retention.length > 0) {
+        lines.push(`  ${c.dim}Retention${c.reset}   ${retention.join(", ")}`)
+    }
+    if (config.timezone !== "UTC") {
+        lines.push(`  ${c.dim}Timezone${c.reset}    ${config.timezone}`)
+    }
+    if (config.debug) {
+        lines.push(`  ${c.dim}Debug${c.reset}       enabled`)
+    }
+
+    process.stdout.write(logo + lines.join("\n") + "\n\n")
+}
 
 const PYTHON_PORT = 8556
 const PYTHON_BACKEND = `http://localhost:${PYTHON_PORT}`
@@ -35,24 +100,62 @@ const SURREAL_BACKOFF_BASE_MS = 1000
 const SURREAL_BACKOFF_MAX_MS = 30000
 let surrealRestartAttempts = 0
 
+/** Strip ANSI escape codes from a string. */
+function stripAnsi(s: string): string {
+    return s.replace(/\x1b\[[0-9;]*m/g, "")
+}
+
+/** Map Rust tracing levels to our logger levels. */
+const RUST_LEVEL_MAP: Record<string, "debug" | "info" | "warn" | "error"> = {
+    TRACE: "debug",
+    DEBUG: "debug",
+    INFO: "info",
+    WARN: "warn",
+    ERROR: "error",
+}
+
+/** Parse a SurrealDB log line (Rust tracing format) and re-emit through surrealLogger. */
+function parseSurrealLine(raw: string, defaultLevel: "debug" | "info" | "warn" | "error" = "info"): void {
+    const line = stripAnsi(raw).trim()
+    if (!line) return
+
+    // Rust tracing format: "2026-03-03T21:47:01.200123Z  INFO surrealdb::module: message"
+    const match = line.match(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z\s+(TRACE|DEBUG|INFO|WARN|ERROR)\s+(.+)$/)
+    if (match) {
+        const level = RUST_LEVEL_MAP[match[1]] ?? "info"
+        surrealLogger[level](match[2])
+    } else {
+        // Unrecognized format — pass through at the default level
+        surrealLogger[defaultLevel](line)
+    }
+}
+
 function spawnSurrealDB(): ChildProcess {
-    console.log(
-        `Spawning SurrealDB subprocess on port ${config.surrealdbPort} (storage: ${config.surrealdbStorage})`,
-    )
+    bunLogger.info(`Spawning SurrealDB subprocess on port ${config.surrealdbPort} (storage: ${config.surrealdbStorage})`)
     const proc = spawn(
         "surreal",
-        ["start", "--bind", `0.0.0.0:${config.surrealdbPort}`, "--user", "root", "--pass", "root", config.surrealdbStorage],
-        { stdio: "inherit" },
+        ["start", "--no-banner", "--bind", `0.0.0.0:${config.surrealdbPort}`, "--user", "root", "--pass", "root", config.surrealdbStorage],
+        { stdio: ["ignore", "pipe", "pipe"] },
     )
+
+    // Pipe stdout and stderr through surrealLogger with line buffering
+    if (proc.stdout) {
+        const rl = readline.createInterface({ input: proc.stdout })
+        rl.on("line", parseSurrealLine)
+    }
+    if (proc.stderr) {
+        const rl = readline.createInterface({ input: proc.stderr })
+        rl.on("line", (line) => parseSurrealLine(line, "warn"))
+    }
 
     proc.on("exit", (code) => {
         if (shuttingDown) return
-        console.error(`SurrealDB exited with code ${code}`)
+        bunLogger.error(`SurrealDB exited with code ${code}`)
         surrealProcess = null
 
         const backoffMs = Math.min(SURREAL_BACKOFF_BASE_MS * 2 ** surrealRestartAttempts, SURREAL_BACKOFF_MAX_MS)
         surrealRestartAttempts++
-        console.log(`Restarting SurrealDB in ${backoffMs}ms (attempt ${surrealRestartAttempts})`)
+        bunLogger.warn(`Restarting SurrealDB in ${backoffMs}ms (attempt ${surrealRestartAttempts})`)
         setTimeout(() => {
             if (!shuttingDown) {
                 surrealProcess = spawnSurrealDB()
@@ -80,7 +183,7 @@ async function waitForSurrealDB(maxWaitMs = 30000): Promise<void> {
             const res = await fetch(healthUrl)
             if (res.ok) {
                 surrealRestartAttempts = 0
-                console.log("SurrealDB is ready")
+                bunLogger.info("SurrealDB is ready")
                 return
             }
         } catch {
@@ -99,7 +202,7 @@ const PYTHON_BACKOFF_MAX_MS = 30000
 let pythonRestartAttempts = 0
 
 function spawnPython(): ChildProcess {
-    console.log("Spawning Python ingester subprocess")
+    bunLogger.info("Spawning Python ingester subprocess")
     const proc = spawn("python", ["run.py"], {
         cwd: path.resolve(import.meta.dir, "server"),
         env: {
@@ -121,19 +224,21 @@ function spawnPython(): ChildProcess {
                 ? { DEAD_WORKER_RETENTION_HOURS: String(config.deadWorkerRetentionHours) }
                 : {}),
             INGESTION_BATCH_INTERVAL_MS: String(config.ingestionBatchIntervalMs),
+            LOG_FORMAT: config.logFormat,
+            LOG_LEVEL: config.logLevel,
         },
         stdio: "inherit",
     })
 
     proc.on("exit", (code) => {
         if (shuttingDown) return
-        console.error(`Python ingester exited with code ${code}`)
+        bunLogger.error(`Python ingester exited with code ${code}`)
         pythonProcess = null
         // If we're still leader, restart Python with backoff
         if (leaderElection?.isLeader) {
             const backoffMs = Math.min(PYTHON_BACKOFF_BASE_MS * 2 ** pythonRestartAttempts, PYTHON_BACKOFF_MAX_MS)
             pythonRestartAttempts++
-            console.log(`Restarting Python ingester in ${backoffMs}ms (attempt ${pythonRestartAttempts})`)
+            bunLogger.warn(`Restarting Python ingester in ${backoffMs}ms (attempt ${pythonRestartAttempts})`)
             setTimeout(() => {
                 if (!shuttingDown && leaderElection?.isLeader) {
                     pythonProcess = spawnPython()
@@ -150,7 +255,7 @@ function spawnPython(): ChildProcess {
 async function shutdown(signal: string): Promise<void> {
     if (shuttingDown) return
     shuttingDown = true
-    console.log(`Received ${signal} — shutting down`)
+    bunLogger.info(`Received ${signal} — shutting down`)
 
     // 1. Release ingestion lock (if held)
     if (leaderElection) {
@@ -185,11 +290,13 @@ process.on("SIGINT", () => shutdown("SIGINT"))
 
 // --- Startup sequence ---
 
+printBanner()
+
 // 1. Start SurrealDB subprocess (or skip if external URL is set)
 if (managingSurrealDB) {
     surrealProcess = spawnSurrealDB()
 } else {
-    console.log(`Using external SurrealDB at ${config.surrealdbExternalUrl}`)
+    bunLogger.info(`Using external SurrealDB at ${config.surrealdbExternalUrl}`)
 }
 
 // 2. Wait for SurrealDB to be ready
@@ -211,9 +318,9 @@ try {
             password: config.surrealdbIngesterPass,
         },
     })
-    console.log("Connected to SurrealDB")
+    bunLogger.info("Connected to SurrealDB")
 } catch (err) {
-    console.error("Failed to connect to SurrealDB:", err)
+    bunLogger.error(`Failed to connect to SurrealDB: ${err}`)
     process.exit(1)
 }
 
@@ -228,7 +335,7 @@ leaderElection = new LeaderElection({
     },
     onLoseLeadership() {
         if (pythonProcess) {
-            console.log("Lost leadership — stopping Python ingester")
+            bunLogger.warn("Lost leadership — stopping Python ingester")
             pythonProcess.kill("SIGTERM")
             pythonProcess = null
         }
@@ -376,6 +483,4 @@ const server = Bun.serve({
     },
 })
 
-console.log(`Celery Insights running at http://localhost:${server.port}`)
-console.log(`SurrealDB: ${managingSurrealDB ? `managed (port ${config.surrealdbPort}, storage: ${config.surrealdbStorage})` : `external (${config.surrealdbExternalUrl})`}`)
-console.log(`Ingestion status: ${leaderElection?.status ?? ingestionStatus}`)
+bunLogger.info(`Celery Insights running at http://localhost:${server.port}`)

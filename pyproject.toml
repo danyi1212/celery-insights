@@ -13,7 +13,7 @@ dependencies = [
     "aiopath",
     "pydantic>=2",
     "pydantic-settings>=2",
-    "colorlog",
+    "dans-log-formatter",
     "redis>=5.0.8",
     "surrealdb>=1.0.8",
     "python-multipart>=0.0.22",

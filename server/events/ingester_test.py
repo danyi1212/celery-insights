@@ -329,7 +329,7 @@ class TestSurrealDBIngester:
         ingester.start()
         # Give the consume loop time to process the event
         await asyncio.sleep(0.1)
-        ingester.stop()
+        await ingester.stop()
 
         # The incoming event should have been dropped (buffer stays at threshold)
         assert len(ingester._buffer) == BACKPRESSURE_THRESHOLD
@@ -402,10 +402,11 @@ class TestSurrealDBIngester:
         query_str = mock_db.query.call_args[0][0]
         assert "array::union" in query_str
 
-    def test_stop_sets_event(self, queue):
+    @pytest.mark.asyncio
+    async def test_stop_sets_event(self, queue):
         ingester = SurrealDBIngester(queue)
         assert not ingester._stop_event.is_set()
-        ingester.stop()
+        await ingester.stop()
         assert ingester._stop_event.is_set()
 
     @pytest.mark.asyncio

@@ -44,6 +44,10 @@ const configSchema = z
         configFile: z.string().default("/app/config.py"),
         timezone: z.string().default("UTC"),
         debug: booleanFromEnv.default(false),
+
+        // Logging
+        logFormat: z.enum(["pretty", "json"]).default("pretty"),
+        logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
     })
     .transform((c) => ({
         ...c,
@@ -83,6 +87,8 @@ const ENV_KEY_MAP: Record<string, string> = {
     CONFIG_FILE: "configFile",
     TIMEZONE: "timezone",
     DEBUG: "debug",
+    LOG_FORMAT: "logFormat",
+    LOG_LEVEL: "logLevel",
 }
 
 function envToConfig(env: Record<string, string | undefined>): Record<string, string | undefined> {

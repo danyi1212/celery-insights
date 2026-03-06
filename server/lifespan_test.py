@@ -37,13 +37,13 @@ class TestLifespan:
             receiver_cls.return_value.stop = MagicMock()
 
             ingester_cls.return_value.start = MagicMock()
-            ingester_cls.return_value.stop = MagicMock()
+            ingester_cls.return_value.stop = AsyncMock()
 
             poller_cls.return_value.start = MagicMock()
-            poller_cls.return_value.stop = MagicMock()
+            poller_cls.return_value.stop = AsyncMock()
 
             cleanup_cls.return_value.start = MagicMock()
-            cleanup_cls.return_value.stop = MagicMock()
+            cleanup_cls.return_value.stop = AsyncMock()
 
             fetcher_cls.return_value.fetch_and_store = AsyncMock()
 

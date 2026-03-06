@@ -97,12 +97,8 @@ async def test_generate_bundle_file(tmp_path: Path):
     config_path = tmp_path / "config.py"
     config_path.write_text("sample content")
 
-    log_path = tmp_path / "app.log"
-    log_path.write_text("sample content")
-
     data = DebugBundleData(
         settings=Settings(config_file=str(config_path)),
-        log_path=str(log_path),
         client_info=ClientDebugInfoFactory.build(),
         state_dump=StateDumpFactory.build(),
         server_info=ServerInfoFactory.build(),
@@ -113,7 +109,6 @@ async def test_generate_bundle_file(tmp_path: Path):
     with zipfile.ZipFile(content, "r") as zip_file:
         assert set(zip_file.namelist()) == {
             "config.py",
-            "app.log",
             "settings.json",
             "client_info.json",
             "state.json",

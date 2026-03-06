@@ -84,11 +84,15 @@ class SurrealDBIngester:
         self._stop_event = asyncio.Event()
         self._consume_task: asyncio.Task | None = None
         self._flush_task: asyncio.Task | None = None
+        self._stats_task: asyncio.Task | None = None
         self._dropped_count = 0
+        self._stats_events_total = 0
+        self._stats_flushes_total = 0
 
     def start(self) -> None:
         self._consume_task = asyncio.create_task(self._consume_loop())
         self._flush_task = asyncio.create_task(self._flush_loop())
+        self._stats_task = asyncio.create_task(self._stats_loop())
         logger.info(
             "SurrealDB ingester started (batch_interval=%dms, buffer_threshold=%d, backpressure=%d)",
             self.batch_interval_ms,
@@ -184,6 +188,8 @@ class SurrealDBIngester:
                 db = get_db()
                 full_query = "BEGIN TRANSACTION;\n" + ";\n".join(queries) + ";\nCOMMIT TRANSACTION;"
                 await db.query(full_query, params)
+                self._stats_events_total += len(events)
+                self._stats_flushes_total += 1
                 logger.debug("Flushed %d events (%d queries) to SurrealDB", len(events), len(queries))
             except Exception:
                 logger.exception("Failed to flush %d events to SurrealDB", len(events))
@@ -196,13 +202,38 @@ class SurrealDBIngester:
             except Exception:
                 logger.exception("Terminal event callback failed for %d tasks", len(terminal_task_ids))
 
-    def stop(self) -> None:
+    async def _stats_loop(self) -> None:
+        prev_events = 0
+        while not self._stop_event.is_set():
+            try:
+                await asyncio.wait_for(self._stop_event.wait(), timeout=30.0)
+                break
+            except TimeoutError:
+                pass
+            events = self._stats_events_total
+            delta = events - prev_events
+            if delta > 0:
+                rate = delta / 30.0
+                logger.info(
+                    "Ingestion stats: %d events in %d batches (%.1f/s), buffer=%d, queue=%d, dropped=%d",
+                    events,
+                    self._stats_flushes_total,
+                    rate,
+                    len(self._buffer),
+                    self.queue.qsize(),
+                    self._dropped_count,
+                )
+            prev_events = events
+
+    async def stop(self) -> None:
         logger.info("Stopping SurrealDB ingester...")
         self._stop_event.set()
-        if self._consume_task and not self._consume_task.done():
-            self._consume_task.cancel()
-        if self._flush_task and not self._flush_task.done():
-            self._flush_task.cancel()
+        tasks = [t for t in (self._consume_task, self._flush_task, self._stats_task) if t and not t.done()]
+        if tasks:
+            for t in tasks:
+                t.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+        logger.info("SurrealDB ingester stopped")
 
 
 def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:

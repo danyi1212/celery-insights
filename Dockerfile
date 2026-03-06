@@ -63,9 +63,6 @@ ARG SURREALDB_VERSION=v2.1.4
 RUN curl -fsSL https://install.surrealdb.com | sh -s -- --version ${SURREALDB_VERSION} \
     && command -v surreal
 
-ENV LOG_FILE_PATH=/app/logs/app.log
-RUN mkdir /app/logs
-
 # Create data directory for persistent SurrealDB storage
 RUN mkdir /data
 

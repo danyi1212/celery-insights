@@ -31,6 +31,7 @@ Tests are colocated: `model.py` -> `model_test.py`, `task-avatar.tsx` -> `task-a
 - `server/workers/poller.py` — periodic worker status polling via Celery inspect API
 - `server/cleanup.py` — periodic data retention/pruning job
 - `frontend/src/config.ts` — Bun-owned settings (Zod-validated), the single source of truth for all config
+- `frontend/src/logger.ts` — Bun logger utility (`bunLogger`, `surrealLogger`, `createLogger`)
 - `frontend/src/surreal-schema.ts` — SurrealDB schema migration (creates tables, users, permissions)
 - `frontend/src/leader-election.ts` — distributed leader election via SurrealDB atomic locks
 - `frontend/bun-entry.ts` — Production entry: orchestrates SurrealDB + Python subprocesses, runs leader election, serves SPA, proxies API/WS/SurrealDB
@@ -53,7 +54,8 @@ Tests are colocated: `model.py` -> `model_test.py`, `task-avatar.tsx` -> `task-a
 
 ## Conventions
 
-- **Python**: Ruff (line-length 120). Absolute imports only (relative banned). Pydantic models, not dicts. Async-first — use `asyncio.to_thread` for blocking code. Register new loggers in `logging_config.py`.
+- **Python**: Ruff (line-length 120). Absolute imports only (relative banned). Pydantic models, not dicts. Async-first — use `asyncio.to_thread` for blocking code. Register new loggers in `logging_config.py`. Use `logging.getLogger(__name__)` — never `print()`.
+- **Logging (Bun)**: Use `bunLogger` from `frontend/src/logger.ts` — never raw `console.log/warn/error`. For new services, use `createLogger("service-name")`. SurrealDB output is piped through `surrealLogger`.
 - **TypeScript**: Prettier (tabWidth 4, no semis, printWidth 120). Arrow functions. `useMemo` for derived state, never `useState`+`useEffect` for it. Path alias `@*` -> `app/*`.
 - **UI**: Shadcn UI components in `frontend/app/components/ui/`. Tailwind CSS v4 for styling (CSS-first config in `app/styles.css`). Lucide React for icons. Dark mode via `.dark` class on `<html>`. Use `cn()` from `@lib/utils` for conditional class merging.
 - **Tests (Python)**: Colocated, suffixed `_test.py` (not prefixed `test_`). Pythonpath is `server/`, so imports start from package root.

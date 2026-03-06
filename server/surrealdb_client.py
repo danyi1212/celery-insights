@@ -76,6 +76,9 @@ async def close_surrealdb() -> None:
     global _db
     async with _lock:
         if _db is not None:
-            await _db.close()
+            try:
+                await _db.close()
+            except Exception:  # noqa: BLE001
+                logger.debug("SurrealDB connection already closed or errored during close", exc_info=True)
             _db = None
             logger.info("SurrealDB connection closed")
