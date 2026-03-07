@@ -34,7 +34,7 @@ COPY --from=requirements-stage /tmp/requirements.txt ./requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade --prefix=/install -r ./requirements.txt --no-warn-script-location
 
-FROM oven/bun:alpine AS front-build
+FROM oven/bun:1-slim AS front-build
 
 WORKDIR /frontend
 
@@ -43,6 +43,7 @@ RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lock
 
 COPY /frontend/ .
 RUN bun run build
+RUN bun build bun-entry.ts --target=bun --outfile ./bun-server.js
 
 FROM python-base
 
@@ -50,18 +51,18 @@ WORKDIR /app
 
 # Install runtime deps only
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl bash unzip libstdc++6 libgcc-s1 \
+    && apt-get install -y --no-install-recommends curl unzip libstdc++6 libgcc-s1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Bun runtime (to /usr/local/bin so all users can access it)
-RUN curl -fsSL https://bun.sh/install | bash \
-    && mv /root/.bun/bin/bun /usr/local/bin/bun \
-    && rm -rf /root/.bun
+# Copy Bun runtime from the build image instead of installing it again.
+COPY --from=front-build /usr/local/bin/bun /usr/local/bin/bun
 
 # Install SurrealDB binary (pinned v3.0.x)
 ARG SURREALDB_VERSION=v3.0.2
 RUN curl -fsSL https://install.surrealdb.com | sh -s -- --version ${SURREALDB_VERSION} \
-    && command -v surreal
+    && command -v surreal \
+    && apt-get purge -y --auto-remove unzip \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create data directory for persistent SurrealDB storage
 RUN mkdir /data
@@ -72,20 +73,15 @@ COPY --from=python-deps /install /usr/local
 # Copy Python server code
 COPY ./server ./server
 
-# Copy built frontend SPA and Bun entry point + src/ modules
+# Copy built frontend SPA and bundled Bun entry point
 COPY --from=front-build /frontend/dist ./dist
-COPY --from=front-build /frontend/bun-entry.ts ./bun-entry.ts
-COPY --from=front-build /frontend/src ./src
-COPY --from=front-build /frontend/node_modules ./node_modules
-COPY --from=front-build /frontend/package.json ./package.json
-COPY ./deploy/start.sh ./deploy/start.sh
-RUN chmod +x /app/deploy/start.sh
+COPY --from=front-build /frontend/bun-server.js ./bun-server.js
 
 # Set environment for production
 ENV NODE_ENV=production
 
 # Avoid running as root
-RUN useradd -m -s /bin/bash myuser
+RUN useradd -m -s /usr/sbin/nologin myuser
 RUN chown -R myuser:myuser /app /data
 USER myuser
 
@@ -93,7 +89,7 @@ USER myuser
 EXPOSE 8555/tcp
 VOLUME /data
 
-CMD ["/app/deploy/start.sh"]
+CMD ["bun", "/app/bun-server.js"]
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s \
     CMD curl --fail http://localhost:8555/health || exit 1

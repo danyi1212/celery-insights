@@ -1,4 +1,5 @@
-const BASE_URL = process.env.E2E_INTERACTIVE_URL ?? "http://localhost:8000"
+const E2E_HOST = process.env.E2E_HOST ?? "127.0.0.1"
+const BASE_URL = process.env.E2E_INTERACTIVE_URL ?? `http://${E2E_HOST}:8000`
 
 export class ScenarioClient {
     async triggerScenario(name: string): Promise<{ scenario: string; task_id: string }> {
