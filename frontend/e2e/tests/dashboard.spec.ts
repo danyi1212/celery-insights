@@ -26,7 +26,7 @@ test.describe("Dashboard", () => {
         await page.goto("/")
         await expect(async () => {
             await page.reload()
-            await expect(page.getByText("RuntimeError")).toBeVisible()
+            await expect(page.getByRole("button", { name: /This task always fails/ })).toBeVisible()
         }).toPass({ timeout: 15_000 })
     })
 

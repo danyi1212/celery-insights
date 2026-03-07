@@ -50,7 +50,7 @@ WORKDIR /app
 
 # Install runtime deps only
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl bash unzip libstdc++6 libgcc-s1 nginx gettext-base \
+    && apt-get install -y --no-install-recommends curl bash unzip libstdc++6 libgcc-s1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Bun runtime (to /usr/local/bin so all users can access it)
@@ -78,7 +78,7 @@ COPY --from=front-build /frontend/bun-entry.ts ./bun-entry.ts
 COPY --from=front-build /frontend/src ./src
 COPY --from=front-build /frontend/node_modules ./node_modules
 COPY --from=front-build /frontend/package.json ./package.json
-COPY ./deploy ./deploy
+COPY ./deploy/start.sh ./deploy/start.sh
 RUN chmod +x /app/deploy/start.sh
 
 # Set environment for production
