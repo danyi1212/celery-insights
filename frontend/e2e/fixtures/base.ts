@@ -1,7 +1,8 @@
 import { test as base } from "@playwright/test"
 import { ScenarioClient } from "../helpers/scenario-client"
 
-const SURREAL_API = "http://localhost:8555/surreal"
+const E2E_HOST = process.env.E2E_HOST ?? "127.0.0.1"
+const SURREAL_API = `http://${E2E_HOST}:8555/surreal`
 
 type TaskState = "PENDING" | "RECEIVED" | "STARTED" | "SUCCESS" | "FAILURE" | "RETRY" | "REVOKED"
 type SurrealStateResult = { result?: Array<{ state?: TaskState }> }

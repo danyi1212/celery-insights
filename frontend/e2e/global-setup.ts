@@ -1,11 +1,12 @@
 import { composeUp } from "./helpers/docker-compose"
 
+const E2E_HOST = process.env.E2E_HOST ?? "127.0.0.1"
 const HEALTH_TIMEOUT = 60_000
 const HEALTH_INTERVAL = 2_000
 const EVENT_WARMUP_TIMEOUT = 60_000
-const INSIGHTS_API = "http://localhost:8555/api"
-const SURREAL_API = "http://localhost:8555/surreal"
-const INTERACTIVE_API = "http://localhost:8000"
+const INSIGHTS_API = `http://${E2E_HOST}:8555/api`
+const SURREAL_API = `http://${E2E_HOST}:8555/surreal`
+const INTERACTIVE_API = `http://${E2E_HOST}:8000`
 
 type SurrealTaskResult = { result?: Array<Record<string, unknown>> }
 
@@ -78,12 +79,13 @@ async function warmupEventStream() {
 
 async function waitForSurrealRpcReady() {
     const deadline = Date.now() + HEALTH_TIMEOUT
+    let lastError: Error | null = null
 
     while (Date.now() < deadline) {
         try {
             await new Promise<void>((resolve, reject) => {
                 let settled = false
-                const ws = new WebSocket("ws://localhost:8555/surreal/rpc")
+                const ws = new WebSocket(`ws://${E2E_HOST}:8555/surreal/rpc`)
                 const timeout = setTimeout(() => {
                     if (!settled) {
                         settled = true
@@ -117,12 +119,14 @@ async function waitForSurrealRpcReady() {
             })
             console.log("  surreal rpc websocket is ready")
             return
-        } catch {
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error))
             await new Promise((r) => setTimeout(r, HEALTH_INTERVAL))
         }
     }
 
-    throw new Error(`Surreal RPC websocket did not become ready within ${HEALTH_TIMEOUT / 1000}s`)
+    const reason = lastError ? ` Last error: ${lastError.message}` : ""
+    throw new Error(`Surreal RPC websocket did not become ready within ${HEALTH_TIMEOUT / 1000}s.${reason}`)
 }
 
 export default async function globalSetup() {
