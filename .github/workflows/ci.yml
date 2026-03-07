@@ -90,6 +90,7 @@ jobs:
     needs: [lint-frontend, lint-backend]
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -97,11 +98,18 @@ jobs:
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
         working-directory: frontend
+      - name: Build E2E images
+        uses: docker/bake-action@v6
+        with:
+          files: ./docker-bake.hcl
+          targets: e2e
+          load: true
       - name: Run E2E tests
         run: bun run e2e
         working-directory: frontend
         env:
           CI: "true"
+          E2E_SKIP_BUILD: "1"
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()

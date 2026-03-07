@@ -4,6 +4,7 @@ import { fileURLToPath } from "url"
 
 const COMPOSE_FILE = resolve(dirname(fileURLToPath(import.meta.url)), "../../../test_project/docker-compose.yml")
 const SKIP = !!process.env.E2E_SKIP_COMPOSE
+const SHOULD_BUILD = process.env.E2E_SKIP_BUILD !== "1" && process.env.E2E_SKIP_BUILD !== "true"
 
 export function composeUp() {
     if (SKIP) {
@@ -11,9 +12,16 @@ export function composeUp() {
         return
     }
     console.log("Starting docker compose stack...")
+    const args = ["compose", "-f", COMPOSE_FILE, "--profile", "interactive", "up", "-d"]
+    if (SHOULD_BUILD) {
+        args.push("--build")
+    } else {
+        console.log("E2E_SKIP_BUILD=1 — using prebuilt docker images")
+    }
+    args.push("--wait")
     execFileSync(
         "docker",
-        ["compose", "-f", COMPOSE_FILE, "--profile", "interactive", "up", "-d", "--build", "--wait"],
+        args,
         { stdio: "inherit", timeout: 600_000 },
     )
 }
