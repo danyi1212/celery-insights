@@ -1,4 +1,6 @@
-import { composeUp } from "./helpers/docker-compose"
+import { randomBytes } from "node:crypto"
+import http from "node:http"
+import { composeLogs, composePs, composeUp } from "./helpers/docker-compose"
 
 const E2E_HOST = process.env.E2E_HOST ?? "127.0.0.1"
 const HEALTH_TIMEOUT = 60_000
@@ -9,6 +11,14 @@ const SURREAL_API = `http://${E2E_HOST}:8555/surreal`
 const INTERACTIVE_API = `http://${E2E_HOST}:8000`
 
 type SurrealTaskResult = { result?: Array<Record<string, unknown>> }
+
+type UpgradeProbeResult = {
+    outcome: "upgrade" | "response" | "error" | "timeout"
+    statusCode?: number
+    statusMessage?: string
+    headers?: http.IncomingHttpHeaders
+    error?: string
+}
 
 async function pollHealth(url: string, label: string) {
     const deadline = Date.now() + HEALTH_TIMEOUT
@@ -80,8 +90,10 @@ async function warmupEventStream() {
 async function waitForSurrealRpcReady() {
     const deadline = Date.now() + HEALTH_TIMEOUT
     let lastError: Error | null = null
+    let attempt = 0
 
     while (Date.now() < deadline) {
+        attempt += 1
         try {
             await new Promise<void>((resolve, reject) => {
                 let settled = false
@@ -121,6 +133,7 @@ async function waitForSurrealRpcReady() {
             return
         } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error))
+            console.warn(`  surreal rpc websocket attempt ${attempt} failed: ${lastError.message}`)
             await new Promise((r) => setTimeout(r, HEALTH_INTERVAL))
         }
     }
@@ -129,15 +142,101 @@ async function waitForSurrealRpcReady() {
     throw new Error(`Surreal RPC websocket did not become ready within ${HEALTH_TIMEOUT / 1000}s.${reason}`)
 }
 
+async function probeWebSocketUpgrade(): Promise<UpgradeProbeResult> {
+    return new Promise((resolve) => {
+        const req = http.request({
+            host: E2E_HOST,
+            port: 8555,
+            path: "/surreal/rpc",
+            headers: {
+                Connection: "Upgrade",
+                Upgrade: "websocket",
+                "Sec-WebSocket-Version": "13",
+                "Sec-WebSocket-Key": randomBytes(16).toString("base64"),
+            },
+        })
+
+        const finish = (result: UpgradeProbeResult) => {
+            req.removeAllListeners()
+            resolve(result)
+        }
+
+        req.setTimeout(5_000, () => {
+            req.destroy()
+            finish({ outcome: "timeout" })
+        })
+
+        req.on("upgrade", (_res, socket, head) => {
+            socket.destroy()
+            finish({
+                outcome: "upgrade",
+                statusCode: 101,
+                statusMessage: "Switching Protocols",
+                headers: head.length > 0 ? { "x-head-bytes": String(head.length) } : undefined,
+            })
+        })
+
+        req.on("response", (res) => {
+            res.resume()
+            finish({
+                outcome: "response",
+                statusCode: res.statusCode,
+                statusMessage: res.statusMessage,
+                headers: res.headers,
+            })
+        })
+
+        req.on("error", (error) => {
+            finish({ outcome: "error", error: error.message })
+        })
+
+        req.end()
+    })
+}
+
+async function logDiagnostics(stage: string) {
+    console.error(`Diagnostics for ${stage}:`)
+
+    const healthChecks = [
+        [`${INSIGHTS_API}/settings/info`, "celery-insights settings"],
+        [`${INTERACTIVE_API}/scenarios`, "interactive scenarios"],
+        [`http://${E2E_HOST}:8555/health`, "bun health"],
+        [`${SURREAL_API}/health`, "surreal health"],
+    ] as const
+
+    for (const [url, label] of healthChecks) {
+        try {
+            const res = await fetch(url)
+            const body = await res.text()
+            console.error(`  ${label}: ${res.status} ${res.statusText} body=${JSON.stringify(body.slice(0, 300))}`)
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+            console.error(`  ${label}: request failed: ${message}`)
+        }
+    }
+
+    const upgradeProbe = await probeWebSocketUpgrade()
+    console.error(`  surreal rpc upgrade probe: ${JSON.stringify(upgradeProbe)}`)
+    console.error("  docker compose ps:")
+    console.error(composePs())
+    console.error("  docker compose logs (celery-insights, interactive):")
+    console.error(composeLogs(["celery-insights", "interactive"]))
+}
+
 export default async function globalSetup() {
     composeUp()
 
-    console.log("Waiting for services to be healthy...")
-    await Promise.all([
-        pollHealth(`${INSIGHTS_API}/settings/info`, "celery-insights"),
-        pollHealth(`${INTERACTIVE_API}/scenarios`, "interactive API"),
-    ])
-    await waitForSurrealRpcReady()
-    await warmupEventStream()
-    console.log("All services healthy. Starting tests.")
+    try {
+        console.log("Waiting for services to be healthy...")
+        await Promise.all([
+            pollHealth(`${INSIGHTS_API}/settings/info`, "celery-insights"),
+            pollHealth(`${INTERACTIVE_API}/scenarios`, "interactive API"),
+        ])
+        await waitForSurrealRpcReady()
+        await warmupEventStream()
+        console.log("All services healthy. Starting tests.")
+    } catch (error) {
+        await logDiagnostics("global setup failure")
+        throw error
+    }
 }

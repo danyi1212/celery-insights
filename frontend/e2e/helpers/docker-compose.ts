@@ -34,3 +34,27 @@ export function composeDown() {
         console.error("docker compose down failed:", e)
     }
 }
+
+function captureComposeOutput(args: string[]): string {
+    if (SKIP) {
+        return "E2E_SKIP_COMPOSE=1 - docker compose diagnostics skipped"
+    }
+
+    try {
+        return execFileSync("docker", ["compose", "-f", COMPOSE_FILE, "--profile", "interactive", ...args], {
+            encoding: "utf8",
+            timeout: 60_000,
+        })
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        return `docker compose ${args.join(" ")} failed: ${message}`
+    }
+}
+
+export function composePs() {
+    return captureComposeOutput(["ps"])
+}
+
+export function composeLogs(services: string[], tail = 200) {
+    return captureComposeOutput(["logs", "--no-color", "--tail", String(tail), ...services])
+}
