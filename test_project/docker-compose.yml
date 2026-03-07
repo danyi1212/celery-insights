@@ -21,6 +21,7 @@ services:
       retries: 5
 
   worker:
+    image: celery-insights-test-project:local
     build: .
     command: celery -A celery_app worker -l INFO -c 4 -n worker@%h
     environment:
@@ -33,6 +34,7 @@ services:
         condition: service_healthy
 
   worker-secondary:
+    image: celery-insights-test-project:local
     build: .
     command: celery -A celery_app worker -l INFO -c 2 -Q secondary -n worker-secondary@%h
     environment:
@@ -45,6 +47,7 @@ services:
         condition: service_healthy
 
   producer:
+    image: celery-insights-test-project:local
     build: .
     command: python -m producer.interval
     environment:
@@ -60,6 +63,7 @@ services:
         condition: service_started
 
   interactive:
+    image: celery-insights-test-project:local
     build: .
     command: uvicorn producer.interactive:app --host 0.0.0.0 --port 8000
     ports:
@@ -76,6 +80,7 @@ services:
       - interactive
 
   celery-insights:
+    image: celery-insights-app:local
     build:
       context: ..
       dockerfile: Dockerfile

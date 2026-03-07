@@ -89,56 +89,23 @@ async function warmupEventStream() {
 
 async function waitForSurrealRpcReady() {
     const deadline = Date.now() + HEALTH_TIMEOUT
-    let lastError: Error | null = null
+    let lastError: string | null = null
     let attempt = 0
 
     while (Date.now() < deadline) {
         attempt += 1
-        try {
-            await new Promise<void>((resolve, reject) => {
-                let settled = false
-                const ws = new WebSocket(`ws://${E2E_HOST}:8555/surreal/rpc`)
-                const timeout = setTimeout(() => {
-                    if (!settled) {
-                        settled = true
-                        ws.close()
-                        reject(new Error("websocket timeout"))
-                    }
-                }, 5_000)
-
-                ws.onopen = () => {
-                    if (!settled) {
-                        settled = true
-                        clearTimeout(timeout)
-                        ws.close()
-                        resolve()
-                    }
-                }
-                ws.onerror = () => {
-                    if (!settled) {
-                        settled = true
-                        clearTimeout(timeout)
-                        reject(new Error("websocket error"))
-                    }
-                }
-                ws.onclose = () => {
-                    if (!settled) {
-                        settled = true
-                        clearTimeout(timeout)
-                        reject(new Error("websocket closed before open"))
-                    }
-                }
-            })
+        const probe = await probeWebSocketUpgrade()
+        if (probe.outcome === "upgrade") {
             console.log("  surreal rpc websocket is ready")
             return
-        } catch (error) {
-            lastError = error instanceof Error ? error : new Error(String(error))
-            console.warn(`  surreal rpc websocket attempt ${attempt} failed: ${lastError.message}`)
-            await new Promise((r) => setTimeout(r, HEALTH_INTERVAL))
         }
+
+        lastError = JSON.stringify(probe)
+        console.warn(`  surreal rpc websocket attempt ${attempt} failed: ${lastError}`)
+        await new Promise((r) => setTimeout(r, HEALTH_INTERVAL))
     }
 
-    const reason = lastError ? ` Last error: ${lastError.message}` : ""
+    const reason = lastError ? ` Last error: ${lastError}` : ""
     throw new Error(`Surreal RPC websocket did not become ready within ${HEALTH_TIMEOUT / 1000}s.${reason}`)
 }
 
