@@ -1,0 +1,9 @@
+{
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    "plugins": ["eslint", "typescript", "unicorn", "oxc", "react", "jsx-a11y", "vitest"],
+    "ignorePatterns": ["dist/**", "node_modules/**", "app/routeTree.gen.ts"],
+    "rules": {
+        "no-alert": "warn",
+        "no-console": ["warn", { "allow": ["warn", "error"] }]
+    }
+}

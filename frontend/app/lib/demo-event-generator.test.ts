@@ -73,10 +73,13 @@ describe("DemoEventGenerator", () => {
         )
 
         const validStates = ["PENDING", "RECEIVED", "STARTED", "SUCCESS", "FAILURE", "RETRY"]
-        for (const [, params] of taskUpserts) {
-            if (params?.state) {
-                expect(validStates).toContain(params.state)
-            }
+        const recordedStates = taskUpserts
+            .map(([, params]) => params.state)
+            .filter((state): state is string => typeof state === "string")
+
+        expect(recordedStates.length).toBeGreaterThan(0)
+        for (const state of recordedStates) {
+            expect(validStates).toContain(state)
         }
     })
 
@@ -142,6 +145,7 @@ describe("DemoEventGenerator", () => {
 
         // Should not throw
         await generator.start()
+        expect(consoleSpy).toHaveBeenCalled()
 
         consoleSpy.mockRestore()
     })
@@ -154,6 +158,7 @@ describe("DemoEventGenerator", () => {
 
         // Advance time — should not throw
         await vi.advanceTimersByTimeAsync(10_000)
+        expect(consoleSpy).toHaveBeenCalled()
 
         consoleSpy.mockRestore()
     })

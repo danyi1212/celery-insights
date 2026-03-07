@@ -89,7 +89,7 @@ typecheck-backend:
 # Run all linters
 lint: lint-frontend lint-backend
 
-# Lint frontend (ESLint)
+# Lint frontend (Oxlint)
 lint-frontend:
     cd {{frontend}} && bun run lint
 
@@ -104,11 +104,11 @@ lint-fix-frontend:
 # Run all formatters (check mode)
 format: format-frontend format-backend-check
 
-# Check frontend formatting (Prettier)
+# Check frontend formatting (Oxfmt)
 format-frontend:
     cd {{frontend}} && bun run format
 
-# Fix frontend formatting (Prettier)
+# Fix frontend formatting (Oxfmt)
 format-fix-frontend:
     cd {{frontend}} && bun run format-fix
 
