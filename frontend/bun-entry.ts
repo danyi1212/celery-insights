@@ -81,6 +81,12 @@ function printBanner(): void {
 const PYTHON_PORT = 8556
 const PYTHON_BACKEND = `http://localhost:${PYTHON_PORT}`
 const PYTHON_WS_BACKEND = `ws://localhost:${PYTHON_PORT}`
+
+// Derive SurrealDB proxy targets from config (strip /rpc suffix, convert ws->http)
+const surrealWsBase = config.surrealdbUrl.replace(/\/rpc$/, "")
+const SURREAL_HTTP_BASE = surrealWsBase.replace(/^ws(s?):\/\//, "http$1://")
+const SURREAL_WS_BASE = surrealWsBase
+
 const DIST_DIR = path.resolve(import.meta.dir, "dist")
 
 // Read index.html once at startup for SPA fallback
@@ -93,6 +99,27 @@ let ingestionStatus: IngestionStatus = "disabled"
 let shuttingDown = false
 const instanceId = generateInstanceId()
 const managingSurrealDB = !config.surrealdbExternalUrl
+
+const REQUEST_HOP_BY_HOP_HEADERS = new Set([
+    "connection",
+    "content-length",
+    "host",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+])
+
+const RESPONSE_HOP_BY_HOP_HEADERS = new Set([
+    "connection",
+    "content-encoding",
+    "content-length",
+    "keep-alive",
+    "transfer-encoding",
+])
 
 // --- SurrealDB subprocess management ---
 
@@ -164,6 +191,31 @@ function spawnSurrealDB(): ChildProcess {
     })
 
     return proc
+}
+
+function createProxyRequestHeaders(headers: Headers): Headers {
+    const proxyHeaders = new Headers()
+
+    for (const [key, value] of headers.entries()) {
+        if (!REQUEST_HOP_BY_HOP_HEADERS.has(key.toLowerCase())) {
+            proxyHeaders.set(key, value)
+        }
+    }
+
+    // Avoid forwarding compressed payload metadata that Bun/undici may rewrite while proxying.
+    proxyHeaders.set("accept-encoding", "identity")
+
+    return proxyHeaders
+}
+
+function createProxyResponseHeaders(headers: Headers): Headers {
+    const proxyHeaders = new Headers(headers)
+
+    for (const header of RESPONSE_HOP_BY_HOP_HEADERS) {
+        proxyHeaders.delete(header)
+    }
+
+    return proxyHeaders
 }
 
 /**
@@ -350,10 +402,26 @@ const server = Bun.serve({
     async fetch(req, server) {
         const url = new URL(req.url)
 
-        // Handle WebSocket upgrade requests for /ws/* paths
-        if (url.pathname.startsWith("/ws") && req.headers.get("upgrade")?.toLowerCase() === "websocket") {
+        const isUpgrade = req.headers.get("upgrade")?.toLowerCase() === "websocket"
+
+        // Handle WebSocket upgrade requests for /surreal/* paths (proxy to SurrealDB)
+        if (url.pathname.startsWith("/surreal/") && isUpgrade) {
+            const surrealPath = url.pathname.slice("/surreal".length) // strip /surreal, keep leading /
             const success = server.upgrade(req, {
-                data: { targetPath: url.pathname + url.search },
+                data: {
+                    targetPath: surrealPath + url.search,
+                    backend: "surreal" as const,
+                    protocols: req.headers.get("sec-websocket-protocol") ?? undefined,
+                },
+            })
+            if (success) return undefined
+            return new Response("WebSocket upgrade failed", { status: 500 })
+        }
+
+        // Handle WebSocket upgrade requests for /ws/* paths (proxy to Python)
+        if (url.pathname.startsWith("/ws") && isUpgrade) {
+            const success = server.upgrade(req, {
+                data: { targetPath: url.pathname + url.search, backend: "python" as const },
             })
             if (success) return undefined
             return new Response("WebSocket upgrade failed", { status: 500 })
@@ -394,6 +462,26 @@ const server = Bun.serve({
             })
         }
 
+        // Proxy /surreal/* HTTP requests to SurrealDB (strip /surreal prefix)
+        if (url.pathname.startsWith("/surreal/")) {
+            const surrealPath = url.pathname.slice("/surreal".length)
+            const targetUrl = `${SURREAL_HTTP_BASE}${surrealPath}${url.search}`
+            try {
+                const proxyRes = await fetch(targetUrl, {
+                    method: req.method,
+                    headers: createProxyRequestHeaders(req.headers),
+                    body: req.body,
+                })
+                return new Response(proxyRes.body, {
+                    status: proxyRes.status,
+                    statusText: proxyRes.statusText,
+                    headers: createProxyResponseHeaders(proxyRes.headers),
+                })
+            } catch {
+                return new Response("SurrealDB unavailable", { status: 502 })
+            }
+        }
+
         // Proxy API, docs, etc. to Python backend (only if Python is running)
         if (
             url.pathname.startsWith("/api") ||
@@ -410,13 +498,13 @@ const server = Bun.serve({
             try {
                 const proxyRes = await fetch(targetUrl, {
                     method: req.method,
-                    headers: req.headers,
+                    headers: createProxyRequestHeaders(req.headers),
                     body: req.body,
                 })
                 return new Response(proxyRes.body, {
                     status: proxyRes.status,
                     statusText: proxyRes.statusText,
-                    headers: proxyRes.headers,
+                    headers: createProxyResponseHeaders(proxyRes.headers),
                 })
             } catch {
                 return new Response("Backend unavailable", { status: 502 })
@@ -446,10 +534,13 @@ const server = Bun.serve({
     },
     websocket: {
         open(ws) {
-            const data = ws.data as { targetPath: string }
+            const data = ws.data as { targetPath: string; backend: string; protocols?: string }
             ws._pendingMessages = [] as (string | Buffer)[]
 
-            const backendWs = new WebSocket(`${PYTHON_WS_BACKEND}${data.targetPath}`)
+            const baseUrl = data.backend === "surreal" ? SURREAL_WS_BASE : PYTHON_WS_BACKEND
+            const protocols = data.protocols ? data.protocols.split(",").map((p) => p.trim()) : undefined
+            const backendWs = new WebSocket(`${baseUrl}${data.targetPath}`, protocols)
+            backendWs.binaryType = "arraybuffer"
 
             backendWs.onopen = () => {
                 ws._backendWs = backendWs
@@ -460,7 +551,7 @@ const server = Bun.serve({
             }
 
             backendWs.onmessage = (event) => {
-                ws.send(event.data as string)
+                ws.send(event.data)
             }
 
             backendWs.onclose = () => ws.close()

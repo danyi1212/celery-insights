@@ -24,14 +24,7 @@ of `localhost`.
 
 Default: `8555`
 
-Specify the external port served by the embedded reverse proxy.
-In production, Bun and Python run on internal ports managed automatically.
-
-### BUN_INTERNAL_PORT
-
-Default: `8554`
-
-Internal Bun service port used behind the embedded reverse proxy. You typically do not need to change this.
+Specify the port Bun listens on. In production, Python runs on an internal port managed automatically.
 
 ### HOST
 
@@ -325,15 +318,15 @@ scrape_configs:
       - targets: ["localhost:8555"]
 ```
 
-# Embedded Reverse Proxy
+# Built-in Reverse Proxy
 
-The standalone Docker image ships with an embedded reverse proxy as the public entrypoint.
+Bun serves as the single entrypoint and built-in reverse proxy:
 
-- `/surreal/*` is routed directly to SurrealDB (HTTP + WebSocket)
-- `/api/*`, `/docs`, `/openapi.json`, and SPA routes are routed to Bun
-- Bun continues orchestrating SurrealDB + Python ingestion processes internally
+- `/surreal/*` is proxied to SurrealDB (HTTP + WebSocket)
+- `/api/*`, `/metrics`, `/docs`, `/openapi.json` are proxied to the Python ingester
+- All other routes serve the SPA static assets
 
-For v1, the embedded proxy is HTTP-only inside the container boundary. If you require HTTPS, terminate TLS externally (for example with your infrastructure ingress, load balancer, or an edge proxy in front of the container).
+For v1, the built-in proxy is HTTP-only. If you require HTTPS, terminate TLS externally (for example with your infrastructure ingress, load balancer, or an edge proxy in front of the container).
 
 ## Support chart
 
