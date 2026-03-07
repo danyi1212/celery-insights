@@ -82,23 +82,37 @@ async function waitForSurrealRpcReady() {
     while (Date.now() < deadline) {
         try {
             await new Promise<void>((resolve, reject) => {
-                const ws = new WebSocket("ws://localhost:8555/surreal/rpc", "json")
+                let settled = false
+                const ws = new WebSocket("ws://localhost:8555/surreal/rpc")
                 const timeout = setTimeout(() => {
-                    ws.close()
-                    reject(new Error("websocket timeout"))
+                    if (!settled) {
+                        settled = true
+                        ws.close()
+                        reject(new Error("websocket timeout"))
+                    }
                 }, 5_000)
 
                 ws.onopen = () => {
-                    clearTimeout(timeout)
-                    ws.close()
-                    resolve()
+                    if (!settled) {
+                        settled = true
+                        clearTimeout(timeout)
+                        ws.close()
+                        resolve()
+                    }
                 }
                 ws.onerror = () => {
-                    clearTimeout(timeout)
-                    reject(new Error("websocket error"))
+                    if (!settled) {
+                        settled = true
+                        clearTimeout(timeout)
+                        reject(new Error("websocket error"))
+                    }
                 }
                 ws.onclose = () => {
-                    clearTimeout(timeout)
+                    if (!settled) {
+                        settled = true
+                        clearTimeout(timeout)
+                        reject(new Error("websocket closed before open"))
+                    }
                 }
             })
             console.log("  surreal rpc websocket is ready")
