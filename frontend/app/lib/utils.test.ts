@@ -6,8 +6,7 @@ describe("cn", () => {
     })
 
     it("handles conditional classes via clsx", () => {
-        expect(cn("base", false && "hidden", "visible")).toBe("base visible")
-        expect(cn("base", true && "shown")).toBe("base shown")
+        expect(cn("base", { hidden: false, shown: true }, "visible")).toBe("base shown visible")
     })
 
     it("resolves Tailwind conflicts via twMerge", () => {

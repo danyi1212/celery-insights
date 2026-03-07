@@ -1,7 +1,7 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 ci:
-  skip: [ty, eslint, prettier, tsc, vitest]
+  skip: [ty, oxlint, oxfmt, tsc, vitest]
 exclude: ^frontend/app/services/server
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -42,17 +42,17 @@ repos:
 
   - repo: local
     hooks:
-      - id: eslint
-        name: eslint
-        entry: bun run --cwd frontend eslint --max-warnings=0 app
+      - id: oxlint
+        name: oxlint
+        entry: bun run --cwd frontend oxlint --deny-warnings app
         language: system
         files: ^frontend/app/.*\.[jt]sx?$
         types: [ file ]
         pass_filenames: false
 
-      - id: prettier
-        name: prettier
-        entry: bun run --cwd frontend prettier --check app
+      - id: oxfmt
+        name: oxfmt
+        entry: bun run --cwd frontend oxfmt --check app
         language: system
         files: ^frontend/app/.*\.[jt]sx?$
         types: [ file ]

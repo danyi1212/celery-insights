@@ -12,9 +12,8 @@ interface FacetValueProps {
 
 const FacetValue: React.FC<FacetValueProps> = ({ value, count, selected, onSelect, label }) => (
     <li className="flex items-center">
-        <div
-            role="button"
-            tabIndex={0}
+        <button
+            type="button"
             className="flex w-full items-center gap-2 px-2 py-1 text-left hover:bg-accent/50 transition-colors"
             onClick={onSelect}
             onKeyDown={(event) => {
@@ -36,7 +35,7 @@ const FacetValue: React.FC<FacetValueProps> = ({ value, count, selected, onSelec
                 <TooltipContent side="right">{value}</TooltipContent>
             </Tooltip>
             <span className="ml-auto text-sm text-muted-foreground">{count}</span>
-        </div>
+        </button>
     </li>
 )
 export default FacetValue
