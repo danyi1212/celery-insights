@@ -13,37 +13,35 @@ import {
     useSidebar,
 } from "@components/ui/sidebar"
 import MenuItem, { MenuLink } from "@layout/menu/menu-item"
-import { BarChart3, LayoutDashboard, Rss, Search, Settings } from "lucide-react"
+import { appLocations } from "@layout/navigation-links"
 import { useIsDark } from "@hooks/use-is-dark"
 import { Link } from "@tanstack/react-router"
 import React from "react"
+import { cn } from "@lib/utils"
 
-const menuLinks: MenuLink[] = [
-    {
-        label: "Dashboard",
-        icon: <LayoutDashboard />,
-        to: "/",
+const menuLinks: MenuLink[] = appLocations
+    .filter((location) => location.sidebar)
+    .map(({ icon: Icon, label, to }) => ({
+        label,
+        icon: <Icon />,
+        to,
         external: false,
-    },
-    {
-        label: "Tasks Explorer",
-        icon: <Search />,
-        to: "/explorer",
-        external: false,
-    },
-    {
-        label: "Live Events",
-        icon: <Rss />,
-        to: "/raw_events",
-        external: false,
-    },
-    {
-        label: "Analytics",
-        icon: <BarChart3 />,
-        to: "/analytics",
-        external: false,
-    },
-]
+    }))
+
+const settingsLocation = appLocations.find((location) => location.to === "/settings")
+
+if (!settingsLocation) {
+    throw new Error("Settings location is missing from navigation definitions")
+}
+
+const SettingsIcon = settingsLocation.icon
+
+const settingsLink: MenuLink = {
+    label: settingsLocation.label,
+    icon: <SettingsIcon />,
+    to: settingsLocation.to,
+    external: false,
+}
 
 const SidebarLogo: React.FC = () => {
     const { state } = useSidebar()
@@ -51,7 +49,10 @@ const SidebarLogo: React.FC = () => {
     const isDark = useIsDark()
 
     return (
-        <Link to="/" className="flex items-center justify-center p-5 no-underline bg-transparent">
+        <Link
+            to="/"
+            className={cn("flex items-center justify-center no-underline bg-transparent", expanded ? "p-5" : "p-1")}
+        >
             <img
                 src={
                     isDark
@@ -63,7 +64,7 @@ const SidebarLogo: React.FC = () => {
                           : "/LogoDark.svg"
                 }
                 alt="logo"
-                className="h-auto transition-[width] duration-200"
+                className="h-auto shrink-0 transition-[width] duration-200"
                 style={{ width: expanded ? "128px" : "32px" }}
             />
         </Link>
@@ -101,14 +102,7 @@ const Menu: React.FC = () => {
             <SidebarFooter>
                 <SidebarSeparator />
                 <SidebarMenu>
-                    <MenuItem
-                        link={{
-                            label: "Settings",
-                            icon: <Settings />,
-                            to: "/settings",
-                            external: false,
-                        }}
-                    />
+                    <MenuItem link={settingsLink} />
                 </SidebarMenu>
             </SidebarFooter>
             <SidebarRail />

@@ -1,7 +1,10 @@
 import { createRootRoute, Outlet, Link as RouterLink } from "@tanstack/react-router"
 import { ReadOnlyBanner } from "@components/connection-status"
+import { AppKeyboardShortcuts } from "@components/keyboard/app-keyboard-shortcuts"
+import { SearchBoxControllerProvider } from "@components/search/search-box-controller"
 import SurrealDBProvider from "@components/surrealdb-provider"
 import { useDarkMode } from "@hooks/use-dark-mode"
+import { KeyboardShortcutsProvider } from "@hooks/use-keyboard-shortcuts"
 import Header from "@layout/header/header"
 import JoyrideTour from "@layout/joyride-tour"
 import Menu from "@layout/menu/menu"
@@ -17,15 +20,20 @@ const RootComponent = () => {
         <QueryClientProvider client={queryClient}>
             <SurrealDBProvider>
                 <SidebarProvider>
-                    <Menu />
-                    <SidebarInset>
-                        <ReadOnlyBanner />
-                        <Header />
-                        <div className="flex-1 p-0">
-                            <Outlet />
-                        </div>
-                    </SidebarInset>
-                    <JoyrideTour />
+                    <KeyboardShortcutsProvider>
+                        <SearchBoxControllerProvider>
+                            <AppKeyboardShortcuts />
+                            <Menu />
+                            <SidebarInset>
+                                <ReadOnlyBanner />
+                                <Header />
+                                <div className="flex-1 p-0">
+                                    <Outlet />
+                                </div>
+                            </SidebarInset>
+                            <JoyrideTour />
+                        </SearchBoxControllerProvider>
+                    </KeyboardShortcutsProvider>
                 </SidebarProvider>
             </SurrealDBProvider>
         </QueryClientProvider>

@@ -1,43 +1,49 @@
-import SearchResultList from "@components/search/search-result-list"
-import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
+import { appShortcuts } from "@components/keyboard/shortcut-definitions"
+import { ShortcutHint } from "@components/keyboard/shortcut-hint"
+import QuickAccessDialog from "@components/search/quick-access-dialog"
+import { useSearchBoxController } from "@components/search/search-box-controller"
+import { cn } from "@lib/utils"
 import { Search } from "lucide-react"
-import React, { useState } from "react"
+import { useEffect, useState } from "react"
 
 const SearchBox = () => {
+    const [focusNonce, setFocusNonce] = useState(0)
     const [open, setOpen] = useState(false)
-    const [query, setQuery] = useState("")
+    const { registerSearchBox } = useSearchBoxController()
 
-    const handleQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)
+    useEffect(() => {
+        return registerSearchBox({
+            close: () => setOpen(false),
+            focus: () => {
+                setOpen(true)
+                setFocusNonce((current) => current + 1)
+            },
+            open: () => setOpen(true),
+        })
+    }, [registerSearchBox])
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <button
-                    id="search-bar"
-                    type="button"
-                    className="relative rounded-md bg-foreground/15 hover:bg-foreground/25 mr-2 ml-0 w-full sm:ml-3 sm:w-auto cursor-text flex items-center border-none"
-                >
-                    <div className="px-2 h-full absolute pointer-events-none flex items-center justify-center">
-                        <Search className="size-5 text-foreground/70" />
-                    </div>
-                    <input
-                        type="text"
-                        placeholder="Search..."
-                        aria-label="search"
-                        className="bg-transparent text-inherit pl-10 pr-2 py-2 w-full md:w-[30ch] outline-none transition-[width] duration-200"
-                        onChange={handleQueryChange}
-                        onClick={(e) => e.stopPropagation()}
-                        onFocus={() => setOpen(true)}
-                        value={query}
-                    />
-                </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[450px] p-0" align="start">
-                <div className="flex items-center justify-center">
-                    <SearchResultList query={query} />
-                </div>
-            </PopoverContent>
-        </Popover>
+        <>
+            <button
+                id="search-bar"
+                type="button"
+                className={cn(
+                    "relative mr-2 ml-0 flex h-9 w-full items-center rounded-md border bg-muted/60 px-3 text-left transition-colors sm:ml-3 sm:w-auto md:min-w-[30ch]",
+                    "border-transparent hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
+                )}
+                onClick={() => setOpen(true)}
+                aria-haspopup="dialog"
+                aria-expanded={open}
+                aria-label="Open quick search"
+            >
+                <Search className="size-4 text-muted-foreground" />
+                <span className="ml-2 flex-1 truncate text-sm text-muted-foreground">
+                    Search tasks, workers, pages, and features
+                </span>
+                <ShortcutHint className="hidden shrink-0 sm:inline-flex" sequence={appShortcuts.focusSearch} />
+            </button>
+            <QuickAccessDialog focusNonce={focusNonce} open={open} onOpenChange={setOpen} />
+        </>
     )
 }
 
