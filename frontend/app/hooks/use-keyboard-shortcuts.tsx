@@ -1,14 +1,13 @@
 import {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useId,
-    useMemo,
-    useRef,
-    useState,
-    type ReactNode,
-} from "react"
+    HotkeysProvider,
+    formatHotkey,
+    rawHotkeyToParsedHotkey,
+    useHotkey,
+    useHotkeySequence,
+    type Hotkey,
+    type RawHotkey,
+} from "@tanstack/react-hotkeys"
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, type ReactNode } from "react"
 
 export interface ShortcutTrigger {
     key: string
@@ -45,36 +44,66 @@ const SEQUENCE_TIMEOUT_MS = 1200
 
 const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextValue | null>(null)
 
-const normalizeKey = (key: string) => (key === " " ? "space" : key.toLowerCase())
-
-const isEditableTarget = (target: EventTarget | null) => {
-    if (!(target instanceof HTMLElement)) {
-        return false
-    }
-
-    if (target.isContentEditable) {
-        return true
-    }
-
-    return ["input", "select", "textarea"].includes(target.tagName.toLowerCase())
+const normalizedKeyMap: Record<string, string> = {
+    " ": "Space",
+    arrowdown: "ArrowDown",
+    arrowleft: "ArrowLeft",
+    arrowright: "ArrowRight",
+    arrowup: "ArrowUp",
+    backspace: "Backspace",
+    delete: "Delete",
+    enter: "Enter",
+    escape: "Escape",
+    esc: "Escape",
+    space: "Space",
+    tab: "Tab",
 }
 
-const matchesTrigger = (event: KeyboardEvent, trigger: ShortcutTrigger) => {
-    const wantsMod = Boolean(trigger.mod)
-    const modPressed = event.metaKey || event.ctrlKey
+const toHotkey = (trigger: ShortcutTrigger): RawHotkey => ({
+    alt: trigger.alt,
+    key: normalizedKeyMap[trigger.key.toLowerCase()] ?? trigger.key.toUpperCase(),
+    mod: trigger.mod,
+    shift: trigger.shift,
+})
 
-    return (
-        normalizeKey(event.key) === normalizeKey(trigger.key) &&
-        modPressed === wantsMod &&
-        event.altKey === Boolean(trigger.alt) &&
-        event.shiftKey === Boolean(trigger.shift)
+const toSequenceHotkey = (trigger: ShortcutTrigger): Hotkey =>
+    formatHotkey(rawHotkeyToParsedHotkey(toHotkey(trigger))) as Hotkey
+
+const getHotkeyOptions = (shortcut: RegisteredShortcut) => ({
+    enabled: shortcut.enabled !== false,
+    ignoreInputs: !shortcut.allowInInput,
+    preventDefault: shortcut.preventDefault !== false,
+    requireReset: true,
+    stopPropagation: false,
+})
+
+const ShortcutHotkeyBinding = ({ shortcut }: { shortcut: RegisteredShortcut }) => {
+    useHotkey(toHotkey(shortcut.sequence[0]!), shortcut.handler, getHotkeyOptions(shortcut))
+    return null
+}
+
+const ShortcutSequenceBinding = ({ shortcut }: { shortcut: RegisteredShortcut }) => {
+    useHotkeySequence(shortcut.sequence.map(toSequenceHotkey), shortcut.handler, {
+        ...getHotkeyOptions(shortcut),
+        timeout: SEQUENCE_TIMEOUT_MS,
+    })
+
+    return null
+}
+
+const KeyboardShortcutBindings = ({ shortcuts }: { shortcuts: RegisteredShortcut[] }) => {
+    return shortcuts.map((shortcut) =>
+        shortcut.sequence.length === 1 ? (
+            <ShortcutHotkeyBinding key={`${shortcut.registrationId}:${shortcut.id}`} shortcut={shortcut} />
+        ) : (
+            <ShortcutSequenceBinding key={`${shortcut.registrationId}:${shortcut.id}`} shortcut={shortcut} />
+        ),
     )
 }
 
 export const KeyboardShortcutsProvider = ({ children }: { children: ReactNode }) => {
     const [shortcutsByRegistration, setShortcutsByRegistration] = useState<Record<string, ShortcutDefinition[]>>({})
     const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
-    const pendingSequenceRef = useRef<{ expiresAt: number; ids: string[]; index: number } | null>(null)
 
     const shortcuts = useMemo<RegisteredShortcut[]>(
         () =>
@@ -83,94 +112,6 @@ export const KeyboardShortcutsProvider = ({ children }: { children: ReactNode })
             ),
         [shortcutsByRegistration],
     )
-
-    const shortcutsRef = useRef(shortcuts)
-    shortcutsRef.current = shortcuts
-
-    useEffect(() => {
-        const runShortcut = (event: KeyboardEvent, shortcut: RegisteredShortcut) => {
-            if (shortcut.preventDefault !== false) {
-                event.preventDefault()
-            }
-
-            pendingSequenceRef.current = null
-            shortcut.handler()
-        }
-
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.repeat) {
-                return
-            }
-
-            const editable = isEditableTarget(event.target)
-            const availableShortcuts = shortcutsRef.current.filter(
-                (shortcut) => shortcut.enabled !== false && (!editable || shortcut.allowInInput),
-            )
-            const now = Date.now()
-            const pendingSequence = pendingSequenceRef.current
-
-            if (pendingSequence && pendingSequence.expiresAt > now) {
-                const matchedPendingShortcuts = availableShortcuts
-                    .filter((shortcut) => pendingSequence.ids.includes(`${shortcut.registrationId}:${shortcut.id}`))
-                    .filter((shortcut) => matchesTrigger(event, shortcut.sequence[pendingSequence.index]))
-
-                if (matchedPendingShortcuts.length > 0) {
-                    const completedShortcut = matchedPendingShortcuts.find(
-                        (shortcut) => pendingSequence.index === shortcut.sequence.length - 1,
-                    )
-
-                    if (completedShortcut) {
-                        runShortcut(event, completedShortcut)
-                        return
-                    }
-
-                    pendingSequenceRef.current = {
-                        expiresAt: now + SEQUENCE_TIMEOUT_MS,
-                        ids: matchedPendingShortcuts.map((shortcut) => `${shortcut.registrationId}:${shortcut.id}`),
-                        index: pendingSequence.index + 1,
-                    }
-
-                    if (matchedPendingShortcuts.some((shortcut) => shortcut.preventDefault !== false)) {
-                        event.preventDefault()
-                    }
-
-                    return
-                }
-
-                pendingSequenceRef.current = null
-            }
-
-            const singleStepShortcut = availableShortcuts.find(
-                (shortcut) => shortcut.sequence.length === 1 && matchesTrigger(event, shortcut.sequence[0]),
-            )
-
-            if (singleStepShortcut) {
-                runShortcut(event, singleStepShortcut)
-                return
-            }
-
-            const sequenceStarters = availableShortcuts.filter(
-                (shortcut) => shortcut.sequence.length > 1 && matchesTrigger(event, shortcut.sequence[0]),
-            )
-
-            if (sequenceStarters.length === 0) {
-                return
-            }
-
-            pendingSequenceRef.current = {
-                expiresAt: now + SEQUENCE_TIMEOUT_MS,
-                ids: sequenceStarters.map((shortcut) => `${shortcut.registrationId}:${shortcut.id}`),
-                index: 1,
-            }
-
-            if (sequenceStarters.some((shortcut) => shortcut.preventDefault !== false)) {
-                event.preventDefault()
-            }
-        }
-
-        window.addEventListener("keydown", onKeyDown)
-        return () => window.removeEventListener("keydown", onKeyDown)
-    }, [])
 
     const openShortcutsDialog = useCallback(() => setShortcutsDialogOpen(true), [])
     const closeShortcutsDialog = useCallback(() => setShortcutsDialogOpen(false), [])
@@ -219,22 +160,36 @@ export const KeyboardShortcutsProvider = ({ children }: { children: ReactNode })
         ],
     )
 
-    return <KeyboardShortcutsContext.Provider value={value}>{children}</KeyboardShortcutsContext.Provider>
+    return (
+        <HotkeysProvider
+            defaultOptions={{
+                hotkey: {
+                    stopPropagation: false,
+                },
+                hotkeySequence: {
+                    stopPropagation: false,
+                    timeout: SEQUENCE_TIMEOUT_MS,
+                },
+            }}
+        >
+            <KeyboardShortcutsContext.Provider value={value}>
+                <KeyboardShortcutBindings shortcuts={shortcuts} />
+                {children}
+            </KeyboardShortcutsContext.Provider>
+        </HotkeysProvider>
+    )
 }
 
 export const useKeyboardShortcuts = (shortcuts: ShortcutDefinition[]) => {
     const context = useContext(KeyboardShortcutsContext)
     const registrationId = useId()
-    const shortcutsRef = useRef(shortcuts)
 
-    shortcutsRef.current = shortcuts
+    if (!context) {
+        throw new Error("useKeyboardShortcuts must be used within a KeyboardShortcutsProvider")
+    }
 
     useEffect(() => {
-        if (!context) {
-            throw new Error("useKeyboardShortcuts must be used within a KeyboardShortcutsProvider")
-        }
-
-        context.registerShortcuts(registrationId, shortcutsRef.current)
+        context.registerShortcuts(registrationId, shortcuts)
         return () => context.unregisterShortcuts(registrationId)
     }, [context, registrationId, shortcuts])
 }
