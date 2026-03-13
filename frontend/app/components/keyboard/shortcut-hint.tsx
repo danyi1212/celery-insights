@@ -45,7 +45,7 @@ const getTriggerTokens = (trigger: ShortcutTrigger) => {
         tokens.push(isApplePlatform() ? "Opt" : "Alt")
     }
 
-    if (trigger.shift && /^[a-z0-9]$/i.test(trigger.key)) {
+    if (trigger.shift) {
         tokens.push("Shift")
     }
 
