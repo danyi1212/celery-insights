@@ -3,6 +3,7 @@ import { render } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { TooltipProvider } from "@components/ui/tooltip"
+import useSettingsStore from "@stores/use-settings-store"
 import { RetentionPolicyPanel } from "./retention-policy-panel"
 
 const mockRetentionInfo = {
@@ -35,6 +36,7 @@ const createWrapper = () => {
 describe("RetentionPolicyPanel", () => {
     beforeEach(() => {
         vi.restoreAllMocks()
+        useSettingsStore.setState({ demo: false })
     })
 
     it("displays record counts after loading", async () => {

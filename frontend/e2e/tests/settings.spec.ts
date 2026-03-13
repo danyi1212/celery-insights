@@ -6,6 +6,7 @@ test.describe("Settings", () => {
         await expect(page.getByText("Theme:", { exact: true })).toBeVisible()
         await expect(page.getByText("Demo mode:", { exact: true })).toBeVisible()
         await expect(page.getByText("Show welcome banner:", { exact: true })).toBeVisible()
+        await expect(page.getByText("Help:", { exact: true })).toBeVisible()
     })
 
     test("server info shows hostname and python version", async ({ page }) => {

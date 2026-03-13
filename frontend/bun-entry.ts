@@ -482,14 +482,8 @@ const server = Bun.serve({
             }
         }
 
-        // Proxy API, docs, etc. to Python backend (only if Python is running)
-        if (
-            url.pathname.startsWith("/api") ||
-            url.pathname.startsWith("/metrics") ||
-            url.pathname === "/docs" ||
-            url.pathname === "/redoc" ||
-            url.pathname === "/openapi.json"
-        ) {
+        // Proxy API and metrics routes to the Python backend (only if Python is running)
+        if (url.pathname.startsWith("/api") || url.pathname.startsWith("/metrics")) {
             if (!pythonProcess) {
                 return new Response("Backend not available (ingestion not active on this instance)", { status: 503 })
             }

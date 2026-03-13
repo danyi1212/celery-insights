@@ -43,6 +43,11 @@
     --color-chart-3: var(--chart-3);
     --color-chart-4: var(--chart-4);
     --color-chart-5: var(--chart-5);
+    --color-status-info: var(--status-info);
+    --color-status-success: var(--status-success);
+    --color-status-warning: var(--status-warning);
+    --color-status-danger: var(--status-danger);
+    --color-status-neutral: var(--status-neutral);
 }
 
 /* Light theme — matches MUI: bg #dee5ce, paper #f5f8ee, primary #a9cc54 */
@@ -78,6 +83,11 @@
     --chart-3: oklch(0.55 0.15 200);
     --chart-4: oklch(0.65 0.18 310);
     --chart-5: oklch(0.7 0.14 170);
+    --status-info: var(--chart-3);
+    --status-success: oklch(0.74 0.17 145);
+    --status-warning: oklch(0.78 0.16 85);
+    --status-danger: var(--destructive);
+    --status-neutral: var(--muted-foreground);
 }
 
 /* Dark theme — matches MUI: bg #141716, surfaces brightened to match elevation overlays */
@@ -112,6 +122,11 @@
     --chart-3: oklch(0.55 0.15 200);
     --chart-4: oklch(0.65 0.18 310);
     --chart-5: oklch(0.7 0.14 170);
+    --status-info: var(--chart-3);
+    --status-success: oklch(0.74 0.17 145);
+    --status-warning: oklch(0.78 0.16 85);
+    --status-danger: var(--destructive);
+    --status-neutral: var(--muted-foreground);
 }
 
 @layer base {

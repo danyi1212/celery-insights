@@ -1,0 +1,76 @@
+Celery Insights is intentionally simple when one broker and one result backend are enough, but it can also inherit a full Celery config module for more advanced clusters.
+
+## Start here
+
+- Use environment variables when all workers share one broker URL and one result backend URL.
+- Use a mounted config file when the cluster needs Redis Sentinel, SSL or transport options, or custom serializers.
+- Run separate Celery Insights deployments when worker groups are intentionally isolated behind different broker domains.
+
+## Baseline event settings
+
+Every worker pool that should appear in the UI needs to emit Celery events.
+
+- Enable task events on all workers, not just one queue or deployment.
+- `task_track_started` and `result_extended` are optional but strongly recommended for richer task pages.
+- Keep worker clocks and the `TIMEZONE` env aligned so timelines stay coherent.
+
+```python
+from celery import Celery
+
+app = Celery("myapp")
+app.conf.worker_send_task_events = True
+app.conf.task_send_sent_event = True
+app.conf.task_track_started = True
+app.conf.result_extended = True
+app.conf.enable_utc = True
+```
+
+## Standard RabbitMQ or Redis deployments
+
+If the cluster exposes one broker URL and one result backend URL, env vars are usually enough.
+
+- Point [`BROKER_URL`](/documentation/configuration#broker_url) and [`RESULT_BACKEND`](/documentation/configuration#result_backend) at the same logical cluster your workers use.
+- Run Celery Insights on the same network plane as the broker and backend. Inside containers, do not use `localhost` for peer services.
+- Use the regular image unless your serializer or transport requires optional Celery extras.
+
+## Sentinel, custom serializers, and advanced transport options
+
+Mount a config module when the broker and backend setup needs more than two URLs.
+
+- [`CONFIG_FILE`](/documentation/configuration#config_file) takes precedence when the file exists at container start.
+- This is the right place for Sentinel, SSL settings, broker transport options, and custom serialization config.
+- Switch to `ghcr.io/danyi1212/celery-insights-all` when the Celery stack needs optional extras such as msgpack or additional backend drivers.
+
+```python
+broker_url = "sentinel://redis-0:26379;sentinel://redis-1:26379;sentinel://redis-2:26379"
+broker_transport_options = {
+    "master_name": "mymaster",
+    "sentinel_kwargs": {"password": "secret"},
+}
+
+result_backend = "redis://mymaster/0"
+result_backend_transport_options = {
+    "master_name": "mymaster",
+    "sentinel_kwargs": {"password": "secret"},
+}
+
+result_accept_content = ["json", "msgpack"]
+task_serializer = "msgpack"
+result_serializer = "msgpack"
+```
+
+## Multiple queues and worker pools
+
+One Celery Insights instance can observe multiple worker groups as long as they share the same broker domain.
+
+- Workers show up through Celery inspect polling, so keep remote control enabled if you want worker panels and queue details.
+- Queue-specific pools are fine as long as events and inspect responses flow back through the same Celery control plane.
+- If you intentionally isolate worker groups behind separate brokers, treat them as separate clusters and deploy one Celery Insights instance per cluster.
+
+## Multiple isolated Celery clusters
+
+Celery Insights is scoped to one broker and result-backend pair at a time.
+
+- Use one Celery Insights deployment per isolated production cluster, region, or tenant boundary.
+- If the instances share one external SurrealDB, isolate them with different [`SURREALDB_NAMESPACE`](/documentation/configuration#surrealdb_namespace) and/or [`SURREALDB_DATABASE`](/documentation/configuration#surrealdb_database) values.
+- This keeps metrics, workers, and task history separated without needing separate container images.

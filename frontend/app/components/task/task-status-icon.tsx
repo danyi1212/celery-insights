@@ -27,14 +27,14 @@ interface StateIconMeta {
 
 const stateMeta: Record<TaskState, StateIconMeta> = {
     [TaskState.PENDING]: { icon: Clock, className: "text-muted-foreground", tooltip: "Pending" },
-    [TaskState.RECEIVED]: { icon: Clock, className: "text-blue-500", tooltip: "Received" },
-    [TaskState.STARTED]: { icon: CirclePlay, className: "text-blue-500", tooltip: "Started" },
-    [TaskState.SUCCESS]: { icon: CheckCircle2, className: "text-green-500", tooltip: "Success" },
-    [TaskState.FAILURE]: { icon: CircleAlert, className: "text-red-500", tooltip: "Failure" },
-    [TaskState.IGNORED]: { icon: XCircle, className: "text-red-500", tooltip: "Ignored" },
-    [TaskState.REJECTED]: { icon: Ban, className: "text-red-500", tooltip: "Rejected" },
-    [TaskState.REVOKED]: { icon: CircleMinus, className: "text-yellow-500", tooltip: "Revoked" },
-    [TaskState.RETRY]: { icon: RotateCw, className: "text-yellow-500", tooltip: "Retry" },
+    [TaskState.RECEIVED]: { icon: Clock, className: "text-status-info", tooltip: "Received" },
+    [TaskState.STARTED]: { icon: CirclePlay, className: "text-status-info", tooltip: "Started" },
+    [TaskState.SUCCESS]: { icon: CheckCircle2, className: "text-status-success", tooltip: "Success" },
+    [TaskState.FAILURE]: { icon: CircleAlert, className: "text-status-danger", tooltip: "Failure" },
+    [TaskState.IGNORED]: { icon: XCircle, className: "text-status-danger", tooltip: "Ignored" },
+    [TaskState.REJECTED]: { icon: Ban, className: "text-status-danger", tooltip: "Rejected" },
+    [TaskState.REVOKED]: { icon: CircleMinus, className: "text-status-warning", tooltip: "Revoked" },
+    [TaskState.RETRY]: { icon: RotateCw, className: "text-status-warning", tooltip: "Retry" },
 }
 
 const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status, className, iconClassName, ...props }) => {

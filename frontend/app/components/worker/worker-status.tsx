@@ -9,7 +9,7 @@ interface WorkerStatusProps {
 const WorkerStatus: React.FC<WorkerStatusProps> = ({ heartbeatExpires }) => {
     const now = useNow(heartbeatExpires ? 1000 : undefined)
     const { status, colorClass } = useMemo(() => {
-        if (!heartbeatExpires) return { status: "Unknown", colorClass: "text-amber-500" }
+        if (!heartbeatExpires) return { status: "Unknown", colorClass: "text-status-warning" }
         const secondsLeft = (heartbeatExpires.getTime() - now.getTime()) / 1000
         if (secondsLeft < 0) {
             return {
@@ -19,7 +19,7 @@ const WorkerStatus: React.FC<WorkerStatusProps> = ({ heartbeatExpires }) => {
         } else if (secondsLeft < 1) {
             return {
                 status: `Unresponsive`,
-                colorClass: "text-amber-500",
+                colorClass: "text-status-warning",
             }
         } else {
             return { status: "Online", colorClass: "text-foreground" }

@@ -1,6 +1,6 @@
 # Contributing to Celery Insights
 
-Thank you for your interest in contributing to Celery Insights! This document will help guide you through the process.
+This guide covers bug reports, feature requests, local development, and the project conventions contributors are expected to follow.
 
 ## Reporting Bugs
 
@@ -9,21 +9,17 @@ Thank you for your interest in contributing to Celery Insights! This document wi
 > If you have discovered a security vulnerability, please **DO NOT** file a public issue.
 > Instead, please report them directly to <danyi1212@users.noreply.github.com>.
 
-If you have found a bug, we would like to know, so we can fix it! Before you file a bug report, please make sure that
-the bug
-can be reproduced consistently.
+If you have found a bug, we would like to know. Before you file a bug report, make sure the issue can be reproduced consistently.
 
-To report a bug, create a new GitHub Issue with the "bug" label. Make sure to include a minimal reproduction of the bug
-and any steps needed to reproduce it.
+To report a bug, create a new GitHub issue with the `bug` label and include a minimal reproduction plus any steps needed to reproduce it.
 
-Please feel free to discuss it in GitHub Discussions first. Other users may have experienced a similar issue and can
-provide insights or guidance on how to overcome it.
+If you are not sure whether it is a bug, start with GitHub Discussions. Other users may have seen the same behavior and can help narrow it down.
 
 ## Asking Questions and Requesting Features
 
-If you have any questions, ideas, or want to request a feature, feel free to discuss them in GitHub Discussions.
+If you have a question, idea, or feature request, start in GitHub Discussions.
 
-For feature requests, create a new GitHub Issue with the "enhancement" label after discussing it in GitHub Discussions.
+For feature requests, open a GitHub issue with the `enhancement` label after the discussion.
 
 ## Contribution Process
 
@@ -32,13 +28,13 @@ To contribute to the project, follow these steps:
 1. Fork the repository.
 2. Create a branch with a descriptive name, using prefixes like `feature/` or `bug/` for the branch names.
 3. Make your changes in the branch.
-4. Make sure to run linters and formatters:
-   - For Python code: [ruff](https://github.com/charliermarsh/ruff)
-   - For TypeScript code: [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/)
+4. Run the project checks before you open the pull request:
+   - For Python code: [ruff](https://github.com/astral-sh/ruff), [ty](https://github.com/astral-sh/ty), and `pytest`
+   - For frontend code: [Oxlint](https://oxc.rs/docs/guide/usage/linter.html), [Oxfmt](https://oxc.rs/docs/guide/usage/formatter.html), TypeScript, and Vitest
 5. Open a pull request to the main branch.
 6. Check the CI workflow statuses and for comments on your pull request.
 
-## Setting up a local development environment
+## Local development
 
 ### Prerequisites
 
@@ -52,13 +48,13 @@ To contribute to the project, follow these steps:
 1. Clone your fork of the Celery Insights repository.
 
     ```shell
-    git clone https://github.com/<your_username>/celery_insights.git
+    git clone https://github.com/<your_username>/celery-insights.git
     ```
 
 2. Navigate to the root folder of the repository.
 
     ```shell
-    cd celery_insights/
+    cd celery-insights/
     ```
 
 3. Install the Python dependencies using [uv](https://docs.astral.sh/uv/).
@@ -87,14 +83,16 @@ To contribute to the project, follow these steps:
     cp .env.example .env
     ```
 
-### Run dev server
+### Run the development stack
 
-The quickest way to start all services at once:
+The quickest way to start all services at once is:
 
 ```shell
 cd frontend/
 bun run dev:all
 ```
+
+If you use `just`, the repo also includes `just dev`, `just lint`, `just typecheck`, and related helper recipes.
 
 Or run them in separate terminals:
 
@@ -121,7 +119,7 @@ Or run them in separate terminals:
 
 4. Open browser to <http://localhost:3000>
 
-> **Note:** All application settings are owned by Bun (`frontend/src/config.ts`) and passed to Python via env vars. When adding new configuration, define it in the Bun config schema first.
+> **Note:** All application settings are owned by Bun (`frontend/src/config.ts`) and passed to Python via environment variables. When adding new configuration, define it in the Bun config schema first.
 
 ## Code Styles
 

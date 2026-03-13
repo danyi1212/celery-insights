@@ -1,0 +1,169 @@
+Choose the SurrealDB topology first. That one decision determines whether the app behaves like a disposable single container, a durable single node, or a shared multi-replica service.
+
+## Summary
+
+### [Single container with in-memory SurrealDB](#single-container-with-in-memory-surrealdb)
+
+Best for: local evaluation, smoke tests, and disposable environments.
+
+Watch for: all history disappears on restart.
+
+### [Single container with persistent local disk](#single-container-with-persistent-local-disk)
+
+Best for: one-node production, homelab, VM deployments, and Docker Compose setups that need local durability.
+
+Watch for: horizontal scaling will create divergent local databases.
+
+### [Multiple app replicas with external SurrealDB](#multiple-app-replicas-with-external-surrealdb)
+
+Best for: high availability, Kubernetes, wallboards, and any topology where the dashboard should survive pod or node loss.
+
+Watch for: you need an external SurrealDB endpoint you control and should validate bootstrap compatibility before using managed offerings such as SurrealDB Cloud.
+
+### [Pods excluded from ingestion leadership](#pods-excluded-from-ingestion-leadership)
+
+Best for: niche scaling systems where some pods should serve the UI only and must be excluded from leadership entirely.
+
+Watch for: this is not the normal multi-replica pattern. Most deployments should keep ingestion enabled and rely on leader election instead.
+
+## Single container with in-memory SurrealDB
+
+Use the embedded database in memory for demos, CI, preview environments, or short-lived operator sessions.
+
+### Best for
+
+- Local evaluation
+- Smoke tests
+- Disposable environments
+
+### Watch for
+
+- All history disappears on restart.
+- Do not use this if operators expect durable task history.
+
+### Key env vars
+
+- `SURREALDB_STORAGE=memory`
+
+### Example
+
+```sh
+docker run -p 8555:8555 --name celery-insights \
+  -e BROKER_URL=amqp://user:pass@rabbitmq:5672// \
+  -e RESULT_BACKEND=redis://redis:6379/0 \
+  -e SURREALDB_STORAGE=memory \
+  ghcr.io/danyi1212/celery-insights:latest
+```
+
+### Notes
+
+- This is the default storage mode, so the explicit env var is mostly for clarity.
+- If you scale beyond one replica, move to an external SurrealDB first so history stays shared.
+
+## Single container with persistent local disk
+
+Keep the embedded SurrealDB, but bind `/data` and switch storage to a durable engine.
+
+### Best for
+
+- One-node production
+- Homelab
+- VM deployments
+- Docker Compose setups that need local durability
+
+### Watch for
+
+- The database lives with that single instance.
+- Replacing the container is fine, but horizontal scaling will create divergent local databases.
+
+### Key env vars
+
+- `SURREALDB_STORAGE=rocksdb:///data/surreal`
+- `VOLUME /data`
+
+### Example
+
+```sh
+docker run -p 8555:8555 --name celery-insights \
+  -v celery-insights-data:/data \
+  -e BROKER_URL=amqp://user:pass@rabbitmq:5672// \
+  -e RESULT_BACKEND=redis://redis:6379/0 \
+  -e SURREALDB_STORAGE=rocksdb:///data/surreal \
+  ghcr.io/danyi1212/celery-insights:latest
+```
+
+### Notes
+
+- `surrealkv:///data/surreal` is also supported if you prefer SurrealKV over RocksDB.
+- Persist `/data` with a named Docker volume, host path, or attached disk.
+
+## Multiple app replicas with external SurrealDB
+
+Point every Celery Insights replica at the same SurrealDB instance and keep leader election enabled.
+
+### Best for
+
+- High availability
+- Kubernetes
+- Wallboards
+- Any topology where the dashboard should survive pod or node loss
+
+### Watch for
+
+- The current bootstrap flow only lets you configure the SurrealDB URL.
+- Use an external endpoint you control and validate its root/bootstrap compatibility before adopting a managed service such as SurrealDB Cloud.
+
+### Key env vars
+
+- `SURREALDB_EXTERNAL_URL=wss://surrealdb.example.com/rpc`
+- `INGESTION_LEADER_ELECTION=true`
+
+### Example
+
+```sh
+docker run -p 8555:8555 --name celery-insights \
+  -e BROKER_URL=amqp://user:pass@rabbitmq:5672// \
+  -e RESULT_BACKEND=redis://redis:6379/0 \
+  -e SURREALDB_EXTERNAL_URL=wss://surrealdb.example.com/rpc \
+  -e SURREALDB_INGESTER_PASS=replace-this \
+  -e SURREALDB_FRONTEND_PASS=replace-this \
+  -e INGESTION_LEADER_ELECTION=true \
+  ghcr.io/danyi1212/celery-insights:latest
+```
+
+### Notes
+
+- Run at least two replicas if you want failover for the ingester.
+- Shared SurrealDB makes replicas interchangeable and keeps leader election meaningful across the whole deployment.
+
+## Pods excluded from ingestion leadership
+
+Set `INGESTION_ENABLED=false` when a pod must never spawn the Python ingester or participate in leader election.
+
+### Best for
+
+- Niche scaling systems where some pods should serve the UI only and must be excluded from leadership entirely
+
+### Watch for
+
+- This is not the normal multi-replica pattern.
+- Most deployments should keep ingestion enabled and rely on leader election instead.
+
+### Key env vars
+
+- `INGESTION_ENABLED=false`
+- `SURREALDB_EXTERNAL_URL=wss://surrealdb.example.com/rpc`
+
+### Example
+
+```sh
+docker run -p 8555:8555 --name celery-insights-ui-only \
+  -e SURREALDB_EXTERNAL_URL=wss://surrealdb.example.com/rpc \
+  -e INGESTION_ENABLED=false \
+  ghcr.io/danyi1212/celery-insights:latest
+```
+
+### Notes
+
+- These pods only read existing data from SurrealDB and can never take over ingestion if the leader disappears.
+- Use this only when your scheduler or traffic model explicitly requires non-leader-capable pods.

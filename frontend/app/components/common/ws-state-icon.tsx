@@ -11,23 +11,23 @@ interface Meta {
 const statusMeta: Record<ReadyState, Meta> = {
     [ReadyState.OPEN]: {
         description: "Connected",
-        icon: <CheckCircle2 className="size-5 text-green-500" />,
+        icon: <CheckCircle2 className="size-5 text-status-success" />,
     },
     [ReadyState.CLOSED]: {
         description: "Disconnected",
-        icon: <AlertCircle className="size-5 text-red-500" />,
+        icon: <AlertCircle className="size-5 text-status-danger" />,
     },
     [ReadyState.CLOSING]: {
         description: "Disconnecting...",
-        icon: <RotateCw className="size-5 text-yellow-500" />,
+        icon: <RotateCw className="size-5 text-status-warning" />,
     },
     [ReadyState.CONNECTING]: {
         description: "Connecting...",
-        icon: <RotateCw className="size-5 text-yellow-500" />,
+        icon: <RotateCw className="size-5 text-status-warning" />,
     },
     [ReadyState.UNINSTANTIATED]: {
         description: "Starting...",
-        icon: <RotateCw className="size-5 text-yellow-500" />,
+        icon: <RotateCw className="size-5 text-status-warning" />,
     },
 }
 

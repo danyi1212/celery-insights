@@ -27,14 +27,14 @@ const TaskListItem: React.FC<TaskListItemProps> = ({ task, subtitle }) => {
                     {task.acknowledged ? (
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <CheckCircle className="size-4 text-green-500" />
+                                <CheckCircle className="size-4 text-status-success" />
                             </TooltipTrigger>
                             <TooltipContent>Message Acknowledged</TooltipContent>
                         </Tooltip>
                     ) : (
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <XCircle className="size-4 text-amber-500" />
+                                <XCircle className="size-4 text-status-warning" />
                             </TooltipTrigger>
                             <TooltipContent>Message Not Acknowledged</TooltipContent>
                         </Tooltip>

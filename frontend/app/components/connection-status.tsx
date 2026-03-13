@@ -12,34 +12,34 @@ interface StatusMeta {
 const connectionMeta: Record<ConnectionStatus, StatusMeta> = {
     connected: {
         label: "Connected",
-        icon: <CheckCircle2 className="size-4 text-green-500" />,
+        icon: <CheckCircle2 className="size-4 text-status-success" />,
     },
     connecting: {
         label: "Connecting...",
-        icon: <RotateCw className="size-4 animate-spin text-yellow-500" />,
+        icon: <RotateCw className="size-4 animate-spin text-status-warning" />,
     },
     reconnecting: {
         label: "Reconnecting...",
-        icon: <RotateCw className="size-4 animate-spin text-yellow-500" />,
+        icon: <RotateCw className="size-4 animate-spin text-status-warning" />,
     },
     disconnected: {
         label: "Disconnected",
-        icon: <AlertCircle className="size-4 text-red-500" />,
+        icon: <AlertCircle className="size-4 text-status-danger" />,
     },
 }
 
 const ingestionMeta: Record<IngestionStatus, StatusMeta> = {
     leader: {
         label: "Ingesting",
-        icon: <Radio className="size-4 text-green-500" />,
+        icon: <Radio className="size-4 text-status-success" />,
     },
     standby: {
         label: "Standby",
-        icon: <Pause className="size-4 text-blue-500" />,
+        icon: <Pause className="size-4 text-status-info" />,
     },
     "read-only": {
         label: "Read-only",
-        icon: <Eye className="size-4 text-amber-500" />,
+        icon: <Eye className="size-4 text-status-warning" />,
     },
     disabled: {
         label: "Disabled",
@@ -109,7 +109,7 @@ const ReadOnlyBanner = () => {
     if (ingestionStatus !== "read-only") return null
 
     return (
-        <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-center text-xs text-amber-600 dark:text-amber-400">
+        <div className="border-b border-status-warning/20 bg-status-warning/10 px-4 py-1.5 text-center text-xs text-status-warning">
             <Eye className="inline-block size-3.5 mr-1.5 -translate-y-px" />
             Read-only mode — viewing existing data, no live ingestion
         </div>

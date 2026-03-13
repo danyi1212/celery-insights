@@ -29,9 +29,9 @@ const getReceivedAt = (task: Task): Date | undefined => task.received_at || task
 export const getTaskEndTime = (task: Task, now: Date): Date => getFinishedAt(task) || now
 
 export const PHASE_COLORS = {
-    queue: "#8b8b8b",
-    worker: "#4da6ff",
-    running: "#4ade80",
+    queue: "var(--color-status-neutral)",
+    worker: "var(--color-status-info)",
+    running: "var(--color-status-success)",
 } as const
 
 export const computeTaskPhases = (task: Task, now: Date): TaskPhase[] => {

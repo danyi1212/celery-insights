@@ -21,6 +21,7 @@
         "dev:all": "concurrently \"bun run dev:surreal\" \"cd ../server && python run.py\" \"bun dev\""
     },
     "dependencies": {
+        "@mdx-js/react": "^3.1.1",
         "@surrealdb/wasm": "^3.0.1",
         "@tailwindcss/vite": "^4.2.1",
         "@tanstack/react-hotkeys": "^0.4.1",
@@ -35,6 +36,7 @@
         "html-to-image": "^1.11.11",
         "lucide-react": "^0.575.0",
         "minidenticons": "^4.2.1",
+        "rehype-slug": "^6.0.0",
         "radix-ui": "^1.4.3",
         "react": "^19.2",
         "react-dom": "^19.2",
@@ -42,6 +44,7 @@
         "react-shiki": "^0.9.1",
         "react-transition-group": "^4.4.5",
         "recharts": "^3.7.0",
+        "remark-gfm": "^4.0.1",
         "semver": "^7.6.3",
         "shiki": "^4.0.1",
         "string-to-color": "^2.2.2",
@@ -64,6 +67,7 @@
         "@types/react-transition-group": "^4.4.12",
         "@types/semver": "^7.5.8",
         "@types/uuid": "^10.0.0",
+        "@mdx-js/rollup": "^3.1.1",
         "@vitejs/plugin-react": "^5.1.4",
         "concurrently": "^9.2.1",
         "happy-dom": "^20.7.0",

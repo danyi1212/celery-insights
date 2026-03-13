@@ -22,7 +22,7 @@ const WorkerPage = () => {
         return (
             <div className="flex h-full flex-col items-center justify-center">
                 <div className="flex items-center">
-                    <AlertCircle className="size-8 text-amber-500" />
+                    <AlertCircle className="size-8 text-status-warning" />
                     <h2 className="ml-2 text-2xl font-semibold">Could not find worker {workerId}</h2>
                 </div>
             </div>

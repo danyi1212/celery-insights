@@ -36,7 +36,7 @@ const PhaseTooltip: React.FC<{ phase: TaskPhase }> = ({ phase }) => (
             <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: phase.color }} />
             <span className="text-xs font-medium">{phase.label}</span>
         </div>
-        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[10px]">
+        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
             <span className="text-muted-foreground">Duration</span>
             <span className="font-mono font-medium tabular-nums">{formatDuration(phase.durationMs)}</span>
             <span className="text-muted-foreground">Start</span>
@@ -147,10 +147,10 @@ const TaskLifetimeChart: React.FC<TaskLifetimeChartProps> = ({
                     {isActive && (
                         <span className="flex items-center gap-1.5" aria-label="Updating in real-time">
                             <span className="relative flex size-2">
-                                <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#4ade80] opacity-75" />
-                                <span className="relative inline-flex size-2 rounded-full bg-[#4ade80]" />
+                                <span className="absolute inline-flex size-full animate-ping rounded-full bg-status-success opacity-75" />
+                                <span className="relative inline-flex size-2 rounded-full bg-status-success" />
                             </span>
-                            <span className="font-sans font-medium text-[#4ade80]">Live</span>
+                            <span className="font-sans font-medium text-status-success">Live</span>
                         </span>
                     )}
                 </span>
@@ -228,7 +228,7 @@ const TaskLifetimeChart: React.FC<TaskLifetimeChartProps> = ({
                         {ticks.map((tick) => (
                             <span
                                 key={tick.ms}
-                                className="absolute -translate-x-1/2 font-mono text-[10px] leading-none tabular-nums text-muted-foreground"
+                                className="absolute -translate-x-1/2 font-mono text-xs leading-none tabular-nums text-muted-foreground"
                                 style={{ left: `${tick.pct}%` }}
                             >
                                 {tick.label}
@@ -248,7 +248,7 @@ const TaskLifetimeChart: React.FC<TaskLifetimeChartProps> = ({
                                 style={{ backgroundColor: item.color }}
                                 aria-hidden="true"
                             />
-                            <span className="text-[11px] leading-none text-muted-foreground">{item.label}</span>
+                            <span className="text-xs leading-none text-muted-foreground">{item.label}</span>
                         </div>
                     ))}
                 </div>

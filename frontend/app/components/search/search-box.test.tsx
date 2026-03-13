@@ -104,6 +104,32 @@ describe("SearchBox", () => {
         expect(screen.queryByText("Dashboard")).not.toBeInTheDocument()
     })
 
+    it("shows documentation pages in the quick access dialog", async () => {
+        const user = userEvent.setup()
+
+        render(<SearchBox />)
+
+        await user.click(screen.getByRole("button", { name: "Open quick search" }))
+        await user.type(screen.getByPlaceholderText("Search tasks, workers, pages, and features..."), "kubernetes")
+
+        expect(screen.getByRole("option", { name: /kubernetes and hpa/i })).toBeInTheDocument()
+    })
+
+    it("navigates to a matching documentation page when Enter is pressed", async () => {
+        const user = userEvent.setup()
+
+        render(<SearchBox />)
+
+        await user.click(screen.getByRole("button", { name: "Open quick search" }))
+        await user.type(
+            screen.getByPlaceholderText("Search tasks, workers, pages, and features..."),
+            "production notes",
+        )
+        await user.keyboard("{Enter}")
+
+        expect(mockNavigate).toHaveBeenCalledWith({ to: "/documentation/production-notes" })
+    })
+
     it("shows task and worker results in the quick access dialog", async () => {
         const user = userEvent.setup()
 

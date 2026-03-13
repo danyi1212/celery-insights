@@ -6,14 +6,14 @@ import TaskStatusIcon from "./task-status-icon"
 describe("TaskStatusIcon", () => {
     const stateExpectations: [TaskState, string, string][] = [
         [TaskState.PENDING, "text-muted-foreground", "Pending"],
-        [TaskState.RECEIVED, "text-blue-500", "Received"],
-        [TaskState.STARTED, "text-blue-500", "Started"],
-        [TaskState.SUCCESS, "text-green-500", "Success"],
-        [TaskState.FAILURE, "text-red-500", "Failure"],
-        [TaskState.IGNORED, "text-red-500", "Ignored"],
-        [TaskState.REJECTED, "text-red-500", "Rejected"],
-        [TaskState.REVOKED, "text-yellow-500", "Revoked"],
-        [TaskState.RETRY, "text-yellow-500", "Retry"],
+        [TaskState.RECEIVED, "text-status-info", "Received"],
+        [TaskState.STARTED, "text-status-info", "Started"],
+        [TaskState.SUCCESS, "text-status-success", "Success"],
+        [TaskState.FAILURE, "text-status-danger", "Failure"],
+        [TaskState.IGNORED, "text-status-danger", "Ignored"],
+        [TaskState.REJECTED, "text-status-danger", "Rejected"],
+        [TaskState.REVOKED, "text-status-warning", "Revoked"],
+        [TaskState.RETRY, "text-status-warning", "Retry"],
     ]
 
     it.each(stateExpectations)("renders correct color class for %s", (state, expectedClass) => {

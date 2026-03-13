@@ -8,6 +8,10 @@ frontend := project / "frontend"
 server := project / "server"
 test_project := project / "test_project"
 
+# Show available recipes
+help:
+    just --list
+
 # ─── Check ────────────────────────────────────────────────────
 
 # Run all checks (typecheck, lint, format, tests)

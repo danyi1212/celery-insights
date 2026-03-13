@@ -12,11 +12,19 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as Raw_eventsRouteImport } from './routes/raw_events'
 import { Route as ExplorerRouteImport } from './routes/explorer'
+import { Route as DocumentationRouteImport } from './routes/documentation'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DocumentationIndexRouteImport } from './routes/documentation.index'
 import { Route as WorkersWorkerIdRouteImport } from './routes/workers.$workerId'
 import { Route as TasksCompareRouteImport } from './routes/tasks.compare'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
+import { Route as DocumentationSetupRouteImport } from './routes/documentation.setup'
+import { Route as DocumentationProductionNotesRouteImport } from './routes/documentation.production-notes'
+import { Route as DocumentationKubernetesRouteImport } from './routes/documentation.kubernetes'
+import { Route as DocumentationDeploymentPatternsRouteImport } from './routes/documentation.deployment-patterns'
+import { Route as DocumentationConfigurationRouteImport } from './routes/documentation.configuration'
+import { Route as DocumentationCeleryClustersRouteImport } from './routes/documentation.celery-clusters'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -33,6 +41,11 @@ const ExplorerRoute = ExplorerRouteImport.update({
   path: '/explorer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocumentationRoute = DocumentationRouteImport.update({
+  id: '/documentation',
+  path: '/documentation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalyticsRoute = AnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -42,6 +55,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DocumentationIndexRoute = DocumentationIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DocumentationRoute,
 } as any)
 const WorkersWorkerIdRoute = WorkersWorkerIdRouteImport.update({
   id: '/workers/$workerId',
@@ -58,16 +76,58 @@ const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
   path: '/tasks/$taskId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocumentationSetupRoute = DocumentationSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => DocumentationRoute,
+} as any)
+const DocumentationProductionNotesRoute =
+  DocumentationProductionNotesRouteImport.update({
+    id: '/production-notes',
+    path: '/production-notes',
+    getParentRoute: () => DocumentationRoute,
+  } as any)
+const DocumentationKubernetesRoute = DocumentationKubernetesRouteImport.update({
+  id: '/kubernetes',
+  path: '/kubernetes',
+  getParentRoute: () => DocumentationRoute,
+} as any)
+const DocumentationDeploymentPatternsRoute =
+  DocumentationDeploymentPatternsRouteImport.update({
+    id: '/deployment-patterns',
+    path: '/deployment-patterns',
+    getParentRoute: () => DocumentationRoute,
+  } as any)
+const DocumentationConfigurationRoute =
+  DocumentationConfigurationRouteImport.update({
+    id: '/configuration',
+    path: '/configuration',
+    getParentRoute: () => DocumentationRoute,
+  } as any)
+const DocumentationCeleryClustersRoute =
+  DocumentationCeleryClustersRouteImport.update({
+    id: '/celery-clusters',
+    path: '/celery-clusters',
+    getParentRoute: () => DocumentationRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
+  '/documentation': typeof DocumentationRouteWithChildren
   '/explorer': typeof ExplorerRoute
   '/raw_events': typeof Raw_eventsRoute
   '/settings': typeof SettingsRoute
+  '/documentation/celery-clusters': typeof DocumentationCeleryClustersRoute
+  '/documentation/configuration': typeof DocumentationConfigurationRoute
+  '/documentation/deployment-patterns': typeof DocumentationDeploymentPatternsRoute
+  '/documentation/kubernetes': typeof DocumentationKubernetesRoute
+  '/documentation/production-notes': typeof DocumentationProductionNotesRoute
+  '/documentation/setup': typeof DocumentationSetupRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/tasks/compare': typeof TasksCompareRoute
   '/workers/$workerId': typeof WorkersWorkerIdRoute
+  '/documentation/': typeof DocumentationIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -75,32 +135,55 @@ export interface FileRoutesByTo {
   '/explorer': typeof ExplorerRoute
   '/raw_events': typeof Raw_eventsRoute
   '/settings': typeof SettingsRoute
+  '/documentation/celery-clusters': typeof DocumentationCeleryClustersRoute
+  '/documentation/configuration': typeof DocumentationConfigurationRoute
+  '/documentation/deployment-patterns': typeof DocumentationDeploymentPatternsRoute
+  '/documentation/kubernetes': typeof DocumentationKubernetesRoute
+  '/documentation/production-notes': typeof DocumentationProductionNotesRoute
+  '/documentation/setup': typeof DocumentationSetupRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/tasks/compare': typeof TasksCompareRoute
   '/workers/$workerId': typeof WorkersWorkerIdRoute
+  '/documentation': typeof DocumentationIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
+  '/documentation': typeof DocumentationRouteWithChildren
   '/explorer': typeof ExplorerRoute
   '/raw_events': typeof Raw_eventsRoute
   '/settings': typeof SettingsRoute
+  '/documentation/celery-clusters': typeof DocumentationCeleryClustersRoute
+  '/documentation/configuration': typeof DocumentationConfigurationRoute
+  '/documentation/deployment-patterns': typeof DocumentationDeploymentPatternsRoute
+  '/documentation/kubernetes': typeof DocumentationKubernetesRoute
+  '/documentation/production-notes': typeof DocumentationProductionNotesRoute
+  '/documentation/setup': typeof DocumentationSetupRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/tasks/compare': typeof TasksCompareRoute
   '/workers/$workerId': typeof WorkersWorkerIdRoute
+  '/documentation/': typeof DocumentationIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/analytics'
+    | '/documentation'
     | '/explorer'
     | '/raw_events'
     | '/settings'
+    | '/documentation/celery-clusters'
+    | '/documentation/configuration'
+    | '/documentation/deployment-patterns'
+    | '/documentation/kubernetes'
+    | '/documentation/production-notes'
+    | '/documentation/setup'
     | '/tasks/$taskId'
     | '/tasks/compare'
     | '/workers/$workerId'
+    | '/documentation/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -108,24 +191,40 @@ export interface FileRouteTypes {
     | '/explorer'
     | '/raw_events'
     | '/settings'
+    | '/documentation/celery-clusters'
+    | '/documentation/configuration'
+    | '/documentation/deployment-patterns'
+    | '/documentation/kubernetes'
+    | '/documentation/production-notes'
+    | '/documentation/setup'
     | '/tasks/$taskId'
     | '/tasks/compare'
     | '/workers/$workerId'
+    | '/documentation'
   id:
     | '__root__'
     | '/'
     | '/analytics'
+    | '/documentation'
     | '/explorer'
     | '/raw_events'
     | '/settings'
+    | '/documentation/celery-clusters'
+    | '/documentation/configuration'
+    | '/documentation/deployment-patterns'
+    | '/documentation/kubernetes'
+    | '/documentation/production-notes'
+    | '/documentation/setup'
     | '/tasks/$taskId'
     | '/tasks/compare'
     | '/workers/$workerId'
+    | '/documentation/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AnalyticsRoute: typeof AnalyticsRoute
+  DocumentationRoute: typeof DocumentationRouteWithChildren
   ExplorerRoute: typeof ExplorerRoute
   Raw_eventsRoute: typeof Raw_eventsRoute
   SettingsRoute: typeof SettingsRoute
@@ -157,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExplorerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/documentation': {
+      id: '/documentation'
+      path: '/documentation'
+      fullPath: '/documentation'
+      preLoaderRoute: typeof DocumentationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/analytics': {
       id: '/analytics'
       path: '/analytics'
@@ -170,6 +276,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/documentation/': {
+      id: '/documentation/'
+      path: '/'
+      fullPath: '/documentation/'
+      preLoaderRoute: typeof DocumentationIndexRouteImport
+      parentRoute: typeof DocumentationRoute
     }
     '/workers/$workerId': {
       id: '/workers/$workerId'
@@ -192,12 +305,79 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasksTaskIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/documentation/setup': {
+      id: '/documentation/setup'
+      path: '/setup'
+      fullPath: '/documentation/setup'
+      preLoaderRoute: typeof DocumentationSetupRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
+    '/documentation/production-notes': {
+      id: '/documentation/production-notes'
+      path: '/production-notes'
+      fullPath: '/documentation/production-notes'
+      preLoaderRoute: typeof DocumentationProductionNotesRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
+    '/documentation/kubernetes': {
+      id: '/documentation/kubernetes'
+      path: '/kubernetes'
+      fullPath: '/documentation/kubernetes'
+      preLoaderRoute: typeof DocumentationKubernetesRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
+    '/documentation/deployment-patterns': {
+      id: '/documentation/deployment-patterns'
+      path: '/deployment-patterns'
+      fullPath: '/documentation/deployment-patterns'
+      preLoaderRoute: typeof DocumentationDeploymentPatternsRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
+    '/documentation/configuration': {
+      id: '/documentation/configuration'
+      path: '/configuration'
+      fullPath: '/documentation/configuration'
+      preLoaderRoute: typeof DocumentationConfigurationRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
+    '/documentation/celery-clusters': {
+      id: '/documentation/celery-clusters'
+      path: '/celery-clusters'
+      fullPath: '/documentation/celery-clusters'
+      preLoaderRoute: typeof DocumentationCeleryClustersRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
   }
 }
+
+interface DocumentationRouteChildren {
+  DocumentationCeleryClustersRoute: typeof DocumentationCeleryClustersRoute
+  DocumentationConfigurationRoute: typeof DocumentationConfigurationRoute
+  DocumentationDeploymentPatternsRoute: typeof DocumentationDeploymentPatternsRoute
+  DocumentationKubernetesRoute: typeof DocumentationKubernetesRoute
+  DocumentationProductionNotesRoute: typeof DocumentationProductionNotesRoute
+  DocumentationSetupRoute: typeof DocumentationSetupRoute
+  DocumentationIndexRoute: typeof DocumentationIndexRoute
+}
+
+const DocumentationRouteChildren: DocumentationRouteChildren = {
+  DocumentationCeleryClustersRoute: DocumentationCeleryClustersRoute,
+  DocumentationConfigurationRoute: DocumentationConfigurationRoute,
+  DocumentationDeploymentPatternsRoute: DocumentationDeploymentPatternsRoute,
+  DocumentationKubernetesRoute: DocumentationKubernetesRoute,
+  DocumentationProductionNotesRoute: DocumentationProductionNotesRoute,
+  DocumentationSetupRoute: DocumentationSetupRoute,
+  DocumentationIndexRoute: DocumentationIndexRoute,
+}
+
+const DocumentationRouteWithChildren = DocumentationRoute._addFileChildren(
+  DocumentationRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AnalyticsRoute: AnalyticsRoute,
+  DocumentationRoute: DocumentationRouteWithChildren,
   ExplorerRoute: ExplorerRoute,
   Raw_eventsRoute: Raw_eventsRoute,
   SettingsRoute: SettingsRoute,

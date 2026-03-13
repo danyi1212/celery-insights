@@ -47,7 +47,7 @@ const TaskTypeListItem: React.FC<TaskTypeListItemProps> = ({ taskType, workerId,
                         <AvatarFallback style={{ backgroundColor, color: textColor }}>{acronym}</AvatarFallback>
                     </Avatar>
                     {count != null && count > 0 && (
-                        <Badge className="absolute -right-2 -bottom-1 h-4 min-w-4 px-1 text-[10px]">
+                        <Badge className="absolute -right-2 -bottom-1 h-4 min-w-4 px-1 text-xs">
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <span>{count}</span>
