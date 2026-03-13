@@ -5,8 +5,8 @@ import React from "react"
 export interface MenuLink {
     label: string
     icon: React.ReactElement
-    to: string
     external: boolean
+    to: string
 }
 
 interface MenuItemProps {

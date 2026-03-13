@@ -1,3 +1,5 @@
+import { appShortcuts } from "@components/keyboard/shortcut-definitions"
+import { ShortcutHint } from "@components/keyboard/shortcut-hint"
 import { Button } from "@components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { Pause, Play } from "lucide-react"
@@ -17,7 +19,12 @@ export const ToggleConnect: React.FC<ToggleConnectProps> = ({ connect, setConnec
                     {connect ? <Pause className="size-4" /> : <Play className="size-4" />}
                 </Button>
             </TooltipTrigger>
-            <TooltipContent>{connect ? "Freeze" : "Connect"}</TooltipContent>
+            <TooltipContent>
+                <div className="flex items-center gap-2">
+                    <span>{connect ? "Freeze" : "Connect"}</span>
+                    {!disabled ? <ShortcutHint sequence={appShortcuts.toggleLiveEventsConnection} /> : null}
+                </div>
+            </TooltipContent>
         </Tooltip>
     )
 }

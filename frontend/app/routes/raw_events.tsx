@@ -1,3 +1,4 @@
+import { appShortcuts } from "@components/keyboard/shortcut-definitions"
 import { createFileRoute } from "@tanstack/react-router"
 import WsStateIcon from "@components/common/ws-state-icon"
 import Facet from "@components/explorer/facet"
@@ -5,6 +6,7 @@ import { LimitSelect } from "@components/raw_events/limit-select"
 import { RawEventsTable } from "@components/raw_events/raw-events-table"
 import { ToggleConnect } from "@components/raw_events/toggle-connect"
 import { useSurrealDB } from "@components/surrealdb-provider"
+import { useKeyboardShortcuts } from "@hooks/use-keyboard-shortcuts"
 import { useLiveEvents } from "@hooks/use-live-events"
 import { ExplorerLayout } from "@layout/explorer/explorer-layout"
 import useSettingsStore from "@stores/use-settings-store"
@@ -59,6 +61,23 @@ const RawEventsPage = () => {
           : status === "connecting" || status === "reconnecting"
             ? ReadyState.CONNECTING
             : ReadyState.CLOSED
+
+    const shortcuts = useMemo(
+        () => [
+            {
+                allowInInput: false,
+                description: connect ? "Freeze live events" : "Connect live events",
+                enabled: !isDemo,
+                handler: () => setConnect((current) => !current),
+                id: "toggle-live-events-connection",
+                section: "Current Page",
+                sequence: appShortcuts.toggleLiveEventsConnection,
+            },
+        ],
+        [connect, isDemo],
+    )
+
+    useKeyboardShortcuts(shortcuts)
 
     return (
         <>

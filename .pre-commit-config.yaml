@@ -24,6 +24,7 @@ repos:
     rev: v0.15.2
     hooks:
       - id: ruff
+        args: [--fix]
         files: \.py$
         types: [ file ]
       - id: ruff-format
@@ -44,7 +45,7 @@ repos:
     hooks:
       - id: oxlint
         name: oxlint
-        entry: bun run --cwd frontend oxlint --deny-warnings app
+        entry: bun run --cwd frontend oxlint --deny-warnings --fix app
         language: system
         files: ^frontend/app/.*\.[jt]sx?$
         types: [ file ]
@@ -52,7 +53,7 @@ repos:
 
       - id: oxfmt
         name: oxfmt
-        entry: bun run --cwd frontend oxfmt --check app
+        entry: bun run --cwd frontend oxfmt app
         language: system
         files: ^frontend/app/.*\.[jt]sx?$
         types: [ file ]

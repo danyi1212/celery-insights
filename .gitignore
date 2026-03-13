@@ -258,6 +258,10 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
+# Local agent metadata
+.codex/
+.agents/
+
 # Pyre type checker
 .pyre/
 
