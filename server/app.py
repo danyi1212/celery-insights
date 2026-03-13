@@ -23,6 +23,9 @@ app = FastAPI(
     lifespan=lifespan,
     generate_unique_id_function=custom_generate_unique_id,
     version="v0.2.0",
+    openapi_url=None,
+    docs_url=None,
+    redoc_url=None,
 )
 
 app.add_middleware(

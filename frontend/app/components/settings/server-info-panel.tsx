@@ -10,14 +10,6 @@ import { formatSecondsDurationLong } from "@utils/format-seconds-duration-long"
 import { Loader2, RotateCw } from "lucide-react"
 import React, { useEffect, useState } from "react"
 
-const LinkButton: React.FC<{ href: string; children?: React.ReactNode }> = ({ href, children }) => (
-    <Button variant="outline" asChild disabled={Boolean(import.meta.env.VITE_DEMO_MODE)}>
-        <a href={href} target="_blank" rel="noopener noreferrer">
-            {children}
-        </a>
-    </Button>
-)
-
 const fetchServerInfo = async () => {
     const res = await fetch("/api/settings/info")
     if (!res.ok) throw new Error(`Server info request failed: ${res.status}`)
@@ -127,10 +119,6 @@ export const ServerInfoPanel: React.FC = () => {
                     description="Number of workers stored in state"
                     value={data?.worker_count ?? 0}
                 />
-                <div className="flex justify-around gap-4 md:col-span-2">
-                    <LinkButton href="/docs">API Explorer</LinkButton>
-                    <LinkButton href="/redoc">API Docs</LinkButton>
-                </div>
             </div>
         </Panel>
     )

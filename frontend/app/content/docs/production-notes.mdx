@@ -1,0 +1,36 @@
+These are the operational behaviors most likely to matter once the app is behind a real load balancer, scrape target, or SRE handoff.
+
+## Production checklist
+
+- Prefer external SurrealDB before introducing multiple replicas, HPA, or rolling updates.
+- Keep the app and workers on a network path that can reach the broker and result backend directly.
+- Enable Celery task events on every worker pool you want represented in the UI.
+- Change the default ingester password and add a frontend password on shared or public networks.
+
+## Health, metrics, and scrape targets
+
+- Use `/health` for liveness and readiness checks.
+- Prometheus scrape targets are `/metrics`, `/metrics/verbose`, and `/metrics/system` depending on the level of detail you want.
+- Verbose metrics add label cardinality, so scrape them less frequently than the core endpoint.
+
+## Reverse proxy and TLS
+
+- Bun is the single entrypoint: it serves the SPA and proxies `/api`, `/metrics`, and `/surreal/*` internally.
+- The built-in proxy is HTTP-only. Terminate TLS in your ingress, load balancer, or edge proxy.
+- If you expose the app publicly, prefer the frontend password and keep internal SurrealDB endpoints private.
+
+## Security defaults to override
+
+- Change `SURREALDB_INGESTER_PASS` in every non-local deployment.
+- Set `SURREALDB_FRONTEND_PASS` when the dashboard is not on a fully trusted network.
+- Store `BROKER_URL`, `RESULT_BACKEND`, and any config-file secrets in your secret manager rather than baking them into images.
+
+## Scaling semantics
+
+- Extra replicas primarily improve availability and frontend capacity.
+- Leader election prevents duplicate ingestion, so scaling replicas does not multiply event write throughput.
+- Use external SurrealDB before introducing rolling updates, HPA, or multiple availability zones.
+
+## Additional references
+
+- [Celery configuration docs](https://docs.celeryq.dev/en/stable/userguide/configuration.html)

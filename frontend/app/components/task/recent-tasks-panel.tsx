@@ -82,12 +82,10 @@ const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
                     <span>
                         For more information, see the{" "}
                         <a
-                            href="https://github.com/danyi1212/celery-insights?tab=readme-ov-file#enabling-celery-events"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            href="/documentation/celery-clusters#baseline-event-settings"
                             className="text-primary underline underline-offset-4 hover:text-primary/80"
                         >
-                            Installation docs
+                            in-app documentation
                         </a>
                         .
                     </span>

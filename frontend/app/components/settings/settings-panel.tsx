@@ -58,6 +58,14 @@ const SettingsPanel = () => {
                         </Tooltip>
                     }
                 />
+                <DetailItem
+                    label="Help"
+                    value={
+                        <Button variant="outline" size="sm" asChild>
+                            <a href="/documentation/setup">Open help</a>
+                        </Button>
+                    }
+                />
             </div>
         </Panel>
     )

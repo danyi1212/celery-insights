@@ -35,19 +35,19 @@ describe("TaskTimer", () => {
         const task = createTask({ eta: undefined, expires: "2025-06-15T12:30:00Z" })
         render(<TaskTimer task={task} />)
         expect(screen.getByTestId("distance-timer")).toBeInTheDocument()
-        expect(getTimerWrapper().className).toContain("text-yellow-500")
+        expect(getTimerWrapper().className).toContain("text-status-warning")
     })
 
     it("shows red warning when expires is less than 5 minutes away", () => {
         const task = createTask({ eta: undefined, expires: "2025-06-15T12:03:00Z" })
         render(<TaskTimer task={task} />)
-        expect(getTimerWrapper().className).toContain("text-red-500")
+        expect(getTimerWrapper().className).toContain("text-status-danger")
     })
 
     it("shows expired state when expires is in the past", () => {
         const task = createTask({ eta: undefined, expires: "2025-06-15T11:00:00Z" })
         render(<TaskTimer task={task} />)
-        expect(getTimerWrapper().className).toContain("text-yellow-500")
+        expect(getTimerWrapper().className).toContain("text-status-warning")
     })
 
     it("prioritizes ETA over expires when ETA is in the future", () => {

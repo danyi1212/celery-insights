@@ -1,15 +1,17 @@
 import WorkerQuickStatus from "@components/worker/worker-quick-status"
-import { Separator } from "@components/ui/separator"
 import { useOnlineWorkers } from "@hooks/use-live-workers"
 import { extractId } from "@/types/surreal-records"
 import React from "react"
 
 const WorkerQuickStatusList: React.FC = () => {
     const { data: workers } = useOnlineWorkers()
+
+    if (workers.length === 0) {
+        return <p className="px-2 py-3 text-xs leading-5 text-sidebar-foreground/70">No online workers connected.</p>
+    }
+
     return (
-        <div className="flex max-h-[40vh] flex-col gap-1 overflow-auto">
-            <h6 className="text-center text-lg font-semibold">Worker Status</h6>
-            <Separator />
+        <div className="flex flex-col gap-1">
             {workers.map((worker) => (
                 <WorkerQuickStatus key={extractId(worker.id)} worker={worker} />
             ))}

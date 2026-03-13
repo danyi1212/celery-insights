@@ -77,6 +77,6 @@ test.describe("Search", () => {
         const input = page.locator("#quick-access-input")
         await input.fill("zzznonexistent999xyz")
 
-        await expect(page.getByText("No matching pages, tasks, or workers.")).toBeVisible()
+        await expect(page.getByText("No matching pages, documentation, tasks, or workers.")).toBeVisible()
     })
 })

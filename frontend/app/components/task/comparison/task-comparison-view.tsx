@@ -32,7 +32,7 @@ const ComparisonRow: React.FC<ComparisonRowProps> = ({ label, left, right, highl
     <div
         className={cn(
             "grid grid-cols-[160px_1fr_1fr] items-start gap-3 rounded-md px-3 py-2",
-            highlight === "different" && "bg-yellow-500/10",
+            highlight === "different" && "bg-status-warning/10",
         )}
     >
         <span className="text-sm font-medium text-muted-foreground">{label}</span>
@@ -53,7 +53,7 @@ const runtimeDiff = (left?: number, right?: number): React.ReactNode => {
     const diffMs = (left - right) * 1000
     if (Math.abs(diffMs) < 1) return null
     const sign = diffMs > 0 ? "+" : ""
-    const color = diffMs > 0 ? "text-red-500" : "text-green-500"
+    const color = diffMs > 0 ? "text-status-danger" : "text-status-success"
     return (
         <span className={cn("text-xs", color)}>
             ({sign}
@@ -81,7 +81,7 @@ const TaskComparisonView: React.FC<TaskComparisonViewProps> = ({ leftId, rightId
         return (
             <div className="flex flex-col gap-4 p-4">
                 <Skeleton className="h-10 w-64" />
-                <Skeleton className="h-[400px] w-full" />
+                <Skeleton className="h-96 w-full" />
             </div>
         )
     }
@@ -238,12 +238,12 @@ const ArgumentComparison: React.FC<{ left: Task; right: Task }> = ({ left, right
                 <CardTitle className="flex items-center gap-2 text-lg">
                     Arguments
                     {(argsDiff || kwargsDiff) && (
-                        <Badge variant="outline" className="text-xs text-yellow-500">
+                        <Badge variant="outline" className="text-xs text-status-warning">
                             Different
                         </Badge>
                     )}
                     {!argsDiff && !kwargsDiff && (
-                        <Badge variant="outline" className="text-xs text-green-500">
+                        <Badge variant="outline" className="text-xs text-status-success">
                             Identical
                         </Badge>
                     )}
@@ -284,12 +284,12 @@ const ResultComparison: React.FC<{ left: Task; right: Task }> = ({ left, right }
                 <CardTitle className="flex items-center gap-2 text-lg">
                     Result
                     {resultDiff && (
-                        <Badge variant="outline" className="text-xs text-yellow-500">
+                        <Badge variant="outline" className="text-xs text-status-warning">
                             Different
                         </Badge>
                     )}
                     {!resultDiff && (
-                        <Badge variant="outline" className="text-xs text-green-500">
+                        <Badge variant="outline" className="text-xs text-status-success">
                             Identical
                         </Badge>
                     )}
@@ -312,8 +312,8 @@ const ResultComparison: React.FC<{ left: Task; right: Task }> = ({ left, right }
                     <>
                         <ComparisonRow
                             label="Exception"
-                            left={<CodeBlock value={left.exception} className="text-red-500" />}
-                            right={<CodeBlock value={right.exception} className="text-red-500" />}
+                            left={<CodeBlock value={left.exception} className="text-status-danger" />}
+                            right={<CodeBlock value={right.exception} className="text-status-danger" />}
                             highlight={exceptionDiff ? "different" : "none"}
                         />
                         <ComparisonRow

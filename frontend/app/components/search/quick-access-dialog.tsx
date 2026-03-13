@@ -1,16 +1,18 @@
 import ErrorAlert from "@components/errors/error-alert"
+import { matchHelpNavigation } from "@components/documentation/help-navigation"
 import TaskAvatar from "@components/task/task-avatar"
 import { Avatar, AvatarFallback } from "@components/ui/avatar"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@components/ui/dialog"
 import { Kbd } from "@components/ui/kbd"
 import { ScrollArea } from "@components/ui/scroll-area"
 import { useSearch } from "@hooks/use-search"
-import { AppLocationPath, appLocations } from "@layout/navigation-links"
+import { appLocations } from "@layout/navigation-links"
+import { cn } from "@lib/utils"
 import useSettingsStore from "@stores/use-settings-store"
 import { TaskState, extractId } from "@/types/surreal-records"
 import { useNavigate } from "@tanstack/react-router"
 import { format } from "date-fns"
-import { CornerDownLeft, Search, Server } from "lucide-react"
+import { BookOpen, CornerDownLeft, Search, Server } from "lucide-react"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
 interface QuickAccessDialogProps {
@@ -25,7 +27,16 @@ interface LocationItem {
     icon: React.ReactNode
     subtitle: string
     title: string
-    to: AppLocationPath
+    to: string
+}
+
+interface DocumentationItem {
+    id: string
+    kind: "documentation"
+    icon: React.ReactNode
+    subtitle: string
+    title: string
+    to: string
 }
 
 interface WorkerItem {
@@ -46,7 +57,7 @@ interface TaskItem {
     icon: React.ReactNode
 }
 
-type QuickAccessItem = LocationItem | WorkerItem | TaskItem
+type QuickAccessItem = DocumentationItem | LocationItem | WorkerItem | TaskItem
 
 interface QuickAccessSection {
     items: QuickAccessItem[]
@@ -117,6 +128,19 @@ const QuickAccessDialog: React.FC<QuickAccessDialogProps> = ({ focusNonce = 0, o
         [normalizedQuery],
     )
 
+    const documentationItems = useMemo<DocumentationItem[]>(
+        () =>
+            matchHelpNavigation(normalizedQuery).map((page) => ({
+                id: `documentation:${page.href}`,
+                kind: "documentation" as const,
+                title: page.title,
+                subtitle: `${page.group} • ${page.description}`,
+                to: page.href,
+                icon: <BookOpen className="size-4" />,
+            })),
+        [normalizedQuery],
+    )
+
     const workerItems = useMemo<WorkerItem[]>(
         () =>
             workers.map((worker) => {
@@ -158,10 +182,11 @@ const QuickAccessDialog: React.FC<QuickAccessDialogProps> = ({ focusNonce = 0, o
     const sections = useMemo<QuickAccessSection[]>(
         () => [
             { title: "Pages", items: locationItems },
+            { title: "Documentation", items: documentationItems },
             { title: "Workers", items: normalizedQuery ? workerItems : [] },
             { title: "Tasks", items: normalizedQuery ? taskItems : [] },
         ],
-        [locationItems, normalizedQuery, taskItems, workerItems],
+        [documentationItems, locationItems, normalizedQuery, taskItems, workerItems],
     )
 
     const items = useMemo<QuickAccessItem[]>(() => sections.flatMap((section) => section.items), [sections])
@@ -178,7 +203,7 @@ const QuickAccessDialog: React.FC<QuickAccessDialogProps> = ({ focusNonce = 0, o
     const selectItem = (item: QuickAccessItem) => {
         onOpenChange(false)
 
-        if (item.kind === "location") {
+        if (item.kind === "location" || item.kind === "documentation") {
             navigate({ to: item.to })
             return
         }
@@ -247,7 +272,7 @@ const QuickAccessDialog: React.FC<QuickAccessDialogProps> = ({ focusNonce = 0, o
                             <p className="px-3 py-8 text-sm text-muted-foreground">Searching...</p>
                         ) : showEmptyState ? (
                             <div className="px-3 py-8 text-sm text-muted-foreground">
-                                <p>No matching pages, tasks, or workers.</p>
+                                <p>No matching pages, documentation, tasks, or workers.</p>
                                 {isDemo && normalizedQuery ? (
                                     <p className="mt-1">Task and worker search is unavailable in Demo Mode.</p>
                                 ) : null}
@@ -277,11 +302,12 @@ const QuickAccessDialog: React.FC<QuickAccessDialogProps> = ({ focusNonce = 0, o
                                                                 aria-selected={isActive}
                                                                 onMouseMove={() => setHighlightedIndex(itemIndex)}
                                                                 onClick={() => selectItem(item)}
-                                                                className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors ${
+                                                                className={cn(
+                                                                    "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors",
                                                                     isActive
                                                                         ? "bg-accent text-accent-foreground"
-                                                                        : "hover:bg-accent/60"
-                                                                }`}
+                                                                        : "hover:bg-accent/60",
+                                                                )}
                                                             >
                                                                 <div className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground">
                                                                     {item.icon}

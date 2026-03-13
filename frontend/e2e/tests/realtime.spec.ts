@@ -3,7 +3,8 @@ import { test, expect } from "../fixtures/base"
 test.describe("Realtime", () => {
     test("WebSocket indicator shows connected", async ({ page }) => {
         await page.goto("/")
-        await expect(page.getByText("Connected")).toBeVisible()
+        await expect(page.getByTestId("app-connection-loading")).toBeHidden({ timeout: 30_000 })
+        await expect(page.getByText("Connected", { exact: true })).toBeVisible()
     })
 
     test("triggered task appears in real-time without refresh", async ({ page, scenario, waitForTask }) => {

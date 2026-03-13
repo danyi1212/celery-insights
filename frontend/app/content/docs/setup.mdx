@@ -1,0 +1,36 @@
+Celery Insights works best when you decide the storage topology first and only then fill in the connection details around it.
+
+## Recommended order
+
+1. Pick a deployment pattern.
+   Decide first whether you are running with memory, local disk, or external SurrealDB.
+2. Set the core connection variables.
+   Most installs only need a broker URL, result backend, and a few SurrealDB settings.
+3. Match the app to your Celery topology.
+   Use environment variables for simple clusters and a mounted config file for Sentinel or custom transports.
+4. Apply production guardrails.
+   Lock down credentials, wire health checks, and understand how leader election affects scaling.
+
+## Operator notes
+
+- The docs are bundled into the app, so operators can use them from a live deployment.
+- External SurrealDB is the preferred path for HA, Kubernetes, and multi-replica deployments.
+- Use a mounted Celery config file only when broker and result env vars are no longer enough.
+
+## Fast local start
+
+Use this for a disposable local run:
+
+```sh
+docker run -p 8555:8555 --name celery-insights \
+  -e BROKER_URL=amqp://user:pass@rabbitmq:5672// \
+  -e RESULT_BACKEND=redis://redis:6379/0 \
+  -e SURREALDB_STORAGE=memory \
+  ghcr.io/danyi1212/celery-insights:latest
+```
+
+## What to read next
+
+- Go to [/documentation/configuration](/documentation/configuration) for the full environment variable reference.
+- Go to [/documentation/deployment-patterns](/documentation/deployment-patterns) to choose between memory, local disk, and shared external SurrealDB.
+- Go to [/documentation/celery-clusters](/documentation/celery-clusters) if the cluster needs Sentinel, transport options, or multiple worker pools.

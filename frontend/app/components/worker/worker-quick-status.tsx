@@ -10,17 +10,18 @@ interface WorkerQuickStatusProps {
 
 const WorkerQuickStatus: React.FC<WorkerQuickStatusProps> = ({ worker }) => {
     const hostname = worker.hostname || extractId(worker.id)
+
     return (
-        <div className="m-1">
+        <div className="rounded-xl px-2 py-2 transition-colors hover:bg-sidebar-accent/40">
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <p className="mx-1 truncate overflow-hidden text-sm font-medium">{hostname}</p>
+                    <p className="truncate overflow-hidden text-sm font-medium text-sidebar-foreground">{hostname}</p>
                 </TooltipTrigger>
                 <TooltipContent>{hostname}</TooltipContent>
             </Tooltip>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <div>
+                    <div className="mt-2">
                         <LinearProgressWithLabel value={worker.cpu_load?.[2] || 0} percentageLabel />
                     </div>
                 </TooltipTrigger>

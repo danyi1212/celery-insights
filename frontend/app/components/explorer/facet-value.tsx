@@ -1,4 +1,5 @@
-import { Checkbox } from "@components/ui/checkbox"
+import { cn } from "@lib/utils"
+import { CheckIcon } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import React from "react"
 
@@ -23,11 +24,15 @@ const FacetValue: React.FC<FacetValueProps> = ({ value, count, selected, onSelec
                 }
             }}
         >
-            <Checkbox
-                checked={selected.size > 0 && selected.has(value)}
-                tabIndex={-1}
-                className="pointer-events-none"
-            />
+            <span
+                aria-hidden="true"
+                className={cn(
+                    "border-input dark:bg-input/30 size-4 shrink-0 rounded-[4px] border shadow-xs",
+                    selected.size > 0 && selected.has(value) && "border-primary bg-primary text-primary-foreground",
+                )}
+            >
+                {selected.size > 0 && selected.has(value) ? <CheckIcon className="size-3.5" /> : null}
+            </span>
             <Tooltip>
                 <TooltipTrigger asChild>
                     <span className="max-w-[80%] truncate text-xs">{label}</span>

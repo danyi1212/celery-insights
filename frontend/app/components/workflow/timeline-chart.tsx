@@ -11,15 +11,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 const REALTIME_INTERVAL = 100
 
 const STATE_BAR_COLORS: Record<TaskState, string> = {
-    [TaskState.PENDING]: "#8b8b8b",
-    [TaskState.RECEIVED]: "#60a5fa",
-    [TaskState.STARTED]: "#3b82f6",
-    [TaskState.SUCCESS]: "#4ade80",
-    [TaskState.FAILURE]: "#f87171",
-    [TaskState.REVOKED]: "#facc15",
-    [TaskState.REJECTED]: "#f87171",
-    [TaskState.RETRY]: "#facc15",
-    [TaskState.IGNORED]: "#f87171",
+    [TaskState.PENDING]: "var(--color-status-neutral)",
+    [TaskState.RECEIVED]: "var(--color-status-info)",
+    [TaskState.STARTED]: "var(--color-status-info)",
+    [TaskState.SUCCESS]: "var(--color-status-success)",
+    [TaskState.FAILURE]: "var(--color-status-danger)",
+    [TaskState.REVOKED]: "var(--color-status-warning)",
+    [TaskState.REJECTED]: "var(--color-status-danger)",
+    [TaskState.RETRY]: "var(--color-status-warning)",
+    [TaskState.IGNORED]: "var(--color-status-danger)",
 }
 
 const ROW_HEIGHT = 48
@@ -41,7 +41,7 @@ const TaskBarTooltip: React.FC<{ task: Task; durationMs: number }> = ({ task, du
             <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: STATE_BAR_COLORS[task.state] }} />
             <span className="text-xs font-medium">{task.type || task.id}</span>
         </div>
-        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[10px]">
+        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
             <span className="text-muted-foreground">State</span>
             <span className="font-medium">{task.state}</span>
             <span className="text-muted-foreground">Duration</span>
@@ -61,7 +61,7 @@ const TaskBarTooltip: React.FC<{ task: Task; durationMs: number }> = ({ task, du
                 </>
             )}
         </div>
-        <span className="text-[10px] text-muted-foreground">Click to view details</span>
+        <span className="text-xs text-muted-foreground">Click to view details</span>
     </div>
 )
 
@@ -155,7 +155,7 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ tasks, currentTaskId }) =
                         {ticks.map((tick) => (
                             <React.Fragment key={tick.ms}>
                                 <span
-                                    className="absolute bottom-0 -translate-x-1/2 font-mono text-[10px] leading-none tabular-nums text-muted-foreground"
+                                    className="absolute bottom-0 -translate-x-1/2 font-mono text-xs leading-none tabular-nums text-muted-foreground"
                                     style={{ left: `${tick.pct}%` }}
                                 >
                                     {tick.label}
@@ -231,7 +231,7 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ tasks, currentTaskId }) =
                                                 aria-label={`${task.type || task.id}: ${task.state}, ${formatDuration(durationMs)}`}
                                             >
                                                 {showDurationLabel && (
-                                                    <span className="pointer-events-none flex h-full items-center justify-center select-none whitespace-nowrap px-1.5 text-[11px] font-semibold text-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
+                                                    <span className="pointer-events-none flex h-full items-center justify-center select-none whitespace-nowrap px-1.5 text-xs font-semibold text-foreground drop-shadow-sm">
                                                         {formatDuration(durationMs)}
                                                     </span>
                                                 )}

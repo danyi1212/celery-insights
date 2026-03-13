@@ -1,0 +1,222 @@
+Celery Insights is configured through environment variables passed to the container entrypoint. The in-app settings panel covers UI preferences and some local behavior, but the variables below control Celery connectivity, storage, ingestion, cleanup, and logs.
+
+Use environment variables for standard deployments. Mount a Celery config file only when broker and result-backend URLs are no longer enough.
+
+> If Celery Insights needs to reach a service running on your machine from inside Docker, use `host.docker.internal` rather than `localhost`.
+
+## Start here
+
+If you only need the minimum set of values, start with one of these combinations and then use the reference below for the details:
+
+- Local or disposable run: set `BROKER_URL` and `RESULT_BACKEND`, then leave the embedded SurrealDB on its default `memory` storage.
+- Durable single node: add `SURREALDB_STORAGE=rocksdb:///data/surreal` and mount `/data`.
+- HA or Kubernetes: use `SURREALDB_EXTERNAL_URL`, keep `INGESTION_LEADER_ELECTION=true`, and set both `SURREALDB_INGESTER_PASS` and `SURREALDB_FRONTEND_PASS`.
+
+## Quick reference
+
+### Most common
+
+[`BROKER_URL`](#broker_url) · [`RESULT_BACKEND`](#result_backend) · [`SURREALDB_STORAGE`](#surrealdb_storage) · [`SURREALDB_EXTERNAL_URL`](#surrealdb_external_url)
+
+### Scale and HA
+
+[`INGESTION_ENABLED`](#ingestion_enabled) · [`INGESTION_LEADER_ELECTION`](#ingestion_leader_election) · [`INGESTION_LOCK_TTL_SECONDS`](#ingestion_lock_ttl_seconds) · [`INGESTION_LOCK_HEARTBEAT_SECONDS`](#ingestion_lock_heartbeat_seconds)
+
+### Security
+
+[`SURREALDB_INGESTER_PASS`](#surrealdb_ingester_pass) · [`SURREALDB_FRONTEND_PASS`](#surrealdb_frontend_pass) · [`LOG_FORMAT`](#log_format)
+
+## Celery connection
+
+#### BROKER_URL
+
+Default: `amqp://guest:guest@host.docker.internal/`
+
+Broker URL for the Celery cluster you want to observe.
+
+[Celery broker documentation](https://docs.celeryq.dev/en/stable/userguide/configuration.html#broker-url)
+
+#### RESULT_BACKEND
+
+Default: `redis://host.docker.internal:6379/0`
+
+Result backend used to enrich task state transitions, result metadata, and task detail pages.
+
+[Celery result backend documentation](https://docs.celeryq.dev/en/stable/userguide/configuration.html#result-backend)
+
+#### CONFIG_FILE
+
+Default: `/app/config.py`
+
+Optional Celery config module mounted into the container. When the file exists at startup, it takes precedence over `BROKER_URL` and `RESULT_BACKEND`.
+
+Use this for Sentinel, transport options, TLS settings, serializer configuration, or any other Celery options that do not fit cleanly into one URL.
+
+#### TIMEZONE
+
+Default: `UTC`
+
+Set this to the same timezone used by your Celery cluster. Celery Insights converts timestamps for the browser, but the source timezone still needs to be consistent so task timelines line up correctly.
+
+## Runtime and logs
+
+#### PORT
+
+Default: `8555`
+
+Public HTTP port served by Bun. This is the port you expose from Docker, Compose, or Kubernetes.
+
+#### DEBUG
+
+Default: `false`
+
+Enables developer-oriented behavior such as hot reload, verbose error output, and additional event logging. Leave it disabled in production.
+
+#### LOG_FORMAT
+
+Default: `pretty`
+
+Controls log output format for both Bun and Python.
+
+- `pretty` for human-readable logs with timestamps, colors, and service prefixes
+- `json` for structured logging pipelines and log aggregation systems
+
+#### LOG_LEVEL
+
+Default: `info`
+
+Minimum log level shared by Bun and Python. Supported values are `debug`, `info`, `warn`, and `error`.
+
+## SurrealDB
+
+Celery Insights stores task, worker, and event history in SurrealDB. It can either start an embedded SurrealDB subprocess or connect to an external shared instance.
+
+#### SURREALDB_URL
+
+Default: `ws://localhost:8557/rpc`
+
+Internal WebSocket URL used by Celery Insights to talk to SurrealDB. Most deployments should leave this alone.
+
+If `SURREALDB_EXTERNAL_URL` is set and `SURREALDB_URL` is still at its default value, Celery Insights automatically switches internal connections to the external URL.
+
+#### SURREALDB_EXTERNAL_URL
+
+Default: _(not set)_
+
+When set, Celery Insights skips the embedded SurrealDB subprocess and connects to this shared external endpoint instead.
+
+Use this for high availability, Kubernetes, multi-replica deployments, or any setup where several Celery Insights instances should share one history store.
+
+#### SURREALDB_PORT
+
+Default: `8557`
+
+Port used by the embedded SurrealDB subprocess. Ignored when `SURREALDB_EXTERNAL_URL` is set.
+
+#### SURREALDB_STORAGE
+
+Default: `memory`
+
+Storage engine for the embedded SurrealDB subprocess.
+
+- `memory` keeps all data in memory and loses it on restart
+- `rocksdb:///data/surreal` stores data on local disk with RocksDB
+- `surrealkv:///data/surreal` stores data on local disk with SurrealKV
+
+Inside the container, `/data` is the intended persistent volume mount point.
+
+#### SURREALDB_NAMESPACE
+
+Default: `celery_insights`
+
+SurrealDB namespace used for the application schema. Change this when you need tenant or environment isolation in a shared SurrealDB instance.
+
+#### SURREALDB_DATABASE
+
+Default: `main`
+
+Database name inside the configured SurrealDB namespace.
+
+#### SURREALDB_INGESTER_PASS
+
+Default: `changeme`
+
+Password for the `ingester` database user. The Python ingester uses this credential to write task, worker, and event data.
+
+Change this in every non-local deployment.
+
+#### SURREALDB_FRONTEND_PASS
+
+Default: _(not set)_
+
+Optional dashboard password. When set, the frontend requires login and authenticates as a read-only database user. When unset, the dashboard connects anonymously with read-only access.
+
+## Ingestion and high availability
+
+Leader election allows multiple Celery Insights instances to share one SurrealDB without duplicating event ingestion.
+
+#### INGESTION_ENABLED
+
+Default: `true`
+
+When `false`, this instance never starts the Python ingester and can never become the active ingestion leader.
+
+Use this only for specialized viewer-only pods. It is not the normal multi-replica pattern.
+
+#### INGESTION_LEADER_ELECTION
+
+Default: `true`
+
+When enabled, several Celery Insights instances can point at the same SurrealDB and only one of them will actively ingest events at a time.
+
+Disable this only for simple single-instance deployments or intentionally duplicated ingestion setups.
+
+#### INGESTION_LOCK_TTL_SECONDS
+
+Default: `30`
+
+How long the leader lease remains valid after missed heartbeats. If the active ingester crashes, another instance can take over after this interval expires.
+
+#### INGESTION_LOCK_HEARTBEAT_SECONDS
+
+Default: `10`
+
+How often the active ingester renews its leader lease. This value must stay lower than `INGESTION_LOCK_TTL_SECONDS`.
+
+#### INGESTION_BATCH_INTERVAL_MS
+
+Default: `100`
+
+How often non-terminal Celery events are flushed to SurrealDB, in milliseconds. Lower values produce fresher data with more writes. Terminal events are flushed immediately regardless of this interval.
+
+## Retention and cleanup
+
+Retention policies are enforced by the Python cleanup job rather than native SurrealDB TTL behavior.
+
+#### TASK_MAX_COUNT
+
+Default: _(not set)_
+
+Optional cap on the number of tasks retained in SurrealDB. When set, the oldest tasks and their associated events are pruned once the limit is exceeded.
+
+Leave it unset to disable count-based pruning.
+
+#### TASK_RETENTION_HOURS
+
+Default: _(not set)_
+
+Optional age-based retention window for tasks. Tasks older than this many hours are pruned.
+
+This can be used together with `TASK_MAX_COUNT`.
+
+#### DEAD_WORKER_RETENTION_HOURS
+
+Default: `24`
+
+How long offline worker records remain in SurrealDB before cleanup removes them.
+
+#### CLEANUP_INTERVAL_SECONDS
+
+Default: `60`
+
+How often the cleanup job evaluates and applies retention policies.

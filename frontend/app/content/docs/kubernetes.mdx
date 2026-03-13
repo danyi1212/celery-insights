@@ -1,0 +1,127 @@
+Treat Celery Insights as a stateless web service once you move to Kubernetes. Autoscaling only makes sense after task history and leader election are backed by shared infrastructure.
+
+## One key rule
+
+Use external SurrealDB before you scale the app horizontally. That one decision removes most of the complexity around failover, HPA, and pod replacement.
+
+## Preferred topology
+
+- Use an external SurrealDB when running more than one pod.
+- Keep `INGESTION_LEADER_ELECTION=true` so only one pod writes Celery events at a time.
+- Back the Deployment with a ClusterIP Service and terminate TLS at the ingress or load balancer.
+
+## When to use a PVC
+
+- A PVC only makes sense for a single-replica Deployment using embedded RocksDB or SurrealKV.
+- Do not combine HPA with embedded local storage unless each replica is intentionally isolated.
+- For autoscaling or failover, move the database out of the pod and into shared infrastructure first.
+
+## HPA expectations
+
+- Scale replicas for availability and frontend throughput, not ingestion throughput.
+- Leader election means one replica is the active ingester at any moment.
+- If the active ingester dies, another replica takes over after the lease expires and renews.
+
+## Deployment and service example
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: celery-insights
+spec:
+    replicas: 2
+    selector:
+        matchLabels:
+            app: celery-insights
+    template:
+        metadata:
+            labels:
+                app: celery-insights
+        spec:
+            containers:
+                - name: app
+                  image: ghcr.io/danyi1212/celery-insights:latest
+                  ports:
+                      - containerPort: 8555
+                  env:
+                      - name: BROKER_URL
+                        valueFrom:
+                            secretKeyRef:
+                                name: celery-insights
+                                key: broker-url
+                      - name: RESULT_BACKEND
+                        valueFrom:
+                            secretKeyRef:
+                                name: celery-insights
+                                key: result-backend
+                      - name: SURREALDB_EXTERNAL_URL
+                        valueFrom:
+                            secretKeyRef:
+                                name: celery-insights
+                                key: surrealdb-url
+                      - name: SURREALDB_INGESTER_PASS
+                        valueFrom:
+                            secretKeyRef:
+                                name: celery-insights
+                                key: surrealdb-ingester-pass
+                      - name: SURREALDB_FRONTEND_PASS
+                        valueFrom:
+                            secretKeyRef:
+                                name: celery-insights
+                                key: surrealdb-frontend-pass
+                      - name: INGESTION_LEADER_ELECTION
+                        value: "true"
+                      - name: LOG_FORMAT
+                        value: "json"
+                  readinessProbe:
+                      httpGet:
+                          path: /health
+                          port: 8555
+                  livenessProbe:
+                      httpGet:
+                          path: /health
+                          port: 8555
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: celery-insights
+spec:
+    selector:
+        app: celery-insights
+    ports:
+        - port: 80
+          targetPort: 8555
+```
+
+## HPA example
+
+Use this only with an external SurrealDB or advanced non-ingester viewer pods.
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+    name: celery-insights
+spec:
+    scaleTargetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: celery-insights
+    minReplicas: 2
+    maxReplicas: 6
+    metrics:
+        - type: Resource
+          resource:
+              name: cpu
+              target:
+                  type: Utilization
+                  averageUtilization: 70
+        - type: Resource
+          resource:
+              name: memory
+              target:
+                  type: Utilization
+                  averageUtilization: 80
+```

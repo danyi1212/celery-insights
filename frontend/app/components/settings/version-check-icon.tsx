@@ -45,7 +45,7 @@ const VersionCheckIcon: React.FC<VersionCheckIconProps> = ({ currentVersion }) =
         return (
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <AlertCircle className="mx-1 size-4 text-yellow-500" />
+                    <AlertCircle className="mx-1 size-4 text-status-warning" />
                 </TooltipTrigger>
                 <TooltipContent>{`Update is available! ${currentVersion} => ${data.tag_name}`}</TooltipContent>
             </Tooltip>
@@ -54,7 +54,7 @@ const VersionCheckIcon: React.FC<VersionCheckIconProps> = ({ currentVersion }) =
         return (
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <CheckCircle className="mx-1 size-4 text-green-500" />
+                    <CheckCircle className="mx-1 size-4 text-status-success" />
                 </TooltipTrigger>
                 <TooltipContent>Up to date</TooltipContent>
             </Tooltip>

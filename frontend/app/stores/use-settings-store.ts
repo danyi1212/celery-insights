@@ -17,7 +17,7 @@ interface Settings {
 const defaultSettings: Settings = {
     theme: PreferredTheme.SYSTEM,
     hideWelcomeBanner: false,
-    demo: Boolean(import.meta.env.VITE_DEMO_MODE),
+    demo: import.meta.env.DEV || Boolean(import.meta.env.VITE_DEMO_MODE),
     rawEventsLimit: 100,
 }
 const useSettingsStore = create<Settings>()(

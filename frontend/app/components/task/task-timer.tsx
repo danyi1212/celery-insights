@@ -31,14 +31,14 @@ function getTimerInfo(etaDate: Date | null, expireDate: Date | null, now: Date):
             return {
                 tooltip: `Expires at ${format(expireDate, "Ppp")}`,
                 icon: AlarmClock,
-                className: differenceInMinutes(expireDate, now) < 5 ? "text-red-500" : "text-yellow-500",
+                className: differenceInMinutes(expireDate, now) < 5 ? "text-status-danger" : "text-status-warning",
                 date: expireDate,
             }
         } else {
             return {
                 tooltip: `Expired at ${format(expireDate, "Ppp")}`,
                 icon: AlarmClock,
-                className: "text-yellow-500",
+                className: "text-status-warning",
                 date: expireDate,
             }
         }

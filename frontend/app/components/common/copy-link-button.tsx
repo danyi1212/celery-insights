@@ -15,11 +15,11 @@ const icons: Record<IconStatus, { icon: React.ReactNode; tooltip: string }> = {
         tooltip: "Copy link",
     },
     [IconStatus.Copied]: {
-        icon: <CheckCircle2 className="size-4 text-green-500" />,
+        icon: <CheckCircle2 className="size-4 text-status-success" />,
         tooltip: "Copied!",
     },
     [IconStatus.Error]: {
-        icon: <XCircle className="size-4 text-red-500" />,
+        icon: <XCircle className="size-4 text-status-danger" />,
         tooltip: "Error: could not copy",
     },
 }

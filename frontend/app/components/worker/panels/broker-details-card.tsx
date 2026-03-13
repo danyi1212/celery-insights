@@ -24,7 +24,7 @@ const BrokerDetailsCard: React.FC<BrokerDetailsCardProps> = ({ workerId, ...prop
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         {stats?.broker?.ssl ? (
-                                            <Lock className="mx-1 size-4 text-green-500" />
+                                            <Lock className="mx-1 size-4 text-status-success" />
                                         ) : (
                                             <LockOpen className="mx-1 size-4 text-destructive" />
                                         )}
