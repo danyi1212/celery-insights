@@ -1,4 +1,16 @@
+import type { Page } from "@playwright/test"
 import { test, expect } from "../fixtures/base"
+
+const quickSearchShortcut = process.platform === "darwin" ? "Meta+K" : "Control+K"
+
+const openQuickSearchWithShortcut = async (page: Page) => {
+    await expect(page.locator("#search-bar")).toBeVisible()
+
+    await expect(async () => {
+        await page.keyboard.press(quickSearchShortcut)
+        await expect(page.locator("#quick-access-input")).toBeVisible()
+    }).toPass({ timeout: 15_000 })
+}
 
 test.describe("Search", () => {
     test("search bar is visible in header", async ({ page }) => {
@@ -9,19 +21,17 @@ test.describe("Search", () => {
     test("quick search opens with keyboard shortcut", async ({ page }) => {
         await page.goto("/")
 
-        await page.keyboard.press("Control+K")
-
-        await expect(page.locator("#quick-access-input")).toBeVisible()
-        await expect(page.getByText("Pages")).toBeVisible()
+        await openQuickSearchWithShortcut(page)
+        await expect(page.getByText("Pages", { exact: true })).toBeVisible()
     })
 
     test("quick search navigates to pages", async ({ page }) => {
         await page.goto("/")
 
-        await page.keyboard.press("Control+K")
+        await openQuickSearchWithShortcut(page)
         const input = page.locator("#quick-access-input")
         await input.fill("settings")
-        await page.keyboard.press("Enter")
+        await input.press("Enter")
 
         await expect(page).toHaveURL(/\/settings$/)
         await expect(page.getByText("Server Info")).toBeVisible()
@@ -37,7 +47,7 @@ test.describe("Search", () => {
         await input.fill("noop")
 
         await expect(async () => {
-            await expect(page.getByText(/tasks\.basic\.noop/i).first()).toBeVisible()
+            await expect(page.getByRole("option", { name: /tasks\.basic\.noop/i }).first()).toBeVisible()
         }).toPass({ timeout: 30_000 })
     })
 
@@ -47,15 +57,15 @@ test.describe("Search", () => {
         await waitForTaskVisible(task_id)
 
         await page.goto("/")
-        await page.keyboard.press("Control+K")
+        await openQuickSearchWithShortcut(page)
         const input = page.locator("#quick-access-input")
-        await input.fill("noop")
+        await input.fill(task_id)
 
         await expect(async () => {
-            await expect(page.getByText(/tasks\.basic\.noop/i).first()).toBeVisible()
+            await expect(page.getByRole("option", { name: /tasks\.basic\.noop/i }).first()).toBeVisible()
         }).toPass({ timeout: 30_000 })
 
-        await page.keyboard.press("Enter")
+        await input.press("Enter")
 
         await expect(page).toHaveURL(new RegExp(`/tasks/${task_id}$`))
         await expect(page.getByText(task_id.slice(0, 8))).toBeVisible()
