@@ -188,10 +188,12 @@ export const useKeyboardShortcuts = (shortcuts: ShortcutDefinition[]) => {
         throw new Error("useKeyboardShortcuts must be used within a KeyboardShortcutsProvider")
     }
 
+    const { registerShortcuts, unregisterShortcuts } = context
+
     useEffect(() => {
-        context.registerShortcuts(registrationId, shortcuts)
-        return () => context.unregisterShortcuts(registrationId)
-    }, [context, registrationId, shortcuts])
+        registerShortcuts(registrationId, shortcuts)
+        return () => unregisterShortcuts(registrationId)
+    }, [registerShortcuts, unregisterShortcuts, registrationId, shortcuts])
 }
 
 export const useKeyboardShortcutsContext = () => {
