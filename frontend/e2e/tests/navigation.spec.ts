@@ -22,7 +22,9 @@ test.describe("Navigation", () => {
     await expect(
       page.getByRole("link", { name: "Back to Dashboard" }),
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: "Configuration" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Configuration", exact: true }),
+    ).toBeVisible();
 
     await page.getByRole("link", { name: "Back to Dashboard" }).click();
     await expect(page).toHaveURL("/");
