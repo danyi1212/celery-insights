@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import useSettingsStore from "@stores/use-settings-store"
 import SurrealDBProvider, { useSurrealDB } from "./surrealdb-provider"
@@ -99,6 +99,55 @@ describe("SurrealDBProvider — remote mode", () => {
         )
 
         expect(screen.getByText("Starting...")).toBeInTheDocument()
+    })
+
+    it("suggests demo mode after extended connection delay", () => {
+        vi.useFakeTimers()
+        vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise(() => {}))
+
+        render(
+            <SurrealDBProvider>
+                <ConsumerComponent />
+            </SurrealDBProvider>,
+        )
+
+        expect(screen.queryByText("Switch to demo mode")).not.toBeInTheDocument()
+
+        act(() => {
+            vi.advanceTimersByTime(12_000)
+        })
+
+        expect(screen.getByText("Switch to demo mode")).toBeInTheDocument()
+        expect(screen.getByText(/switch to demo mode and use sample data/i)).toBeInTheDocument()
+
+        act(() => {
+            vi.runOnlyPendingTimers()
+        })
+        vi.useRealTimers()
+    })
+
+    it("switches to demo mode from the delayed connection suggestion", async () => {
+        vi.useFakeTimers()
+        vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise(() => {}))
+
+        render(
+            <SurrealDBProvider>
+                <ConsumerComponent />
+            </SurrealDBProvider>,
+        )
+
+        act(() => {
+            vi.advanceTimersByTime(12_000)
+        })
+
+        fireEvent.click(screen.getByText("Switch to demo mode"))
+
+        expect(useSettingsStore.getState().demo).toBe(true)
+
+        act(() => {
+            vi.runOnlyPendingTimers()
+        })
+        vi.useRealTimers()
     })
 
     it("connects as viewer user when auth is not required", async () => {

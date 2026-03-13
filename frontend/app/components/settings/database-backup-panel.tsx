@@ -1,11 +1,13 @@
 import Panel from "@components/common/panel"
 import { Button } from "@components/ui/button"
 import useSettingsStore from "@stores/use-settings-store"
+import { useQueryClient } from "@tanstack/react-query"
 import { Database, Download, Loader2, Upload } from "lucide-react"
 import React, { useCallback, useRef, useState } from "react"
 
-export const DatabaseBackupPanel: React.FC = () => {
+export const DatabaseBackupPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
     const isDemo = useSettingsStore((state) => state.demo)
+    const queryClient = useQueryClient()
     const [isExporting, setIsExporting] = useState(false)
     const [isImporting, setIsImporting] = useState(false)
     const [importResult, setImportResult] = useState<string | null>(null)
@@ -37,41 +39,48 @@ export const DatabaseBackupPanel: React.FC = () => {
         fileInputRef.current?.click()
     }, [])
 
-    const handleFileSelected = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
+    const handleFileSelected = useCallback(
+        async (e: React.ChangeEvent<HTMLInputElement>) => {
+            const file = e.target.files?.[0]
+            if (!file) return
 
-        setIsImporting(true)
-        setImportResult(null)
-        try {
-            const formData = new FormData()
-            formData.append("file", file)
-            const response = await fetch("/api/settings/import", {
-                method: "POST",
-                body: formData,
-            })
-            const result = await response.json()
-            if (result.success) {
-                const { tasks, events, workers } = result.imported
-                setImportResult(`Imported ${tasks} tasks, ${events} events, ${workers} workers`)
-            } else {
-                setImportResult(`Import failed: ${result.error}`)
+            setIsImporting(true)
+            setImportResult(null)
+            try {
+                const formData = new FormData()
+                formData.append("file", file)
+                const response = await fetch("/api/settings/import", {
+                    method: "POST",
+                    body: formData,
+                })
+                const result = await response.json()
+                if (result.success) {
+                    const { tasks, events, workers } = result.imported
+                    await Promise.all([
+                        queryClient.invalidateQueries({ queryKey: ["settings-info"] }),
+                        queryClient.invalidateQueries({ queryKey: ["retention-settings"] }),
+                    ])
+                    setImportResult(`Imported ${tasks} tasks, ${events} events, ${workers} workers`)
+                } else {
+                    setImportResult(`Import failed: ${result.error}`)
+                }
+            } catch (err) {
+                console.error("Import failed:", err)
+                setImportResult("Import failed — check console for details")
+            } finally {
+                setIsImporting(false)
+                // Reset file input so the same file can be selected again
+                if (fileInputRef.current) fileInputRef.current.value = ""
             }
-        } catch (err) {
-            console.error("Import failed:", err)
-            setImportResult("Import failed — check console for details")
-        } finally {
-            setIsImporting(false)
-            // Reset file input so the same file can be selected again
-            if (fileInputRef.current) fileInputRef.current.value = ""
-        }
-    }, [])
+        },
+        [queryClient],
+    )
 
     return (
-        <Panel title="Database" titleClassName="text-lg">
+        <Panel title="Backups" titleClassName="text-lg" hideHeader={hideHeader}>
             <div className="space-y-4 p-4">
                 <p className="text-sm text-muted-foreground">
-                    Export all tasks, events, and workers as a backup file, or restore from a previous backup.
+                    Export the current dataset or restore one from a backup file.
                 </p>
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={handleExport} disabled={isDemo || isExporting}>
@@ -90,6 +99,7 @@ export const DatabaseBackupPanel: React.FC = () => {
                         onChange={handleFileSelected}
                     />
                 </div>
+                {isDemo && <p className="text-sm text-muted-foreground">Unavailable while demo mode is active.</p>}
                 {importResult && (
                     <p className="flex items-center gap-2 text-sm">
                         <Database className="size-4 text-muted-foreground" />

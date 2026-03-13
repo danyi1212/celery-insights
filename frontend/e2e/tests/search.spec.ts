@@ -34,7 +34,7 @@ test.describe("Search", () => {
         await input.press("Enter")
 
         await expect(page).toHaveURL(/\/settings$/)
-        await expect(page.getByText("Server Info")).toBeVisible()
+        await expect(page.getByRole("heading", { name: "System status", exact: true })).toBeVisible()
     })
 
     test("searching for a task type shows results", async ({ page, scenario, waitForTask }) => {

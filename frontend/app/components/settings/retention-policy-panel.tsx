@@ -1,4 +1,5 @@
 import Panel from "@components/common/panel"
+import { Badge } from "@components/ui/badge"
 import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
 import { Separator } from "@components/ui/separator"
@@ -55,11 +56,12 @@ const FieldRow: React.FC<{
     </div>
 )
 
-export const RetentionPolicyPanel: React.FC = () => {
+export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
     const isDemo = useSettingsStore((state) => state.demo)
-    const { data, isLoading, refetch } = useQuery({
-        queryKey: ["retention-settings"],
+    const { data, refetch } = useQuery({
+        queryKey: ["retention-settings", isDemo ? "demo" : "live"],
         queryFn: fetchRetention,
+        enabled: !isDemo,
     })
 
     const [taskMaxCount, setTaskMaxCount] = useState("")
@@ -107,7 +109,7 @@ export const RetentionPolicyPanel: React.FC = () => {
             })
             if (!res.ok) throw new Error(`Save failed: ${res.status}`)
             await refetch()
-            setStatusMessage("Settings saved")
+            setStatusMessage("Applied to the running instance")
             setHasChanges(false)
         } catch (err) {
             setStatusMessage(`Save failed: ${err instanceof Error ? err.message : "unknown error"}`)
@@ -137,101 +139,138 @@ export const RetentionPolicyPanel: React.FC = () => {
     }, [refetch])
 
     return (
-        <Panel
-            title="Retention Policy"
-            titleClassName="text-lg"
-            actions={
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => refetch().then()}
-                            disabled={isLoading || isDemo}
-                        >
-                            <RotateCw className="size-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Refresh</TooltipContent>
-                </Tooltip>
-            }
-        >
+        <Panel title="Cleanup rules" titleClassName="text-lg" hideHeader={hideHeader}>
             <div className="space-y-4 p-4">
-                <div className="flex gap-6 text-sm">
-                    <div className="flex items-center gap-2">
-                        <Database className="size-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Tasks:</span>
-                        <span className="font-medium">{data?.counts.tasks.toLocaleString() ?? "—"}</span>
+                {isDemo ? (
+                    <div className="rounded-2xl border bg-background/60 p-5">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline">Demo mode</Badge>
+                            <span className="text-sm font-medium">Cleanup controls are turned off</span>
+                        </div>
+                        <p className="mt-3 max-w-3xl text-sm text-muted-foreground">
+                            Demo mode does not connect to a live instance, so cleanup rules are not applied. You can
+                            start a clean demo by refreshing the page.
+                        </p>
                     </div>
-                    <div>
-                        <span className="text-muted-foreground">Events:</span>{" "}
-                        <span className="font-medium">{data?.counts.events.toLocaleString() ?? "—"}</span>
-                    </div>
-                    <div>
-                        <span className="text-muted-foreground">Workers:</span>{" "}
-                        <span className="font-medium">{data?.counts.workers.toLocaleString() ?? "—"}</span>
-                    </div>
-                </div>
+                ) : (
+                    <>
+                        <div className="rounded-2xl border bg-background/60 p-4">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="outline">Runtime only</Badge>
+                                <span className="text-sm font-medium">Applies until restart</span>
+                            </div>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                                These controls affect the running cleanup job only. Use config or environment variables
+                                to keep the same defaults after a restart.
+                            </p>
+                        </div>
 
-                <Separator />
+                        <div className="flex gap-6 text-sm">
+                            <div className="flex items-center gap-2">
+                                <Database className="size-4 text-muted-foreground" />
+                                <span className="text-muted-foreground">Tasks:</span>
+                                <span className="font-medium">{data?.counts.tasks.toLocaleString() ?? "—"}</span>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground">Events:</span>{" "}
+                                <span className="font-medium">{data?.counts.events.toLocaleString() ?? "—"}</span>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground">Workers:</span>{" "}
+                                <span className="font-medium">{data?.counts.workers.toLocaleString() ?? "—"}</span>
+                            </div>
+                        </div>
 
-                <div className="space-y-3">
-                    <FieldRow
-                        label="Max task count"
-                        description="Keep at most this many tasks (empty = unlimited)"
-                        value={taskMaxCount}
-                        onChange={handleFieldChange(setTaskMaxCount)}
-                        placeholder="unlimited"
-                        type="number"
-                    />
-                    <FieldRow
-                        label="Task retention (hours)"
-                        description="Delete tasks older than this (empty = no age limit)"
-                        value={taskRetentionHours}
-                        onChange={handleFieldChange(setTaskRetentionHours)}
-                        placeholder="unlimited"
-                        type="number"
-                    />
-                    <FieldRow
-                        label="Dead worker retention (hours)"
-                        description="Delete offline workers older than this (empty = keep forever)"
-                        value={deadWorkerRetentionHours}
-                        onChange={handleFieldChange(setDeadWorkerRetentionHours)}
-                        placeholder="forever"
-                        type="number"
-                    />
-                    <FieldRow
-                        label="Cleanup interval (seconds)"
-                        description="How often the cleanup job runs"
-                        value={cleanupInterval}
-                        onChange={handleFieldChange(setCleanupInterval)}
-                        type="number"
-                    />
-                </div>
+                        <Separator />
 
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="default"
-                        size="sm"
-                        onClick={handleSave}
-                        disabled={isDemo || isSaving || !hasChanges}
-                    >
-                        {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-                        Save
-                    </Button>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="outline" size="sm" onClick={handleCleanup} disabled={isDemo || isCleaning}>
-                                {isCleaning ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
-                                Run Cleanup Now
+                        <div className="space-y-3">
+                            <FieldRow
+                                label="Max task count"
+                                description="Keep at most this many tasks (empty = unlimited)"
+                                value={taskMaxCount}
+                                onChange={handleFieldChange(setTaskMaxCount)}
+                                placeholder="unlimited"
+                                type="number"
+                            />
+                            <FieldRow
+                                label="Task retention (hours)"
+                                description="Delete tasks older than this (empty = no age limit)"
+                                value={taskRetentionHours}
+                                onChange={handleFieldChange(setTaskRetentionHours)}
+                                placeholder="unlimited"
+                                type="number"
+                            />
+                            <FieldRow
+                                label="Dead worker retention (hours)"
+                                description="Delete offline workers older than this (empty = keep forever)"
+                                value={deadWorkerRetentionHours}
+                                onChange={handleFieldChange(setDeadWorkerRetentionHours)}
+                                placeholder="forever"
+                                type="number"
+                            />
+                            <FieldRow
+                                label="Cleanup interval (seconds)"
+                                description="How often cleanup runs"
+                                value={cleanupInterval}
+                                onChange={handleFieldChange(setCleanupInterval)}
+                                type="number"
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="default"
+                                size="sm"
+                                onClick={handleSave}
+                                disabled={isDemo || isSaving || !hasChanges}
+                            >
+                                {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                                Apply to running instance
                             </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Trigger an immediate cleanup cycle with current settings</TooltipContent>
-                    </Tooltip>
-                </div>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleCleanup}
+                                        disabled={isDemo || isCleaning}
+                                    >
+                                        {isCleaning ? (
+                                            <Loader2 className="size-4 animate-spin" />
+                                        ) : (
+                                            <Play className="size-4" />
+                                        )}
+                                        Run cleanup now
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Run cleanup once with the current rules</TooltipContent>
+                            </Tooltip>
+                        </div>
 
-                {statusMessage && <p className="text-sm text-muted-foreground">{statusMessage}</p>}
+                        {statusMessage && <p className="text-sm text-muted-foreground">{statusMessage}</p>}
+                    </>
+                )}
             </div>
         </Panel>
+    )
+}
+
+export const RetentionPolicyPanelAction: React.FC = () => {
+    const isDemo = useSettingsStore((state) => state.demo)
+    const { isLoading, refetch } = useQuery({
+        queryKey: ["retention-settings", isDemo ? "demo" : "live"],
+        queryFn: fetchRetention,
+        enabled: !isDemo,
+    })
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => refetch().then()} disabled={isLoading || isDemo}>
+                    <RotateCw className="size-4" />
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent>Refresh</TooltipContent>
+        </Tooltip>
     )
 }

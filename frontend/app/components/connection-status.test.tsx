@@ -1,12 +1,17 @@
-import { render, screen } from "@test-utils"
+import { act, render, screen } from "@test-utils"
 import { ConnectionStatusIndicator, ReadOnlyBanner } from "./connection-status"
 import type { IngestionStatus } from "./surrealdb-provider"
 import type { ConnectionStatus } from "surrealdb"
 
 const mockUseSurrealDB = vi.fn()
+const mockUseSettingsStore = vi.fn()
 
 vi.mock("@components/surrealdb-provider", () => ({
     useSurrealDB: () => mockUseSurrealDB(),
+}))
+
+vi.mock("@stores/use-settings-store", () => ({
+    default: (selector: (state: { demo: boolean }) => boolean) => mockUseSettingsStore(selector),
 }))
 
 function setMockContext(status: ConnectionStatus, ingestionStatus: IngestionStatus, error: Error | null = null) {
@@ -16,9 +21,18 @@ function setMockContext(status: ConnectionStatus, ingestionStatus: IngestionStat
 describe("ConnectionStatusIndicator", () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        vi.useFakeTimers()
+        mockUseSettingsStore.mockImplementation((selector) => selector({ demo: false }))
     })
 
-    it("shows connected state with green checkmark", () => {
+    afterEach(() => {
+        act(() => {
+            vi.runOnlyPendingTimers()
+        })
+        vi.useRealTimers()
+    })
+
+    it("shows connected state for the leader instance", () => {
         setMockContext("connected", "leader")
         render(<ConnectionStatusIndicator />)
 
@@ -29,7 +43,7 @@ describe("ConnectionStatusIndicator", () => {
         setMockContext("reconnecting", "leader")
         render(<ConnectionStatusIndicator />)
 
-        expect(screen.getByText("Reconnecting...")).toBeInTheDocument()
+        expect(screen.getByText("Reconnecting")).toBeInTheDocument()
     })
 
     it("shows disconnected state", () => {
@@ -43,43 +57,88 @@ describe("ConnectionStatusIndicator", () => {
         setMockContext("connecting", "leader")
         render(<ConnectionStatusIndicator />)
 
-        expect(screen.getByText("Connecting...")).toBeInTheDocument()
+        expect(screen.getByText("Connecting")).toBeInTheDocument()
     })
 
-    it("shows ingestion status when connected and not leader", () => {
+    it("shows standby when connected but not ingesting", () => {
         setMockContext("connected", "standby")
         render(<ConnectionStatusIndicator />)
 
         expect(screen.getByText("Standby")).toBeInTheDocument()
-        expect(screen.getByText("Connected")).toBeInTheDocument()
     })
 
-    it("shows read-only ingestion status when connected", () => {
+    it("shows read-only when connected without live ingestion", () => {
         setMockContext("connected", "read-only")
         render(<ConnectionStatusIndicator />)
 
         expect(screen.getByText("Read-only")).toBeInTheDocument()
     })
 
-    it("shows disabled ingestion status when connected", () => {
+    it("shows connected when ingestion is disabled", () => {
         setMockContext("connected", "disabled")
         render(<ConnectionStatusIndicator />)
 
-        expect(screen.getByText("Disabled")).toBeInTheDocument()
+        expect(screen.getByText("Connected")).toBeInTheDocument()
     })
 
-    it("does not show ingestion status when connected as leader", () => {
+    it("shows demo mode when demo data is enabled", () => {
         setMockContext("connected", "leader")
+        mockUseSettingsStore.mockImplementation((selector) => selector({ demo: true }))
         render(<ConnectionStatusIndicator />)
 
-        expect(screen.queryByText("Ingesting")).not.toBeInTheDocument()
+        expect(screen.getByText("Demo mode")).toBeInTheDocument()
     })
 
-    it("does not show ingestion status when disconnected", () => {
+    it("keeps the connection label when disconnected even if ingestion state is stale", () => {
         setMockContext("disconnected", "standby")
         render(<ConnectionStatusIndicator />)
 
         expect(screen.queryByText("Standby")).not.toBeInTheDocument()
+        expect(screen.getByText("Disconnected")).toBeInTheDocument()
+    })
+
+    it("collapses plain connected state after a short delay", () => {
+        setMockContext("connected", "leader")
+        render(<ConnectionStatusIndicator />)
+
+        const indicator = screen.getByTestId("header-connection-status")
+        expect(indicator).toHaveAttribute("data-expanded", "true")
+
+        act(() => {
+            vi.advanceTimersByTime(5000)
+        })
+
+        expect(indicator).toHaveAttribute("data-expanded", "false")
+    })
+
+    it("keeps important states expanded", () => {
+        setMockContext("disconnected", "leader")
+        render(<ConnectionStatusIndicator />)
+
+        const indicator = screen.getByTestId("header-connection-status")
+
+        act(() => {
+            vi.advanceTimersByTime(5000)
+        })
+
+        expect(indicator).toHaveAttribute("data-expanded", "true")
+    })
+
+    it("re-expands when the status changes", () => {
+        setMockContext("connected", "leader")
+        const { rerender } = render(<ConnectionStatusIndicator />)
+
+        const indicator = screen.getByTestId("header-connection-status")
+        act(() => {
+            vi.advanceTimersByTime(5000)
+        })
+        expect(indicator).toHaveAttribute("data-expanded", "false")
+
+        setMockContext("reconnecting", "leader")
+        rerender(<ConnectionStatusIndicator />)
+
+        expect(indicator).toHaveAttribute("data-expanded", "true")
+        expect(screen.getByText("Reconnecting")).toBeInTheDocument()
     })
 })
 

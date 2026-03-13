@@ -3,7 +3,7 @@ import useSettingsStore from "@stores/use-settings-store"
 import { Download, Loader2 } from "lucide-react"
 import React, { useState } from "react"
 
-export const DownloadDebugBundleButton: React.FC = () => {
+export const DownloadDebugBundleButton: React.FC<{ label?: string }> = ({ label = "Download diagnostics" }) => {
     const isDemo = useSettingsStore((state) => state.demo)
     const [isLoading, setIsLoading] = useState(false)
 
@@ -44,7 +44,7 @@ export const DownloadDebugBundleButton: React.FC = () => {
     return (
         <Button variant="outline" onClick={handleDownloadDebugBundle} disabled={isDemo || isLoading}>
             {isLoading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-            <span>Download Debug Bundle</span>
+            <span>{label}</span>
         </Button>
     )
 }

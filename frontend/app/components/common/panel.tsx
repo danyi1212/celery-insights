@@ -5,12 +5,13 @@ import { Loader2 } from "lucide-react"
 import React, { useMemo } from "react"
 
 export interface PanelProps extends React.ComponentProps<"div"> {
-    title: string
+    title?: string
     titleClassName?: string
     actions?: React.ReactNode
     children?: React.ReactNode
     loading?: boolean
     error?: unknown
+    hideHeader?: boolean
 }
 
 const Panel: React.FC<PanelProps> = ({
@@ -20,6 +21,7 @@ const Panel: React.FC<PanelProps> = ({
     titleClassName,
     loading,
     error,
+    hideHeader,
     className,
     ...props
 }) => {
@@ -40,10 +42,16 @@ const Panel: React.FC<PanelProps> = ({
     }, [loading, error, children])
     return (
         <div className="flex h-full flex-col">
-            <div className="flex min-h-16 items-center gap-2 px-4">
-                <h4 className={cn("flex-grow truncate text-2xl font-semibold", titleClassName)}>{title}</h4>
-                {actions}
-            </div>
+            {!hideHeader && (title || actions) && (
+                <div className="flex min-h-16 items-center gap-2 px-4">
+                    {title ? (
+                        <h4 className={cn("flex-grow truncate text-2xl font-semibold", titleClassName)}>{title}</h4>
+                    ) : (
+                        <div className="flex-grow" />
+                    )}
+                    {actions}
+                </div>
+            )}
             <PanelPaper className={className} {...props}>
                 {content}
             </PanelPaper>

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Surreal, type ConnectionStatus } from "surrealdb"
 import useSettingsStore from "@stores/use-settings-store"
 import { Progress } from "@components/ui/progress"
+import { Button } from "@components/ui/button"
 import { DEMO_SCHEMA } from "@lib/demo-schema"
 import { DemoEventGenerator } from "@lib/demo-event-generator"
 
@@ -382,6 +383,7 @@ const DemoSurrealDBProvider = ({ children }: { children: React.ReactNode }) => {
 
 const RemoteLoadingScreen = ({ status, error }: { status?: ConnectionStatus; error?: Error | null }) => {
     const [elapsedSeconds, setElapsedSeconds] = useState(0)
+    const showDemoSuggestion = elapsedSeconds >= 12 && status !== "connected"
 
     useEffect(() => {
         const timer = setInterval(() => setElapsedSeconds((prev) => prev + 1), 1000)
@@ -409,6 +411,16 @@ const RemoteLoadingScreen = ({ status, error }: { status?: ConnectionStatus; err
                 {elapsedSeconds >= 8 && !error && (
                     <div className="text-xs text-muted-foreground">
                         This is taking longer than expected. Services may still be warming up.
+                    </div>
+                )}
+                {showDemoSuggestion && (
+                    <div className="space-y-3">
+                        <div className="text-sm text-muted-foreground">
+                            If you just want to explore the app, switch to demo mode and use sample data instead.
+                        </div>
+                        <Button variant="outline" onClick={() => useSettingsStore.setState({ demo: true })}>
+                            Switch to demo mode
+                        </Button>
                     </div>
                 )}
                 {error && <div className="text-sm text-destructive">Connection error: {error.message}</div>}
