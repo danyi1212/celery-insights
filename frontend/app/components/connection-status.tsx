@@ -1,105 +1,154 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { useSurrealDB, type IngestionStatus } from "@components/surrealdb-provider"
-import { CheckCircle2, AlertCircle, RotateCw, Radio, Eye, Pause, CircleDot } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { Badge } from "@components/ui/badge"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
+import { cn } from "@lib/utils"
+import useSettingsStore from "@stores/use-settings-store"
+import { AlertCircle, CheckCircle2, CircleDot, Eye, Pause, RotateCw, Zap } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+import { useEffect, useState } from "react"
 import type { ConnectionStatus } from "surrealdb"
 
-interface StatusMeta {
+interface IndicatorMeta {
     label: string
-    icon: React.ReactElement
+    detail: string
+    icon: LucideIcon
+    className: string
+    iconClassName?: string
+    keepExpanded?: boolean
 }
 
-const connectionMeta: Record<ConnectionStatus, StatusMeta> = {
+const connectionMeta: Record<ConnectionStatus, IndicatorMeta> = {
     connected: {
         label: "Connected",
-        icon: <CheckCircle2 className="size-4 text-status-success" />,
+        detail: "Live database connection is healthy.",
+        icon: CheckCircle2,
+        className: "border-status-success/30 bg-status-success/10 text-status-success",
     },
     connecting: {
-        label: "Connecting...",
-        icon: <RotateCw className="size-4 animate-spin text-status-warning" />,
+        label: "Connecting",
+        detail: "Opening the live database connection.",
+        icon: RotateCw,
+        className: "border-status-warning/30 bg-status-warning/10 text-status-warning",
+        iconClassName: "animate-spin",
+        keepExpanded: true,
     },
     reconnecting: {
-        label: "Reconnecting...",
-        icon: <RotateCw className="size-4 animate-spin text-status-warning" />,
+        label: "Reconnecting",
+        detail: "Trying to restore the live database connection.",
+        icon: RotateCw,
+        className: "border-status-warning/30 bg-status-warning/10 text-status-warning",
+        iconClassName: "animate-spin",
+        keepExpanded: true,
     },
     disconnected: {
         label: "Disconnected",
-        icon: <AlertCircle className="size-4 text-status-danger" />,
+        detail: "Live database connection is unavailable.",
+        icon: AlertCircle,
+        className: "border-status-danger/30 bg-status-danger/10 text-status-danger",
+        keepExpanded: true,
     },
 }
 
-const ingestionMeta: Record<IngestionStatus, StatusMeta> = {
+const connectedIngestionMeta: Record<IngestionStatus, IndicatorMeta> = {
     leader: {
-        label: "Ingesting",
-        icon: <Radio className="size-4 text-status-success" />,
+        label: "Connected",
+        detail: "Live data is connected and ingestion is active.",
+        icon: CheckCircle2,
+        className: "border-status-success/30 bg-status-success/10 text-status-success",
     },
     standby: {
         label: "Standby",
-        icon: <Pause className="size-4 text-status-info" />,
+        detail: "Connected to live data, but this instance is not ingesting.",
+        icon: Pause,
+        className: "border-status-info/30 bg-status-info/10 text-status-info",
+        keepExpanded: true,
     },
     "read-only": {
         label: "Read-only",
-        icon: <Eye className="size-4 text-status-warning" />,
+        detail: "Connected to stored data without live ingestion.",
+        icon: Eye,
+        className: "border-status-warning/30 bg-status-warning/10 text-status-warning",
+        keepExpanded: true,
     },
     disabled: {
-        label: "Disabled",
-        icon: <CircleDot className="size-4 text-muted-foreground" />,
+        label: "Connected",
+        detail: "Connected to data with ingestion disabled.",
+        icon: CircleDot,
+        className: "border-border bg-muted text-muted-foreground",
     },
 }
 
+const demoMeta: IndicatorMeta = {
+    label: "Demo mode",
+    detail: "Using the embedded demo database and sample events.",
+    icon: Zap,
+    className: "border-primary/30 bg-primary/10 text-primary",
+    keepExpanded: true,
+}
+
+const LABEL_HIDE_DELAY_MS = 5000
+const COLLAPSED_WIDTH_REM = 2
+const LABEL_WIDTH_CH_BUFFER = 5.5
+
+const getIndicatorMeta = (
+    status: ConnectionStatus,
+    ingestionStatus: IngestionStatus,
+    isDemo: boolean,
+): IndicatorMeta => {
+    if (isDemo) return demoMeta
+    if (status === "connected") return connectedIngestionMeta[ingestionStatus]
+    return connectionMeta[status]
+}
+
 const ConnectionStatusIndicator = () => {
-    const { status, ingestionStatus } = useSurrealDB()
-    const [textVisible, setTextVisible] = useState(true)
-    const prevStatusRef = useRef(status)
+    const { status, ingestionStatus, error } = useSurrealDB()
+    const isDemo = useSettingsStore((state) => state.demo)
+    const meta = getIndicatorMeta(status, ingestionStatus, isDemo)
+    const Icon = meta.icon
+    const tooltipText = error ? `${meta.detail} Error: ${error.message}` : meta.detail
+    const expandedWidth = `${meta.label.length + LABEL_WIDTH_CH_BUFFER}ch`
+    const [expanded, setExpanded] = useState(true)
 
-    const connMeta = connectionMeta[status]
-    const ingMeta = ingestionMeta[ingestionStatus]
-
-    // Auto-hide text after 5 seconds, re-show on status change
     useEffect(() => {
-        setTextVisible(true)
-        const timer = setTimeout(() => setTextVisible(false), 5000)
-        return () => clearTimeout(timer)
-    }, [status, ingestionStatus])
+        setExpanded(true)
 
-    // Track reconnection recovery
-    useEffect(() => {
-        if (prevStatusRef.current === "reconnecting" && status === "connected") {
-            // Could show a toast here if a toast library is added
-        }
-        prevStatusRef.current = status
-    }, [status])
+        if (meta.keepExpanded) return
 
-    const tooltipText = status === "connected" ? `${connMeta.label} \u2014 ${ingMeta.label}` : `${connMeta.label}`
+        const timeoutId = window.setTimeout(() => setExpanded(false), LABEL_HIDE_DELAY_MS)
+        return () => window.clearTimeout(timeoutId)
+    }, [meta.keepExpanded, meta.label])
 
     return (
-        <div className="flex items-center p-1">
-            <div className="overflow-hidden">
-                <div
-                    className="transition-all duration-300 flex items-center gap-1.5"
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Badge
+                    variant="outline"
+                    data-testid="header-connection-status"
+                    aria-label={meta.label}
+                    data-expanded={expanded ? "true" : "false"}
                     style={{
-                        transform: textVisible ? "translateX(0)" : "translateX(100%)",
-                        opacity: textVisible ? 1 : 0,
+                        width: expanded ? expandedWidth : `${COLLAPSED_WIDTH_REM}rem`,
                     }}
-                >
-                    {status === "connected" && ingestionStatus !== "leader" && (
-                        <span className="text-xs text-muted-foreground">{ingMeta.label}</span>
+                    className={cn(
+                        "inline-flex h-8 items-center overflow-hidden text-xs font-medium transition-[width,padding,background-color,border-color,color] duration-300 ease-out",
+                        expanded ? "max-w-40 gap-1.5 px-2.5 py-1" : "shrink-0 justify-center gap-0 px-0 py-0",
+                        meta.className,
                     )}
-                    <span className="text-xs text-muted-foreground">{connMeta.label}</span>
-                </div>
-            </div>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <span className="flex items-center gap-1">
-                        {status === "connected" && ingestionStatus !== "leader" && (
-                            <span className="flex items-center">{ingMeta.icon}</span>
+                >
+                    <Icon className={cn("size-4 shrink-0", meta.iconClassName)} />
+                    <span
+                        className={cn(
+                            "whitespace-nowrap transition-[width,opacity] duration-500 ease-out",
+                            expanded ? "w-auto opacity-100" : "w-0 opacity-0",
                         )}
-                        <span className="flex items-center">{connMeta.icon}</span>
+                        aria-hidden={expanded ? undefined : true}
+                    >
+                        {meta.label}
                     </span>
-                </TooltipTrigger>
-                <TooltipContent>{tooltipText}</TooltipContent>
-            </Tooltip>
-        </div>
+                </Badge>
+            </TooltipTrigger>
+            <TooltipContent>{tooltipText}</TooltipContent>
+        </Tooltip>
     )
 }
 
@@ -110,10 +159,10 @@ const ReadOnlyBanner = () => {
 
     return (
         <div className="border-b border-status-warning/20 bg-status-warning/10 px-4 py-1.5 text-center text-xs text-status-warning">
-            <Eye className="inline-block size-3.5 mr-1.5 -translate-y-px" />
-            Read-only mode — viewing existing data, no live ingestion
+            <Eye className="mr-1.5 inline-block size-3.5 -translate-y-px" />
+            Read-only mode - viewing existing data, no live ingestion
         </div>
     )
 }
 
-export { ConnectionStatusIndicator, ReadOnlyBanner }
+export { ConnectionStatusIndicator, ReadOnlyBanner, getIndicatorMeta }

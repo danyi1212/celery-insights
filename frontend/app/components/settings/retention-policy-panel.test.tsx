@@ -101,7 +101,7 @@ describe("RetentionPolicyPanel", () => {
             expect(screen.getByDisplayValue("10000")).toBeInTheDocument()
         })
 
-        const saveButton = screen.getByRole("button", { name: /save/i })
+        const saveButton = screen.getByRole("button", { name: /apply to running instance/i })
         expect(saveButton).toBeDisabled()
 
         const maxCountInput = screen.getByDisplayValue("10000")
@@ -145,7 +145,7 @@ describe("RetentionPolicyPanel", () => {
             }),
         } as Response)
 
-        await user.click(screen.getByRole("button", { name: /save/i }))
+        await user.click(screen.getByRole("button", { name: /apply to running instance/i }))
 
         await waitFor(() => {
             const putCall = fetchSpy.mock.calls.find((call) => typeof call[1] === "object" && call[1]?.method === "PUT")
@@ -183,10 +183,10 @@ describe("RetentionPolicyPanel", () => {
             json: async () => mockRetentionInfo,
         } as Response)
 
-        await user.click(screen.getByRole("button", { name: /save/i }))
+        await user.click(screen.getByRole("button", { name: /apply to running instance/i }))
 
         await waitFor(() => {
-            expect(screen.getByText("Settings saved")).toBeInTheDocument()
+            expect(screen.getByText("Applied to the running instance")).toBeInTheDocument()
         })
     })
 
@@ -265,6 +265,18 @@ describe("RetentionPolicyPanel", () => {
 
         render(<RetentionPolicyPanel />, { wrapper: createWrapper() })
 
-        expect(screen.getByText("Retention Policy")).toBeInTheDocument()
+        expect(screen.getByText("Cleanup rules")).toBeInTheDocument()
+        expect(screen.getByText("Runtime only")).toBeInTheDocument()
+    })
+
+    it("shows a demo-mode message without loading retention settings", () => {
+        const fetchSpy = vi.spyOn(globalThis, "fetch")
+        useSettingsStore.setState({ demo: true })
+
+        render(<RetentionPolicyPanel />, { wrapper: createWrapper() })
+
+        expect(screen.getByText("Cleanup controls are turned off")).toBeInTheDocument()
+        expect(screen.getByText(/does not connect to a live instance/i)).toBeInTheDocument()
+        expect(fetchSpy).not.toHaveBeenCalled()
     })
 })

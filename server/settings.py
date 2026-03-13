@@ -17,9 +17,11 @@ class Settings(BaseSettings):
 
     # SurrealDB connection (received from Bun)
     surrealdb_url: str = "ws://localhost:8557/rpc"
+    surrealdb_external_url: str | None = None
     surrealdb_ingester_pass: str = "changeme"
     surrealdb_namespace: str = "celery_insights"
     surrealdb_database: str = "main"
+    surrealdb_storage: str = "memory"
 
     # Celery connection (received from Bun)
     broker_url: str = "amqp://guest:guest@host.docker.internal/"
