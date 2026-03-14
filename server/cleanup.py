@@ -85,24 +85,32 @@ class CleanupJob:
             return
 
         try:
-            # Find the oldest tasks that exceed the limit
             oldest_result: list = await db.query(  # ty: ignore[invalid-assignment]
-                "SELECT id FROM task ORDER BY last_updated ASC LIMIT $limit",
-                {"limit": excess},
+                "SELECT id, task_count FROM workflow ORDER BY last_updated ASC",
             )
-            oldest_tasks: list[dict] = oldest_result[0] if oldest_result and isinstance(oldest_result[0], list) else []
+            oldest_workflows: list[dict] = (
+                oldest_result[0] if oldest_result and isinstance(oldest_result[0], list) else []
+            )
         except Exception:
-            logger.exception("Failed to find oldest tasks for count-based cleanup")
+            logger.exception("Failed to find oldest workflows for count-based cleanup")
             return
 
-        if not oldest_tasks:
+        if not oldest_workflows:
             return
 
-        task_ids = [t["id"] for t in oldest_tasks]
-        await self._delete_tasks_and_events(task_ids)
+        workflow_ids: list = []
+        removed_tasks = 0
+        for workflow in oldest_workflows:
+            workflow_ids.append(workflow["id"])
+            removed_tasks += int(workflow.get("task_count") or 0)
+            if removed_tasks >= excess:
+                break
+
+        await self._delete_workflows(workflow_ids)
         logger.info(
-            "Count-based cleanup: deleted %d tasks (total was %d, max is %d)",
-            len(task_ids),
+            "Count-based cleanup: deleted %d workflows / %d tasks (total was %d, max is %d)",
+            len(workflow_ids),
+            removed_tasks,
             total,
             self.task_max_count,
         )
@@ -114,44 +122,65 @@ class CleanupJob:
         db = get_db()
         try:
             result: list = await db.query(  # ty: ignore[invalid-assignment]
-                "SELECT id FROM task WHERE last_updated < time::now() - $hours * 1h",
+                "SELECT id FROM workflow WHERE last_updated < time::now() - $hours * 1h",
                 {"hours": self.task_retention_hours},
             )
-            old_tasks: list[dict] = result[0] if result and isinstance(result[0], list) else []
+            old_workflows: list[dict] = result[0] if result and isinstance(result[0], list) else []
         except Exception:
-            logger.exception("Failed to find old tasks for age-based cleanup")
+            logger.exception("Failed to find old workflows for age-based cleanup")
             return
 
-        if not old_tasks:
+        if not old_workflows:
             return
 
-        task_ids = [t["id"] for t in old_tasks]
-        await self._delete_tasks_and_events(task_ids)
-        logger.info("Age-based cleanup: deleted %d tasks older than %s hours", len(task_ids), self.task_retention_hours)
+        workflow_ids = [t["id"] for t in old_workflows]
+        await self._delete_workflows(workflow_ids)
+        logger.info(
+            "Age-based cleanup: deleted %d workflows older than %s hours",
+            len(workflow_ids),
+            self.task_retention_hours,
+        )
 
-    async def _delete_tasks_and_events(self, task_ids: list) -> None:
-        """Delete tasks and their associated events in SurrealDB."""
+    async def _delete_workflows(self, workflow_ids: list) -> None:
+        """Delete workflows and all associated tasks, events, and edges atomically."""
+        if not workflow_ids:
+            return
+
         db = get_db()
 
-        # Extract task ID strings for event lookup (e.g., "task:abc123" -> "abc123")
-        # SurrealDB may wrap IDs with special chars in angle brackets (e.g., "task:⟨uuid⟩")
+        try:
+            result: list = await db.query(  # ty: ignore[invalid-assignment]
+                "SELECT id FROM task WHERE workflow_id IN $workflow_ids",
+                {"workflow_ids": workflow_ids},
+            )
+            tasks: list[dict] = result[0] if result and isinstance(result[0], list) else []
+        except Exception:
+            logger.exception("Failed to load workflow members for %d workflows", len(workflow_ids))
+            return
+
+        task_ids = [task["id"] for task in tasks]
         task_id_strings = [str(tid).removeprefix("task:").strip("⟨⟩") for tid in task_ids]
 
         try:
             await db.query(
-                "DELETE FROM event WHERE task_id IN $task_ids",
-                {"task_ids": task_id_strings},
+                "\n".join(
+                    [
+                        "BEGIN TRANSACTION;",
+                        "DELETE FROM event WHERE task_id IN $task_ids;",
+                        "DELETE FROM workflow_task WHERE `in` IN $workflow_ids OR out IN $task_records;",
+                        "DELETE FROM task WHERE id IN $task_records;",
+                        "DELETE FROM workflow WHERE id IN $workflow_ids;",
+                        "COMMIT TRANSACTION;",
+                    ]
+                ),
+                {
+                    "workflow_ids": workflow_ids,
+                    "task_ids": task_id_strings,
+                    "task_records": task_ids,
+                },
             )
         except Exception:
-            logger.exception("Failed to delete events for %d tasks", len(task_ids))
-
-        try:
-            await db.query(
-                "DELETE FROM task WHERE id IN $task_ids",
-                {"task_ids": task_ids},
-            )
-        except Exception:
-            logger.exception("Failed to delete %d tasks", len(task_ids))
+            logger.exception("Failed to delete %d workflows", len(workflow_ids))
 
     async def _cleanup_dead_workers(self) -> None:
         if self.dead_worker_retention_hours is None:

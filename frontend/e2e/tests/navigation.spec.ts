@@ -53,6 +53,6 @@ test.describe("Navigation", () => {
     await waitForTaskVisible(task_id);
 
     await page.goto(`/tasks/${task_id}`);
-    await expect(page.getByText(task_id.slice(0, 8))).toBeVisible();
+    await expect(page.locator("#task-header")).toContainText(task_id);
   });
 });

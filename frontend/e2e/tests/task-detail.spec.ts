@@ -6,8 +6,8 @@ test.describe("Task Detail", () => {
         await waitForTask(task_id, ["SUCCESS"])
 
         await page.goto(`/tasks/${task_id}`)
-        await expect(page.getByText("tasks.basic.add")).toBeVisible()
-        await expect(page.getByText(task_id.slice(0, 8))).toBeVisible()
+        await expect(page.locator("#task-header")).toContainText("tasks.basic.add")
+        await expect(page.locator("#task-header")).toContainText(task_id)
     })
 
     test("workflow chart is visible", async ({ page, scenario, waitForTask }) => {
@@ -32,6 +32,17 @@ test.describe("Task Detail", () => {
 
         await page.goto(`/tasks/${task_id}`)
         await expect(page.locator("#task-details")).toBeVisible()
+    })
+
+    test("workflow context and related tasks stay secondary to selected task details", async ({ page, scenario, waitForTask }) => {
+        const { task_id } = await scenario.triggerScenario("chain")
+        await waitForTask(task_id, ["SUCCESS"])
+
+        await page.goto(`/tasks/${task_id}`)
+        await expect(page.getByText("Workflow Context")).toBeVisible()
+        await expect(page.getByRole("heading", { name: "Related Tasks", exact: true })).toBeVisible()
+        await expect(page.getByRole("heading", { name: "Execution", exact: true })).toBeVisible()
+        await expect(page.getByRole("heading", { name: "Outcome", exact: true })).toBeVisible()
     })
 
     test("unknown task ID shows not-found message", async ({ page }) => {

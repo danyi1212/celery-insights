@@ -53,6 +53,7 @@ TASK_FIELD_MAP: dict[str, str] = {
 
 BACKPRESSURE_THRESHOLD = 10_000
 BUFFER_SIZE_THRESHOLD = 500
+ACTIVE_STATES = frozenset({"PENDING", "RECEIVED", "STARTED"})
 
 _WORKER_SKIP_FIELDS = frozenset({"type", "hostname", "timestamp", "local_received", "clock"})
 _SAFE_IDENT = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
@@ -60,6 +61,15 @@ _SAFE_IDENT = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 def _epoch_to_iso(ts: float) -> str:
     return datetime.fromtimestamp(ts, tz=UTC).isoformat()
+
+
+def _workflow_id_for_event(event: dict) -> str | None:
+    task_id = event.get("uuid")
+    if not task_id:
+        return None
+
+    root_id = event.get("root_id")
+    return str(root_id) if root_id else str(task_id)
 
 
 class SurrealDBIngester:
@@ -162,10 +172,20 @@ class SurrealDBIngester:
                     queries.append(q)
                     params.update(p)
 
+                wq, wp = build_workflow_membership_upsert(event, i)
+                if wq:
+                    queries.append(wq)
+                    params.update(wp)
+
                 cq, cp = build_children_update(event, i)
                 if cq:
                     queries.append(cq)
                     params.update(cp)
+
+                sq, sp = build_workflow_summary_recompute(event, i)
+                if sq:
+                    queries.append(sq)
+                    params.update(sp)
 
                 if event_type in TERMINAL_EVENT_TYPES:
                     task_id = event.get("uuid")
@@ -248,12 +268,14 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
     state = EVENT_STATE_MAP[event_type]
     ts_field = EVENT_TS_FIELD_MAP[event_type]
     ts_iso = _epoch_to_iso(timestamp)
+    workflow_id = _workflow_id_for_event(event)
 
     p = f"t{idx}"
     params: dict = {
         f"{p}_id": task_id,
         f"{p}_state": state,
         f"{p}_ts": ts_iso,
+        f"{p}_workflow_id": workflow_id,
     }
 
     set_clauses = [
@@ -262,6 +284,7 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
         f" THEN <datetime>${p}_ts ELSE last_updated END",
         f"{ts_field} = IF {ts_field} IS NONE OR <datetime>${p}_ts < {ts_field}"
         f" THEN <datetime>${p}_ts ELSE {ts_field} END",
+        f"workflow_id = ${p}_workflow_id",
     ]
 
     for event_field, db_field in TASK_FIELD_MAP.items():
@@ -282,6 +305,124 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
         )
 
     query = f"UPSERT type::record('task', ${p}_id) SET " + ", ".join(set_clauses)
+    return query, params
+
+
+def build_workflow_membership_upsert(event: dict, idx: int) -> tuple[str, dict]:
+    """Build UPSERTs for the workflow summary shell and task membership edge."""
+    task_id = event.get("uuid")
+    workflow_id = _workflow_id_for_event(event)
+    timestamp = event.get("timestamp")
+
+    if not task_id or not workflow_id or not timestamp:
+        return "", {}
+
+    p = f"wfrel{idx}"
+    ts_iso = _epoch_to_iso(timestamp)
+    edge_id = f"{workflow_id}:{task_id}"
+    params = {
+        f"{p}_workflow_id": workflow_id,
+        f"{p}_task_id": task_id,
+        f"{p}_edge_id": edge_id,
+        f"{p}_ts": ts_iso,
+    }
+
+    workflow_upsert = (
+        f"UPSERT type::record('workflow', ${p}_workflow_id) SET "
+        f"root_task_id = ${p}_workflow_id, "
+        "task_count = task_count ?? 0, "
+        "completed_count = completed_count ?? 0, "
+        "failure_count = failure_count ?? 0, "
+        "retry_count = retry_count ?? 0, "
+        "active_count = active_count ?? 0, "
+        "worker_count = worker_count ?? 0, "
+        "aggregate_state = aggregate_state ?? 'PENDING', "
+        f"first_seen_at = first_seen_at ?? <datetime>${p}_ts, "
+        f"last_updated = IF last_updated IS NONE OR <datetime>${p}_ts > last_updated "
+        f"THEN <datetime>${p}_ts ELSE last_updated END"
+    )
+    edge_upsert = (
+        f"UPSERT type::record('workflow_task', ${p}_edge_id) SET "
+        f"`in` = type::record('workflow', ${p}_workflow_id), "
+        f"out = type::record('task', ${p}_task_id), "
+        f"created_at = created_at ?? <datetime>${p}_ts, "
+        f"last_updated = <datetime>${p}_ts"
+    )
+    query = f"{workflow_upsert};\n{edge_upsert}"
+    return query, params
+
+
+def build_workflow_summary_recompute(event: dict, idx: int) -> tuple[str, dict]:
+    """Build a workflow summary recomputation for the workflow touched by this event."""
+    workflow_id = _workflow_id_for_event(event)
+    if not workflow_id:
+        return "", {}
+
+    p = f"wfs{idx}"
+    params = {
+        f"{p}_workflow_id": workflow_id,
+        f"{p}_active_states": list(ACTIVE_STATES),
+    }
+
+    query_parts = [
+        (
+            f"LET ${p}_task_count = "
+            f"(SELECT count() AS count FROM task WHERE workflow_id = ${p}_workflow_id GROUP ALL)[0].count ?? 0"
+        ),
+        (
+            f"LET ${p}_completed_count = (SELECT count() AS count FROM task "
+            f"WHERE workflow_id = ${p}_workflow_id AND state NOT IN ${p}_active_states "
+            "AND state != 'RETRY' GROUP ALL)[0].count ?? 0"
+        ),
+        (
+            f"LET ${p}_failure_count = (SELECT count() AS count FROM task "
+            f"WHERE workflow_id = ${p}_workflow_id AND state = 'FAILURE' GROUP ALL)[0].count ?? 0"
+        ),
+        (
+            f"LET ${p}_retry_count = (SELECT count() AS count FROM task "
+            f"WHERE workflow_id = ${p}_workflow_id AND state = 'RETRY' GROUP ALL)[0].count ?? 0"
+        ),
+        (
+            f"LET ${p}_active_count = (SELECT count() AS count FROM task "
+            f"WHERE workflow_id = ${p}_workflow_id AND state IN ${p}_active_states GROUP ALL)[0].count ?? 0"
+        ),
+        (
+            f"LET ${p}_worker_count = array::len(SELECT VALUE worker FROM task "
+            f"WHERE workflow_id = ${p}_workflow_id AND worker != NONE GROUP BY worker)"
+        ),
+        f"LET ${p}_root = (SELECT * FROM type::record('task', ${p}_workflow_id))[0]",
+        (
+            f"LET ${p}_first_seen_at = (SELECT VALUE last_updated FROM task "
+            f"WHERE workflow_id = ${p}_workflow_id ORDER BY last_updated ASC LIMIT 1)[0]"
+        ),
+        (
+            f"LET ${p}_last_updated = (SELECT VALUE last_updated FROM task "
+            f"WHERE workflow_id = ${p}_workflow_id ORDER BY last_updated DESC LIMIT 1)[0]"
+        ),
+        (
+            f"LET ${p}_latest_exception = (SELECT * FROM task WHERE workflow_id = ${p}_workflow_id "
+            "AND exception != NONE ORDER BY last_updated DESC LIMIT 1)[0].exception"
+        ),
+        (
+            f"UPSERT type::record('workflow', ${p}_workflow_id) SET "
+            f"root_task_id = ${p}_workflow_id, "
+            f"root_task_type = ${p}_root.type, "
+            f"aggregate_state = IF ${p}_failure_count > 0 THEN 'FAILURE' "
+            f"ELSE IF ${p}_retry_count > 0 THEN 'RETRY' "
+            f"ELSE IF ${p}_active_count > 0 THEN 'STARTED' "
+            f"ELSE IF ${p}_task_count > 0 THEN 'SUCCESS' ELSE 'PENDING' END, "
+            f"first_seen_at = ${p}_first_seen_at, "
+            f"last_updated = ${p}_last_updated, "
+            f"task_count = ${p}_task_count, "
+            f"completed_count = ${p}_completed_count, "
+            f"failure_count = ${p}_failure_count, "
+            f"retry_count = ${p}_retry_count, "
+            f"active_count = ${p}_active_count, "
+            f"worker_count = ${p}_worker_count, "
+            f"latest_exception_preview = ${p}_latest_exception"
+        ),
+    ]
+    query = ";\n".join(query_parts)
     return query, params
 
 

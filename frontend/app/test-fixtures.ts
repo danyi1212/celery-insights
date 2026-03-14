@@ -17,6 +17,7 @@ export const createTask = (overrides: Partial<Task> = {}): Task => ({
     kwargs: "{'key': 'value'}",
     retries: 0,
     routing_key: "default",
+    workflow_id: "test-task-id",
     children: [],
     worker: "worker1@hostname",
     result: "'result_value'",

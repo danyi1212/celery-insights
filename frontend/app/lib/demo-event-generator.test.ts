@@ -94,6 +94,30 @@ describe("DemoEventGenerator", () => {
         expect(childrenUpdates.length).toBeGreaterThanOrEqual(4)
     })
 
+    it("projects workflow summaries for generated tasks", async () => {
+        await generator.start()
+
+        const workflowUpserts = calls(mockDb).filter(
+            ([q]: MockCall) => typeof q === "string" && q.includes("UPSERT type::record('workflow'"),
+        )
+
+        expect(workflowUpserts.length).toBeGreaterThan(0)
+    })
+
+    it("stores workflow ids on task records", async () => {
+        await generator.start()
+
+        const taskUpserts = calls(mockDb).filter(
+            ([q, params]: MockCall) =>
+                typeof q === "string" &&
+                q.includes("UPSERT type::record('task'") &&
+                q.includes("workflow_id = $workflowId") &&
+                !!params.workflowId,
+        )
+
+        expect(taskUpserts.length).toBeGreaterThan(0)
+    })
+
     it("generates worker heartbeats periodically", async () => {
         await generator.start()
 

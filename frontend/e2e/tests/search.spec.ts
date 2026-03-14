@@ -49,6 +49,7 @@ test.describe("Search", () => {
         await expect(async () => {
             await expect(page.getByRole("option", { name: /tasks\.basic\.noop/i }).first()).toBeVisible()
         }).toPass({ timeout: 30_000 })
+        await expect(page.getByText(/Workflow/i).first()).toBeVisible()
     })
 
     test("quick search opens a matching task on Enter", async ({ page, scenario, waitForTask, waitForTaskVisible }) => {
@@ -68,7 +69,7 @@ test.describe("Search", () => {
         await input.press("Enter")
 
         await expect(page).toHaveURL(new RegExp(`/tasks/${task_id}$`))
-        await expect(page.getByText(task_id.slice(0, 8))).toBeVisible()
+        await expect(page.locator("#task-header")).toContainText(task_id)
     })
 
     test("nonsense query shows no results message", async ({ page }) => {

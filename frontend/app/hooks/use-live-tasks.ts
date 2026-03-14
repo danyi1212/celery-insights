@@ -30,19 +30,16 @@ export const useWorkerTasks = (workerId: string) => {
 }
 
 /** Workflow tasks — all tasks sharing the same root_id, plus the root task itself. */
-export const useWorkflowTasks = (rootTaskId: string) => {
-    const bindings = useMemo(() => ({ rootId: rootTaskId, rootRid: new RecordId("task", rootTaskId) }), [rootTaskId])
-    const filter = useCallback(
-        (t: SurrealTask) => t.root_id === rootTaskId || extractId(t.id) === rootTaskId,
-        [rootTaskId],
-    )
+export const useWorkflowTasks = (workflowId: string) => {
+    const bindings = useMemo(() => ({ workflowId }), [workflowId])
+    const filter = useCallback((t: SurrealTask) => t.workflow_id === workflowId, [workflowId])
 
     return useLiveQuery<SurrealTask>({
-        initialQuery: "SELECT * FROM task WHERE root_id = $rootId OR id = $rootRid",
+        initialQuery: "SELECT * FROM task WHERE workflow_id = $workflowId ORDER BY last_updated DESC",
         liveTable: "task",
         bindings,
         filter,
-        enabled: !!rootTaskId,
+        enabled: !!workflowId,
     })
 }
 

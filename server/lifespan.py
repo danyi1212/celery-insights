@@ -14,7 +14,7 @@ from events.ingester import SurrealDBIngester
 from events.receiver import CeleryEventReceiver
 from settings import Settings
 from surrealdb_client import close_surrealdb, init_surrealdb
-from tasks.result_fetcher import ResultFetcher
+from tasks.result_fetcher import ResultBackendPoller, ResultFetcher
 from workers.poller import WorkerPoller
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,7 @@ async def lifespan(_):
 
     # 3. Start services: EventReceiver -> SurrealDBIngester -> WorkerPoller -> CleanupJob
     result_fetcher = ResultFetcher(celery_app)
+    result_backend_poller = ResultBackendPoller(celery_app)
 
     event_receiver = CeleryEventReceiver(celery_app, asyncio.get_running_loop())
     event_receiver.start()
@@ -53,6 +54,7 @@ async def lifespan(_):
 
     worker_poller = WorkerPoller(celery_app)
     worker_poller.start()
+    result_backend_poller.start()
 
     cleanup_job = CleanupJob(
         interval_seconds=settings.cleanup_interval_seconds,
@@ -74,6 +76,7 @@ async def lifespan(_):
     finally:
         # Shutdown in reverse order — await async tasks before closing DB
         await cleanup_job.stop()
+        await result_backend_poller.stop()
         await worker_poller.stop()
         await ingester.stop()
         event_receiver.stop()

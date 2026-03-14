@@ -10,6 +10,8 @@ from events.ingester import (
     build_children_update,
     build_raw_event,
     build_task_upsert,
+    build_workflow_membership_upsert,
+    build_workflow_summary_recompute,
     build_worker_upsert,
 )
 
@@ -36,6 +38,7 @@ class TestBuildTaskUpsert:
         assert params["t0_type"] == "myapp.tasks.add"
         assert params["t0_args"] == "(1, 2)"
         assert params["t0_retries"] == 0
+        assert params["t0_workflow_id"] == "abc-123"
 
     def test_task_started_with_worker(self):
         event = {
@@ -50,6 +53,7 @@ class TestBuildTaskUpsert:
         assert "started_at = IF started_at IS NONE" in query
         assert params["t5_state"] == "STARTED"
         assert params["t5_worker"] == "worker1@host"
+        assert params["t5_workflow_id"] == "abc-123"
 
     def test_task_succeeded_with_result(self):
         event = {
@@ -156,6 +160,54 @@ class TestBuildChildrenUpdate:
         }
         query, _params = build_children_update(event, 0)
         assert query == ""
+
+
+class TestBuildWorkflowMembershipUpsert:
+    def test_builds_workflow_and_edge_upserts(self):
+        event = {
+            "type": "task-started",
+            "uuid": "child-1",
+            "root_id": "root-1",
+            "timestamp": 1700000000.0,
+        }
+
+        query, params = build_workflow_membership_upsert(event, 0)
+
+        assert "UPSERT type::record('workflow', $wfrel0_workflow_id)" in query
+        assert "UPSERT type::record('workflow_task', $wfrel0_edge_id)" in query
+        assert params["wfrel0_workflow_id"] == "root-1"
+        assert params["wfrel0_task_id"] == "child-1"
+        assert params["wfrel0_edge_id"] == "root-1:child-1"
+
+    def test_uses_task_id_for_single_task_workflow(self):
+        event = {
+            "type": "task-started",
+            "uuid": "solo-1",
+            "timestamp": 1700000000.0,
+        }
+
+        _query, params = build_workflow_membership_upsert(event, 0)
+
+        assert params["wfrel0_workflow_id"] == "solo-1"
+
+
+class TestBuildWorkflowSummaryRecompute:
+    def test_recomputes_summary_for_workflow(self):
+        event = {
+            "type": "task-failed",
+            "uuid": "child-1",
+            "root_id": "root-1",
+            "timestamp": 1700000000.0,
+        }
+
+        query, params = build_workflow_summary_recompute(event, 0)
+
+        assert "LET $wfs0_task_count = " in query
+        assert "FROM task WHERE workflow_id = $wfs0_workflow_id" in query
+        assert "aggregate_state = IF $wfs0_failure_count > 0 THEN 'FAILURE'" in query
+        assert "latest_exception_preview = $wfs0_latest_exception" in query
+        assert params["wfs0_workflow_id"] == "root-1"
+        assert sorted(params["wfs0_active_states"]) == ["PENDING", "RECEIVED", "STARTED"]
 
 
 class TestBuildWorkerUpsert:
@@ -275,6 +327,8 @@ class TestSurrealDBIngester:
         assert "BEGIN TRANSACTION" in query_str
         assert "COMMIT TRANSACTION" in query_str
         assert "UPSERT type::record('task'" in query_str
+        assert "UPSERT type::record('workflow'" in query_str
+        assert "UPSERT type::record('workflow_task'" in query_str
         assert "CREATE event SET" in query_str
 
     @pytest.mark.asyncio

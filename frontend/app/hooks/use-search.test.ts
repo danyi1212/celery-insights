@@ -66,7 +66,9 @@ describe("useSearch", () => {
         })
 
         const [queryStr, bindings] = mockQuery.mock.calls[0]
-        expect(queryStr).toContain("SELECT * FROM task WHERE")
+        expect(queryStr).toContain("SELECT *,")
+        expect(queryStr).toContain("FROM task WHERE")
+        expect(queryStr).toContain("FROM workflow WHERE id = type::record('workflow', workflow_id)")
         expect(queryStr).toContain("string::contains")
         expect(queryStr).toContain("SELECT * FROM worker WHERE")
         expect(bindings).toEqual({ q: "myquery", limit: 5 })

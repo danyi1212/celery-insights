@@ -12,13 +12,14 @@ export enum WorkflowChartType {
 }
 
 interface WorkflowGraphProps {
+    workflowId: string
     rootTaskId: string
     currentTaskId?: string
     chartType: WorkflowChartType
 }
 
-const WorkflowGraph: React.FC<WorkflowGraphProps> = ({ chartType, rootTaskId, currentTaskId }) => {
-    const { data: surrealTasks } = useWorkflowTasks(rootTaskId)
+const WorkflowGraph: React.FC<WorkflowGraphProps> = ({ chartType, workflowId, rootTaskId, currentTaskId }) => {
+    const { data: surrealTasks } = useWorkflowTasks(workflowId)
     const workflowTasks = useMemo(() => surrealTasks.map(parseTask), [surrealTasks])
 
     const deferredTasks = useDeferredValue(workflowTasks)

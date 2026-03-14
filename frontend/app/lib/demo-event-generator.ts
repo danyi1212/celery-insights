@@ -128,6 +128,109 @@ interface TaskLifecycleEvent {
     kwargs: string
 }
 
+const ACTIVE_TASK_STATES = ["PENDING", "RECEIVED", "STARTED"] as const
+
+async function updateWorkflowProjection(db: Surreal, task: TaskLifecycleEvent, ts: Date): Promise<void> {
+    const workflowId = task.rootId ?? task.taskId
+    const iso = ts.toISOString()
+    await db.query(
+        `UPSERT type::record('workflow', $workflowId) SET
+            root_task_id = $workflowId,
+            task_count = task_count ?? 0,
+            completed_count = completed_count ?? 0,
+            failure_count = failure_count ?? 0,
+            retry_count = retry_count ?? 0,
+            active_count = active_count ?? 0,
+            worker_count = worker_count ?? 0,
+            aggregate_state = aggregate_state ?? 'PENDING',
+            first_seen_at = first_seen_at ?? <datetime>$ts,
+            last_updated = IF last_updated IS NONE OR <datetime>$ts > last_updated THEN <datetime>$ts ELSE last_updated END`,
+        { workflowId, ts: iso },
+    )
+
+    const workflowTasks = await db.query<
+        Array<
+            Array<{
+                type?: string
+                state?: string
+                worker?: string | null
+                last_updated?: string
+                exception?: string | null
+            }>
+        >
+    >(
+        "SELECT type, state, worker, last_updated, exception FROM task WHERE workflow_id = $workflowId ORDER BY last_updated DESC",
+        {
+            workflowId,
+        },
+    )
+    const rootResults = await db.query<Array<Array<{ type?: string }>>>(
+        "SELECT type FROM type::record('task', $workflowId)",
+        { workflowId },
+    )
+
+    const members = workflowTasks[0] ?? []
+    const root = rootResults[0]?.[0]
+    const taskCount = members.length
+    const completedCount = members.filter(
+        (member) =>
+            member.state &&
+            !ACTIVE_TASK_STATES.includes(member.state as (typeof ACTIVE_TASK_STATES)[number]) &&
+            member.state !== "RETRY",
+    ).length
+    const failureCount = members.filter((member) => member.state === "FAILURE").length
+    const retryCount = members.filter((member) => member.state === "RETRY").length
+    const activeCount = members.filter(
+        (member) => member.state && ACTIVE_TASK_STATES.includes(member.state as (typeof ACTIVE_TASK_STATES)[number]),
+    ).length
+    const workerCount = new Set(members.map((member) => member.worker).filter(Boolean)).size
+    const firstSeenAt = members.at(-1)?.last_updated ?? iso
+    const lastUpdated = members[0]?.last_updated ?? iso
+    const latestExceptionPreview = members.find((member) => member.exception)?.exception ?? null
+    const hasLatestExceptionPreview = latestExceptionPreview !== null
+    const aggregateState =
+        failureCount > 0
+            ? "FAILURE"
+            : retryCount > 0
+              ? "RETRY"
+              : activeCount > 0
+                ? "STARTED"
+                : taskCount > 0
+                  ? "SUCCESS"
+                  : "PENDING"
+
+    await db.query(
+        `UPSERT type::record('workflow', $workflowId) SET
+            root_task_id = $workflowId,
+            root_task_type = $rootTaskType,
+            aggregate_state = $aggregateState,
+            first_seen_at = <datetime>$firstSeenAt,
+            last_updated = <datetime>$lastUpdated,
+            task_count = $taskCount,
+            completed_count = $completedCount,
+            failure_count = $failureCount,
+            retry_count = $retryCount,
+            active_count = $activeCount,
+            worker_count = $workerCount,
+            latest_exception_preview = IF $hasLatestExceptionPreview THEN $latestExceptionPreview ELSE NONE END`,
+        {
+            workflowId,
+            rootTaskType: root?.type ?? task.taskType,
+            aggregateState,
+            firstSeenAt,
+            lastUpdated,
+            taskCount,
+            completedCount,
+            failureCount,
+            retryCount,
+            activeCount,
+            workerCount,
+            hasLatestExceptionPreview,
+            latestExceptionPreview,
+        },
+    )
+}
+
 async function insertWorkerOnline(db: Surreal, hostname: string, ts: Date): Promise<void> {
     const iso = ts.toISOString()
     await db.query(
@@ -233,6 +336,7 @@ async function insertTaskEvent(
         `state = IF last_updated IS NONE OR <datetime>$ts > last_updated THEN $state ELSE state END`,
         `last_updated = IF last_updated IS NONE OR <datetime>$ts > last_updated THEN <datetime>$ts ELSE last_updated END`,
         `${tsField} = IF ${tsField} IS NONE OR <datetime>$ts < ${tsField} THEN <datetime>$ts ELSE ${tsField} END`,
+        `workflow_id = $workflowId`,
         `worker = IF last_updated IS NONE OR <datetime>$ts >= last_updated THEN $worker ELSE worker END`,
     ]
 
@@ -240,6 +344,7 @@ async function insertTaskEvent(
         id: task.taskId,
         ts: iso,
         state,
+        workflowId: task.rootId ?? task.taskId,
         worker: task.worker,
     }
 
@@ -310,6 +415,8 @@ async function insertTaskEvent(
             { parentId: task.parentId, childId: task.taskId },
         )
     }
+
+    await updateWorkflowProjection(db, task, ts)
 }
 
 // --- Task lifecycle simulation ---

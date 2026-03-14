@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import ExceptionsSummary from "@components/task/alerts/exceptions-summary"
-import RecentTasksPanel from "@components/task/recent-tasks-panel"
+import WorkflowActivityFeed from "@components/task/workflow-activity-feed"
 import WelcomeBanner from "@components/welcome-banner"
 import WorkersSummaryStack from "@components/worker/workers-summary-stack"
 import useSettingsStore from "@stores/use-settings-store"
@@ -42,7 +42,7 @@ const HomePage = () => {
             <ExceptionsSummary />
             <div className="grid grid-cols-12 gap-6 px-6">
                 <div className="col-span-12 lg:col-span-8">
-                    <RecentTasksPanel id="recent-tasks" />
+                    <WorkflowActivityFeed id="recent-tasks" />
                 </div>
                 <div className="col-span-12 lg:col-span-4">
                     <WorkersSummaryStack />
