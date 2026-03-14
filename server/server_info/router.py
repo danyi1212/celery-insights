@@ -1,14 +1,13 @@
 import json
 import logging
 
-from fastapi import APIRouter, Body, Request, UploadFile
+from fastapi import APIRouter, Request, UploadFile
 from fastapi_cache.decorator import cache
+from starlette.responses import JSONResponse
 from starlette.responses import StreamingResponse
 
 from server_info.backup import export_database, import_database
-from server_info.debug_bundle import create_debug_bundle
 from server_info.models import (
-    ClientDebugInfo,
     RecordCounts,
     RetentionInfo,
     RetentionSettings,
@@ -21,6 +20,16 @@ logger = logging.getLogger(__name__)
 
 settings_router = APIRouter(prefix="/api/settings", tags=["settings"])
 
+READ_ONLY_ERROR = {"error": "debug snapshot is read-only"}
+
+
+def _read_only_response():
+    return JSONResponse(READ_ONLY_ERROR, status_code=409)
+
+
+def _is_debug_snapshot_mode(request: Request) -> bool:
+    return bool(getattr(request.app.state, "debug_snapshot_mode", False))
+
 
 @settings_router.get("/info")
 @cache(1)
@@ -29,7 +38,9 @@ async def get_server_info(request: Request) -> ServerInfo:
 
 
 @settings_router.post("/clear")
-async def clear_state() -> bool:
+async def clear_state(request: Request):
+    if _is_debug_snapshot_mode(request):
+        return _read_only_response()
     try:
         db = get_db()
         await db.query("DELETE FROM task; DELETE FROM event; DELETE FROM worker;")
@@ -38,14 +49,6 @@ async def clear_state() -> bool:
         logger.exception("Failed to clear SurrealDB tables")
         return False
     return True
-
-
-@settings_router.post("/download-debug-bundle")
-async def download_debug_bundle(request: Request, client_info: ClientDebugInfo = Body(...)):  # noqa B008
-    buffer = await create_debug_bundle(request, client_info)
-    return StreamingResponse(
-        buffer, media_type="application/zip", headers={"Content-Disposition": "attachment; filename=debug_bundle.zip"}
-    )
 
 
 @settings_router.get("/export")
@@ -62,7 +65,9 @@ MAX_IMPORT_SIZE = 100 * 1024 * 1024  # 100 MB
 
 
 @settings_router.post("/import")
-async def import_backup(file: UploadFile):
+async def import_backup(request: Request, file: UploadFile):
+    if _is_debug_snapshot_mode(request):
+        return _read_only_response()
     content = await file.read(MAX_IMPORT_SIZE + 1)
     if len(content) > MAX_IMPORT_SIZE:
         return {"success": False, "error": f"File too large (max {MAX_IMPORT_SIZE // (1024 * 1024)}MB)"}
@@ -106,6 +111,8 @@ async def get_retention_settings(request: Request) -> RetentionInfo:
 
 @settings_router.put("/retention")
 async def update_retention_settings(request: Request, new_settings: RetentionSettings) -> RetentionInfo:
+    if _is_debug_snapshot_mode(request):
+        return _read_only_response()
     cleanup_job = request.app.state.cleanup_job
     cleanup_job.task_max_count = new_settings.task_max_count
     cleanup_job.task_retention_hours = new_settings.task_retention_hours
@@ -127,6 +134,8 @@ async def update_retention_settings(request: Request, new_settings: RetentionSet
 
 @settings_router.post("/cleanup")
 async def trigger_cleanup(request: Request) -> dict:
+    if _is_debug_snapshot_mode(request):
+        return _read_only_response()
     cleanup_job = request.app.state.cleanup_job
     try:
         await cleanup_job._run_cleanup()

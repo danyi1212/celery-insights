@@ -25,8 +25,13 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Debug Bundle**
-Please include a debug bundle by clicking `Download Debug Bundle` from the Settings Page at the time you have
-experienced your problem.
+If the issue depends on real runtime state, attach a redacted debug bundle captured from **Settings** -> **Download diagnostics** while the problem is visible.
+
+Please also note:
+
+- whether the attached bundle is redacted or includes secrets
+- whether replay mode reproduces the same issue
+- the exact `docker run ... DEBUG_BUNDLE_PATH=...` or `just start-debug /absolute/path/to/debug-bundle-v2.zip` command if you already replayed it locally
 
 **Additional context**
 Add any other context about the problem here.

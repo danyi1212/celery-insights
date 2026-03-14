@@ -25,6 +25,14 @@ These are the operational behaviors most likely to matter once the app is behind
 - Set `SURREALDB_FRONTEND_PASS` when the dashboard is not on a fully trusted network.
 - Store `BROKER_URL`, `RESULT_BACKEND`, and any config-file secrets in your secret manager rather than baking them into images.
 
+## Incident capture and replay
+
+- Use **Settings** -> **Download diagnostics** to capture a `debug bundle v2` while the issue is visible.
+- Keep secrets redacted unless the investigation explicitly requires exact credentials.
+- Replay the captured bundle with `DEBUG_BUNDLE_PATH` when you need an offline, read-only copy of the incident.
+- If you work from this repository, `just start-debug /absolute/path/to/debug-bundle-v2.zip` is the quickest local replay path.
+- Attach the redacted bundle to bug reports when possible, or share it privately if the issue requires sensitive context.
+
 ## Scaling semantics
 
 - Extra replicas primarily improve availability and frontend capacity.

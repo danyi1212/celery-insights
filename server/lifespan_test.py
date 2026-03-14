@@ -29,6 +29,7 @@ class TestLifespan:
             settings.task_max_count = None
             settings.task_retention_hours = None
             settings.dead_worker_retention_hours = 24
+            settings.debug_snapshot_mode = False
 
             get_app.return_value = MagicMock()
 
@@ -118,3 +119,17 @@ class TestLifespan:
     async def test_exposes_cleanup_job_on_app_state(self):
         async with lifespan(self.mock_app):
             assert self.mock_app.state.cleanup_job is self.cleanup
+
+    @pytest.mark.asyncio
+    async def test_snapshot_mode_skips_celery_services(self):
+        self.settings.debug_snapshot_mode = True
+
+        async with lifespan(self.mock_app):
+            pass
+
+        self.get_celery_app.assert_not_called()
+        self.receiver.start.assert_not_called()
+        self.ingester.start.assert_not_called()
+        self.poller.start.assert_not_called()
+        self.cleanup.start.assert_not_called()
+        assert self.mock_app.state.debug_snapshot_mode is True

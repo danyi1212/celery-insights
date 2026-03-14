@@ -23,6 +23,7 @@ describe("parseConfig", () => {
         expect(config.brokerUrl).toBe("amqp://guest:guest@host.docker.internal/")
         expect(config.resultBackend).toBe("redis://host.docker.internal:6379/0")
         expect(config.configFile).toBe("/app/config.py")
+        expect(config.debugBundlePath).toBeUndefined()
         expect(config.timezone).toBe("UTC")
         expect(config.debug).toBe(false)
     })
@@ -67,6 +68,7 @@ describe("parseConfig", () => {
         expect(config.surrealdbFrontendPass).toBeUndefined()
         expect(config.taskMaxCount).toBeUndefined()
         expect(config.taskRetentionHours).toBeUndefined()
+        expect(config.debugBundlePath).toBeUndefined()
     })
 
     it("coerces boolean strings", () => {
@@ -128,5 +130,12 @@ describe("parseConfig", () => {
             SURREALDB_FRONTEND_PASS: "mysecret",
         })
         expect(config.surrealdbFrontendPass).toBe("mysecret")
+    })
+
+    it("accepts a debug bundle path", () => {
+        const config = parseConfig({
+            DEBUG_BUNDLE_PATH: "/snapshots/debug-bundle.zip",
+        })
+        expect(config.debugBundlePath).toBe("/snapshots/debug-bundle.zip")
     })
 })

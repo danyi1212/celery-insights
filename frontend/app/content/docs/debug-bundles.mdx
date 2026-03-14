@@ -1,0 +1,93 @@
+Debug bundles are the fastest way to move a real Celery Insights incident from an operator's browser into a reproducible local investigation.
+
+## What a debug bundle captures
+
+`Download diagnostics` on the Settings page creates a `debug bundle v2` zip.
+
+It includes:
+
+- effective runtime config, with secrets redacted by default
+- optional mounted `config.py`
+- runtime diagnostics, retention settings, health metadata, and version details
+- a full SurrealDB export of `task`, `event`, and `worker`
+- browser and UI settings for reference
+- recent Bun, Python, and SurrealDB logs from the in-memory process buffers
+
+Use the bundle when:
+
+- filing a bug report
+- handing an incident from an operator to an engineer
+- preserving a transient failure before restarting or redeploying
+- reproducing a production-only state without reconnecting to the live broker
+
+## Downloading a bundle safely
+
+Open **Settings** and use **Download diagnostics**.
+
+By default, the download is redacted. That is the preferred option for almost every bug report and support handoff.
+
+Enable **Include secrets** only when someone actively investigating the issue needs the exact broker, backend, or database credentials to reproduce the environment.
+
+Capture the bundle while the problem is visible if possible. That preserves the task/event state and the recent process logs closest to the failure.
+
+## Replaying a bundle locally
+
+Snapshot replay starts the app in an offline, read-only mode from a mounted bundle file.
+
+### Docker run
+
+```bash
+docker run --rm -p 8555:8555 \
+  -v "$PWD/debug-bundle-v2.zip:/snapshot/debug-bundle-v2.zip:ro" \
+  -e DEBUG_BUNDLE_PATH=/snapshot/debug-bundle-v2.zip \
+  ghcr.io/danyi1212/celery-insights:latest
+```
+
+### Local test compose stack
+
+If you are working from this repository, use the helper recipe:
+
+```bash
+just start-debug /absolute/path/to/debug-bundle-v2.zip
+```
+
+That starts the test compose stack in detached mode and mounts the bundle into the `celery-insights` service.
+
+## What replay mode changes
+
+Replay mode is intentionally isolated:
+
+- ingestion is disabled
+- no live Celery broker or result-backend connections are started
+- leader election is disabled
+- external SurrealDB is ignored in favor of the embedded database
+- settings actions that mutate server state stay disabled
+
+The Settings page shows a persistent replay banner plus a snapshot overview panel so you can compare the captured source metadata with the replayed runtime.
+
+## Re-downloading from replay mode
+
+You can download a new debug bundle while replaying an older one.
+
+When that happens:
+
+- the original captured files stay under `source/`
+- new replay-only diagnostics are written under `replay/`
+
+This preserves the original source environment while still letting you capture extra logs and UI metadata from the replay session.
+
+## Compatibility and limits
+
+- Snapshot replay requires `debug bundle v2`.
+- Older bundle formats fail fast instead of importing partial state.
+- The JSON backup import/export endpoints remain available as a lower-level data-only transfer format.
+- UI settings from the bundle are shown for reference only and are not applied to the viewer's browser automatically.
+
+## What to include in a bug report
+
+For bugs or regressions, attach:
+
+- the redacted debug bundle when possible
+- the app image or commit you were running
+- whether replay mode reproduces the same behavior
+- the exact `docker run` or `just start-debug ...` command if you already replayed it locally

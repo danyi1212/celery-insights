@@ -23,6 +23,7 @@ import { Route as DocumentationSetupRouteImport } from './routes/documentation.s
 import { Route as DocumentationProductionNotesRouteImport } from './routes/documentation.production-notes'
 import { Route as DocumentationKubernetesRouteImport } from './routes/documentation.kubernetes'
 import { Route as DocumentationDeploymentPatternsRouteImport } from './routes/documentation.deployment-patterns'
+import { Route as DocumentationDebugBundlesRouteImport } from './routes/documentation.debug-bundles'
 import { Route as DocumentationConfigurationRouteImport } from './routes/documentation.configuration'
 import { Route as DocumentationCeleryClustersRouteImport } from './routes/documentation.celery-clusters'
 
@@ -98,6 +99,12 @@ const DocumentationDeploymentPatternsRoute =
     path: '/deployment-patterns',
     getParentRoute: () => DocumentationRoute,
   } as any)
+const DocumentationDebugBundlesRoute =
+  DocumentationDebugBundlesRouteImport.update({
+    id: '/debug-bundles',
+    path: '/debug-bundles',
+    getParentRoute: () => DocumentationRoute,
+  } as any)
 const DocumentationConfigurationRoute =
   DocumentationConfigurationRouteImport.update({
     id: '/configuration',
@@ -120,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/documentation/celery-clusters': typeof DocumentationCeleryClustersRoute
   '/documentation/configuration': typeof DocumentationConfigurationRoute
+  '/documentation/debug-bundles': typeof DocumentationDebugBundlesRoute
   '/documentation/deployment-patterns': typeof DocumentationDeploymentPatternsRoute
   '/documentation/kubernetes': typeof DocumentationKubernetesRoute
   '/documentation/production-notes': typeof DocumentationProductionNotesRoute
@@ -137,6 +145,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/documentation/celery-clusters': typeof DocumentationCeleryClustersRoute
   '/documentation/configuration': typeof DocumentationConfigurationRoute
+  '/documentation/debug-bundles': typeof DocumentationDebugBundlesRoute
   '/documentation/deployment-patterns': typeof DocumentationDeploymentPatternsRoute
   '/documentation/kubernetes': typeof DocumentationKubernetesRoute
   '/documentation/production-notes': typeof DocumentationProductionNotesRoute
@@ -156,6 +165,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/documentation/celery-clusters': typeof DocumentationCeleryClustersRoute
   '/documentation/configuration': typeof DocumentationConfigurationRoute
+  '/documentation/debug-bundles': typeof DocumentationDebugBundlesRoute
   '/documentation/deployment-patterns': typeof DocumentationDeploymentPatternsRoute
   '/documentation/kubernetes': typeof DocumentationKubernetesRoute
   '/documentation/production-notes': typeof DocumentationProductionNotesRoute
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/documentation/celery-clusters'
     | '/documentation/configuration'
+    | '/documentation/debug-bundles'
     | '/documentation/deployment-patterns'
     | '/documentation/kubernetes'
     | '/documentation/production-notes'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/documentation/celery-clusters'
     | '/documentation/configuration'
+    | '/documentation/debug-bundles'
     | '/documentation/deployment-patterns'
     | '/documentation/kubernetes'
     | '/documentation/production-notes'
@@ -211,6 +223,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/documentation/celery-clusters'
     | '/documentation/configuration'
+    | '/documentation/debug-bundles'
     | '/documentation/deployment-patterns'
     | '/documentation/kubernetes'
     | '/documentation/production-notes'
@@ -333,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentationDeploymentPatternsRouteImport
       parentRoute: typeof DocumentationRoute
     }
+    '/documentation/debug-bundles': {
+      id: '/documentation/debug-bundles'
+      path: '/debug-bundles'
+      fullPath: '/documentation/debug-bundles'
+      preLoaderRoute: typeof DocumentationDebugBundlesRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
     '/documentation/configuration': {
       id: '/documentation/configuration'
       path: '/configuration'
@@ -353,6 +373,7 @@ declare module '@tanstack/react-router' {
 interface DocumentationRouteChildren {
   DocumentationCeleryClustersRoute: typeof DocumentationCeleryClustersRoute
   DocumentationConfigurationRoute: typeof DocumentationConfigurationRoute
+  DocumentationDebugBundlesRoute: typeof DocumentationDebugBundlesRoute
   DocumentationDeploymentPatternsRoute: typeof DocumentationDeploymentPatternsRoute
   DocumentationKubernetesRoute: typeof DocumentationKubernetesRoute
   DocumentationProductionNotesRoute: typeof DocumentationProductionNotesRoute
@@ -363,6 +384,7 @@ interface DocumentationRouteChildren {
 const DocumentationRouteChildren: DocumentationRouteChildren = {
   DocumentationCeleryClustersRoute: DocumentationCeleryClustersRoute,
   DocumentationConfigurationRoute: DocumentationConfigurationRoute,
+  DocumentationDebugBundlesRoute: DocumentationDebugBundlesRoute,
   DocumentationDeploymentPatternsRoute: DocumentationDeploymentPatternsRoute,
   DocumentationKubernetesRoute: DocumentationKubernetesRoute,
   DocumentationProductionNotesRoute: DocumentationProductionNotesRoute,

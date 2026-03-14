@@ -35,6 +35,12 @@ export const helpNavigation = [
         description: "Guardrails for real deployments.",
         group: "Operations",
     },
+    {
+        title: "Debug Bundles",
+        href: "/documentation/debug-bundles",
+        description: "Capture reproducible snapshots and replay them offline.",
+        group: "Operations",
+    },
 ] as const
 
 export const matchHelpNavigation = (query: string) => {

@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
+import { DebugSnapshotPanel } from "@components/settings/debug-snapshot-panel"
+import { useSurrealDB } from "@components/surrealdb-provider"
 import { DatabaseBackupPanel } from "@components/settings/database-backup-panel"
 import DangerZonePanel from "@components/settings/danger-zone-panel"
 import { RetentionPolicyPanel, RetentionPolicyPanelAction } from "@components/settings/retention-policy-panel"
@@ -6,14 +8,6 @@ import { ServerInfoPanel, ServerInfoPanelAction } from "@components/settings/ser
 import SettingsOverview from "@components/settings/settings-overview"
 import SettingsPanel, { SettingsPanelAction } from "@components/settings/settings-panel"
 import { Link } from "lucide-react"
-
-const sections = [
-    { id: "workspace", label: "Workspace" },
-    { id: "system", label: "System status" },
-    { id: "cleanup", label: "Cleanup" },
-    { id: "backups", label: "Backups" },
-    { id: "danger-zone", label: "Danger zone" },
-]
 
 const SectionBlock = ({
     id,
@@ -45,6 +39,17 @@ const SectionBlock = ({
 )
 
 const SettingsPage = () => {
+    const { appConfig } = useSurrealDB()
+    const snapshotEnabled = appConfig?.debugSnapshot?.enabled === true
+    const sections = [
+        { id: "workspace", label: "Workspace" },
+        ...(snapshotEnabled ? [{ id: "snapshot", label: "Snapshot overview" }] : []),
+        { id: "system", label: "System status" },
+        { id: "cleanup", label: "Cleanup" },
+        { id: "backups", label: "Backups" },
+        { id: "danger-zone", label: "Danger zone" },
+    ]
+
     return (
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_220px]">
             <div className="space-y-8">
@@ -65,6 +70,12 @@ const SettingsPage = () => {
                 <SectionBlock id="workspace" label="Workspace" action={<SettingsPanelAction />}>
                     <SettingsPanel hideHeader />
                 </SectionBlock>
+
+                {snapshotEnabled && (
+                    <SectionBlock id="snapshot" label="Snapshot overview">
+                        <DebugSnapshotPanel hideHeader />
+                    </SectionBlock>
+                )}
 
                 <SectionBlock id="system" label="System status" action={<ServerInfoPanelAction />}>
                     <ServerInfoPanel hideHeader />

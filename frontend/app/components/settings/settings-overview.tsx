@@ -50,9 +50,10 @@ const SettingsOverview = () => {
     const hideWelcomeBanner = useSettingsStore((state) => state.hideWelcomeBanner)
     const isDemo = useSettingsStore((state) => state.demo)
     const rawEventsLimit = useSettingsStore((state) => state.rawEventsLimit)
-    const { status, ingestionStatus } = useSurrealDB()
+    const { status, ingestionStatus, appConfig } = useSurrealDB()
     const { data, error } = useSettingsDiagnostics({ enabled: !isDemo })
     const { data: demoCounts, isLoading: isLoadingDemoCounts } = useDemoRecordCounts({ enabled: isDemo })
+    const snapshotEnabled = appConfig?.debugSnapshot?.enabled === true
 
     const durability = data?.surrealdb.durability
     const topology = data?.surrealdb.topology
@@ -119,15 +120,17 @@ const SettingsOverview = () => {
             <SummaryCard
                 icon={<Gauge className="size-4" />}
                 title="Runtime"
-                value={isDemo ? "Demo mode" : formatConnectionStatus(status)}
+                value={isDemo ? "Demo mode" : snapshotEnabled ? "Snapshot replay" : formatConnectionStatus(status)}
                 hint={
                     isDemo
                         ? "No live instance connection is used while sample data is active."
-                        : `${formatIngestionStatus(ingestionStatus)}${data ? ` · ${formatVersion(data.server_version)}` : ""}`
+                        : snapshotEnabled
+                          ? "Offline debug bundle loaded at startup."
+                          : `${formatIngestionStatus(ingestionStatus)}${data ? ` · ${formatVersion(data.server_version)}` : ""}`
                 }
                 badge={
-                    <Badge variant={isDemo || status === "connected" ? "secondary" : "destructive"}>
-                        {isDemo ? "Demo" : formatIngestionStatus(ingestionStatus)}
+                    <Badge variant={isDemo || snapshotEnabled || status === "connected" ? "secondary" : "destructive"}>
+                        {isDemo ? "Demo" : snapshotEnabled ? "Snapshot" : formatIngestionStatus(ingestionStatus)}
                     </Badge>
                 }
             />

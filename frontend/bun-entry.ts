@@ -10,8 +10,21 @@ import path from "node:path"
 import readline from "node:readline"
 import { spawn, type ChildProcess } from "node:child_process"
 import { Surreal } from "surrealdb"
-import { config } from "./src/config"
-import { bunLogger, surrealLogger } from "./src/logger"
+import { config, type Config } from "./src/config"
+import {
+    createDebugBundleArchive,
+    exportSurrealNative,
+    getSnapshotDetails,
+    getSnapshotSummary,
+    getSurrealRecordCounts,
+    importSurrealNative,
+    importSurrealData,
+    LineRingBuffer,
+    parseDebugSnapshot,
+    type DebugBundleClientInfo,
+    type ParsedDebugSnapshot,
+} from "./src/debug-bundle"
+import { bunLogger, registerLogSink, surrealLogger } from "./src/logger"
 import { LeaderElection, generateInstanceId, type IngestionStatus } from "./src/leader-election"
 import { runSchemaMigration } from "./src/surreal-schema"
 
@@ -31,8 +44,8 @@ const LOGO = `
 
 // --- Startup banner ---
 
-function printBanner(): void {
-    if (config.logFormat !== "pretty") return
+function printBanner(runtimeConfig: Config, replaySnapshot: ParsedDebugSnapshot | null): void {
+    if (runtimeConfig.logFormat !== "pretty") return
 
     const isTTY = process.stdout.isTTY === true
     const c = isTTY
@@ -41,38 +54,43 @@ function printBanner(): void {
 
     const logo = `${c.green}${c.bold}${LOGO}${c.reset}\n`
 
-    const surrealInfo = config.surrealdbExternalUrl
-        ? `external (${config.surrealdbExternalUrl})`
-        : `managed (${config.surrealdbStorage}) on port ${config.surrealdbPort}`
+    const surrealInfo = runtimeConfig.surrealdbExternalUrl
+        ? `external (${runtimeConfig.surrealdbExternalUrl})`
+        : `managed (${runtimeConfig.surrealdbStorage}) on port ${runtimeConfig.surrealdbPort}`
 
-    const ingestionInfo = !config.ingestionEnabled
-        ? "disabled"
-        : config.ingestionLeaderElection
+    const ingestionInfo = replaySnapshot
+        ? "snapshot replay (read-only)"
+        : !runtimeConfig.ingestionEnabled
+          ? "disabled"
+          : runtimeConfig.ingestionLeaderElection
           ? "enabled (leader election)"
           : "enabled (standalone)"
 
     const retention: string[] = []
-    if (config.taskMaxCount != null) retention.push(`max ${config.taskMaxCount} tasks`)
-    if (config.taskRetentionHours != null) retention.push(`tasks: ${config.taskRetentionHours}h`)
-    if (config.deadWorkerRetentionHours != null) retention.push(`dead workers: ${config.deadWorkerRetentionHours}h`)
+    if (runtimeConfig.taskMaxCount != null) retention.push(`max ${runtimeConfig.taskMaxCount} tasks`)
+    if (runtimeConfig.taskRetentionHours != null) retention.push(`tasks: ${runtimeConfig.taskRetentionHours}h`)
+    if (runtimeConfig.deadWorkerRetentionHours != null) retention.push(`dead workers: ${runtimeConfig.deadWorkerRetentionHours}h`)
 
     const lines = [
-        `  ${c.dim}Server${c.reset}      http://localhost:${config.port}`,
-        `  ${c.dim}Broker${c.reset}      ${config.brokerUrl}`,
-        `  ${c.dim}Backend${c.reset}     ${config.resultBackend}`,
+        `  ${c.dim}Server${c.reset}      http://localhost:${runtimeConfig.port}`,
+        `  ${c.dim}Broker${c.reset}      ${runtimeConfig.brokerUrl}`,
+        `  ${c.dim}Backend${c.reset}     ${runtimeConfig.resultBackend}`,
         `  ${c.dim}SurrealDB${c.reset}   ${surrealInfo}`,
         `  ${c.dim}Ingestion${c.reset}   ${ingestionInfo}`,
-        `  ${c.dim}Log level${c.reset}   ${config.logLevel}`,
+        `  ${c.dim}Log level${c.reset}   ${runtimeConfig.logLevel}`,
     ]
 
     if (retention.length > 0) {
         lines.push(`  ${c.dim}Retention${c.reset}   ${retention.join(", ")}`)
     }
-    if (config.timezone !== "UTC") {
-        lines.push(`  ${c.dim}Timezone${c.reset}    ${config.timezone}`)
+    if (runtimeConfig.timezone !== "UTC") {
+        lines.push(`  ${c.dim}Timezone${c.reset}    ${runtimeConfig.timezone}`)
     }
-    if (config.debug) {
+    if (runtimeConfig.debug) {
         lines.push(`  ${c.dim}Debug${c.reset}       enabled`)
+    }
+    if (replaySnapshot) {
+        lines.push(`  ${c.dim}Snapshot${c.reset}    ${replaySnapshot.bundlePath}`)
     }
 
     process.stdout.write(logo + lines.join("\n") + "\n\n")
@@ -83,10 +101,6 @@ const PYTHON_BACKEND = `http://localhost:${PYTHON_PORT}`
 const PYTHON_WS_BACKEND = `ws://localhost:${PYTHON_PORT}`
 
 // Derive SurrealDB proxy targets from config (strip /rpc suffix, convert ws->http)
-const surrealWsBase = config.surrealdbUrl.replace(/\/rpc$/, "")
-const SURREAL_HTTP_BASE = surrealWsBase.replace(/^ws(s?):\/\//, "http$1://")
-const SURREAL_WS_BASE = surrealWsBase
-
 const DIST_DIR = path.resolve(import.meta.dir, "dist")
 
 // Read index.html once at startup for SPA fallback
@@ -98,7 +112,13 @@ let leaderElection: LeaderElection | null = null
 let ingestionStatus: IngestionStatus = "disabled"
 let shuttingDown = false
 const instanceId = generateInstanceId()
-const managingSurrealDB = !config.surrealdbExternalUrl
+let replaySnapshot: ParsedDebugSnapshot | null = null
+let runtimeConfig: Config = config
+const bunLogBuffer = new LineRingBuffer()
+const surrealLogBuffer = new LineRingBuffer()
+const pythonLogBuffer = new LineRingBuffer()
+registerLogSink("bun", (line) => bunLogBuffer.add(line))
+registerLogSink("surrealdb", (line) => surrealLogBuffer.add(line))
 
 const REQUEST_HOP_BY_HOP_HEADERS = new Set([
     "connection",
@@ -120,6 +140,50 @@ const RESPONSE_HOP_BY_HOP_HEADERS = new Set([
     "keep-alive",
     "transfer-encoding",
 ])
+
+function getSurrealBases(activeConfig: Config): { httpBase: string; wsBase: string } {
+    const wsBase = activeConfig.surrealdbUrl.replace(/\/rpc$/, "")
+    return {
+        httpBase: wsBase.replace(/^ws(s?):\/\//, "http$1://"),
+        wsBase,
+    }
+}
+
+function buildSnapshotRuntimeConfig(baseConfig: Config): Config {
+    return {
+        ...baseConfig,
+        debugBundlePath: baseConfig.debugBundlePath,
+        ingestionEnabled: false,
+        ingestionLeaderElection: false,
+        surrealdbExternalUrl: undefined,
+        surrealdbUrl: `ws://localhost:${baseConfig.surrealdbPort}/rpc`,
+        surrealdbStorage: baseConfig.surrealdbStorage || "memory",
+    }
+}
+
+async function fetchJsonFromPython<T>(pathname: string): Promise<T | null> {
+    try {
+        const response = await fetch(`${PYTHON_BACKEND}${pathname}`)
+        if (!response.ok) return null
+        return (await response.json()) as T
+    } catch {
+        return null
+    }
+}
+
+function buildVersionsInfo(activeConfig: Config): Record<string, unknown> {
+    return {
+        bun: Bun.version,
+        pythonBackendPort: PYTHON_PORT,
+        surrealdbUrl: activeConfig.surrealdbUrl,
+        appVersion: "v0.2.0",
+    }
+}
+
+function buildDebugBundleFilename(date = new Date()): string {
+    const stamp = date.toISOString().replace(/[:.]/g, "-")
+    return `celery-insights-debug-bundle-${stamp}.zip`
+}
 
 // --- SurrealDB subprocess management ---
 
@@ -158,10 +222,22 @@ function parseSurrealLine(raw: string, defaultLevel: "debug" | "info" | "warn" |
 }
 
 function spawnSurrealDB(): ChildProcess {
-    bunLogger.info(`Spawning SurrealDB subprocess on port ${config.surrealdbPort} (storage: ${config.surrealdbStorage})`)
+    bunLogger.info(
+        `Spawning SurrealDB subprocess on port ${runtimeConfig.surrealdbPort} (storage: ${runtimeConfig.surrealdbStorage})`,
+    )
     const proc = spawn(
         "surreal",
-        ["start", "--no-banner", "--bind", `0.0.0.0:${config.surrealdbPort}`, "--user", "root", "--pass", "root", config.surrealdbStorage],
+        [
+            "start",
+            "--no-banner",
+            "--bind",
+            `0.0.0.0:${runtimeConfig.surrealdbPort}`,
+            "--user",
+            "root",
+            "--pass",
+            "root",
+            runtimeConfig.surrealdbStorage,
+        ],
         { stdio: ["ignore", "pipe", "pipe"] },
     )
 
@@ -223,9 +299,9 @@ function createProxyResponseHeaders(headers: Headers): Headers {
  * Polls the health endpoint with exponential backoff.
  */
 async function waitForSurrealDB(maxWaitMs = 30000): Promise<void> {
-    const surrealHttpUrl = config.surrealdbExternalUrl
-        ? config.surrealdbExternalUrl.replace(/\/rpc$/, "").replace(/^ws(s?):\/\//, "http$1://")
-        : `http://localhost:${config.surrealdbPort}`
+    const surrealHttpUrl = runtimeConfig.surrealdbExternalUrl
+        ? runtimeConfig.surrealdbExternalUrl.replace(/\/rpc$/, "").replace(/^ws(s?):\/\//, "http$1://")
+        : `http://localhost:${runtimeConfig.surrealdbPort}`
     const healthUrl = `${surrealHttpUrl}/health`
     const startTime = Date.now()
     let delayMs = 200
@@ -254,47 +330,65 @@ const PYTHON_BACKOFF_MAX_MS = 30000
 let pythonRestartAttempts = 0
 
 function spawnPython(): ChildProcess {
-    bunLogger.info("Spawning Python ingester subprocess")
+    bunLogger.info(replaySnapshot ? "Spawning Python control-plane subprocess" : "Spawning Python ingester subprocess")
     const proc = spawn("python", ["run.py"], {
         cwd: path.resolve(import.meta.dir, "server"),
         env: {
             ...process.env,
             PORT: String(PYTHON_PORT),
-            SURREALDB_URL: config.surrealdbUrl,
-            ...(config.surrealdbExternalUrl ? { SURREALDB_EXTERNAL_URL: config.surrealdbExternalUrl } : {}),
-            SURREALDB_INGESTER_PASS: config.surrealdbIngesterPass,
-            SURREALDB_NAMESPACE: config.surrealdbNamespace,
-            SURREALDB_DATABASE: config.surrealdbDatabase,
-            SURREALDB_STORAGE: config.surrealdbStorage,
-            BROKER_URL: config.brokerUrl,
-            RESULT_BACKEND: config.resultBackend,
-            CONFIG_FILE: config.configFile,
-            TIMEZONE: config.timezone,
-            DEBUG: String(config.debug),
-            CLEANUP_INTERVAL_SECONDS: String(config.cleanupIntervalSeconds),
-            ...(config.taskMaxCount != null ? { TASK_MAX_COUNT: String(config.taskMaxCount) } : {}),
-            ...(config.taskRetentionHours != null ? { TASK_RETENTION_HOURS: String(config.taskRetentionHours) } : {}),
-            ...(config.deadWorkerRetentionHours != null
-                ? { DEAD_WORKER_RETENTION_HOURS: String(config.deadWorkerRetentionHours) }
+            SURREALDB_URL: runtimeConfig.surrealdbUrl,
+            ...(runtimeConfig.surrealdbExternalUrl ? { SURREALDB_EXTERNAL_URL: runtimeConfig.surrealdbExternalUrl } : {}),
+            SURREALDB_INGESTER_PASS: runtimeConfig.surrealdbIngesterPass,
+            SURREALDB_NAMESPACE: runtimeConfig.surrealdbNamespace,
+            SURREALDB_DATABASE: runtimeConfig.surrealdbDatabase,
+            SURREALDB_STORAGE: runtimeConfig.surrealdbStorage,
+            BROKER_URL: runtimeConfig.brokerUrl,
+            RESULT_BACKEND: runtimeConfig.resultBackend,
+            CONFIG_FILE: runtimeConfig.configFile,
+            TIMEZONE: runtimeConfig.timezone,
+            DEBUG: String(runtimeConfig.debug),
+            CLEANUP_INTERVAL_SECONDS: String(runtimeConfig.cleanupIntervalSeconds),
+            ...(runtimeConfig.taskMaxCount != null ? { TASK_MAX_COUNT: String(runtimeConfig.taskMaxCount) } : {}),
+            ...(runtimeConfig.taskRetentionHours != null
+                ? { TASK_RETENTION_HOURS: String(runtimeConfig.taskRetentionHours) }
                 : {}),
-            INGESTION_BATCH_INTERVAL_MS: String(config.ingestionBatchIntervalMs),
-            LOG_FORMAT: config.logFormat,
-            LOG_LEVEL: config.logLevel,
+            ...(runtimeConfig.deadWorkerRetentionHours != null
+                ? { DEAD_WORKER_RETENTION_HOURS: String(runtimeConfig.deadWorkerRetentionHours) }
+                : {}),
+            INGESTION_BATCH_INTERVAL_MS: String(runtimeConfig.ingestionBatchIntervalMs),
+            LOG_FORMAT: runtimeConfig.logFormat,
+            LOG_LEVEL: runtimeConfig.logLevel,
+            DEBUG_SNAPSHOT_MODE: replaySnapshot ? "true" : "false",
         },
-        stdio: "inherit",
+        stdio: ["ignore", "pipe", "pipe"],
     })
+
+    if (proc.stdout) {
+        const rl = readline.createInterface({ input: proc.stdout })
+        rl.on("line", (line) => {
+            pythonLogBuffer.add(line)
+            process.stdout.write(line + "\n")
+        })
+    }
+    if (proc.stderr) {
+        const rl = readline.createInterface({ input: proc.stderr })
+        rl.on("line", (line) => {
+            pythonLogBuffer.add(line)
+            process.stderr.write(line + "\n")
+        })
+    }
 
     proc.on("exit", (code) => {
         if (shuttingDown) return
         bunLogger.error(`Python ingester exited with code ${code}`)
         pythonProcess = null
         // If we're still leader, restart Python with backoff
-        if (leaderElection?.isLeader) {
+        if (replaySnapshot || leaderElection?.isLeader) {
             const backoffMs = Math.min(PYTHON_BACKOFF_BASE_MS * 2 ** pythonRestartAttempts, PYTHON_BACKOFF_MAX_MS)
             pythonRestartAttempts++
-            bunLogger.warn(`Restarting Python ingester in ${backoffMs}ms (attempt ${pythonRestartAttempts})`)
+            bunLogger.warn(`Restarting Python subprocess in ${backoffMs}ms (attempt ${pythonRestartAttempts})`)
             setTimeout(() => {
-                if (!shuttingDown && leaderElection?.isLeader) {
+                if (!shuttingDown && (replaySnapshot || leaderElection?.isLeader)) {
                     pythonProcess = spawnPython()
                 }
             }, backoffMs)
@@ -343,33 +437,40 @@ process.on("SIGTERM", () => shutdown("SIGTERM"))
 process.on("SIGINT", () => shutdown("SIGINT"))
 
 // --- Startup sequence ---
+if (config.debugBundlePath) {
+    replaySnapshot = await parseDebugSnapshot(config.debugBundlePath)
+    runtimeConfig = buildSnapshotRuntimeConfig(config)
+    bunLogger.info(`Loaded debug snapshot from ${config.debugBundlePath}`)
+}
 
-printBanner()
+printBanner(runtimeConfig, replaySnapshot)
+
+const managingSurrealDB = !runtimeConfig.surrealdbExternalUrl
 
 // 1. Start SurrealDB subprocess (or skip if external URL is set)
 if (managingSurrealDB) {
     surrealProcess = spawnSurrealDB()
 } else {
-    bunLogger.info(`Using external SurrealDB at ${config.surrealdbExternalUrl}`)
+    bunLogger.info(`Using external SurrealDB at ${runtimeConfig.surrealdbExternalUrl}`)
 }
 
 // 2. Wait for SurrealDB to be ready
 await waitForSurrealDB()
 
 // 3. Run schema migration (as root — creates namespace, database, tables, ingester user)
-await runSchemaMigration(config)
+await runSchemaMigration(runtimeConfig)
 
 // 4. Connect to SurrealDB as ingester user
 const db = new Surreal()
 try {
-    await db.connect(config.surrealdbUrl, {
-        namespace: config.surrealdbNamespace,
-        database: config.surrealdbDatabase,
+    await db.connect(runtimeConfig.surrealdbUrl, {
+        namespace: runtimeConfig.surrealdbNamespace,
+        database: runtimeConfig.surrealdbDatabase,
         authentication: {
-            namespace: config.surrealdbNamespace,
-            database: config.surrealdbDatabase,
+            namespace: runtimeConfig.surrealdbNamespace,
+            database: runtimeConfig.surrealdbDatabase,
             username: "ingester",
-            password: config.surrealdbIngesterPass,
+            password: runtimeConfig.surrealdbIngesterPass,
         },
     })
     bunLogger.info("Connected to SurrealDB")
@@ -378,31 +479,45 @@ try {
     process.exit(1)
 }
 
-// 5. Run leader election (spawns Python if this instance becomes leader)
-leaderElection = new LeaderElection({
-    db,
-    config,
-    instanceId,
-    onBecomeLeader() {
-        pythonRestartAttempts = 0
-        pythonProcess = spawnPython()
-    },
-    onLoseLeadership() {
-        if (pythonProcess) {
-            bunLogger.warn("Lost leadership — stopping Python ingester")
-            pythonProcess.kill("SIGTERM")
-            pythonProcess = null
-        }
-    },
-})
+if (replaySnapshot) {
+    if (replaySnapshot.sourceDataSqlPath) {
+        await importSurrealNative(runtimeConfig, db, replaySnapshot.sourceDataSqlPath)
+    } else if (replaySnapshot.sourceData) {
+        await importSurrealData(db, replaySnapshot.sourceData)
+    } else {
+        throw new Error("Debug snapshot does not contain SurrealDB export data")
+    }
+    pythonRestartAttempts = 0
+    pythonProcess = spawnPython()
+    ingestionStatus = "read-only"
+} else {
+    // 5. Run leader election (spawns Python if this instance becomes leader)
+    leaderElection = new LeaderElection({
+        db,
+        config: runtimeConfig,
+        instanceId,
+        onBecomeLeader() {
+            pythonRestartAttempts = 0
+            pythonProcess = spawnPython()
+        },
+        onLoseLeadership() {
+            if (pythonProcess) {
+                bunLogger.warn("Lost leadership — stopping Python ingester")
+                pythonProcess.kill("SIGTERM")
+                pythonProcess = null
+            }
+        },
+    })
 
-ingestionStatus = await leaderElection.start()
+    ingestionStatus = await leaderElection.start()
+}
 
 // 6. Start serving
 const server = Bun.serve({
-    port: config.port,
+    port: runtimeConfig.port,
     async fetch(req, server) {
         const url = new URL(req.url)
+        const { httpBase: surrealHttpBase } = getSurrealBases(runtimeConfig)
 
         const isUpgrade = req.headers.get("upgrade")?.toLowerCase() === "websocket"
 
@@ -431,11 +546,12 @@ const server = Bun.serve({
 
         // Bun-served endpoint: frontend configuration
         if (url.pathname === "/api/config") {
-            const authRequired = config.surrealdbFrontendPass != null
+            const authRequired = runtimeConfig.surrealdbFrontendPass != null
             return Response.json({
                 authRequired,
                 surrealPath: "/surreal/rpc",
                 ingestionStatus: leaderElection?.status ?? ingestionStatus,
+                debugSnapshot: getSnapshotSummary(replaySnapshot),
                 // When auth is not required, pass viewer credentials so the frontend
                 // can authenticate as a read-only DB user. SurrealDB requires
                 // authentication even for tables with FULL select permissions.
@@ -444,9 +560,58 @@ const server = Bun.serve({
                     : {
                           viewerUser: "viewer",
                           viewerPass: "viewer",
-                          viewerNs: config.surrealdbNamespace,
-                          viewerDb: config.surrealdbDatabase,
+                          viewerNs: runtimeConfig.surrealdbNamespace,
+                          viewerDb: runtimeConfig.surrealdbDatabase,
                       }),
+            })
+        }
+
+        if (url.pathname === "/api/settings/debug-snapshot") {
+            const details = getSnapshotDetails(replaySnapshot)
+            if (!details) {
+                return Response.json({ error: "debug snapshot is not active" }, { status: 404 })
+            }
+            return Response.json(details)
+        }
+
+        if (url.pathname === "/api/settings/download-debug-bundle" && req.method === "POST") {
+            let clientInfo: DebugBundleClientInfo
+            try {
+                clientInfo = (await req.json()) as DebugBundleClientInfo
+            } catch {
+                return Response.json({ error: "invalid debug bundle request" }, { status: 400 })
+            }
+
+            const [serverInfo, retentionInfo, healthInfo, recordCounts, surrealExportSql] = await Promise.all([
+                fetchJsonFromPython<Record<string, unknown>>("/api/settings/info"),
+                fetchJsonFromPython<Record<string, unknown>>("/api/settings/retention"),
+                fetchJsonFromPython<Record<string, unknown>>("/health"),
+                getSurrealRecordCounts(db),
+                exportSurrealNative(runtimeConfig),
+            ])
+            const archive = await createDebugBundleArchive({
+                config: runtimeConfig,
+                includeSecrets: clientInfo.includeSecrets === true,
+                clientInfo,
+                serverInfo,
+                retentionInfo,
+                healthInfo,
+                versionsInfo: buildVersionsInfo(runtimeConfig),
+                recordCounts,
+                surrealExportSql,
+                logs: {
+                    bun: bunLogBuffer.toString(),
+                    python: pythonLogBuffer.toString(),
+                    surrealdb: surrealLogBuffer.toString(),
+                },
+                replaySnapshot,
+            })
+
+            return new Response(archive, {
+                headers: {
+                    "Content-Type": "application/zip",
+                    "Content-Disposition": `attachment; filename="${buildDebugBundleFilename()}"`,
+                },
             })
         }
 
@@ -467,7 +632,7 @@ const server = Bun.serve({
         // Proxy /surreal/* HTTP requests to SurrealDB (strip /surreal prefix)
         if (url.pathname.startsWith("/surreal/")) {
             const surrealPath = url.pathname.slice("/surreal".length)
-            const targetUrl = `${SURREAL_HTTP_BASE}${surrealPath}${url.search}`
+            const targetUrl = `${surrealHttpBase}${surrealPath}${url.search}`
             try {
                 const proxyRes = await fetch(targetUrl, {
                     method: req.method,
@@ -533,7 +698,7 @@ const server = Bun.serve({
             const data = ws.data as { targetPath: string; backend: string; protocols?: string }
             ws._pendingMessages = [] as (string | Buffer)[]
 
-            const baseUrl = data.backend === "surreal" ? SURREAL_WS_BASE : PYTHON_WS_BACKEND
+            const baseUrl = data.backend === "surreal" ? getSurrealBases(runtimeConfig).wsBase : PYTHON_WS_BACKEND
             const protocols = data.protocols ? data.protocols.split(",").map((p) => p.trim()) : undefined
             const backendWs = new WebSocket(`${baseUrl}${data.targetPath}`, protocols)
             backendWs.binaryType = "arraybuffer"

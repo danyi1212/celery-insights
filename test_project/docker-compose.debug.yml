@@ -1,0 +1,9 @@
+services:
+  celery-insights:
+    environment:
+      DEBUG_BUNDLE_PATH: /debug-bundle/debug-bundle-v2.zip
+    volumes:
+      - type: bind
+        source: ${DEBUG_BUNDLE_HOST_PATH}
+        target: /debug-bundle/debug-bundle-v2.zip
+        read_only: true
