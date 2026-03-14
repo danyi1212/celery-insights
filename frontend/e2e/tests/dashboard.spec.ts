@@ -4,7 +4,8 @@ test.describe("Dashboard", () => {
     test("shows online workers", async ({ page }) => {
         await page.goto("/")
         await expect(page.getByTestId("app-connection-loading")).toBeHidden({ timeout: 30_000 })
-        await expect(page.getByRole("heading", { name: "Online Workers", exact: true })).toBeVisible()
+        await expect(page.getByRole("heading", { name: "Worker Context", exact: true })).toBeVisible()
+        await expect(page.getByRole("heading", { name: "Failure Inbox", exact: true })).toBeVisible()
         await expect(page.locator("#recent-tasks")).toBeVisible()
     })
 
@@ -26,19 +27,19 @@ test.describe("Dashboard", () => {
         await page.goto("/")
         await expect(async () => {
             await page.reload()
-            await expect(page.getByRole("heading", { name: "Workflow Activity", exact: true })).toBeVisible()
+            await expect(page.getByRole("heading", { name: "Recent Activity", exact: true })).toBeVisible()
             await expect(page.locator("#recent-tasks")).toContainText("tasks.basic.add")
         }).toPass({ timeout: 15_000 })
     })
 
-    test("failed task appears in exceptions summary", async ({ page, scenario, waitForTask }) => {
+    test("failed task appears in failure inbox", async ({ page, scenario, waitForTask }) => {
         const { task_id } = await scenario.triggerScenario("always_fails")
         await waitForTask(task_id, ["FAILURE"])
 
         await page.goto("/")
         await expect(async () => {
             await page.reload()
-            await expect(page.getByRole("button", { name: /This task always fails/ })).toBeVisible()
+            await expect(page.locator("text=This task always fails")).toBeVisible()
         }).toPass({ timeout: 15_000 })
     })
 
