@@ -51,6 +51,19 @@ build-docker:
 
 # ─── Test project (manual testing) ───────────────────────────
 
+# Start the test docker-compose stack in the background
+start:
+    docker compose -f {{test_project}}/docker-compose.yml up --build -d
+
+# Start the test docker-compose stack in snapshot replay mode
+# Usage: just start-debug /absolute/path/to/debug-bundle-v2.zip
+start-debug bundle_path:
+    DEBUG_BUNDLE_HOST_PATH='{{bundle_path}}' docker compose -f {{test_project}}/docker-compose.yml -f {{test_project}}/docker-compose.debug.yml up --build -d
+
+# Rebuild and reload only the celery-insights service in the background
+start-reload:
+    docker compose -f {{test_project}}/docker-compose.yml up --build -d --no-deps celery-insights
+
 # Start test cluster without rebuilding the main image (uses cached)
 start-test:
     docker compose -f {{test_project}}/docker-compose.yml up --build

@@ -14,8 +14,13 @@ vi.mock("@stores/use-settings-store", () => ({
     default: (selector: (state: { demo: boolean }) => boolean) => mockUseSettingsStore(selector),
 }))
 
-function setMockContext(status: ConnectionStatus, ingestionStatus: IngestionStatus, error: Error | null = null) {
-    mockUseSurrealDB.mockReturnValue({ db: {}, status, ingestionStatus, error })
+function setMockContext(
+    status: ConnectionStatus,
+    ingestionStatus: IngestionStatus,
+    error: Error | null = null,
+    appConfig: unknown = null,
+) {
+    mockUseSurrealDB.mockReturnValue({ db: {}, status, ingestionStatus, error, appConfig })
 }
 
 describe("ConnectionStatusIndicator", () => {
@@ -174,5 +179,14 @@ describe("ReadOnlyBanner", () => {
         const { container } = render(<ReadOnlyBanner />)
 
         expect(container.firstChild).toBeNull()
+    })
+
+    it("shows snapshot banner when replay mode is active", () => {
+        setMockContext("connected", "read-only", null, {
+            debugSnapshot: { enabled: true, readOnly: true },
+        })
+        render(<ReadOnlyBanner />)
+
+        expect(screen.getByText(/Snapshot replay mode/)).toBeInTheDocument()
     })
 })

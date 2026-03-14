@@ -50,8 +50,9 @@ const DetailGridItem = ({ label, value }: { label: string; value: React.ReactNod
 export const ServerInfoPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
     const isDemo = useSettingsStore((state) => state.demo)
     const { data, isLoading, error } = useSettingsDiagnostics({ enabled: !isDemo })
-    const { status, ingestionStatus } = useSurrealDB()
+    const { status, ingestionStatus, appConfig } = useSurrealDB()
     const [showAdvanced, setShowAdvanced] = useState(false)
+    const snapshotEnabled = appConfig?.debugSnapshot?.enabled === true
 
     const cpuLoad = data?.cpu_usage ? data.cpu_usage.map((value) => value.toFixed(2)).join(" / ") : "—"
     const durability = data?.surrealdb.durability
@@ -74,7 +75,9 @@ export const ServerInfoPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader
                 ) : (
                     <>
                         <p className="max-w-3xl text-sm text-muted-foreground">
-                            Check whether the app is connected, how data is stored, and whether ingestion is keeping up.
+                            {snapshotEnabled
+                                ? "This instance is replaying a mounted debug bundle. Runtime values stay read-only."
+                                : "Check whether the app is connected, how data is stored, and whether ingestion is keeping up."}
                         </p>
 
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

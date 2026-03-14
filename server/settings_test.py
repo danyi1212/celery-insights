@@ -25,6 +25,7 @@ def test_default_settings(monkeypatch: pytest.MonkeyPatch):
     assert settings.broker_url == "amqp://guest:guest@host.docker.internal/"
     assert settings.result_backend == "redis://host.docker.internal:6379/0"
     assert settings.config_file == "/app/config.py"
+    assert settings.debug_snapshot_mode is False
     assert settings.cleanup_interval_seconds == 60
     assert settings.task_max_count is None
     assert settings.task_retention_hours is None
@@ -72,3 +73,8 @@ def test_task_max_count_none():
 def test_dead_worker_retention_none():
     settings = Settings(dead_worker_retention_hours=None)
     assert settings.dead_worker_retention_hours is None
+
+
+def test_snapshot_mode_override():
+    settings = Settings(debug_snapshot_mode=True)
+    assert settings.debug_snapshot_mode is True

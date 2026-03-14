@@ -153,6 +153,49 @@ Default: _(not set)_
 
 Optional dashboard password. When set, the frontend requires login and authenticates as a read-only database user. When unset, the dashboard connects anonymously with read-only access.
 
+## Debug Bundles and Snapshot Replay
+
+Operators usually create the bundle from **Settings** -> **Download diagnostics**. The generated `debug bundle v2` captures effective config, runtime diagnostics, recent Bun/Python/SurrealDB logs, and a full SurrealDB export of `task`, `event`, and `worker`.
+
+Secrets are redacted by default. Leave them redacted for bug reports unless someone investigating the issue explicitly needs the exact credentials.
+
+#### DEBUG_BUNDLE_PATH
+
+Default: _(not set)_
+
+Absolute path to a `debug bundle v2` zip file mounted into the container at startup.
+
+When set, Celery Insights boots into an offline, read-only replay of that captured system:
+
+- live Celery ingestion is disabled
+- leader election is disabled
+- external SurrealDB is ignored in favor of the embedded database
+- the bundled `task`, `event`, and `worker` export is restored transactionally before traffic is served
+
+`SURREALDB_STORAGE` still applies in replay mode. Leave it unset for in-memory replay, or point it at a local embedded path if you want the replay database to persist across container restarts.
+
+Inside this repository, `just start-debug /absolute/path/to/debug-bundle-v2.zip` starts the test compose stack with the bundle mounted into the `celery-insights` service.
+
+Example: disposable in-memory replay
+
+```bash
+docker run --rm -p 8555:8555 \
+  -v "$PWD/debug-bundle-v2.zip:/snapshot/debug-bundle-v2.zip:ro" \
+  -e DEBUG_BUNDLE_PATH=/snapshot/debug-bundle-v2.zip \
+  ghcr.io/danyi1212/celery-insights:latest
+```
+
+Example: replay with a persistent local SurrealDB volume
+
+```bash
+docker run --rm -p 8555:8555 \
+  -v "$PWD/debug-bundle-v2.zip:/snapshot/debug-bundle-v2.zip:ro" \
+  -v celery-insights-replay:/data \
+  -e DEBUG_BUNDLE_PATH=/snapshot/debug-bundle-v2.zip \
+  -e SURREALDB_STORAGE=rocksdb:///data/replay \
+  ghcr.io/danyi1212/celery-insights:latest
+```
+
 ## Ingestion and High Availability
 
 Leader election allows multiple Celery Insights instances to share one SurrealDB without duplicating event ingestion.

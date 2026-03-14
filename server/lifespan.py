@@ -35,26 +35,36 @@ async def lifespan(_):
     # 1. Initialize SurrealDB connection
     await init_surrealdb(settings)
 
-    # 2. Connect to Celery broker
-    celery_app = await get_celery_app()
+    celery_app = None
+    event_receiver = None
+    ingester = None
+    worker_poller = None
 
-    # 3. Start services: EventReceiver -> SurrealDBIngester -> WorkerPoller -> CleanupJob
-    result_fetcher = ResultFetcher(celery_app)
-    result_backend_poller = ResultBackendPoller(celery_app)
+    result_backend_poller = None
 
-    event_receiver = CeleryEventReceiver(celery_app, asyncio.get_running_loop())
-    event_receiver.start()
+    if not settings.debug_snapshot_mode:
+        # 2. Connect to Celery broker
+        celery_app = await get_celery_app()
 
-    ingester = SurrealDBIngester(
-        queue=event_receiver.queue,
-        batch_interval_ms=settings.ingestion_batch_interval_ms,
-        on_terminal=result_fetcher.fetch_and_store,
-    )
-    ingester.start()
+        # 3. Start services: EventReceiver -> SurrealDBIngester -> WorkerPoller -> CleanupJob
+        result_fetcher = ResultFetcher(celery_app)
+        result_backend_poller = ResultBackendPoller(celery_app)
 
-    worker_poller = WorkerPoller(celery_app)
-    worker_poller.start()
-    result_backend_poller.start()
+        event_receiver = CeleryEventReceiver(celery_app, asyncio.get_running_loop())
+        event_receiver.start()
+
+        ingester = SurrealDBIngester(
+            queue=event_receiver.queue,
+            batch_interval_ms=settings.ingestion_batch_interval_ms,
+            on_terminal=result_fetcher.fetch_and_store,
+        )
+        ingester.start()
+
+        worker_poller = WorkerPoller(celery_app)
+        worker_poller.start()
+        result_backend_poller.start()
+    else:
+        logger.info("Debug snapshot mode enabled; starting control-plane-only services")
 
     cleanup_job = CleanupJob(
         interval_seconds=settings.cleanup_interval_seconds,
@@ -62,12 +72,14 @@ async def lifespan(_):
         task_retention_hours=settings.task_retention_hours,
         dead_worker_retention_hours=settings.dead_worker_retention_hours,
     )
-    cleanup_job.start()
+    if not settings.debug_snapshot_mode:
+        cleanup_job.start()
 
     # Expose services on app.state for other routers
     _.state.settings = settings
     _.state.ingester = ingester
     _.state.cleanup_job = cleanup_job
+    _.state.debug_snapshot_mode = settings.debug_snapshot_mode
 
     try:
         yield
@@ -75,10 +87,15 @@ async def lifespan(_):
         logger.info("Stopping server...")
     finally:
         # Shutdown in reverse order — await async tasks before closing DB
-        await cleanup_job.stop()
-        await result_backend_poller.stop()
-        await worker_poller.stop()
-        await ingester.stop()
-        event_receiver.stop()
+        if not settings.debug_snapshot_mode:
+            await cleanup_job.stop()
+        if result_backend_poller is not None:
+            await result_backend_poller.stop()
+        if worker_poller is not None:
+            await worker_poller.stop()
+        if ingester is not None:
+            await ingester.stop()
+        if event_receiver is not None:
+            event_receiver.stop()
         await close_surrealdb()
         logger.info("Goodbye! See you soon.")

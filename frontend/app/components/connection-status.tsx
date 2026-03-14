@@ -153,7 +153,16 @@ const ConnectionStatusIndicator = () => {
 }
 
 const ReadOnlyBanner = () => {
-    const { ingestionStatus } = useSurrealDB()
+    const { ingestionStatus, appConfig } = useSurrealDB()
+
+    if (appConfig?.debugSnapshot?.enabled) {
+        return (
+            <div className="border-b border-status-warning/20 bg-status-warning/10 px-4 py-1.5 text-center text-xs text-status-warning">
+                <Eye className="mr-1.5 inline-block size-3.5 -translate-y-px" />
+                Snapshot replay mode - viewing an offline, read-only debug bundle
+            </div>
+        )
+    }
 
     if (ingestionStatus !== "read-only") return null
 

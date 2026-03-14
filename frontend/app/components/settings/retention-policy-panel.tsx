@@ -1,4 +1,5 @@
 import Panel from "@components/common/panel"
+import { useSurrealDB } from "@components/surrealdb-provider"
 import { Badge } from "@components/ui/badge"
 import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
@@ -58,6 +59,7 @@ const FieldRow: React.FC<{
 
 export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
     const isDemo = useSettingsStore((state) => state.demo)
+    const { appConfig } = useSurrealDB()
     const { data, refetch } = useQuery({
         queryKey: ["retention-settings", isDemo ? "demo" : "live"],
         queryFn: fetchRetention,
@@ -72,6 +74,7 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
     const [isCleaning, setIsCleaning] = useState(false)
     const [statusMessage, setStatusMessage] = useState<string | null>(null)
     const [hasChanges, setHasChanges] = useState(false)
+    const snapshotEnabled = appConfig?.debugSnapshot?.enabled === true
 
     useEffect(() => {
         if (data) {
@@ -152,6 +155,16 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
                             start a clean demo by refreshing the page.
                         </p>
                     </div>
+                ) : snapshotEnabled ? (
+                    <div className="rounded-2xl border bg-background/60 p-5">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline">Snapshot replay</Badge>
+                            <span className="text-sm font-medium">Cleanup controls are read-only</span>
+                        </div>
+                        <p className="mt-3 max-w-3xl text-sm text-muted-foreground">
+                            Retention changes and manual cleanup are disabled while replaying a mounted debug bundle.
+                        </p>
+                    </div>
                 ) : (
                     <>
                         <div className="rounded-2xl border bg-background/60 p-4">
@@ -222,7 +235,7 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
                                 variant="default"
                                 size="sm"
                                 onClick={handleSave}
-                                disabled={isDemo || isSaving || !hasChanges}
+                                disabled={isDemo || snapshotEnabled || isSaving || !hasChanges}
                             >
                                 {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
                                 Apply to running instance
@@ -233,7 +246,7 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
                                         variant="outline"
                                         size="sm"
                                         onClick={handleCleanup}
-                                        disabled={isDemo || isCleaning}
+                                        disabled={isDemo || snapshotEnabled || isCleaning}
                                     >
                                         {isCleaning ? (
                                             <Loader2 className="size-4 animate-spin" />
@@ -257,16 +270,23 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
 
 export const RetentionPolicyPanelAction: React.FC = () => {
     const isDemo = useSettingsStore((state) => state.demo)
+    const { appConfig } = useSurrealDB()
     const { isLoading, refetch } = useQuery({
         queryKey: ["retention-settings", isDemo ? "demo" : "live"],
         queryFn: fetchRetention,
         enabled: !isDemo,
     })
+    const snapshotEnabled = appConfig?.debugSnapshot?.enabled === true
 
     return (
         <Tooltip>
             <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={() => refetch().then()} disabled={isLoading || isDemo}>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => refetch().then()}
+                    disabled={isLoading || isDemo || snapshotEnabled}
+                >
                     <RotateCw className="size-4" />
                 </Button>
             </TooltipTrigger>
