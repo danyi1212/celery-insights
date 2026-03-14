@@ -18,7 +18,6 @@ test.describe("Realtime", () => {
         }).toPass({ timeout: 15_000 })
 
         const { task_id } = await scenario.triggerScenario("noop")
-        const shortId = task_id.slice(0, 8)
 
         // Ensure the task has been ingested into SurrealDB before checking the UI.
         // This eliminates pipeline latency (Celery -> ingester -> SurrealDB) as a variable.
@@ -26,8 +25,8 @@ test.describe("Realtime", () => {
 
         // Give the live query a window to pick up the task without a page reload.
         const recentTasks = page.locator("#recent-tasks")
-        const appearedViaLiveQuery = await recentTasks
-            .getByText(shortId)
+        const taskLink = recentTasks.locator(`a[href="/tasks/${task_id}"]`).first()
+        const appearedViaLiveQuery = await taskLink
             .waitFor({ state: "visible", timeout: 10_000 })
             .then(() => true)
             .catch(() => false)
@@ -37,7 +36,7 @@ test.describe("Realtime", () => {
             // Reload to re-run the initial query so we still verify the data is present.
             await page.reload()
             await expect(page.getByTestId("app-connection-loading")).toBeHidden({ timeout: 15_000 })
-            await expect(recentTasks.getByText(shortId)).toBeVisible({ timeout: 15_000 })
+            await expect(recentTasks.locator(`a[href="/tasks/${task_id}"]`).first()).toBeVisible({ timeout: 15_000 })
         }
     })
 })

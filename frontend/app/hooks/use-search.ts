@@ -2,10 +2,18 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import type { SurrealTask, SurrealWorker } from "@/types/surreal-records"
 
+export interface SearchTaskResult extends SurrealTask {
+    workflow?: {
+        aggregate_state?: string | null
+        root_task_type?: string | null
+        task_count?: number | null
+    } | null
+}
+
 const DEBOUNCE_MS = 300
 
 export interface SearchResult {
-    tasks: SurrealTask[]
+    tasks: SearchTaskResult[]
     workers: SurrealWorker[]
 }
 
@@ -35,8 +43,10 @@ export const useSearch = (query: string, limit = 10) => {
             }
 
             try {
-                const [tasks, workers] = await db.query<[SurrealTask[], SurrealWorker[]]>(
-                    `SELECT * FROM task WHERE
+                const [tasks, workers] = await db.query<[SearchTaskResult[], SurrealWorker[]]>(
+                    `SELECT *,
+                        (SELECT root_task_type, aggregate_state, task_count FROM workflow WHERE id = type::record('workflow', workflow_id))[0] AS workflow
+                    FROM task WHERE
                         string::contains(string::lowercase(string::concat("", id)), $q)
                         OR string::contains(string::lowercase(type ?? ''), $q)
                         OR string::contains(string::lowercase(exception ?? ''), $q)

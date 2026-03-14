@@ -28,32 +28,33 @@ class TestCleanupTasksByCount:
         assert mock_db.query.call_count == 1
 
     @pytest.mark.asyncio
-    async def test_deletes_excess_tasks_and_events(self, mock_db):
+    async def test_deletes_excess_workflows_atomically(self, mock_db):
         mock_db.query.side_effect = [
             [[{"total": 120}]],  # count query
-            [[{"id": "task:old1"}, {"id": "task:old2"}]],  # oldest tasks query
-            None,  # delete events
-            None,  # delete tasks
+            [[{"id": "workflow:old1", "task_count": 1}, {"id": "workflow:old2", "task_count": 2}]],  # oldest workflows
+            [[{"id": "task:old1"}, {"id": "task:old2"}, {"id": "task:old3"}]],  # workflow members
+            None,  # atomic delete transaction
         ]
         job = CleanupJob(task_max_count=118)
         await job._cleanup_tasks_by_count()
 
         assert mock_db.query.call_count == 4
 
-        # Verify oldest tasks query has correct limit
         oldest_call = mock_db.query.call_args_list[1]
-        assert "ORDER BY last_updated ASC LIMIT" in oldest_call[0][0]
-        assert oldest_call[0][1]["limit"] == 2
+        assert "SELECT id, task_count FROM workflow ORDER BY last_updated ASC" in oldest_call[0][0]
 
-        # Verify event deletion with task ID strings
-        event_delete_call = mock_db.query.call_args_list[2]
-        assert "DELETE FROM event" in event_delete_call[0][0]
-        assert event_delete_call[0][1]["task_ids"] == ["old1", "old2"]
+        member_call = mock_db.query.call_args_list[2]
+        assert "SELECT id FROM task WHERE workflow_id IN $workflow_ids" in member_call[0][0]
+        assert member_call[0][1]["workflow_ids"] == ["workflow:old1", "workflow:old2"]
 
-        # Verify task deletion with full record IDs
-        task_delete_call = mock_db.query.call_args_list[3]
-        assert "DELETE FROM task" in task_delete_call[0][0]
-        assert task_delete_call[0][1]["task_ids"] == ["task:old1", "task:old2"]
+        delete_call = mock_db.query.call_args_list[3]
+        assert "BEGIN TRANSACTION" in delete_call[0][0]
+        assert "DELETE FROM event WHERE task_id IN $task_ids" in delete_call[0][0]
+        assert "DELETE FROM workflow_task" in delete_call[0][0]
+        assert "DELETE FROM workflow WHERE id IN $workflow_ids" in delete_call[0][0]
+        assert delete_call[0][1]["workflow_ids"] == ["workflow:old1", "workflow:old2"]
+        assert delete_call[0][1]["task_ids"] == ["old1", "old2", "old3"]
+        assert delete_call[0][1]["task_records"] == ["task:old1", "task:old2", "task:old3"]
 
     @pytest.mark.asyncio
     async def test_handles_count_query_error(self, mock_db):
@@ -73,21 +74,21 @@ class TestCleanupTasksByCount:
     async def test_handles_oldest_query_error(self, mock_db):
         mock_db.query.side_effect = [
             [[{"total": 200}]],  # count query
-            Exception("SurrealDB down"),  # oldest tasks query fails
+            Exception("SurrealDB down"),  # oldest workflows query fails
         ]
         job = CleanupJob(task_max_count=100)
         # Should not raise
         await job._cleanup_tasks_by_count()
 
     @pytest.mark.asyncio
-    async def test_skips_when_no_oldest_tasks_returned(self, mock_db):
+    async def test_skips_when_no_oldest_workflows_returned(self, mock_db):
         mock_db.query.side_effect = [
             [[{"total": 200}]],  # count query
-            [[]],  # oldest tasks query returns empty
+            [[]],  # oldest workflows query returns empty
         ]
         job = CleanupJob(task_max_count=100)
         await job._cleanup_tasks_by_count()
-        # Only count + oldest queries
+        # Only count + oldest workflow queries
         assert mock_db.query.call_count == 2
 
 
@@ -105,34 +106,32 @@ class TestCleanupTasksByAge:
         mock_db.query.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_deletes_old_tasks_and_events(self, mock_db):
+    async def test_deletes_old_workflows_atomically(self, mock_db):
         mock_db.query.side_effect = [
-            [[{"id": "task:ancient1"}, {"id": "task:ancient2"}]],  # old tasks query
-            None,  # delete events
-            None,  # delete tasks
+            [[{"id": "workflow:ancient1"}, {"id": "workflow:ancient2"}]],  # old workflows query
+            [[{"id": "task:ancient1"}, {"id": "task:ancient2"}]],  # workflow members
+            None,  # atomic delete transaction
         ]
         job = CleanupJob(task_retention_hours=48)
         await job._cleanup_tasks_by_age()
 
         assert mock_db.query.call_count == 3
 
-        # Verify age query uses correct hours
         age_call = mock_db.query.call_args_list[0]
         assert "time::now()" in age_call[0][0]
         assert age_call[0][1]["hours"] == 48
+        assert "SELECT id FROM workflow" in age_call[0][0]
 
-        # Verify event deletion
-        event_call = mock_db.query.call_args_list[1]
-        assert "DELETE FROM event" in event_call[0][0]
-        assert event_call[0][1]["task_ids"] == ["ancient1", "ancient2"]
+        members_call = mock_db.query.call_args_list[1]
+        assert members_call[0][1]["workflow_ids"] == ["workflow:ancient1", "workflow:ancient2"]
 
-        # Verify task deletion
-        task_call = mock_db.query.call_args_list[2]
-        assert "DELETE FROM task" in task_call[0][0]
-        assert task_call[0][1]["task_ids"] == ["task:ancient1", "task:ancient2"]
+        delete_call = mock_db.query.call_args_list[2]
+        assert "DELETE FROM workflow WHERE id IN $workflow_ids" in delete_call[0][0]
+        assert delete_call[0][1]["task_ids"] == ["ancient1", "ancient2"]
+        assert delete_call[0][1]["task_records"] == ["task:ancient1", "task:ancient2"]
 
     @pytest.mark.asyncio
-    async def test_skips_when_no_old_tasks(self, mock_db):
+    async def test_skips_when_no_old_workflows(self, mock_db):
         mock_db.query.return_value = [[]]
         job = CleanupJob(task_retention_hours=24)
         await job._cleanup_tasks_by_age()
@@ -197,7 +196,11 @@ class TestCleanupJob:
         return mock
 
     def test_start_creates_task(self, mocker: MockerFixture):
-        mock_create_task = mocker.patch("cleanup.asyncio.create_task")
+        def close_coroutine(coro):
+            coro.close()
+            return mocker.Mock()
+
+        mock_create_task = mocker.patch("cleanup.asyncio.create_task", side_effect=close_coroutine)
         job = CleanupJob()
         job.start()
         mock_create_task.assert_called_once()
@@ -259,7 +262,7 @@ class TestCleanupJob:
         assert call_count == 2
 
 
-class TestDeleteTasksAndEvents:
+class TestDeleteWorkflows:
     @pytest.fixture()
     def mock_db(self, mocker: MockerFixture):
         mock = mocker.AsyncMock()
@@ -267,28 +270,33 @@ class TestDeleteTasksAndEvents:
         return mock
 
     @pytest.mark.asyncio
-    async def test_deletes_events_then_tasks(self, mock_db):
+    async def test_deletes_workflow_related_records_in_one_transaction(self, mock_db):
+        mock_db.query.side_effect = [
+            [[{"id": "task:abc"}, {"id": "task:def"}]],
+            None,
+        ]
         job = CleanupJob()
-        await job._delete_tasks_and_events(["task:abc", "task:def"])
+        await job._delete_workflows(["workflow:abc"])
 
         assert mock_db.query.call_count == 2
 
-        # Events deleted first
-        event_call = mock_db.query.call_args_list[0]
-        assert "DELETE FROM event" in event_call[0][0]
-        assert event_call[0][1]["task_ids"] == ["abc", "def"]
+        member_call = mock_db.query.call_args_list[0]
+        assert member_call[0][1]["workflow_ids"] == ["workflow:abc"]
 
-        # Then tasks
-        task_call = mock_db.query.call_args_list[1]
-        assert "DELETE FROM task" in task_call[0][0]
-        assert task_call[0][1]["task_ids"] == ["task:abc", "task:def"]
+        delete_call = mock_db.query.call_args_list[1]
+        assert "BEGIN TRANSACTION" in delete_call[0][0]
+        assert "DELETE FROM event WHERE task_id IN $task_ids" in delete_call[0][0]
+        assert "DELETE FROM workflow_task" in delete_call[0][0]
+        assert "DELETE FROM task WHERE id IN $task_records" in delete_call[0][0]
+        assert "DELETE FROM workflow WHERE id IN $workflow_ids" in delete_call[0][0]
+        assert delete_call[0][1]["task_ids"] == ["abc", "def"]
+        assert delete_call[0][1]["task_records"] == ["task:abc", "task:def"]
 
     @pytest.mark.asyncio
-    async def test_continues_task_deletion_if_event_deletion_fails(self, mock_db):
-        mock_db.query.side_effect = [Exception("Event delete failed"), None]
+    async def test_stops_if_member_lookup_fails(self, mock_db):
+        mock_db.query.side_effect = [Exception("lookup failed")]
 
         job = CleanupJob()
-        await job._delete_tasks_and_events(["task:abc"])
+        await job._delete_workflows(["workflow:abc"])
 
-        # Should still try to delete tasks even if events failed
-        assert mock_db.query.call_count == 2
+        assert mock_db.query.call_count == 1

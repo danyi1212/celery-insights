@@ -1,10 +1,7 @@
 import Panel from "@components/common/panel"
+import JsonViewThemed from "@components/common/json-view-themed"
 import { useTask } from "@hooks/use-live-tasks"
-import { useIsDark } from "@hooks/use-is-dark"
 import type { SurrealTask } from "@/types/surreal-records"
-import JsonView from "@uiw/react-json-view"
-import { githubDarkTheme } from "@uiw/react-json-view/githubDark"
-import { githubLightTheme } from "@uiw/react-json-view/githubLight"
 import React from "react"
 
 interface ResultCardProps {
@@ -31,23 +28,13 @@ const tryParseJson = (str: string): unknown => {
 }
 
 const CardContent: React.FC<CardContentProps> = ({ task }) => {
-    const isDark = useIsDark()
-
     if (!task) return <p>Could not find task result.</p>
 
     if (!task.result) return <p>No result available.</p>
 
     const parsed = tryParseJson(task.result)
 
-    return (
-        <JsonView
-            value={normalizeJsonViewValue(parsed)}
-            style={isDark ? githubDarkTheme : githubLightTheme}
-            collapsed={2}
-            displayDataTypes={false}
-            enableClipboard={false}
-        />
-    )
+    return <JsonViewThemed value={normalizeJsonViewValue(parsed)} />
 }
 
 const ResultCard: React.FC<ResultCardProps> = ({ taskId }) => {

@@ -13,6 +13,13 @@ describe("DEMO_SCHEMA", () => {
         expect(DEMO_SCHEMA).toContain("DEFINE TABLE IF NOT EXISTS worker SCHEMALESS PERMISSIONS FULL")
     })
 
+    it("defines workflow projection tables with FULL permissions", () => {
+        expect(DEMO_SCHEMA).toContain("DEFINE TABLE IF NOT EXISTS workflow SCHEMAFULL PERMISSIONS FULL")
+        expect(DEMO_SCHEMA).toContain(
+            "DEFINE TABLE IF NOT EXISTS workflow_task TYPE RELATION IN workflow OUT task SCHEMAFULL PERMISSIONS FULL",
+        )
+    })
+
     it("does not define ingestion_lock table", () => {
         expect(DEMO_SCHEMA).not.toContain("ingestion_lock")
     })
@@ -44,6 +51,7 @@ describe("DEMO_SCHEMA", () => {
             "exchange",
             "routing_key",
             "root_id",
+            "workflow_id",
             "parent_id",
             "children",
             "worker",
@@ -62,7 +70,15 @@ describe("DEMO_SCHEMA", () => {
         expect(DEMO_SCHEMA).toContain("DEFINE INDEX OVERWRITE idx_task_type ON task FIELDS type")
         expect(DEMO_SCHEMA).toContain("DEFINE INDEX OVERWRITE idx_task_worker ON task FIELDS worker")
         expect(DEMO_SCHEMA).toContain("DEFINE INDEX OVERWRITE idx_task_root_id ON task FIELDS root_id")
+        expect(DEMO_SCHEMA).toContain("DEFINE INDEX OVERWRITE idx_task_workflow_id ON task FIELDS workflow_id")
         expect(DEMO_SCHEMA).toContain("DEFINE INDEX OVERWRITE idx_task_last_updated ON task FIELDS last_updated")
+    })
+
+    it("defines workflow indexes", () => {
+        expect(DEMO_SCHEMA).toContain(
+            "DEFINE INDEX OVERWRITE idx_workflow_last_updated ON workflow FIELDS last_updated",
+        )
+        expect(DEMO_SCHEMA).toContain("DEFINE INDEX OVERWRITE idx_workflow_state ON workflow FIELDS aggregate_state")
     })
 
     it("defines event indexes", () => {

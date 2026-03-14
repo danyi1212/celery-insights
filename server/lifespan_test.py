@@ -20,6 +20,7 @@ class TestLifespan:
             patch("lifespan.WorkerPoller") as poller_cls,
             patch("lifespan.CleanupJob") as cleanup_cls,
             patch("lifespan.ResultFetcher") as fetcher_cls,
+            patch("lifespan.ResultBackendPoller") as result_backend_poller_cls,
             patch("lifespan.FastAPICache"),
         ):
             settings = mock_settings_cls.return_value
@@ -47,6 +48,8 @@ class TestLifespan:
             cleanup_cls.return_value.stop = AsyncMock()
 
             fetcher_cls.return_value.fetch_and_store = AsyncMock()
+            result_backend_poller_cls.return_value.start = MagicMock()
+            result_backend_poller_cls.return_value.stop = AsyncMock()
 
             self.settings = settings
             self.init_surrealdb = init_surreal
@@ -61,6 +64,7 @@ class TestLifespan:
             self.cleanup = cleanup_cls.return_value
             self.fetcher_cls = fetcher_cls
             self.fetcher = fetcher_cls.return_value
+            self.result_backend_poller = result_backend_poller_cls.return_value
             yield
 
     @pytest.mark.asyncio
@@ -79,6 +83,7 @@ class TestLifespan:
             self.receiver.start.assert_called_once()
             self.ingester.start.assert_called_once()
             self.poller.start.assert_called_once()
+            self.result_backend_poller.start.assert_called_once()
             self.cleanup.start.assert_called_once()
 
     @pytest.mark.asyncio
@@ -87,6 +92,7 @@ class TestLifespan:
             pass
 
         self.cleanup.stop.assert_called_once()
+        self.result_backend_poller.stop.assert_called_once()
         self.poller.stop.assert_called_once()
         self.ingester.stop.assert_called_once()
         self.receiver.stop.assert_called_once()
@@ -131,5 +137,8 @@ class TestLifespan:
         self.receiver.start.assert_not_called()
         self.ingester.start.assert_not_called()
         self.poller.start.assert_not_called()
+        self.result_backend_poller.start.assert_not_called()
         self.cleanup.start.assert_not_called()
+        self.result_backend_poller.stop.assert_not_called()
+        self.cleanup.stop.assert_not_called()
         assert self.mock_app.state.debug_snapshot_mode is True

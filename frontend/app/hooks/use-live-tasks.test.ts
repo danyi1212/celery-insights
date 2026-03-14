@@ -125,20 +125,18 @@ describe("useWorkflowTasks", () => {
         mockLiveOf.mockResolvedValue(subscription)
     })
 
-    it("queries tasks by root_id or matching task ID", async () => {
+    it("queries tasks by workflow_id", async () => {
         renderHook(() => useWorkflowTasks("abc-123"))
 
         await waitFor(() => {
             expect(mockQuery).toHaveBeenCalledWith(
-                "SELECT * FROM task WHERE root_id = $rootId OR id = $rootRid",
-                expect.objectContaining({ rootId: "abc-123" }),
+                "SELECT * FROM task WHERE workflow_id = $workflowId ORDER BY last_updated DESC",
+                { workflowId: "abc-123" },
             )
-            const bindings = mockQuery.mock.calls[0][1]
-            expect(bindings.rootRid).toEqual(expect.objectContaining({ tb: "task", id: "abc-123" }))
         })
     })
 
-    it("does not run when rootTaskId is empty", async () => {
+    it("does not run when workflowId is empty", async () => {
         renderHook(() => useWorkflowTasks(""))
 
         await waitFor(() => {

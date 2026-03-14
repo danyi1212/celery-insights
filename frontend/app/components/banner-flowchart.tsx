@@ -4,6 +4,7 @@ import { useMediaQuery } from "@hooks/use-media-query"
 import { TaskState, type Task } from "@/types/surreal-records"
 import React, { useMemo } from "react"
 import { ReactFlow, Background } from "@xyflow/react"
+import "@xyflow/react/dist/style.css"
 
 const nodeTypes = {
     taskNode: TaskNode,
@@ -18,7 +19,10 @@ const createDemoTask = (task: Partial<Task>): Task => ({
     ...task,
 })
 const demoTasks: Task[] = [
-    createDemoTask({ id: "b0e1bccb-dcf3-4ee6-b30c-7a16105b0d46", type: "submit_order" }),
+    createDemoTask({
+        id: "b0e1bccb-dcf3-4ee6-b30c-7a16105b0d46",
+        type: "submit_order",
+    }),
     createDemoTask({
         id: "3222416c-4967-4f1d-a39c-34cfa8085496",
         type: "create_invoice",

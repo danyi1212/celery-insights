@@ -36,6 +36,7 @@ export interface SurrealTask {
     exchange?: string | null
     routing_key?: string | null
     root_id?: string | null
+    workflow_id?: string | null
     parent_id?: string | null
     children: string[]
     worker?: string | null
@@ -43,6 +44,22 @@ export interface SurrealTask {
     result_truncated?: boolean
     exception?: string | null
     traceback?: string | null
+}
+
+export interface SurrealWorkflow {
+    id: unknown
+    root_task_id: string
+    root_task_type?: string | null
+    aggregate_state: string
+    first_seen_at?: string | null
+    last_updated?: string | null
+    task_count: number
+    completed_count: number
+    failure_count: number
+    retry_count: number
+    active_count: number
+    worker_count: number
+    latest_exception_preview?: string | null
 }
 
 /** Worker record as stored in SurrealDB */
@@ -198,6 +215,7 @@ export interface Task {
     exchange?: string
     routing_key?: string
     root_id?: string
+    workflow_id?: string
     parent_id?: string
     children: string[]
     worker?: string
@@ -205,6 +223,22 @@ export interface Task {
     result_truncated?: boolean
     exception?: string
     traceback?: string
+}
+
+export interface Workflow {
+    id: string
+    root_task_id: string
+    root_task_type?: string
+    aggregate_state: TaskState
+    first_seen_at?: Date
+    last_updated?: Date
+    task_count: number
+    completed_count: number
+    failure_count: number
+    retry_count: number
+    active_count: number
+    worker_count: number
+    latest_exception_preview?: string
 }
 
 /** Convert a raw SurrealDB task record to a parsed Task with Date objects */
@@ -230,6 +264,7 @@ export const parseTask = (raw: SurrealTask): Task => ({
     exchange: raw.exchange || undefined,
     routing_key: raw.routing_key || undefined,
     root_id: raw.root_id || undefined,
+    workflow_id: raw.workflow_id || raw.root_id || extractId(raw.id),
     parent_id: raw.parent_id || undefined,
     children: raw.children,
     worker: raw.worker || undefined,
@@ -237,4 +272,20 @@ export const parseTask = (raw: SurrealTask): Task => ({
     result_truncated: raw.result_truncated,
     exception: raw.exception || undefined,
     traceback: raw.traceback || undefined,
+})
+
+export const parseWorkflow = (raw: SurrealWorkflow): Workflow => ({
+    id: extractId(raw.id),
+    root_task_id: raw.root_task_id,
+    root_task_type: raw.root_task_type || undefined,
+    aggregate_state: (raw.aggregate_state as TaskState) || TaskState.PENDING,
+    first_seen_at: isoToDate(raw.first_seen_at),
+    last_updated: isoToDate(raw.last_updated),
+    task_count: raw.task_count,
+    completed_count: raw.completed_count,
+    failure_count: raw.failure_count,
+    retry_count: raw.retry_count,
+    active_count: raw.active_count,
+    worker_count: raw.worker_count,
+    latest_exception_preview: raw.latest_exception_preview || undefined,
 })

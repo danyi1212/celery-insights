@@ -19,6 +19,18 @@ test.describe("Dashboard", () => {
         }).toPass({ timeout: 15_000 })
     })
 
+    test("workflow activity feed groups task rows under workflow context", async ({ page, scenario, waitForTask }) => {
+        const { task_id } = await scenario.triggerScenario("add")
+        await waitForTask(task_id, ["SUCCESS"])
+
+        await page.goto("/")
+        await expect(async () => {
+            await page.reload()
+            await expect(page.getByRole("heading", { name: "Workflow Activity", exact: true })).toBeVisible()
+            await expect(page.locator("#recent-tasks")).toContainText("tasks.basic.add")
+        }).toPass({ timeout: 15_000 })
+    })
+
     test("failed task appears in exceptions summary", async ({ page, scenario, waitForTask }) => {
         const { task_id } = await scenario.triggerScenario("always_fails")
         await waitForTask(task_id, ["FAILURE"])

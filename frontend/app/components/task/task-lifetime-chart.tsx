@@ -139,23 +139,7 @@ const TaskLifetimeChart: React.FC<TaskLifetimeChartProps> = ({
     }
 
     return (
-        <div className={cn("flex flex-col gap-3", className)}>
-            {/* Header row */}
-            <div className="flex items-center justify-end gap-3">
-                <span className="flex items-center gap-2 font-mono text-xs tabular-nums text-muted-foreground">
-                    Total: {formatDuration(totalDurationMs)}
-                    {isActive && (
-                        <span className="flex items-center gap-1.5" aria-label="Updating in real-time">
-                            <span className="relative flex size-2">
-                                <span className="absolute inline-flex size-full animate-ping rounded-full bg-status-success opacity-75" />
-                                <span className="relative inline-flex size-2 rounded-full bg-status-success" />
-                            </span>
-                            <span className="font-sans font-medium text-status-success">Live</span>
-                        </span>
-                    )}
-                </span>
-            </div>
-
+        <div className={cn("flex flex-col w-full gap-3", className)}>
             {/* Main bar area */}
             <div
                 ref={containerRef}
@@ -238,21 +222,37 @@ const TaskLifetimeChart: React.FC<TaskLifetimeChartProps> = ({
                 )}
             </div>
 
-            {/* Legend */}
-            {showLegend && (
-                <div className="flex items-center gap-x-3" role="list" aria-label="Chart legend">
-                    {PHASE_LEGEND.map((item) => (
-                        <div key={item.label} className="flex items-center gap-1" role="listitem">
-                            <span
-                                className="size-2 shrink-0 rounded-full"
-                                style={{ backgroundColor: item.color }}
-                                aria-hidden="true"
-                            />
-                            <span className="text-xs leading-none text-muted-foreground">{item.label}</span>
-                        </div>
-                    ))}
-                </div>
-            )}
+            {/* Footer bar area */}
+            <div className="flex items-center">
+                {/* Legend */}
+                {showLegend && (
+                    <div className="flex items-center gap-x-3" role="list" aria-label="Chart legend">
+                        {PHASE_LEGEND.map((item) => (
+                            <div key={item.label} className="flex items-center gap-1" role="listitem">
+                                <span
+                                    className="size-2 shrink-0 rounded-full"
+                                    style={{ backgroundColor: item.color }}
+                                    aria-hidden="true"
+                                />
+                                <span className="text-xs leading-none text-muted-foreground">{item.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <div className="grow" />
+                <span className="flex items-center gap-2 font-mono text-xs tabular-nums text-muted-foreground">
+                    Total: {formatDuration(totalDurationMs)}
+                    {isActive && (
+                        <span className="flex items-center gap-1.5" aria-label="Updating in real-time">
+                            <span className="relative flex size-2">
+                                <span className="absolute inline-flex size-full animate-ping rounded-full bg-status-success opacity-75" />
+                                <span className="relative inline-flex size-2 rounded-full bg-status-success" />
+                            </span>
+                            <span className="font-sans font-medium text-status-success">Live</span>
+                        </span>
+                    )}
+                </span>
+            </div>
         </div>
     )
 }

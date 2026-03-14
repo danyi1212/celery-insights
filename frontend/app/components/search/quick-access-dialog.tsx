@@ -171,7 +171,14 @@ const QuickAccessDialog: React.FC<QuickAccessDialogProps> = ({ focusNonce = 0, o
                     id: `task:${taskId}`,
                     kind: "task" as const,
                     title: task.type || "Unknown task",
-                    subtitle: `Task • Sent at ${formatTaskTime(task.sent_at, task.last_updated)}`,
+                    subtitle: [
+                        `Task • Sent at ${formatTaskTime(task.sent_at, task.last_updated)}`,
+                        task.workflow?.root_task_type ? `Root ${task.workflow.root_task_type}` : null,
+                        task.workflow?.aggregate_state ? `Workflow ${task.workflow.aggregate_state}` : null,
+                        task.workflow?.task_count ? `${task.workflow.task_count} tasks` : null,
+                    ]
+                        .filter(Boolean)
+                        .join(" • "),
                     taskId,
                     icon: <TaskAvatar taskId={taskId} type={task.type} status={task.state as TaskState} disableLink />,
                 }

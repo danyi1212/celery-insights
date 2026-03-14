@@ -35,8 +35,13 @@ class CeleryEventReceiver(Thread):
     def consume_events(self):
         logger.info("Connecting to celery cluster...")
         with self.app.connection() as connection:
-            self.receiver = EventReceiver(
-                channel=connection,
+            try:
+                self.app.control.enable_events()
+            except Exception:  # noqa: BLE001
+                logger.warning("Failed to broadcast enable_events before consuming Celery events", exc_info=True)
+
+            self.receiver = self.app.events.Receiver(
+                connection,
                 app=self.app,
                 handlers={
                     "*": self.on_event,

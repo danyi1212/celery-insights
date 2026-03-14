@@ -14,9 +14,20 @@ interface TaskAvatarProps extends React.ComponentProps<typeof Avatar> {
     type: string | undefined | null
     status?: TaskState
     disableLink?: true
+    tooltipSide?: "top" | "bottom"
+    statusReveal?: "always" | "hover"
 }
 
-const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, type, disableLink, className, ...props }) => {
+const TaskAvatar: React.FC<TaskAvatarProps> = ({
+    taskId,
+    status,
+    type,
+    disableLink,
+    className,
+    tooltipSide = "top",
+    statusReveal = "always",
+    ...props
+}) => {
     const backgroundColor = useMemo(() => type && stc(type), [type])
     const iconBrightness = useMemo(() => backgroundColor && 100 - getBrightness(backgroundColor), [backgroundColor])
     const Wrapper = disableLink ? "div" : Link
@@ -25,7 +36,7 @@ const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, type, disableLi
         <Wrapper {...(!disableLink ? { to: `/tasks/${taskId}` as string } : {})}>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <div className="relative inline-flex">
+                    <div className="group/task-avatar relative inline-flex">
                         <Avatar
                             className={cn("size-10", className)}
                             style={{ backgroundColor: backgroundColor || undefined }}
@@ -34,13 +45,20 @@ const TaskAvatar: React.FC<TaskAvatarProps> = ({ taskId, status, type, disableLi
                             <IdentityIcon username={taskId} lightness={iconBrightness || 0} className="size-full" />
                         </Avatar>
                         {status && (
-                            <span className="absolute -bottom-1 -right-1 z-10 inline-flex rounded-full bg-background">
+                            <span
+                                className={cn(
+                                    "absolute -right-1 -bottom-1 z-10 inline-flex rounded-full bg-background transition-all duration-150",
+                                    statusReveal === "hover"
+                                        ? "pointer-events-none translate-y-0.5 scale-90 opacity-0 group-hover/task-avatar:translate-y-0 group-hover/task-avatar:scale-100 group-hover/task-avatar:opacity-100"
+                                        : "opacity-100",
+                                )}
+                            >
                                 <TaskStatusIcon status={status} iconClassName="size-4" />
                             </span>
                         )}
                     </div>
                 </TooltipTrigger>
-                <TooltipContent side="right">
+                <TooltipContent side={tooltipSide}>
                     <span>
                         {taskId}
                         <br />

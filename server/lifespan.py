@@ -14,7 +14,7 @@ from events.ingester import SurrealDBIngester
 from events.receiver import CeleryEventReceiver
 from settings import Settings
 from surrealdb_client import close_surrealdb, init_surrealdb
-from tasks.result_fetcher import ResultFetcher
+from tasks.result_fetcher import ResultBackendPoller, ResultFetcher
 from workers.poller import WorkerPoller
 
 logger = logging.getLogger(__name__)
@@ -40,12 +40,15 @@ async def lifespan(_):
     ingester = None
     worker_poller = None
 
+    result_backend_poller = None
+
     if not settings.debug_snapshot_mode:
         # 2. Connect to Celery broker
         celery_app = await get_celery_app()
 
         # 3. Start services: EventReceiver -> SurrealDBIngester -> WorkerPoller -> CleanupJob
         result_fetcher = ResultFetcher(celery_app)
+        result_backend_poller = ResultBackendPoller(celery_app)
 
         event_receiver = CeleryEventReceiver(celery_app, asyncio.get_running_loop())
         event_receiver.start()
@@ -59,6 +62,7 @@ async def lifespan(_):
 
         worker_poller = WorkerPoller(celery_app)
         worker_poller.start()
+        result_backend_poller.start()
     else:
         logger.info("Debug snapshot mode enabled; starting control-plane-only services")
 
@@ -85,6 +89,8 @@ async def lifespan(_):
         # Shutdown in reverse order — await async tasks before closing DB
         if not settings.debug_snapshot_mode:
             await cleanup_job.stop()
+        if result_backend_poller is not None:
+            await result_backend_poller.stop()
         if worker_poller is not None:
             await worker_poller.stop()
         if ingester is not None:

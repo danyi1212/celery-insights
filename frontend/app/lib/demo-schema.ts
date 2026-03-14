@@ -26,6 +26,7 @@ DEFINE FIELD OVERWRITE retries ON task TYPE option<int>;
 DEFINE FIELD OVERWRITE exchange ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE routing_key ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE root_id ON task TYPE option<string>;
+DEFINE FIELD OVERWRITE workflow_id ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE parent_id ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE children ON task TYPE array<string> DEFAULT [];
 DEFINE FIELD OVERWRITE worker ON task TYPE option<string>;
@@ -38,7 +39,31 @@ DEFINE INDEX OVERWRITE idx_task_state ON task FIELDS state;
 DEFINE INDEX OVERWRITE idx_task_type ON task FIELDS type;
 DEFINE INDEX OVERWRITE idx_task_worker ON task FIELDS worker;
 DEFINE INDEX OVERWRITE idx_task_root_id ON task FIELDS root_id;
+DEFINE INDEX OVERWRITE idx_task_workflow_id ON task FIELDS workflow_id;
 DEFINE INDEX OVERWRITE idx_task_last_updated ON task FIELDS last_updated;
+
+DEFINE TABLE IF NOT EXISTS workflow SCHEMAFULL PERMISSIONS FULL;
+
+DEFINE FIELD OVERWRITE root_task_id ON workflow TYPE string;
+DEFINE FIELD OVERWRITE root_task_type ON workflow TYPE option<string>;
+DEFINE FIELD OVERWRITE aggregate_state ON workflow TYPE string DEFAULT "PENDING";
+DEFINE FIELD OVERWRITE first_seen_at ON workflow TYPE option<datetime>;
+DEFINE FIELD OVERWRITE last_updated ON workflow TYPE option<datetime>;
+DEFINE FIELD OVERWRITE task_count ON workflow TYPE int DEFAULT 0;
+DEFINE FIELD OVERWRITE completed_count ON workflow TYPE int DEFAULT 0;
+DEFINE FIELD OVERWRITE failure_count ON workflow TYPE int DEFAULT 0;
+DEFINE FIELD OVERWRITE retry_count ON workflow TYPE int DEFAULT 0;
+DEFINE FIELD OVERWRITE active_count ON workflow TYPE int DEFAULT 0;
+DEFINE FIELD OVERWRITE worker_count ON workflow TYPE int DEFAULT 0;
+DEFINE FIELD OVERWRITE latest_exception_preview ON workflow TYPE option<string>;
+
+DEFINE INDEX OVERWRITE idx_workflow_last_updated ON workflow FIELDS last_updated;
+DEFINE INDEX OVERWRITE idx_workflow_state ON workflow FIELDS aggregate_state;
+
+DEFINE TABLE IF NOT EXISTS workflow_task TYPE RELATION IN workflow OUT task SCHEMAFULL PERMISSIONS FULL;
+
+DEFINE FIELD OVERWRITE created_at ON workflow_task TYPE option<datetime>;
+DEFINE FIELD OVERWRITE last_updated ON workflow_task TYPE option<datetime>;
 
 DEFINE TABLE IF NOT EXISTS event SCHEMALESS PERMISSIONS FULL;
 

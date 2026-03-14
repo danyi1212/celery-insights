@@ -124,6 +124,8 @@ describe("runSchemaMigration", () => {
         expect(coreSchema).toContain("DEFINE TABLE IF NOT EXISTS task SCHEMAFULL")
         expect(coreSchema).toContain("DEFINE TABLE IF NOT EXISTS event SCHEMALESS")
         expect(coreSchema).toContain("DEFINE TABLE IF NOT EXISTS worker SCHEMALESS")
+        expect(coreSchema).toContain("DEFINE TABLE IF NOT EXISTS workflow SCHEMAFULL")
+        expect(coreSchema).toContain("DEFINE TABLE IF NOT EXISTS workflow_task TYPE RELATION IN workflow OUT task SCHEMAFULL")
         expect(coreSchema).toContain("DEFINE TABLE IF NOT EXISTS ingestion_lock SCHEMAFULL")
     })
 
@@ -137,7 +139,12 @@ describe("runSchemaMigration", () => {
         expect(coreSchema).toContain("DEFINE FIELD OVERWRITE state ON task TYPE string")
         expect(coreSchema).toContain("DEFINE FIELD OVERWRITE type ON task TYPE option<string>")
         expect(coreSchema).toContain("DEFINE FIELD OVERWRITE children ON task TYPE array<string> DEFAULT []")
+        expect(coreSchema).toContain("DEFINE FIELD OVERWRITE workflow_id ON task TYPE string")
         expect(coreSchema).toContain("DEFINE FIELD OVERWRITE result_truncated ON task TYPE bool DEFAULT false")
+
+        expect(coreSchema).toContain("DEFINE FIELD OVERWRITE aggregate_state ON workflow TYPE string")
+        expect(coreSchema).toContain("DEFINE FIELD OVERWRITE task_count ON workflow TYPE int DEFAULT 0")
+        expect(coreSchema).toContain("DEFINE FIELD OVERWRITE last_updated ON workflow_task TYPE option<datetime>")
 
         // Worker fields
         expect(coreSchema).toContain('DEFINE FIELD OVERWRITE status ON worker TYPE string DEFAULT "online"')
@@ -150,12 +157,51 @@ describe("runSchemaMigration", () => {
         // Task indexes
         expect(coreSchema).toContain("DEFINE INDEX OVERWRITE idx_task_state ON task FIELDS state")
         expect(coreSchema).toContain("DEFINE INDEX OVERWRITE idx_task_last_updated ON task FIELDS last_updated")
+        expect(coreSchema).toContain("DEFINE INDEX OVERWRITE idx_task_workflow_id ON task FIELDS workflow_id")
 
         // Event indexes
         expect(coreSchema).toContain("DEFINE INDEX OVERWRITE idx_event_task_id ON event FIELDS task_id")
 
         // Worker indexes
         expect(coreSchema).toContain("DEFINE INDEX OVERWRITE idx_worker_status ON worker FIELDS status")
+        expect(coreSchema).toContain("DEFINE INDEX OVERWRITE idx_workflow_last_updated ON workflow FIELDS last_updated")
+    })
+
+    it("backfills workflow records after applying schema", async () => {
+        mockDb._queryResult.collect = vi
+            .fn()
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([
+                [
+                    {
+                        id: "task:root-1",
+                        type: "tasks.root",
+                        state: "SUCCESS",
+                        last_updated: "2026-03-10T10:00:00Z",
+                        sent_at: "2026-03-10T10:00:00Z",
+                    },
+                    {
+                        id: "task:child-1",
+                        type: "tasks.child",
+                        root_id: "root-1",
+                        state: "FAILURE",
+                        last_updated: "2026-03-10T10:01:00Z",
+                        exception: "boom",
+                    },
+                ],
+            ])
+            .mockResolvedValue([])
+
+        await runSchemaMigration(createConfig())
+
+        const queries = mockDb.query.mock.calls.map((c) => c[0] as string)
+        expect(queries).toContain("SELECT * FROM task")
+        expect(queries.some((query) => query.includes("UPSERT type::record('workflow', $workflowId)"))).toBe(true)
+        expect(queries.some((query) => query.includes("UPSERT type::record('workflow_task', $edgeId)"))).toBe(true)
+        expect(queries.some((query) => query.includes("UPSERT type::record('task', $taskId) SET workflow_id = $workflowId"))).toBe(true)
     })
 
     it("sets correct table permissions", async () => {

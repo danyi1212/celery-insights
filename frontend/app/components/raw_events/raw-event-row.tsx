@@ -1,10 +1,7 @@
 import TaskAvatar from "@components/task/task-avatar"
 import { Button } from "@components/ui/button"
 import { TableCell, TableRow } from "@components/ui/table"
-import { useIsDark } from "@hooks/use-is-dark"
-import JsonView from "@uiw/react-json-view"
-import { githubDarkTheme } from "@uiw/react-json-view/githubDark"
-import { githubLightTheme } from "@uiw/react-json-view/githubLight"
+import JsonViewThemed from "@components/common/json-view-themed"
 import { format } from "date-fns"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import type { SurrealEvent } from "@/types/surreal-records"
@@ -16,7 +13,6 @@ interface RawEventRowProps {
 
 export const RawEventRow: React.FC<RawEventRowProps> = ({ event }) => {
     const [open, setOpen] = React.useState(false)
-    const isDark = useIsDark()
     const parsedData = useMemo(() => {
         const raw = event.data
         if (!raw) return null
@@ -67,12 +63,7 @@ export const RawEventRow: React.FC<RawEventRowProps> = ({ event }) => {
             {open && (
                 <TableRow>
                     <TableCell colSpan={5} className="p-2">
-                        <JsonView
-                            value={parsedData ?? event}
-                            style={isDark ? githubDarkTheme : githubLightTheme}
-                            displayDataTypes={false}
-                            enableClipboard={false}
-                        />
+                        <JsonViewThemed value={parsedData ?? event} />
                     </TableCell>
                 </TableRow>
             )}
