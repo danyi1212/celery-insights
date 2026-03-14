@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     broker_url: str = "amqp://guest:guest@host.docker.internal/"
     result_backend: str = "redis://host.docker.internal:6379/0"
     config_file: str = "/app/config.py"
+    debug_snapshot_mode: bool = False
 
     # Data retention (received from Bun)
     cleanup_interval_seconds: int = 60

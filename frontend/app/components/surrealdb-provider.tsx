@@ -12,6 +12,20 @@ interface AppConfig {
     authRequired: boolean
     surrealPath: string
     ingestionStatus: IngestionStatus
+    debugSnapshot: {
+        enabled: boolean
+        readOnly: boolean
+        bundlePath?: string
+        manifestVersion?: number
+        capturedAt?: string
+        replayedAt?: string
+        redacted?: boolean
+        recordCounts?: {
+            tasks: number
+            events: number
+            workers: number
+        }
+    } | null
     /** Viewer credentials for anonymous mode (SurrealDB requires authentication) */
     viewerUser?: string
     viewerPass?: string
@@ -24,6 +38,7 @@ interface SurrealDBContextValue {
     status: ConnectionStatus
     ingestionStatus: IngestionStatus
     error: Error | null
+    appConfig: AppConfig | null
 }
 
 const SurrealDBContext = createContext<SurrealDBContextValue | null>(null)
@@ -167,6 +182,7 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
                     authRequired: false,
                     surrealPath: "/surreal/rpc",
                     ingestionStatus: "disabled",
+                    debugSnapshot: null,
                     // Dev mode fallback: use default viewer credentials matching the schema migration defaults
                     viewerUser: "viewer",
                     viewerPass: "viewer",
@@ -250,6 +266,7 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
             status,
             ingestionStatus,
             error,
+            appConfig: configRef.current,
         }),
         [status, ingestionStatus, error],
     )
@@ -366,6 +383,7 @@ const DemoSurrealDBProvider = ({ children }: { children: React.ReactNode }) => {
                       status,
                       ingestionStatus: "disabled" as IngestionStatus,
                       error,
+                      appConfig: null,
                   }
                 : null,
         // eslint-disable-next-line react-hooks/exhaustive-deps

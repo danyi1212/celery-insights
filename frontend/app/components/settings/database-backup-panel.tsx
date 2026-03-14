@@ -1,4 +1,5 @@
 import Panel from "@components/common/panel"
+import { useSurrealDB } from "@components/surrealdb-provider"
 import { Button } from "@components/ui/button"
 import useSettingsStore from "@stores/use-settings-store"
 import { useQueryClient } from "@tanstack/react-query"
@@ -7,6 +8,8 @@ import React, { useCallback, useRef, useState } from "react"
 
 export const DatabaseBackupPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
     const isDemo = useSettingsStore((state) => state.demo)
+    const { appConfig } = useSurrealDB()
+    const snapshotEnabled = appConfig?.debugSnapshot?.enabled === true
     const queryClient = useQueryClient()
     const [isExporting, setIsExporting] = useState(false)
     const [isImporting, setIsImporting] = useState(false)
@@ -87,7 +90,11 @@ export const DatabaseBackupPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHe
                         {isExporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
                         Export Backup
                     </Button>
-                    <Button variant="outline" onClick={handleImportClick} disabled={isDemo || isImporting}>
+                    <Button
+                        variant="outline"
+                        onClick={handleImportClick}
+                        disabled={isDemo || snapshotEnabled || isImporting}
+                    >
                         {isImporting ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
                         Import Backup
                     </Button>
@@ -99,7 +106,13 @@ export const DatabaseBackupPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHe
                         onChange={handleFileSelected}
                     />
                 </div>
-                {isDemo && <p className="text-sm text-muted-foreground">Unavailable while demo mode is active.</p>}
+                {(isDemo || snapshotEnabled) && (
+                    <p className="text-sm text-muted-foreground">
+                        {isDemo
+                            ? "Unavailable while demo mode is active."
+                            : "Import is disabled during snapshot replay."}
+                    </p>
+                )}
                 {importResult && (
                     <p className="flex items-center gap-2 text-sm">
                         <Database className="size-4 text-muted-foreground" />

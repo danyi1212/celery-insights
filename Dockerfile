@@ -51,7 +51,7 @@ WORKDIR /app
 
 # Install runtime deps only
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl unzip libstdc++6 libgcc-s1 \
+    && apt-get install -y --no-install-recommends curl unzip zip libstdc++6 libgcc-s1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Bun runtime from the build image instead of installing it again.
@@ -61,7 +61,6 @@ COPY --from=front-build /usr/local/bin/bun /usr/local/bin/bun
 ARG SURREALDB_VERSION=v3.0.2
 RUN curl -fsSL https://install.surrealdb.com | sh -s -- --version ${SURREALDB_VERSION} \
     && command -v surreal \
-    && apt-get purge -y --auto-remove unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Create data directory for persistent SurrealDB storage

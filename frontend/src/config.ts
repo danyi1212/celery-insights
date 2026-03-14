@@ -42,6 +42,7 @@ const configSchema = z
         brokerUrl: z.string().default("amqp://guest:guest@host.docker.internal/"),
         resultBackend: z.string().default("redis://host.docker.internal:6379/0"),
         configFile: z.string().default("/app/config.py"),
+        debugBundlePath: z.string().min(1).optional(),
         timezone: z.string().default("UTC"),
         debug: booleanFromEnv.default(false),
 
@@ -85,6 +86,7 @@ const ENV_KEY_MAP: Record<string, string> = {
     BROKER_URL: "brokerUrl",
     RESULT_BACKEND: "resultBackend",
     CONFIG_FILE: "configFile",
+    DEBUG_BUNDLE_PATH: "debugBundlePath",
     TIMEZONE: "timezone",
     DEBUG: "debug",
     LOG_FORMAT: "logFormat",

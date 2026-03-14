@@ -34,6 +34,24 @@ export interface Logger {
     error(msg: string, extra?: Record<string, unknown>): void
 }
 
+type LogSink = (line: string, level: LogLevel, extra?: Record<string, unknown>) => void
+
+const serviceSinks = new Map<string, Set<LogSink>>()
+
+export function registerLogSink(service: string, sink: LogSink): () => void {
+    const sinks = serviceSinks.get(service) ?? new Set<LogSink>()
+    sinks.add(sink)
+    serviceSinks.set(service, sinks)
+    return () => {
+        const current = serviceSinks.get(service)
+        if (!current) return
+        current.delete(sink)
+        if (current.size === 0) {
+            serviceSinks.delete(service)
+        }
+    }
+}
+
 export function createLogger(service: string, format?: "pretty" | "json", level?: LogLevel): Logger {
     const fmt = format ?? config.logFormat
     const minLevel = level ?? config.logLevel
@@ -49,7 +67,14 @@ export function createLogger(service: string, format?: "pretty" | "json", level?
             const obj: Record<string, unknown> = { ts, level: lvl, service, msg }
             if (extra) Object.assign(obj, extra)
             const stream = lvl === "error" || lvl === "warn" ? process.stderr : process.stdout
-            stream.write(JSON.stringify(obj) + "\n")
+            const line = JSON.stringify(obj)
+            stream.write(line + "\n")
+            const sinks = serviceSinks.get(service)
+            if (sinks) {
+                for (const sink of sinks) {
+                    sink(line, lvl, extra)
+                }
+            }
             return
         }
 
@@ -64,6 +89,12 @@ export function createLogger(service: string, format?: "pretty" | "json", level?
 
         const stream = lvl === "error" || lvl === "warn" ? process.stderr : process.stdout
         stream.write(line + "\n")
+        const sinks = serviceSinks.get(service)
+        if (sinks) {
+            for (const sink of sinks) {
+                sink(line, lvl, extra)
+            }
+        }
     }
 
     return {

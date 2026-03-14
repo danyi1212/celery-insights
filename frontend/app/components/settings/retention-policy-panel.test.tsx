@@ -6,6 +6,12 @@ import { TooltipProvider } from "@components/ui/tooltip"
 import useSettingsStore from "@stores/use-settings-store"
 import { RetentionPolicyPanel } from "./retention-policy-panel"
 
+vi.mock("@components/surrealdb-provider", () => ({
+    useSurrealDB: () => ({
+        appConfig: { debugSnapshot: null },
+    }),
+}))
+
 const mockRetentionInfo = {
     settings: {
         cleanup_interval_seconds: 60,

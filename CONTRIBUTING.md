@@ -13,6 +13,8 @@ If you have found a bug, we would like to know. Before you file a bug report, ma
 
 To report a bug, create a new GitHub issue with the `bug` label and include a minimal reproduction plus any steps needed to reproduce it.
 
+When the issue depends on real task history, logs, or runtime config, also attach a redacted `debug bundle v2` from **Settings** -> **Download diagnostics**. Keep secrets redacted unless someone investigating the issue explicitly asks for the unredacted bundle.
+
 If you are not sure whether it is a bug, start with GitHub Discussions. Other users may have seen the same behavior and can help narrow it down.
 
 ## Asking Questions and Requesting Features
@@ -93,6 +95,33 @@ bun run dev:all
 ```
 
 If you use `just`, the repo also includes `just dev`, `just lint`, `just typecheck`, and related helper recipes.
+
+### Debug bundles and snapshot replay
+
+Use this workflow when you need to reproduce a real incident locally without reconnecting to the original broker or result backend.
+
+Capture:
+
+```shell
+# From the running app UI:
+# Settings -> Download diagnostics
+```
+
+Replay with the local test compose stack:
+
+```shell
+just start
+just start-reload
+just start-debug /absolute/path/to/debug-bundle-v2.zip
+```
+
+What these recipes do:
+
+- `just start` starts `test_project/docker-compose.yml` in detached mode
+- `just start-reload` rebuilds and recreates only the `celery-insights` service
+- `just start-debug ...` starts the test stack with `DEBUG_BUNDLE_PATH` set on the `celery-insights` service
+
+Replay mode is offline and read-only by design. It restores the bundled `task`, `event`, and `worker` data into embedded SurrealDB and disables mutating settings actions.
 
 Or run them in separate terminals:
 

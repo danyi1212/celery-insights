@@ -1,4 +1,5 @@
 import Panel from "@components/common/panel"
+import { useSurrealDB } from "@components/surrealdb-provider"
 import { useSettingsDiagnostics } from "@components/settings/use-settings-diagnostics"
 import { Button } from "@components/ui/button"
 import useSettingsStore from "@stores/use-settings-store"
@@ -8,6 +9,8 @@ import React, { useEffect, useState } from "react"
 
 const DangerZonePanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
     const isDemo = useSettingsStore((state) => state.demo)
+    const { appConfig } = useSurrealDB()
+    const snapshotEnabled = appConfig?.debugSnapshot?.enabled === true
     const { data } = useSettingsDiagnostics()
     const queryClient = useQueryClient()
     const [confirming, setConfirming] = useState(false)
@@ -69,14 +72,16 @@ const DangerZonePanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fals
                     <Button
                         variant="destructive"
                         onClick={() => handleClear()}
-                        disabled={isDemo || isClearing}
+                        disabled={isDemo || snapshotEnabled || isClearing}
                         aria-label="Clear stored data"
                     >
                         {isClearing ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
                         {confirming ? "Confirm clear all data" : "Clear stored data"}
                     </Button>
-                    {isDemo && (
-                        <span className="text-sm text-muted-foreground">Unavailable while demo mode is active.</span>
+                    {(isDemo || snapshotEnabled) && (
+                        <span className="text-sm text-muted-foreground">
+                            {isDemo ? "Unavailable while demo mode is active." : "Disabled during snapshot replay."}
+                        </span>
                     )}
                 </div>
                 {statusMessage && <p className="text-sm text-muted-foreground">{statusMessage}</p>}

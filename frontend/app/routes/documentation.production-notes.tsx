@@ -10,6 +10,7 @@ const DocumentationProductionNotesPage = () => (
         group="Operations"
         source={{ path: "frontend/app/content/docs/production-notes.mdx", markdown: productionNotesMarkdown }}
         previousPage={{ title: "Celery Cluster Setups", href: "/documentation/celery-clusters" }}
+        nextPage={{ title: "Debug Bundles", href: "/documentation/debug-bundles" }}
     >
         <ProductionNotesContent />
     </DocsPage>

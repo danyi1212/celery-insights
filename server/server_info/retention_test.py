@@ -1,5 +1,6 @@
 import pytest
 from pytest_mock import MockerFixture
+from starlette.responses import JSONResponse
 
 from cleanup import CleanupJob
 from server_info.router import get_retention_settings, trigger_cleanup, update_retention_settings
@@ -26,6 +27,7 @@ class TestGetRetentionSettings:
     def mock_request(self, mocker: MockerFixture, cleanup_job):
         request = mocker.MagicMock()
         request.app.state.cleanup_job = cleanup_job
+        request.app.state.debug_snapshot_mode = False
         return request
 
     @pytest.mark.asyncio
@@ -84,6 +86,7 @@ class TestUpdateRetentionSettings:
     def mock_request(self, mocker: MockerFixture, cleanup_job):
         request = mocker.MagicMock()
         request.app.state.cleanup_job = cleanup_job
+        request.app.state.debug_snapshot_mode = False
         return request
 
     @pytest.mark.asyncio
@@ -135,6 +138,23 @@ class TestUpdateRetentionSettings:
         assert cleanup_job.task_retention_hours is None
         assert cleanup_job.dead_worker_retention_hours is None
 
+    @pytest.mark.asyncio
+    async def test_returns_conflict_in_snapshot_mode(self, mock_request, cleanup_job):  # noqa: ARG002
+        mock_request.app.state.debug_snapshot_mode = True
+
+        result = await update_retention_settings(
+            mock_request,
+            RetentionSettings(
+                cleanup_interval_seconds=60,
+                task_max_count=None,
+                task_retention_hours=None,
+                dead_worker_retention_hours=None,
+            ),
+        )
+
+        assert isinstance(result, JSONResponse)
+        assert result.status_code == 409
+
 
 class TestTriggerCleanup:
     @pytest.fixture()
@@ -153,6 +173,7 @@ class TestTriggerCleanup:
     def mock_request(self, mocker: MockerFixture, cleanup_job):
         request = mocker.MagicMock()
         request.app.state.cleanup_job = cleanup_job
+        request.app.state.debug_snapshot_mode = False
         return request
 
     @pytest.mark.asyncio
@@ -187,3 +208,12 @@ class TestTriggerCleanup:
 
         assert result["success"] is False
         assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_returns_conflict_in_snapshot_mode(self, mock_request, cleanup_job):  # noqa: ARG002
+        mock_request.app.state.debug_snapshot_mode = True
+
+        result = await trigger_cleanup(mock_request)
+
+        assert isinstance(result, JSONResponse)
+        assert result.status_code == 409

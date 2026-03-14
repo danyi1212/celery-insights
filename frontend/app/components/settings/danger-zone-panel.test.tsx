@@ -5,6 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import useSettingsStore from "@stores/use-settings-store"
 import DangerZonePanel from "./danger-zone-panel"
 
+vi.mock("@components/surrealdb-provider", () => ({
+    useSurrealDB: () => ({
+        appConfig: { debugSnapshot: null },
+    }),
+}))
+
 const diagnostics = {
     cpu_usage: [0.42, 0.3, 0.2] as [number, number, number],
     memory_usage: 1024,
