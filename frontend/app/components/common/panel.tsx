@@ -7,6 +7,7 @@ import React, { useMemo } from "react"
 export interface PanelProps extends React.ComponentProps<"div"> {
     title?: string
     titleClassName?: string
+    headerClassName?: string
     actions?: React.ReactNode
     children?: React.ReactNode
     loading?: boolean
@@ -19,6 +20,7 @@ const Panel: React.FC<PanelProps> = ({
     children,
     actions,
     titleClassName,
+    headerClassName,
     loading,
     error,
     hideHeader,
@@ -43,7 +45,7 @@ const Panel: React.FC<PanelProps> = ({
     return (
         <div className="flex h-full flex-col">
             {!hideHeader && (title || actions) && (
-                <div className="flex min-h-16 items-center gap-2 px-4">
+                <div className={cn("flex min-h-16 items-center gap-2 px-4", headerClassName)}>
                     {title ? (
                         <h4 className={cn("flex-grow truncate text-2xl font-semibold", titleClassName)}>{title}</h4>
                     ) : (

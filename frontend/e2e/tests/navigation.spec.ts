@@ -7,7 +7,7 @@ test.describe("Navigation", () => {
       timeout: 30_000,
     });
     await expect(
-      page.getByRole("heading", { name: "Online Workers", exact: true }),
+      page.getByRole("heading", { name: "Recent Activity", exact: true }),
     ).toBeVisible();
 
     await page.getByRole("link", { name: "Tasks Explorer" }).click();

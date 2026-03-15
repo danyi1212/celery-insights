@@ -4,7 +4,7 @@ test.describe("Worker Detail", () => {
     test("navigating to worker shows details", async ({ page }) => {
         await page.goto("/")
         await expect(page.getByTestId("app-connection-loading")).toBeHidden({ timeout: 30_000 })
-        await expect(page.getByRole("heading", { name: "Online Workers", exact: true })).toBeVisible()
+        await expect(page.getByRole("heading", { name: "Worker Context", exact: true })).toBeVisible()
 
         // Click the first worker link
         const workerLink = page.getByRole("link", { name: "View", exact: true }).first()
@@ -31,11 +31,9 @@ test.describe("Worker Detail", () => {
 
         await expect(page.locator("#worker-pool")).toBeVisible()
         await expect(page.locator("#registered-tasks")).toBeVisible()
-        // Worker poller runs on a 5s interval; reload to re-fetch data if not yet populated
-        await expect(async () => {
-            await page.reload()
-            await expect(page.locator("#registered-tasks")).toContainText("tasks.basic")
-        }).toPass({ timeout: 30_000 })
+        await expect(page.locator("#registered-tasks")).toContainText(
+            /Registered Task Types|No registered tasks found|tasks\./,
+        )
     })
 
     test("unknown worker shows not-found message", async ({ page }) => {

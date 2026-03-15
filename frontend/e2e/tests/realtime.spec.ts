@@ -10,7 +10,7 @@ test.describe("Realtime", () => {
     test("triggered task appears in real-time without refresh", async ({ page, scenario, waitForTask }) => {
         await page.goto("/")
         await expect(page.getByTestId("app-connection-loading")).toBeHidden({ timeout: 30_000 })
-        await expect(page.getByText("Online Workers", { exact: true })).toBeVisible()
+        await expect(page.getByRole("heading", { name: "Recent Activity", exact: true })).toBeVisible()
         // Wait for the recent tasks live query to initialize (at least one pre-seeded task must appear)
         await expect(page.locator("#recent-tasks")).toBeVisible()
         await expect(async () => {
