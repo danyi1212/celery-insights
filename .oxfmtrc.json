@@ -1,0 +1,7 @@
+{
+    "$schema": "./node_modules/oxfmt/configuration_schema.json",
+    "ignorePatterns": ["frontend/dist/**", "node_modules/**", "frontend/node_modules/**"],
+    "tabWidth": 2,
+    "semi": false,
+    "printWidth": 120
+}
