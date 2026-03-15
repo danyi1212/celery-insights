@@ -38,7 +38,7 @@
         "clsx": "^2.1.1",
         "date-fns": "^3.6.0",
         "html-to-image": "^1.11.11",
-        "lucide-react": "^0.575.0",
+        "lucide-react": "^0.577.0",
         "minidenticons": "^4.2.1",
         "motion": "^12.36.0",
         "radix-ui": "^1.4.3",
