@@ -5,12 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 **Backend** (from repo root): `uv run pytest`, `uv run ruff check server/`, `uv run ruff format server/`, `uv run ty check server/`
-**Frontend** (from `frontend/`): `bun dev`, `bun run build`, `bun run lint`, `bun run lint-fix`
-**Frontend tests** (from `frontend/`): `bun run test`, `bun run test:watch`
-**Start all dev services** (from `frontend/`): `bun run dev:all` (starts SurrealDB, Python, and Vite concurrently)
-**Start SurrealDB only** (from `frontend/`): `bun run dev:surreal`
+**Frontend** (from repo root): `bun dev`, `bun run build`, `bun run lint`, `bun run lint-fix`
+**Frontend tests** (from repo root): `bun run test`, `bun run test:watch`
+**Start all dev services** (from repo root): `bun run dev:all` (starts SurrealDB, Python, and Vite concurrently)
+**Start SurrealDB only** (from repo root): `bun run dev:surreal`
 
-Tests are colocated: `model.py` -> `model_test.py`, `task-avatar.tsx` -> `task-avatar.test.tsx`. Run one with `uv run pytest server/tasks/model_test.py` or `cd frontend && bunx vitest run app/components/task/task-avatar.test.tsx`.
+Tests are colocated: `model.py` -> `model_test.py`, `task-avatar.tsx` -> `task-avatar.test.tsx`. Run one with `uv run pytest server/tasks/model_test.py` or `bunx vitest run src/components/task/task-avatar.test.tsx`.
 
 ## Stack
 
@@ -30,50 +30,50 @@ Tests are colocated: `model.py` -> `model_test.py`, `task-avatar.tsx` -> `task-a
 - `server/tasks/result_fetcher.py` — fetches task results from Celery result backend
 - `server/workers/poller.py` — periodic worker status polling via Celery inspect API
 - `server/cleanup.py` — periodic data retention/pruning job
-- `frontend/src/config.ts` — Bun-owned settings (Zod-validated), the single source of truth for all config
-- `frontend/src/logger.ts` — Bun logger utility (`bunLogger`, `surrealLogger`, `createLogger`)
-- `frontend/src/surreal-schema.ts` — SurrealDB schema migration (creates tables, users, permissions)
-- `frontend/src/leader-election.ts` — distributed leader election via SurrealDB atomic locks
-- `frontend/bun-entry.ts` — Production entry: orchestrates SurrealDB + Python subprocesses, runs leader election, serves SPA, proxies API/WS/SurrealDB
-- `frontend/app/` — frontend source (TanStack Router file-based routing)
-- `frontend/app/routes/` — file-based routes (auto code-split per route)
-- `frontend/app/hooks/use-live-query.ts` — generic SurrealDB live query hook
-- `frontend/app/hooks/use-live-tasks.ts`, `use-live-workers.ts`, `use-live-events.ts` — domain-specific live query hooks
-- `frontend/app/hooks/use-search.ts` — search via SurrealDB queries
-- `frontend/app/stores/` — Zustand state (settings, explorer config, tour)
-- `frontend/app/components/surrealdb-provider.tsx` — SurrealDB connection provider (remote + WASM demo mode)
-- `frontend/app/components/` — organized by domain, mirrors backend modules
-- `frontend/app/lib/utils.ts` — `cn()` helper for Tailwind class merging
-- `frontend/components.json` — Shadcn UI config (style variant, path aliases, CSS location)
-- `frontend/vitest.config.ts` — Vitest configuration (happy-dom, colocated `.test` pattern)
-- `frontend/app/test-utils.tsx` — Custom `render` that wraps components with required providers
-- `frontend/app/test-fixtures.ts` — Shared factory helpers (`createServerTask`, `createStateTask`, etc.)
-- `frontend/vite.config.ts` — Vite config with TanStack Router plugin and dev proxy rules
+- `runtime/config.ts` — Bun-owned settings (Zod-validated), the single source of truth for all config
+- `runtime/logger.ts` — Bun logger utility (`bunLogger`, `surrealLogger`, `createLogger`)
+- `runtime/surreal-schema.ts` — SurrealDB schema migration (creates tables, users, permissions)
+- `runtime/leader-election.ts` — distributed leader election via SurrealDB atomic locks
+- `bun-entry.ts` — Production entry: orchestrates SurrealDB + Python subprocesses, runs leader election, serves SPA, proxies API/WS/SurrealDB
+- `src/` — frontend source (TanStack Router file-based routing)
+- `src/routes/` — file-based routes (auto code-split per route)
+- `src/hooks/use-live-query.ts` — generic SurrealDB live query hook
+- `src/hooks/use-live-tasks.ts`, `use-live-workers.ts`, `use-live-events.ts` — domain-specific live query hooks
+- `src/hooks/use-search.ts` — search via SurrealDB queries
+- `src/stores/` — Zustand state (settings, explorer config, tour)
+- `src/components/surrealdb-provider.tsx` — SurrealDB connection provider (remote + WASM demo mode)
+- `src/components/` — organized by domain, mirrors backend modules
+- `src/lib/utils.ts` — `cn()` helper for Tailwind class merging
+- `components.json` — Shadcn UI config (style variant, path aliases, CSS location)
+- `vitest.config.ts` — Vitest configuration (happy-dom, colocated `.test` pattern)
+- `src/test-utils.tsx` — Custom `render` that wraps components with required providers
+- `src/test-fixtures.ts` — Shared factory helpers (`createServerTask`, `createStateTask`, etc.)
+- `vite.config.ts` — Vite config with TanStack Router plugin and dev proxy rules
 - `CONTRIBUTING.md` — full code style guide and design guidelines
 - `CONFIGURATION.md` — all environment variables and setup options
 
 ## Conventions
 
 - **Python**: Ruff (line-length 120). Absolute imports only (relative banned). Pydantic models, not dicts. Async-first — use `asyncio.to_thread` for blocking code. Register new loggers in `logging_config.py`. Use `logging.getLogger(__name__)` — never `print()`.
-- **Logging (Bun)**: Use `bunLogger` from `frontend/src/logger.ts` — never raw `console.log/warn/error`. For new services, use `createLogger("service-name")`. SurrealDB output is piped through `surrealLogger`.
-- **TypeScript**: Prettier (tabWidth 4, no semis, printWidth 120). Arrow functions. `useMemo` for derived state, never `useState`+`useEffect` for it. Path alias `@*` -> `app/*`.
-- **UI**: Shadcn UI components in `frontend/app/components/ui/`. Tailwind CSS v4 for styling (CSS-first config in `app/styles.css`). Lucide React for icons. Dark mode via `.dark` class on `<html>`. Use `cn()` from `@lib/utils` for conditional class merging.
+- **Logging (Bun)**: Use `bunLogger` from `runtime/logger.ts` — never raw `console.log/warn/error`. For new services, use `createLogger("service-name")`. SurrealDB output is piped through `surrealLogger`.
+- **TypeScript**: Prettier (tabWidth 4, no semis, printWidth 120). Arrow functions. `useMemo` for derived state, never `useState`+`useEffect` for it. Path alias `@*` -> `src/*`.
+- **UI**: Shadcn UI components in `src/components/ui/`. Tailwind CSS v4 for styling (CSS-first config in `src/styles.css`). Lucide React for icons. Dark mode via `.dark` class on `<html>`. Use `cn()` from `@lib/utils` for conditional class merging.
 - **Tests (Python)**: Colocated, suffixed `_test.py` (not prefixed `test_`). Pythonpath is `server/`, so imports start from package root.
-- **Tests (Frontend)**: Colocated, suffixed `.test.ts` / `.test.tsx`. Vitest with happy-dom. Use custom `render` from `app/test-utils.tsx` (wraps providers). Shared factories in `app/test-fixtures.ts`.
+- **Tests (Frontend)**: Colocated, suffixed `.test.ts` / `.test.tsx`. Vitest with happy-dom. Use custom `render` from `src/test-utils.tsx` (wraps providers). Shared factories in `src/test-fixtures.ts`.
 
 ## Development
 
 The quickest way to start all three services:
 
-```
-cd frontend && bun run dev:all
+```shell
+bun run dev:all
 ```
 
 Or run them in separate terminals:
 
-1. **Terminal 1**: `cd frontend && bun run dev:surreal` (SurrealDB on port 8557)
+1. **Terminal 1**: `bun run dev:surreal` (SurrealDB on port 8557)
 2. **Terminal 2**: `cd server && python run.py` (Python ingester on port 8556)
-3. **Terminal 3**: `cd frontend && bun dev` (Vite dev server on port 3000)
+3. **Terminal 3**: `bun dev` (Vite dev server on port 3000)
 
 The Vite dev server handles HMR and proxies `/api/*` to Python at 8556, `/surreal/*` to SurrealDB at 8557.
 

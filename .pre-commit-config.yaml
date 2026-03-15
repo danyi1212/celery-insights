@@ -2,7 +2,7 @@
 # See https://pre-commit.com/hooks.html for more hooks
 ci:
   skip: [ty, oxlint, oxfmt, tsc, vitest]
-exclude: ^frontend/app/services/server
+exclude: ^(\.agents/|frontend/app/services/server)
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -45,32 +45,32 @@ repos:
     hooks:
       - id: oxlint
         name: oxlint
-        entry: bun run --cwd frontend oxlint --deny-warnings --fix app
+        entry: bun run lint-fix
         language: system
-        files: ^frontend/app/.*\.[jt]sx?$
+        files: ^(src|runtime|e2e|tooling)/.*\.[jt]sx?$|^(bun-entry|vite\.config|vitest\.config|vitest\.setup)\.ts$
         types: [ file ]
         pass_filenames: false
 
       - id: oxfmt
         name: oxfmt
-        entry: bun run --cwd frontend oxfmt app
+        entry: bun run format-fix
         language: system
-        files: ^frontend/app/.*\.[jt]sx?$
+        files: ^(src|runtime|e2e|tooling)/.*\.[jt]sx?$|^(bun-entry|vite\.config|vitest\.config|vitest\.setup)\.ts$
         types: [ file ]
         pass_filenames: false
 
       - id: tsc
         name: tsc
-        entry: bun run --cwd frontend tsc --noEmit
+        entry: bun run typecheck
         language: system
-        files: ^frontend/app/.*\.[jt]sx?$
+        files: ^(src|runtime|e2e|tooling)/.*\.[jt]sx?$|^(bun-entry|vite\.config|vitest\.config|vitest\.setup)\.ts$
         types: [ file ]
         pass_filenames: false
 
       - id: vitest
         name: vitest
-        entry: bun run --cwd frontend vitest run
+        entry: bun run test
         language: system
-        files: ^frontend/app/.*\.[jt]sx?$
+        files: ^(src|runtime|e2e|tooling)/.*\.[jt]sx?$|^(bun-entry|vite\.config|vitest\.config|vitest\.setup)\.ts$
         types: [ file ]
         pass_filenames: false

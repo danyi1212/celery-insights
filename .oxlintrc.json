@@ -1,0 +1,15 @@
+{
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    "plugins": ["eslint", "typescript", "unicorn", "oxc", "react", "jsx-a11y", "vitest"],
+    "ignorePatterns": ["dist/**", "frontend/dist/**", "node_modules/**", "frontend/node_modules/**", "src/routeTree.gen.ts"],
+    "rules": {
+        "eqeqeq": ["error", "always"],
+        "no-alert": "error",
+        "no-console": ["error", { "allow": ["warn", "error"] }],
+        "no-debugger": "error",
+        "no-var": "error",
+        "object-shorthand": "error",
+        "prefer-const": "error",
+        "unicorn/no-useless-fallback-in-spread": "error"
+    }
+}

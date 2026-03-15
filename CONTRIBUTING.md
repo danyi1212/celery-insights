@@ -74,14 +74,13 @@ To contribute to the project, follow these steps:
 5. Install the frontend dependencies using Bun.
 
     ```shell
-    cd frontend/
     bun install
     ```
 
 6. Create `.env` file
 
     ```shell
-    cd ../server/
+    cd server/
     cp .env.example .env
     ```
 
@@ -90,7 +89,6 @@ To contribute to the project, follow these steps:
 The quickest way to start all services at once is:
 
 ```shell
-cd frontend/
 bun run dev:all
 ```
 
@@ -128,7 +126,6 @@ Or run them in separate terminals:
 1. Start SurrealDB
 
     ```shell
-   cd frontend/
    bun run dev:surreal
    ```
 
@@ -142,13 +139,12 @@ Or run them in separate terminals:
 3. Start the frontend dev server (provided PyCharm run configuration `dev`)
 
     ```shell
-   cd frontend/
    bun dev
    ```
 
 4. Open browser to <http://localhost:3000>
 
-> **Note:** All application settings are owned by Bun (`frontend/src/config.ts`) and passed to Python via environment variables. When adding new configuration, define it in the Bun config schema first.
+> **Note:** All application settings are owned by Bun (`runtime/config.ts`) and passed to Python via environment variables. The Bun package root is the repository root, but the application source now lives at the repository root under `src/`, `runtime/`, and `e2e/`. When adding new configuration, define it in the Bun config schema first.
 
 ## Code Styles
 
@@ -185,13 +181,17 @@ Or run them in separate terminals:
     ```
 
 - Avoid unnecessary React re-renders. Performance is important.
-- Frontend source code lives in `frontend/app/` (routes in `app/routes/`, components in `app/components/`, stores in `app/stores/`).
-- Routes use [TanStack Router](https://tanstack.com/router) with file-based routing. `frontend/app/routeTree.gen.ts` is auto-generated — do not edit manually.
+- Bun commands and tooling run from the repository root.
+- Keep the frontend split by responsibility:
+  - `src/` for the browser application
+  - `runtime/` for the Bun server/runtime layer
+  - `e2e/` for Playwright coverage
+- Routes use [TanStack Router](https://tanstack.com/router) with file-based routing. `src/routeTree.gen.ts` is auto-generated — do not edit manually.
 
 ### UI Components & Styling
 
-- Use [Shadcn UI](https://ui.shadcn.com/) components from `frontend/app/components/ui/`. Add new Shadcn components via `bunx shadcn@latest add <component>`.
-- Style with Tailwind CSS v4 utility classes. Theme configuration is CSS-first in `frontend/app/styles.css` (no `tailwind.config.js`).
+- Use [Shadcn UI](https://ui.shadcn.com/) components from `src/components/ui/`. Add new Shadcn components via `bunx shadcn@latest add <component>`.
+- Style with Tailwind CSS v4 utility classes. Theme configuration is CSS-first in `src/styles.css` (no `tailwind.config.js`).
 - Use `cn()` from `@lib/utils` for conditional class merging.
 - Use [Lucide React](https://lucide.dev/) for all icons.
 - Dark mode is toggled via `.dark` class on `<html>`. Use Tailwind's `dark:` variant for dark-mode-specific styles.
@@ -225,13 +225,12 @@ Frontend unit tests use [Vitest](https://vitest.dev/) with [Testing Library](htt
 Tests are colocated next to the module they test, suffixed `.test.ts` or `.test.tsx` (e.g., `task-avatar.tsx` -> `task-avatar.test.tsx`).
 
 ```shell
-cd frontend
 bun run test          # all tests (single run)
 bun run test:watch    # watch mode
 ```
 
-- Use the custom `render` from `app/test-utils.tsx` instead of the raw Testing Library `render` — it wraps components with required providers.
-- Use factory helpers from `app/test-fixtures.ts` to create test data (`createServerTask`, `createStateTask`, `createServerWorker`).
+- Use the custom `render` from `src/test-utils.tsx` instead of the raw Testing Library `render` — it wraps components with required providers.
+- Use factory helpers from `src/test-fixtures.ts` to create test data (`createServerTask`, `createStateTask`, `createServerWorker`).
 
 ### E2E tests (Playwright)
 
@@ -240,7 +239,6 @@ E2E tests run against the full docker-compose stack (celery-insights + Celery wo
 **Full lifecycle** (starts and stops docker-compose automatically):
 
 ```shell
-cd frontend
 bun run e2e
 ```
 
@@ -248,7 +246,6 @@ bun run e2e
 
 ```shell
 cd test_project && docker compose --profile interactive up --build -d
-cd ../frontend
 E2E_SKIP_COMPOSE=1 bun run e2e
 ```
 
