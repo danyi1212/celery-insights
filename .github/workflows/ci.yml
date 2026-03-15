@@ -101,6 +101,14 @@ jobs:
         env:
           CI: "true"
           E2E_SKIP_BUILD: "1"
+      - name: Publish Playwright summary
+        uses: daun/playwright-report-summary@v3
+        if: always() && hashFiles('playwright-report/results.json') != ''
+        with:
+          report-file: playwright-report/results.json
+          report-tag: e2e
+          comment-title: E2E test results
+          job-summary: true
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()
