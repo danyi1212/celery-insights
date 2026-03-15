@@ -133,6 +133,7 @@ eggs/
 .eggs/
 lib/
 !frontend/app/lib/
+!src/lib/
 lib64/
 parts/
 sdist/
