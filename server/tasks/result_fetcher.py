@@ -7,6 +7,7 @@ from typing import Any, cast
 from celery import Celery
 from celery.result import AsyncResult
 from celery.backends.redis import RedisBackend
+from surrealdb.types import Value
 
 from events.ingester import build_workflow_summary_recompute
 from surrealdb_client import get_db
@@ -150,7 +151,7 @@ class ResultFetcher:
 
         try:
             db = get_db()
-            params = {"task_id": task_id}
+            params: dict[str, Value] = {"task_id": task_id}
             set_clauses = []
 
             for key, value in data.items():
