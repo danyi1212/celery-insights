@@ -17,6 +17,7 @@ export default defineConfig({
     ? [
         ["github"],
         ["html", { outputFolder: "../playwright-report" }],
+        ["json", { outputFile: "../playwright-report/results.json" }],
         ["junit", { outputFile: "../playwright-report/results.xml" }],
       ]
     : [["html", { outputFolder: "../playwright-report" }]],
