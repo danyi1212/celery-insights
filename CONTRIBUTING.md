@@ -242,6 +242,11 @@ E2E tests run against the full docker-compose stack (celery-insights + Celery wo
 bun run e2e
 ```
 
+This now runs in two passes:
+- `bun run e2e:parallel` runs the parallel-safe specs with 2 Playwright workers.
+- `bun run e2e:serial` runs shared-state specs with 1 worker.
+- `bun run e2e` still produces one merged Playwright report after both passes finish.
+
 **With the stack already running** (faster iteration):
 
 ```shell
