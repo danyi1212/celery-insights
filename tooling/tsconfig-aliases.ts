@@ -20,17 +20,17 @@ export const loadTsconfigAliases = (tsconfigPath = path.resolve(process.cwd(), "
   return Object.entries(paths)
     .sort(([left], [right]) => right.length - left.length)
     .flatMap(([key, values]) => {
-    const target = values[0]
-    if (!target) return []
+      const target = values[0]
+      if (!target) return []
 
-    if (key.endsWith("/*") && target.endsWith("/*")) {
-      return [{ find: key.slice(0, -2), replacement: path.resolve(baseDir, target.slice(0, -2)) }]
-    }
+      if (key.endsWith("/*") && target.endsWith("/*")) {
+        return [{ find: key.slice(0, -2), replacement: path.resolve(baseDir, target.slice(0, -2)) }]
+      }
 
-    if (key.endsWith("*") && target.endsWith("*")) {
-      return [{ find: key.slice(0, -1), replacement: path.resolve(baseDir, target.slice(0, -1)) }]
-    }
+      if (key.endsWith("*") && target.endsWith("*")) {
+        return [{ find: key.slice(0, -1), replacement: path.resolve(baseDir, target.slice(0, -1)) }]
+      }
 
-    return [{ find: key, replacement: path.resolve(baseDir, target) }]
+      return [{ find: key, replacement: path.resolve(baseDir, target) }]
     })
 }

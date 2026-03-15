@@ -1,7 +1,7 @@
 {
     "$schema": "./node_modules/oxlint/configuration_schema.json",
     "plugins": ["eslint", "typescript", "unicorn", "oxc", "react", "jsx-a11y", "vitest"],
-    "ignorePatterns": ["frontend/dist/**", "node_modules/**", "frontend/node_modules/**", "frontend/app/routeTree.gen.ts"],
+    "ignorePatterns": ["dist/**", "frontend/dist/**", "node_modules/**", "frontend/node_modules/**", "src/routeTree.gen.ts"],
     "rules": {
         "eqeqeq": ["error", "always"],
         "no-alert": "error",
