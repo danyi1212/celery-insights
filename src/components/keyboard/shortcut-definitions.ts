@@ -4,7 +4,7 @@ export const appShortcuts = {
   focusSearchAlt: [{ key: "/" }],
   openHelp: [{ key: "?", shift: true }],
   focusSearch: [{ key: "k", mod: true }],
-  toggleFacets: [{ key: "f" }],
+  toggleFilters: [{ key: "f" }],
   toggleLiveEventsConnection: [{ key: "c" }],
   toggleSidebar: [{ key: "b", mod: true }],
 } satisfies Record<string, ShortcutTrigger[]>

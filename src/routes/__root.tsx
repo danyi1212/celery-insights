@@ -11,32 +11,35 @@ import Menu from "@layout/menu/menu"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { SidebarInset, SidebarProvider } from "@components/ui/sidebar"
 import { TooltipProvider } from "@components/ui/tooltip"
+import { NuqsAdapter } from "nuqs/adapters/react"
 
 const queryClient = new QueryClient()
 
 const RootComponent = () => {
   useDarkMode()
   return (
-    <QueryClientProvider client={queryClient}>
-      <SurrealDBProvider>
-        <SidebarProvider>
-          <KeyboardShortcutsProvider>
-            <SearchBoxControllerProvider>
-              <AppKeyboardShortcuts />
-              <Menu />
-              <SidebarInset>
-                <ReadOnlyBanner />
-                <Header />
-                <div className="flex-1 p-0">
-                  <Outlet />
-                </div>
-              </SidebarInset>
-              <JoyrideTour />
-            </SearchBoxControllerProvider>
-          </KeyboardShortcutsProvider>
-        </SidebarProvider>
-      </SurrealDBProvider>
-    </QueryClientProvider>
+    <NuqsAdapter>
+      <QueryClientProvider client={queryClient}>
+        <SurrealDBProvider>
+          <SidebarProvider>
+            <KeyboardShortcutsProvider>
+              <SearchBoxControllerProvider>
+                <AppKeyboardShortcuts />
+                <Menu />
+                <SidebarInset>
+                  <ReadOnlyBanner />
+                  <Header />
+                  <div className="flex-1 p-0">
+                    <Outlet />
+                  </div>
+                </SidebarInset>
+                <JoyrideTour />
+              </SearchBoxControllerProvider>
+            </KeyboardShortcutsProvider>
+          </SidebarProvider>
+        </SurrealDBProvider>
+      </QueryClientProvider>
+    </NuqsAdapter>
   )
 }
 

@@ -6,9 +6,9 @@ services:
       - "15672:15672"
     healthcheck:
       test: rabbitmq-diagnostics -q ping
-      interval: 10s
+      interval: 3s
       timeout: 5s
-      retries: 5
+      retries: 15
 
   redis:
     image: redis:8-alpine
@@ -16,10 +16,9 @@ services:
       - "6379:6379"
     healthcheck:
       test: redis-cli ping
-      interval: 10s
+      interval: 3s
       timeout: 5s
-      retries: 5
-
+      retries: 15
   worker:
     image: celery-insights-test-project:local
     build: .

@@ -3,23 +3,16 @@ import DurationByTypeChart from "@components/analytics/duration-by-type-chart"
 import FailureRateChart from "@components/analytics/failure-rate-chart"
 import ThroughputChart from "@components/analytics/throughput-chart"
 import WorkerLoadChart from "@components/analytics/worker-load-chart"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
+import AppTimeRangePicker, { type TimeRange } from "@components/common/time-range-picker"
 import { useSurrealDB } from "@components/surrealdb-provider"
-import { type TimeRange, useAnalytics } from "@hooks/use-analytics"
+import { useAnalytics } from "@hooks/use-analytics"
+import { createDefaultTimeRange } from "@lib/time-range-utils"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { useState } from "react"
 
-const TIME_RANGE_LABELS: Record<TimeRange, string> = {
-  "1h": "Last hour",
-  "6h": "Last 6 hours",
-  "24h": "Last 24 hours",
-  "7d": "Last 7 days",
-  "30d": "Last 30 days",
-}
-
 const AnalyticsPage = () => {
   const { status, error: connError } = useSurrealDB()
-  const [timeRange, setTimeRange] = useState<TimeRange>("24h")
+  const [timeRange, setTimeRange] = useState<TimeRange>(() => createDefaultTimeRange())
   const { data, isLoading, error } = useAnalytics(timeRange)
 
   if (status !== "connected") {
@@ -42,20 +35,14 @@ const AnalyticsPage = () => {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-3xl font-semibold">Analytics</h2>
-        <Select value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(Object.entries(TIME_RANGE_LABELS) as [TimeRange, string][]).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <AppTimeRangePicker
+          value={timeRange}
+          onChange={(range) => setTimeRange(range ?? createDefaultTimeRange())}
+          className="w-full sm:w-[24rem]"
+          placeholder="Search time range..."
+        />
       </div>
 
       {error && (

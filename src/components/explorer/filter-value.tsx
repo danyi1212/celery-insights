@@ -3,7 +3,7 @@ import { CheckIcon } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import React from "react"
 
-interface FacetValueProps {
+interface FilterValueProps {
   value: string
   label: React.ReactElement | string
   count: number
@@ -11,7 +11,7 @@ interface FacetValueProps {
   selected: Set<string>
 }
 
-const FacetValue: React.FC<FacetValueProps> = ({ value, count, selected, onSelect, label }) => (
+const FilterValue: React.FC<FilterValueProps> = ({ value, count, selected, onSelect, label }) => (
   <li className="flex items-center">
     <button
       type="button"
@@ -43,4 +43,4 @@ const FacetValue: React.FC<FacetValueProps> = ({ value, count, selected, onSelec
     </button>
   </li>
 )
-export default FacetValue
+export default FilterValue

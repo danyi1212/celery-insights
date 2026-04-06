@@ -1,6 +1,6 @@
 import { render, screen, within } from "@test-utils"
 import userEvent from "@testing-library/user-event"
-import Facet from "./facet"
+import FilterSection from "./filter-section"
 
 const defaultCounts = new Map([
   ["alpha", 10],
@@ -8,14 +8,14 @@ const defaultCounts = new Map([
   ["gamma", 20],
 ])
 
-describe("Facet", () => {
+describe("FilterSection", () => {
   it("renders the title", () => {
-    render(<Facet title="Status" counts={defaultCounts} selected={new Set()} setSelected={vi.fn()} />)
+    render(<FilterSection title="Status" counts={defaultCounts} selected={new Set()} setSelected={vi.fn()} />)
     expect(screen.getByText("Status")).toBeInTheDocument()
   })
 
   it("sorts values by count descending", () => {
-    render(<Facet title="Type" counts={defaultCounts} selected={new Set()} setSelected={vi.fn()} />)
+    render(<FilterSection title="Type" counts={defaultCounts} selected={new Set()} setSelected={vi.fn()} />)
     const items = screen.getAllByRole("listitem")
     // Each listitem contains the value label and count text
     const values = items.map((item) => {
@@ -29,7 +29,7 @@ describe("Facet", () => {
   it("calls setSelected to add a value on click", async () => {
     const user = userEvent.setup()
     const setSelected = vi.fn()
-    render(<Facet title="Type" counts={defaultCounts} selected={new Set()} setSelected={setSelected} />)
+    render(<FilterSection title="Type" counts={defaultCounts} selected={new Set()} setSelected={setSelected} />)
 
     // Click on the list item button for "alpha"
     const items = screen.getAllByRole("listitem")
@@ -43,7 +43,12 @@ describe("Facet", () => {
     const user = userEvent.setup()
     const setSelected = vi.fn()
     render(
-      <Facet title="Type" counts={defaultCounts} selected={new Set(["alpha", "beta"])} setSelected={setSelected} />,
+      <FilterSection
+        title="Type"
+        counts={defaultCounts}
+        selected={new Set(["alpha", "beta"])}
+        setSelected={setSelected}
+      />,
     )
 
     const items = screen.getAllByRole("listitem")
@@ -57,7 +62,12 @@ describe("Facet", () => {
     const user = userEvent.setup()
     const setSelected = vi.fn()
     render(
-      <Facet title="Type" counts={defaultCounts} selected={new Set(["alpha", "beta"])} setSelected={setSelected} />,
+      <FilterSection
+        title="Type"
+        counts={defaultCounts}
+        selected={new Set(["alpha", "beta"])}
+        setSelected={setSelected}
+      />,
     )
 
     const clearButton = screen.getByRole("button", { name: "Clear selection" })
@@ -67,7 +77,7 @@ describe("Facet", () => {
 
   it("filters values by search input", async () => {
     const user = userEvent.setup()
-    render(<Facet title="Type" counts={defaultCounts} selected={new Set()} setSelected={vi.fn()} />)
+    render(<FilterSection title="Type" counts={defaultCounts} selected={new Set()} setSelected={vi.fn()} />)
 
     const searchInput = screen.getByPlaceholderText("Filter values...")
     await user.type(searchInput, "alp")
@@ -79,7 +89,7 @@ describe("Facet", () => {
 
   it("search filtering is case-insensitive", async () => {
     const user = userEvent.setup()
-    render(<Facet title="Type" counts={defaultCounts} selected={new Set()} setSelected={vi.fn()} />)
+    render(<FilterSection title="Type" counts={defaultCounts} selected={new Set()} setSelected={vi.fn()} />)
 
     const searchInput = screen.getByPlaceholderText("Filter values...")
     await user.type(searchInput, "BETA")
@@ -92,7 +102,7 @@ describe("Facet", () => {
   it("uses custom valueFormatter when provided", () => {
     const formatter = (value: string) => <span data-testid="formatted">{value.toUpperCase()}</span>
     render(
-      <Facet
+      <FilterSection
         title="Type"
         counts={defaultCounts}
         selected={new Set()}

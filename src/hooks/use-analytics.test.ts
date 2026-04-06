@@ -1,4 +1,5 @@
 import { renderHook, act, waitFor } from "@testing-library/react"
+import { parseTimeRange, type TimeRange } from "@danyi1212/time-range-picker"
 import { useAnalytics } from "./use-analytics"
 
 vi.mock("surrealdb", () => ({
@@ -55,6 +56,11 @@ function createMockSubscription() {
 }
 
 const emptyResults = [[], [], [], []]
+const makeRange = (input: string): TimeRange => {
+  const range = parseTimeRange(input, new Date("2025-01-01T12:00:00Z"))
+  if (!range) throw new Error(`Could not parse range: ${input}`)
+  return range
+}
 
 describe("useAnalytics", () => {
   beforeEach(() => {
@@ -66,7 +72,7 @@ describe("useAnalytics", () => {
   })
 
   it("runs all four aggregation queries on mount", async () => {
-    renderHook(() => useAnalytics("24h"))
+    renderHook(() => useAnalytics(makeRange("24h")))
 
     await waitFor(() => {
       expect(mockQuery).toHaveBeenCalledTimes(1)
@@ -80,26 +86,28 @@ describe("useAnalytics", () => {
   })
 
   it("passes correct bindings for the time range", async () => {
-    renderHook(() => useAnalytics("1h"))
+    renderHook(() => useAnalytics(makeRange("11:00 - 12:00")))
 
     await waitFor(() => {
       expect(mockQuery).toHaveBeenCalledTimes(1)
     })
 
     const bindings = mockQuery.mock.calls[0][1] as Record<string, unknown>
-    expect(bindings.cutoffDuration).toBe("3600s")
+    expect(typeof bindings.from).toBe("string")
+    expect(typeof bindings.to).toBe("string")
     expect(bindings.bucketDuration).toBe("1m")
   })
 
   it("passes correct bindings for 7d time range", async () => {
-    renderHook(() => useAnalytics("7d"))
+    renderHook(() => useAnalytics(makeRange("Jan 1 2025 - Jan 7 2025")))
 
     await waitFor(() => {
       expect(mockQuery).toHaveBeenCalledTimes(1)
     })
 
     const bindings = mockQuery.mock.calls[0][1] as Record<string, unknown>
-    expect(bindings.cutoffDuration).toBe("604800s")
+    expect(typeof bindings.from).toBe("string")
+    expect(typeof bindings.to).toBe("string")
     expect(bindings.bucketDuration).toBe("360m")
   })
 
@@ -111,7 +119,7 @@ describe("useAnalytics", () => {
 
     mockQuery.mockResolvedValue([throughput, failureRate, durationByType, workerLoad])
 
-    const { result } = renderHook(() => useAnalytics("24h"))
+    const { result } = renderHook(() => useAnalytics(makeRange("24h")))
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
@@ -125,7 +133,7 @@ describe("useAnalytics", () => {
   })
 
   it("subscribes to the task table for live updates", async () => {
-    renderHook(() => useAnalytics("24h"))
+    renderHook(() => useAnalytics(makeRange("24h")))
 
     await waitFor(() => {
       expect(mockLive).toHaveBeenCalledWith(expect.objectContaining({ name: "task" }))
@@ -139,7 +147,7 @@ describe("useAnalytics", () => {
     mockLive.mockResolvedValue(mock.subscription)
     mockQuery.mockResolvedValue(emptyResults)
 
-    renderHook(() => useAnalytics("24h"))
+    renderHook(() => useAnalytics(makeRange("24h")))
 
     await waitFor(() => {
       expect(mockQuery).toHaveBeenCalledTimes(1)
@@ -176,7 +184,7 @@ describe("useAnalytics", () => {
     mockLive.mockResolvedValue(mock.subscription)
     mockQuery.mockResolvedValue(emptyResults)
 
-    renderHook(() => useAnalytics("24h"))
+    renderHook(() => useAnalytics(makeRange("24h")))
 
     await waitFor(() => {
       expect(mockQuery).toHaveBeenCalledTimes(1)
@@ -203,7 +211,7 @@ describe("useAnalytics", () => {
   it("sets error when query fails", async () => {
     mockQuery.mockRejectedValue(new Error("Query failed"))
 
-    const { result } = renderHook(() => useAnalytics("24h"))
+    const { result } = renderHook(() => useAnalytics(makeRange("24h")))
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
@@ -216,7 +224,7 @@ describe("useAnalytics", () => {
   it("does not run queries when disconnected", async () => {
     mockStatus = "disconnected"
 
-    const { result } = renderHook(() => useAnalytics("24h"))
+    const { result } = renderHook(() => useAnalytics(makeRange("24h")))
 
     // Give time for any async work
     await act(async () => {

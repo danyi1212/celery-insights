@@ -8,8 +8,8 @@
         "no-console": ["error", { "allow": ["warn", "error"] }],
         "no-debugger": "error",
         "no-var": "error",
-        "object-shorthand": "error",
         "prefer-const": "error",
+        "vitest/require-mock-type-parameters": "off",
         "unicorn/no-useless-fallback-in-spread": "error"
     }
 }
