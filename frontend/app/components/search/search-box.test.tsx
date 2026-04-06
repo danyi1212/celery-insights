@@ -142,6 +142,20 @@ describe("SearchBox", () => {
         expect(screen.getByText("celery@worker-1")).toBeInTheDocument()
     })
 
+    it("keeps task and worker search enabled in demo mode", async () => {
+        const user = userEvent.setup()
+        useSettingsStore.setState({ demo: true })
+
+        render(<SearchBox />)
+
+        await user.click(screen.getByRole("button", { name: "Open quick search" }))
+        await user.type(screen.getByPlaceholderText("Search tasks, workers, pages, and features..."), "noop")
+
+        expect(mockUseSearch).toHaveBeenLastCalledWith("noop", 6)
+        expect(screen.getByRole("option", { name: /tasks\.basic\.noop/i })).toBeInTheDocument()
+        expect(screen.getByText("celery@worker-1")).toBeInTheDocument()
+    })
+
     it("navigates to the highlighted destination when Enter is pressed", async () => {
         const user = userEvent.setup()
 

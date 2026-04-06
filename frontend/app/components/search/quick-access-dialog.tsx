@@ -88,7 +88,7 @@ const QuickAccessDialog: React.FC<QuickAccessDialogProps> = ({ focusNonce = 0, o
     const wasOpenRef = useRef(false)
     const [query, setQuery] = useState("")
     const normalizedQuery = query.trim().toLowerCase()
-    const { tasks, workers, isLoading, error } = useSearch(isDemo ? "" : query, 6)
+    const { tasks, workers, isLoading, error } = useSearch(query, 6)
     const [highlightedIndex, setHighlightedIndex] = useState(0)
 
     useEffect(() => {
@@ -280,9 +280,6 @@ const QuickAccessDialog: React.FC<QuickAccessDialogProps> = ({ focusNonce = 0, o
                         ) : showEmptyState ? (
                             <div className="px-3 py-8 text-sm text-muted-foreground">
                                 <p>No matching pages, documentation, tasks, or workers.</p>
-                                {isDemo && normalizedQuery ? (
-                                    <p className="mt-1">Task and worker search is unavailable in Demo Mode.</p>
-                                ) : null}
                             </div>
                         ) : (
                             <div aria-label="Quick access results" role="listbox">
@@ -343,7 +340,7 @@ const QuickAccessDialog: React.FC<QuickAccessDialogProps> = ({ focusNonce = 0, o
                 <div className="flex items-center justify-between border-t px-4 py-2 text-xs text-muted-foreground">
                     <span>
                         {isDemo
-                            ? "Navigate pages and features in Demo Mode."
+                            ? "Search pages or open matching embedded sample records."
                             : "Jump to pages or open matching entities."}
                     </span>
                     <div className="flex items-center gap-3">

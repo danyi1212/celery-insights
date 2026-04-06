@@ -1,4 +1,6 @@
 import { readFile } from "node:fs/promises"
+import { dirname, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
 import { defineConfig } from "vite"
 import tailwindcss from "@tailwindcss/vite"
 import tsConfigPaths from "vite-tsconfig-paths"
@@ -10,6 +12,9 @@ import remarkGfm from "remark-gfm"
 
 const DOCS_SOURCE_SUFFIX = ".source"
 const DOCS_SOURCE_PREFIX = "\0docs-source:"
+const FRONTEND_ROOT = dirname(fileURLToPath(import.meta.url))
+const WORKSPACE_ROOT = resolve(FRONTEND_ROOT, "..")
+const WORKSPACE_NODE_MODULES = resolve(WORKSPACE_ROOT, "node_modules")
 
 const docsSourcePlugin = () => ({
     name: "docs-source-plugin",
@@ -70,6 +75,9 @@ export default defineConfig({
         global: "window",
     },
     server: {
+        fs: {
+            allow: [WORKSPACE_NODE_MODULES],
+        },
         port: 3000,
         proxy: {
             "/metrics": {

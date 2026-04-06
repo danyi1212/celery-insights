@@ -33,22 +33,22 @@ const Placeholder: React.FC<PlaceholderProps> = ({ text, progress }) => {
 const filterEventTypes = (event: SurrealEvent, selectedTypes: string[]) =>
     selectedTypes.length == 0 || (event?.event_type && selectedTypes.includes(event?.event_type as string))
 
-const RawEventsPage = () => {
+export const RawEventsPage = () => {
     const { status } = useSurrealDB()
     const isDemo = useSettingsStore((state) => state.demo)
     const limit = useSettingsStore((state) => state.rawEventsLimit)
-    const [connect, setConnect] = useState(!isDemo)
-    const { data: liveEvents, isLoading } = useLiveEvents(limit, connect && !isDemo)
+    const [connect, setConnect] = useState(true)
+    const { data: liveEvents, isLoading } = useLiveEvents(limit, connect)
     const [frozenEvents, setFrozenEvents] = useState<SurrealEvent[]>([])
     const [selectedTypes, setSelectedTypes] = useState<string[]>([])
 
     useEffect(() => {
-        if (connect && !isDemo && !isLoading) {
+        if (connect && !isLoading) {
             setFrozenEvents(liveEvents)
         }
-    }, [connect, isDemo, isLoading, liveEvents])
+    }, [connect, isLoading, liveEvents])
 
-    const events = connect && !isDemo ? liveEvents : frozenEvents
+    const events = connect ? liveEvents : frozenEvents
     const groups = useMemo(() => countUniqueProperties(events, ["event_type"]), [events])
     const filteredEvents = useMemo(
         () => events.filter((event) => filterEventTypes(event, selectedTypes)),
@@ -67,14 +67,13 @@ const RawEventsPage = () => {
             {
                 allowInInput: false,
                 description: connect ? "Freeze live events" : "Connect live events",
-                enabled: !isDemo,
                 handler: () => setConnect((current) => !current),
                 id: "toggle-live-events-connection",
                 section: "Current Page",
                 sequence: appShortcuts.toggleLiveEventsConnection,
             },
         ],
-        [connect, isDemo],
+        [connect],
     )
 
     useKeyboardShortcuts(shortcuts)
@@ -86,7 +85,7 @@ const RawEventsPage = () => {
                     <>
                         <WsStateIcon state={readyState} isDemo={isDemo} />
                         <span className="text-sm font-medium truncate">{events.length} Events</span>
-                        <ToggleConnect connect={connect} setConnect={setConnect} disabled={isDemo} />
+                        <ToggleConnect connect={connect} setConnect={setConnect} />
                         <LimitSelect
                             limit={limit}
                             setLimit={(newLimit) => useSettingsStore.setState({ rawEventsLimit: newLimit })}
@@ -102,9 +101,7 @@ const RawEventsPage = () => {
                     />
                 }
             >
-                {isDemo ? (
-                    <Placeholder text="Live Events are not available in Demo Mode." />
-                ) : events.length === 0 ? (
+                {events.length === 0 ? (
                     <Placeholder progress text="Waiting for events..." />
                 ) : (
                     <RawEventsTable events={filteredEvents} />

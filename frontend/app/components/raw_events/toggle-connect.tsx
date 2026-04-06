@@ -12,10 +12,18 @@ interface ToggleConnectProps {
 }
 
 export const ToggleConnect: React.FC<ToggleConnectProps> = ({ connect, setConnect, disabled }) => {
+    const label = connect ? "Freeze live events" : "Connect live events"
+
     return (
         <Tooltip>
             <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={() => setConnect(!connect)} disabled={disabled}>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setConnect(!connect)}
+                    disabled={disabled}
+                    aria-label={label}
+                >
                     {connect ? <Pause className="size-4" /> : <Play className="size-4" />}
                 </Button>
             </TooltipTrigger>
