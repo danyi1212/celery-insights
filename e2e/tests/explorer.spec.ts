@@ -66,6 +66,8 @@ test.describe("Explorer", () => {
     await page.goto("/explorer")
     await waitForExplorerRows(page)
 
+    await expect(page.getByRole("button", { name: "Tasks view" })).toHaveAttribute("aria-pressed", "true")
+    await expect(page.getByRole("button", { name: "Workflows view" })).toHaveAttribute("aria-pressed", "false")
     await expect(page.getByText("No tasks found.")).toHaveCount(0)
     await expect(page.getByText("No tasks in the selected range")).toHaveCount(0)
     await expect(page.locator("#facets-menu li")).not.toHaveCount(0)
@@ -120,10 +122,12 @@ test.describe("Explorer", () => {
     await page.goto("/explorer")
     await waitForExplorerRows(page)
 
-    await page.getByRole("radio", { name: "Workflows view" }).click()
+    await page.getByRole("button", { name: "Workflows view" }).click()
 
     await expect(page.getByText(/^Error$/)).toHaveCount(0)
     await expect(page.getByText("Objects are not valid as a React child")).toHaveCount(0)
+    await expect(page.getByRole("button", { name: "Workflows view" })).toHaveAttribute("aria-pressed", "true")
+    await expect(page.getByRole("button", { name: "Tasks view" })).toHaveAttribute("aria-pressed", "false")
     await expect(
       page
         .locator("table tbody tr")

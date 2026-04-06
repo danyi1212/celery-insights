@@ -1,19 +1,13 @@
 import { appShortcuts } from "@components/keyboard/shortcut-definitions"
 import { createFileRoute } from "@tanstack/react-router"
+import CopyLinkButton from "@components/common/copy-link-button"
+import DownloadMenuButton from "@components/common/download-menu-button"
 import LiveRefreshButton from "@components/common/live-refresh-button"
 import AppTimeRangePicker from "@components/common/time-range-picker"
 import ExplorerActivityChart from "@components/explorer/explorer-activity-chart"
 import Facet from "@components/explorer/facet"
 import { RawEventsTable } from "@components/raw_events/raw-events-table"
 import { Button } from "@components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@components/ui/dropdown-menu"
 import { Input } from "@components/ui/input"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { useSurrealDB } from "@components/surrealdb-provider"
@@ -26,7 +20,8 @@ import {
   serializeTimeRange,
 } from "@lib/time-range-utils"
 import { downloadFile } from "@lib/export-tasks"
-import { Download, Loader2, PanelLeftClose, PanelLeftOpen, Search, Share2 } from "lucide-react"
+import { downloadServerCsvExport } from "@lib/server-export"
+import { FileJson, FileSpreadsheet, Loader2, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react"
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs"
 import { isLiveTimeRange } from "@danyi1212/time-range-picker/time-range"
 import { startTransition, useCallback, useDeferredValue, useMemo, useState } from "react"
@@ -69,13 +64,22 @@ const RawEventsPage = () => {
 
   useKeyboardShortcuts(shortcuts)
 
-  const copyCurrentLocation = useCallback(async () => {
-    await navigator.clipboard.writeText(window.location.href)
-  }, [])
-
   const exportCurrentRows = useCallback(() => {
     downloadFile(JSON.stringify(events, null, 2), "raw-events.json", "application/json")
   }, [events])
+  const downloadCurrentCsv = useCallback(async () => {
+    const { from, to } = resolveTimeRangeBindings(range)
+    await downloadServerCsvExport(
+      {
+        kind: "raw-events",
+        from,
+        to,
+        query: deferredQuery,
+        types: params.types,
+      },
+      "raw-events.csv",
+    )
+  }, [deferredQuery, params.types, range])
 
   return (
     <div className="space-y-4 p-4">
@@ -160,25 +164,15 @@ const RawEventsPage = () => {
               </Tooltip>
             </div>
             <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" aria-label="Share options">
-                    <Share2 className="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Share</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => void copyCurrentLocation()}>
-                    <Share2 className="size-4" />
-                    Copy link
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={exportCurrentRows}>
-                    <Download className="size-4" />
-                    Download JSON
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <CopyLinkButton variant="outline" size="sm" aria-label="Copy link" />
+              <DownloadMenuButton
+                label="Download data"
+                disabled={total === 0}
+                items={[
+                  { label: "Download JSON", icon: FileJson, onSelect: exportCurrentRows },
+                  { label: "Download CSV", icon: FileSpreadsheet, onSelect: () => void downloadCurrentCsv() },
+                ]}
+              />
             </div>
           </div>
 

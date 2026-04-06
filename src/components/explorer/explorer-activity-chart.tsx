@@ -3,12 +3,20 @@ import { Loader2 } from "lucide-react"
 import { useMemo } from "react"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
+interface ChartSeries {
+  key: string
+  label: string
+  color: string
+  states?: string[]
+}
+
 interface ExplorerActivityChartProps {
   data: HistogramPoint[]
   isLoading: boolean
   emptyLabel: string
   rangeStart: string
   rangeEnd: string
+  series?: ChartSeries[]
 }
 
 const BUCKET_COUNT = 15
@@ -19,7 +27,7 @@ const formatTime = (value: number) =>
     minute: "2-digit",
   })
 
-const buildChartData = (data: HistogramPoint[], rangeStart: string, rangeEnd: string) => {
+const buildChartData = (data: HistogramPoint[], rangeStart: string, rangeEnd: string, series: ChartSeries[]) => {
   const startMs = new Date(rangeStart).getTime()
   const endMs = new Date(rangeEnd).getTime()
 
@@ -30,11 +38,16 @@ const buildChartData = (data: HistogramPoint[], rangeStart: string, rangeEnd: st
   const bucketMs = Math.max((endMs - startMs) / BUCKET_COUNT, 1)
   const buckets = Array.from({ length: BUCKET_COUNT }, (_, index) => {
     const bucketStart = startMs + index * bucketMs
-    return {
-      bucketStart,
-      count: 0,
-      time: formatTime(bucketStart),
-    }
+    return series.reduce(
+      (acc, item) => {
+        acc[item.key] = 0
+        return acc
+      },
+      {
+        bucketStart,
+        time: formatTime(bucketStart),
+      } as Record<string, number | string>,
+    )
   })
 
   for (const row of data) {
@@ -42,15 +55,31 @@ const buildChartData = (data: HistogramPoint[], rangeStart: string, rangeEnd: st
     if (Number.isNaN(bucketTime)) continue
     const normalized = Math.min(Math.max(bucketTime - startMs, 0), Math.max(endMs - startMs - 1, 0))
     const index = Math.min(Math.floor(normalized / bucketMs), BUCKET_COUNT - 1)
-    buckets[index].count += row.count
+    const seriesKey = series.find((item) => item.states?.includes(row.state ?? ""))?.key ?? series[0]?.key
+
+    if (!seriesKey) continue
+    buckets[index][seriesKey] = Number(buckets[index][seriesKey] ?? 0) + row.count
   }
 
-  return buckets
+  return buckets as Array<Record<string, number | string>>
 }
 
-const ExplorerActivityChart = ({ data, isLoading, emptyLabel, rangeStart, rangeEnd }: ExplorerActivityChartProps) => {
-  const chartData = useMemo(() => buildChartData(data, rangeStart, rangeEnd), [data, rangeEnd, rangeStart])
-  const hasValues = chartData.some((row) => row.count > 0)
+const defaultSeries: ChartSeries[] = [{ key: "count", label: "Count", color: "var(--chart-1)" }]
+
+const ExplorerActivityChart = ({
+  data,
+  isLoading,
+  emptyLabel,
+  rangeStart,
+  rangeEnd,
+  series,
+}: ExplorerActivityChartProps) => {
+  const activeSeries = series && series.length > 0 ? series : defaultSeries
+  const chartData = useMemo(
+    () => buildChartData(data, rangeStart, rangeEnd, activeSeries),
+    [activeSeries, data, rangeEnd, rangeStart],
+  )
+  const hasValues = chartData.some((row) => activeSeries.some((item) => Number(row[item.key] ?? 0) > 0))
 
   return (
     <div>
@@ -74,7 +103,9 @@ const ExplorerActivityChart = ({ data, isLoading, emptyLabel, rangeStart, rangeE
                 color: "var(--popover-foreground)",
               }}
             />
-            <Bar dataKey="count" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+            {activeSeries.map((item) => (
+              <Bar key={item.key} dataKey={item.key} stackId="activity" fill={item.color} radius={[4, 4, 0, 0]} />
+            ))}
           </BarChart>
         </ResponsiveContainer>
       )}

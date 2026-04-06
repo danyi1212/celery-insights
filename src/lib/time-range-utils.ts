@@ -1,7 +1,7 @@
 import { parseTimeRange, type TimeRange } from "@danyi1212/time-range-picker"
 import { getTimeRangeDurationMs, resolveTimeRangeToIso } from "@danyi1212/time-range-picker/time-range"
 
-const DEFAULT_TIME_RANGE_INPUT = "24h"
+const DEFAULT_TIME_RANGE_INPUT = "1h"
 const RANGE_SERIALIZER_VERSION = "v1"
 
 export const createDefaultTimeRange = (referenceDate: Date = new Date()): TimeRange =>

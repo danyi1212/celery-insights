@@ -4,7 +4,7 @@ describe("time range URL serialization", () => {
   const referenceDate = new Date("2026-04-06T10:04:00Z")
 
   it("round-trips relative live ranges without falling back to anchored parsing", () => {
-    const range = deserializeTimeRange("24h", referenceDate)
+    const range = deserializeTimeRange("1h", referenceDate)
     expect(range).not.toBeNull()
 
     const serialized = serializeTimeRange(range!)
@@ -14,9 +14,14 @@ describe("time range URL serialization", () => {
       mode: "live",
       liveRange: {
         mode: "relative",
-        duration: { value: 24, unit: "hour" },
+        duration: { value: 1, unit: "hour" },
       },
     })
+  })
+
+  it("uses past one hour as the default range", () => {
+    const range = deserializeTimeRange("1h", referenceDate)
+    expect(serializeTimeRange(range!)).toBe("v1:relative:1:hour")
   })
 
   it("round-trips static ranges with exact bounds", () => {

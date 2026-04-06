@@ -26,6 +26,7 @@ export interface ExplorerQueryState {
 export interface HistogramPoint {
   bucket: string
   count: number
+  state?: string
 }
 
 export interface ExplorerFacetCounts {
@@ -192,7 +193,7 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
             { state: string; count: number }[],
             { type: string; count: number }[],
             { worker: string; count: number }[],
-            HistogramPoint[],
+            { bucket: string; state: string; count: number }[],
           ]
         >(
           `SELECT * FROM task${clause} ORDER BY ${sortField} ${state.sortDirection} LIMIT $rowLimit;` +
@@ -200,7 +201,7 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
             `SELECT state, count() AS count FROM task${clause} GROUP BY state;` +
             `SELECT type, count() AS count FROM task${appendCondition(clause, "type != NONE")} GROUP BY type;` +
             `SELECT worker, count() AS count FROM task${appendCondition(clause, "worker != NONE")} GROUP BY worker;` +
-            `SELECT time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket, count() AS count FROM task${clause} GROUP BY bucket ORDER BY bucket ASC;`,
+            `SELECT time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket, state, count() AS count FROM task${clause} GROUP BY bucket, state ORDER BY bucket ASC;`,
           { ...bindings, ...whereBindings, rowLimit },
         )
 
@@ -227,14 +228,14 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
           [{ count: number }],
           { aggregate_state: string; count: number }[],
           { root_task_type: string; count: number }[],
-          HistogramPoint[],
+          { bucket: string; aggregate_state: string; count: number }[],
         ]
       >(
         `SELECT * FROM workflow${clause} ORDER BY ${sortField} ${state.sortDirection} LIMIT $rowLimit;` +
           `SELECT count() AS count FROM workflow${clause} GROUP ALL;` +
           `SELECT aggregate_state, count() AS count FROM workflow${clause} GROUP BY aggregate_state;` +
           `SELECT root_task_type, count() AS count FROM workflow${appendCondition(clause, "root_task_type != NONE")} GROUP BY root_task_type;` +
-          `SELECT time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket, count() AS count FROM workflow${clause} GROUP BY bucket ORDER BY bucket ASC;`,
+          `SELECT time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket, aggregate_state, count() AS count FROM workflow${clause} GROUP BY bucket, aggregate_state ORDER BY bucket ASC;`,
         { ...bindings, ...whereBindings, rowLimit },
       )
 
@@ -242,7 +243,9 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
         tasks: [],
         workflows: Array.isArray(workflowRows) ? workflowRows : [],
         total: Array.isArray(countRows) && countRows[0] ? countRows[0].count : 0,
-        histogram: Array.isArray(buckets) ? buckets : [],
+        histogram: Array.isArray(buckets)
+          ? buckets.map((row) => ({ bucket: row.bucket, count: row.count, state: row.aggregate_state }))
+          : [],
         facets: {
           state: {},
           type: {},

@@ -1,20 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router"
+import CopyLinkButton from "@components/common/copy-link-button"
+import DownloadMenuButton from "@components/common/download-menu-button"
 import LiveRefreshButton from "@components/common/live-refresh-button"
 import AppTimeRangePicker from "@components/common/time-range-picker"
 import ExplorerActivityChart from "@components/explorer/explorer-activity-chart"
 import ExplorerResultsTable from "@components/explorer/explorer-results-table"
 import Facet from "@components/explorer/facet"
 import { Button } from "@components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@components/ui/dropdown-menu"
 import { Input } from "@components/ui/input"
-import { ToggleGroup, ToggleGroupItem } from "@components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { useExplorerData, type ExplorerMode } from "@hooks/use-explorer-data"
 import {
@@ -23,17 +16,19 @@ import {
   resolveTimeRangeBindings,
   serializeTimeRange,
 } from "@lib/time-range-utils"
+import { cn } from "@lib/utils"
+import { downloadFile } from "@lib/export-tasks"
+import { downloadServerCsvExport } from "@lib/server-export"
 import { useTourChangeStepOnLoad } from "@stores/use-tour-store"
-import { Download, GitBranch, PanelLeftClose, PanelLeftOpen, Search, Share2, Workflow } from "lucide-react"
+import { FileJson, FileSpreadsheet, GitBranch, PanelLeftClose, PanelLeftOpen, Search, Workflow } from "lucide-react"
 import { parseAsArrayOf, parseAsInteger, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs"
 import { isLiveTimeRange } from "@danyi1212/time-range-picker/time-range"
-import { downloadFile } from "@lib/export-tasks"
 import { startTransition, useCallback, useDeferredValue, useMemo, useState } from "react"
 
 const ExplorerPage = () => {
   const [params, setParams] = useQueryStates({
     mode: parseAsStringLiteral(["tasks", "workflows"] as const).withDefault("tasks"),
-    range: parseAsString.withDefault("24h"),
+    range: parseAsString.withDefault("1h"),
     query: parseAsString.withDefault(""),
     states: parseAsArrayOf(parseAsString).withDefault([]),
     types: parseAsArrayOf(parseAsString).withDefault([]),
@@ -86,6 +81,21 @@ const ExplorerPage = () => {
     pageCount: params.pageCount,
   })
   const isLive = isLiveTimeRange(range)
+  const chartSeries = useMemo(
+    () => [
+      { key: "pending", label: "Pending", color: "var(--status-neutral)", states: ["PENDING", "RECEIVED"] },
+      { key: "running", label: "Running", color: "var(--status-info)", states: ["STARTED"] },
+      { key: "retry", label: "Retry", color: "var(--status-warning)", states: ["RETRY"] },
+      { key: "success", label: "Success", color: "var(--status-success)", states: ["SUCCESS"] },
+      {
+        key: "error",
+        label: "Error",
+        color: "var(--status-danger)",
+        states: ["FAILURE", "REVOKED", "REJECTED", "IGNORED"],
+      },
+    ],
+    [],
+  )
 
   const setTaskFacet = (key: "states" | "types" | "workers" | "workflowStates" | "rootTypes", values: Set<string>) => {
     startTransition(() => {
@@ -97,10 +107,37 @@ const ExplorerPage = () => {
     const rows = mode === "tasks" ? tasks : workflows.map((workflow) => ({ ...workflow, id: workflow.root_task_id }))
     downloadFile(JSON.stringify(rows, null, 2), `${mode}.json`, "application/json")
   }
-
-  const copyCurrentLocation = useCallback(async () => {
-    await navigator.clipboard.writeText(window.location.href)
-  }, [])
+  const downloadCurrentCsv = useCallback(async () => {
+    const { from, to } = resolveTimeRangeBindings(range)
+    await downloadServerCsvExport(
+      {
+        kind: "explorer",
+        mode,
+        from,
+        to,
+        query: deferredQuery,
+        states: params.states,
+        types: params.types,
+        workers: params.workers,
+        workflowStates: params.workflowStates,
+        rootTypes: params.rootTypes,
+        sortField: params.sortField,
+        sortDirection: params.sortDirection,
+      },
+      `${mode}.csv`,
+    )
+  }, [
+    deferredQuery,
+    mode,
+    params.rootTypes,
+    params.sortDirection,
+    params.sortField,
+    params.states,
+    params.types,
+    params.workflowStates,
+    params.workers,
+    range,
+  ])
 
   useTourChangeStepOnLoad(11)
 
@@ -121,42 +158,47 @@ const ExplorerPage = () => {
           />
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <ToggleGroup
-            type="single"
-            value={mode}
-            onValueChange={(value) =>
-              value &&
-              startTransition(() => {
-                void setParams(
-                  {
-                    mode: value as ExplorerMode,
-                    pageCount: 1,
-                    sortField: "last_updated",
-                    sortDirection: "DESC",
-                  },
-                  { history: "push" },
-                )
-              })
-            }
-            variant="outline"
-          >
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <ToggleGroupItem value="tasks" aria-label="Tasks view" className="px-2">
-                  <Workflow className="size-4" />
-                </ToggleGroupItem>
-              </TooltipTrigger>
-              <TooltipContent>Tasks</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <ToggleGroupItem value="workflows" aria-label="Workflows view" className="px-2">
-                  <GitBranch className="size-4" />
-                </ToggleGroupItem>
-              </TooltipTrigger>
-              <TooltipContent>Workflows</TooltipContent>
-            </Tooltip>
-          </ToggleGroup>
+          <div className="flex items-center rounded-md border bg-background shadow-xs">
+            {[
+              { value: "tasks", label: "Tasks", icon: Workflow },
+              { value: "workflows", label: "Workflows", icon: GitBranch },
+            ].map((item) => {
+              const Icon = item.icon
+              const active = mode === item.value
+              return (
+                <Tooltip key={item.value}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`${item.label} view`}
+                      aria-pressed={active}
+                      className={cn(
+                        "rounded-none first:rounded-l-md last:rounded-r-md",
+                        active ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+                      )}
+                      onClick={() =>
+                        startTransition(() => {
+                          void setParams(
+                            {
+                              mode: item.value as ExplorerMode,
+                              pageCount: 1,
+                              sortField: "last_updated",
+                              sortDirection: "DESC",
+                            },
+                            { history: "push" },
+                          )
+                        })
+                      }
+                    >
+                      <Icon className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{item.label}</TooltipContent>
+                </Tooltip>
+              )
+            })}
+          </div>
           <AppTimeRangePicker
             value={range}
             onChange={(nextRange) =>
@@ -185,6 +227,7 @@ const ExplorerPage = () => {
         emptyLabel={`No ${mode} in the selected range`}
         rangeStart={rangeBindings.from}
         rangeEnd={rangeBindings.to}
+        series={chartSeries}
       />
 
       <div className="flex flex-col gap-4 xl:flex-row">
@@ -281,25 +324,17 @@ const ExplorerPage = () => {
               </Tooltip>
             }
             toolbarEnd={
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" aria-label="Share options">
-                    <Share2 className="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Share</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => void copyCurrentLocation()}>
-                    <Share2 className="size-4" />
-                    Copy link
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={exportCurrentRows}>
-                    <Download className="size-4" />
-                    Download JSON
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <>
+                <CopyLinkButton variant="outline" size="sm" aria-label="Copy link" />
+                <DownloadMenuButton
+                  label="Download data"
+                  disabled={total === 0}
+                  items={[
+                    { label: "Download JSON", icon: FileJson, onSelect: exportCurrentRows },
+                    { label: "Download CSV", icon: FileSpreadsheet, onSelect: () => void downloadCurrentCsv() },
+                  ]}
+                />
+              </>
             }
           />
         </div>

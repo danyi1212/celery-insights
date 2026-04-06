@@ -33,8 +33,8 @@ const createWrapper = () => {
 
 const createState = (): ExplorerQueryState => ({
   mode: "tasks",
-  range: deserializeTimeRange("24h", new Date("2026-04-06T10:04:00Z"))!,
-  rangeKey: "24h",
+  range: deserializeTimeRange("1h", new Date("2026-04-06T10:04:00Z"))!,
+  rangeKey: "1h",
   query: "",
   states: [],
   types: [],
@@ -49,7 +49,14 @@ const createState = (): ExplorerQueryState => ({
 describe("useExplorerData", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockQuery.mockResolvedValue([[], [{ count: 0 }], [], [], [], []])
+    mockQuery.mockResolvedValue([
+      [],
+      [{ count: 0 }],
+      [],
+      [],
+      [],
+      [{ bucket: "2026-04-06T10:00", state: "SUCCESS", count: 1 }],
+    ])
   })
 
   it("builds facet queries without duplicate WHERE clauses", async () => {
