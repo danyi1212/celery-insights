@@ -181,12 +181,12 @@ const createSteps = (): Step[] => [
   },
   {
     // step index 12
-    target: "#facets-menu",
+    target: "#filters-panel",
     placement: "right-start",
     title: "Refine Your Search",
     content: (
       <span>
-        Facets display unique values and counts for each task property. <br />
+        Filters display unique values and counts for each task property. <br />
         Select these values to refine your search, and the table will show only tasks matching the selected criteria.
       </span>
     ),

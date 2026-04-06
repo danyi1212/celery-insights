@@ -1,5 +1,5 @@
-import FacetQuickFilter from "@components/explorer/facet-quick-filter"
-import FacetValue from "@components/explorer/facet-value"
+import FilterSearch from "@components/explorer/filter-search"
+import FilterValue from "@components/explorer/filter-value"
 import { Button } from "@components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@components/ui/collapsible"
 import { ScrollArea } from "@components/ui/scroll-area"
@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { ChevronDown, ChevronUp, ListX } from "lucide-react"
 import React, { useState } from "react"
 
-interface FacetProps {
+interface FilterSectionProps {
   title: string
   counts: Map<string, number>
   selected: Set<string>
@@ -16,9 +16,9 @@ interface FacetProps {
   valueFormatter?: (value: string) => React.ReactElement | string
 }
 
-const FACET_MAX_HEIGHT = 42 * 8 // 8 list items
+const FILTER_MAX_HEIGHT = 42 * 8 // 8 list items
 
-const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected, valueFormatter }) => {
+const FilterSection: React.FC<FilterSectionProps> = ({ title, counts, selected, setSelected, valueFormatter }) => {
   const [isOpen, setOpen] = useState<boolean>(true)
   const [isHover, setHover] = useState<boolean>(false)
   const [filter, setFilter] = useState<string>("")
@@ -62,14 +62,14 @@ const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected, val
         </div>
         <Separator />
         <CollapsibleContent>
-          <FacetQuickFilter filter={filter} setFilter={setFilter} />
-          <ScrollArea className="w-full" style={{ maxHeight: FACET_MAX_HEIGHT }}>
+          <FilterSearch filter={filter} setFilter={setFilter} />
+          <ScrollArea className="w-full" style={{ maxHeight: FILTER_MAX_HEIGHT }}>
             <ul>
               {Array.from(counts.entries())
                 .filter(([value]) => !filter || value.toLowerCase().includes(filter.toLowerCase()))
                 .sort((a, b) => b[1] - a[1])
                 .map(([value, count]) => (
-                  <FacetValue
+                  <FilterValue
                     key={value}
                     value={value}
                     label={valueFormatter ? valueFormatter(value) : value}
@@ -85,4 +85,4 @@ const Facet: React.FC<FacetProps> = ({ title, counts, selected, setSelected, val
     </Collapsible>
   )
 }
-export default Facet
+export default FilterSection

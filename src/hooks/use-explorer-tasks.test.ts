@@ -41,7 +41,7 @@ describe("useExplorerTasks", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockStatus = "connected"
-    // Return 5 query results: data, count, state facets, type facets, worker facets
+    // Return 5 query results: data, count, state filters, type filters, worker filters
     mockQuery.mockResolvedValue([[], [{ count: 0 }], [], [], []])
     const { subscription } = createMockSubscription()
     mockLive.mockResolvedValue(subscription)
@@ -119,7 +119,7 @@ describe("useExplorerTasks", () => {
     expect(bindings.offset).toBe(50) // (page 3 - 1) * 25
   })
 
-  it("returns facet counts", async () => {
+  it("returns filter counts", async () => {
     mockQuery.mockResolvedValue([
       [{ id: "task:1", state: "SUCCESS", last_updated: "2024-01-01T00:00:00Z", children: [] }],
       [{ count: 1 }],
@@ -136,9 +136,9 @@ describe("useExplorerTasks", () => {
     })
 
     expect(result.current.total).toBe(1)
-    expect(result.current.facets.state).toEqual({ SUCCESS: 1 })
-    expect(result.current.facets.type).toEqual({ "tasks.add": 1 })
-    expect(result.current.facets.worker).toEqual({ "celery@host": 1 })
+    expect(result.current.filters.state).toEqual({ SUCCESS: 1 })
+    expect(result.current.filters.type).toEqual({ "tasks.add": 1 })
+    expect(result.current.filters.worker).toEqual({ "celery@host": 1 })
   })
 
   it("subscribes to task table for live refresh", async () => {

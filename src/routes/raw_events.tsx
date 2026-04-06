@@ -5,7 +5,7 @@ import DownloadMenuButton from "@components/common/download-menu-button"
 import LiveRefreshButton from "@components/common/live-refresh-button"
 import AppTimeRangePicker from "@components/common/time-range-picker"
 import ExplorerActivityChart from "@components/explorer/explorer-activity-chart"
-import Facet from "@components/explorer/facet"
+import FilterSection from "@components/explorer/filter-section"
 import { RawEventsTable } from "@components/raw_events/raw-events-table"
 import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
@@ -37,7 +37,7 @@ const RawEventsPage = () => {
 
   const range = useMemo(() => deserializeTimeRange(params.range) ?? createDefaultTimeRange(), [params.range])
   const deferredQuery = useDeferredValue(params.query)
-  const [isFacetMenuOpen, setFacetMenuOpen] = useState(true)
+  const [isFilterPanelOpen, setFilterPanelOpen] = useState(true)
   const rangeBindings = useMemo(() => resolveTimeRangeBindings(range), [range])
   const { events, total, eventTypes, histogram, isLoading, isFetching, updatedAt, refetch } = useEventsBrowser({
     range,
@@ -129,10 +129,10 @@ const RawEventsPage = () => {
       />
 
       <div className="flex flex-col gap-4 xl:flex-row">
-        {isFacetMenuOpen ? (
-          <div id="facets-menu" className="w-full xl:w-[320px] xl:shrink-0">
+        {isFilterPanelOpen ? (
+          <div id="filters-panel" className="w-full xl:w-[320px] xl:shrink-0">
             <div className="space-y-1 pt-1">
-              <Facet
+              <FilterSection
                 title="Event types"
                 counts={new Map(Object.entries(eventTypes))}
                 selected={new Set(params.types)}
@@ -154,13 +154,13 @@ const RawEventsPage = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setFacetMenuOpen((open) => !open)}
-                    aria-label={isFacetMenuOpen ? "Hide facets" : "Show facets"}
+                    onClick={() => setFilterPanelOpen((open) => !open)}
+                    aria-label={isFilterPanelOpen ? "Hide filters" : "Show filters"}
                   >
-                    {isFacetMenuOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+                    {isFilterPanelOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{isFacetMenuOpen ? "Hide facets" : "Show facets"}</TooltipContent>
+                <TooltipContent>{isFilterPanelOpen ? "Hide filters" : "Show filters"}</TooltipContent>
               </Tooltip>
             </div>
             <div className="flex items-center gap-2">

@@ -29,7 +29,7 @@ export interface HistogramPoint {
   state?: string
 }
 
-export interface ExplorerFacetCounts {
+export interface ExplorerFilterCounts {
   state: Record<string, number>
   type: Record<string, number>
   worker: Record<string, number>
@@ -42,7 +42,7 @@ interface UseExplorerDataResult {
   workflows: SurrealWorkflow[]
   total: number
   histogram: HistogramPoint[]
-  facets: ExplorerFacetCounts
+  filters: ExplorerFilterCounts
   isLoading: boolean
   isFetching: boolean
   updatedAt: number
@@ -55,7 +55,7 @@ interface ExplorerDataPayload {
   workflows: SurrealWorkflow[]
   total: number
   histogram: HistogramPoint[]
-  facets: ExplorerFacetCounts
+  filters: ExplorerFilterCounts
 }
 
 const LIVE_REFETCH_MS = 5000
@@ -71,7 +71,7 @@ const WORKFLOW_SORT_FIELDS = new Set([
   "worker_count",
 ])
 
-const EMPTY_FACETS: ExplorerFacetCounts = {
+const EMPTY_FILTERS: ExplorerFilterCounts = {
   state: {},
   type: {},
   worker: {},
@@ -84,7 +84,7 @@ const EMPTY_DATA: ExplorerDataPayload = {
   workflows: [],
   total: 0,
   histogram: [],
-  facets: EMPTY_FACETS,
+  filters: EMPTY_FILTERS,
 }
 
 function appendCondition(clause: string, condition: string): string {
@@ -186,7 +186,7 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
       if (state.mode === "tasks") {
         const { clause, bindings: whereBindings } = buildTaskWhereClause(state)
         const sortField = TASK_SORT_FIELDS.has(state.sortField) ? state.sortField : "last_updated"
-        const [taskRows, countRows, stateFacets, typeFacets, workerFacets, buckets] = await db.query<
+        const [taskRows, countRows, stateFilters, typeFilters, workerFilters, buckets] = await db.query<
           [
             SurrealTask[],
             [{ count: number }],
@@ -210,10 +210,10 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
           workflows: [],
           total: Array.isArray(countRows) && countRows[0] ? countRows[0].count : 0,
           histogram: Array.isArray(buckets) ? buckets : [],
-          facets: {
-            state: Object.fromEntries((stateFacets ?? []).map((row) => [row.state, row.count])),
-            type: Object.fromEntries((typeFacets ?? []).map((row) => [row.type, row.count])),
-            worker: Object.fromEntries((workerFacets ?? []).map((row) => [row.worker, row.count])),
+          filters: {
+            state: Object.fromEntries((stateFilters ?? []).map((row) => [row.state, row.count])),
+            type: Object.fromEntries((typeFilters ?? []).map((row) => [row.type, row.count])),
+            worker: Object.fromEntries((workerFilters ?? []).map((row) => [row.worker, row.count])),
             aggregate_state: {},
             root_task_type: {},
           },
@@ -222,7 +222,7 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
 
       const { clause, bindings: whereBindings } = buildWorkflowWhereClause(state)
       const sortField = WORKFLOW_SORT_FIELDS.has(state.sortField) ? state.sortField : "last_updated"
-      const [workflowRows, countRows, workflowStateFacets, rootTypeFacets, buckets] = await db.query<
+      const [workflowRows, countRows, workflowStateFilters, rootTypeFilters, buckets] = await db.query<
         [
           SurrealWorkflow[],
           [{ count: number }],
@@ -246,14 +246,14 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
         histogram: Array.isArray(buckets)
           ? buckets.map((row) => ({ bucket: row.bucket, count: row.count, state: row.aggregate_state }))
           : [],
-        facets: {
+        filters: {
           state: {},
           type: {},
           worker: {},
           aggregate_state: Object.fromEntries(
-            (workflowStateFacets ?? []).map((row) => [row.aggregate_state, row.count]),
+            (workflowStateFilters ?? []).map((row) => [row.aggregate_state, row.count]),
           ),
-          root_task_type: Object.fromEntries((rootTypeFacets ?? []).map((row) => [row.root_task_type, row.count])),
+          root_task_type: Object.fromEntries((rootTypeFilters ?? []).map((row) => [row.root_task_type, row.count])),
         },
       }
     },
@@ -266,7 +266,7 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
     workflows: data.workflows,
     total: data.total,
     histogram: data.histogram,
-    facets: data.facets,
+    filters: data.filters,
     isLoading: query.isLoading || query.isFetching,
     isFetching: query.isFetching,
     updatedAt: query.dataUpdatedAt,

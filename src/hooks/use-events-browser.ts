@@ -91,7 +91,7 @@ export const useEventsBrowser = (state: EventsBrowserState): UseEventsBrowserRes
     queryFn: async () => {
       const timeBindings = resolveTimeRangeBindings(state.range, new Date())
       const { clause, bindings } = buildWhereClause(state)
-      const [rows, countRows, facetRows, bucketRows] = await db.query<
+      const [rows, countRows, filterRows, bucketRows] = await db.query<
         [SurrealEvent[], [{ count: number }], { event_type: string; count: number }[], EventHistogramPoint[]]
       >(
         `SELECT * FROM event${clause} ORDER BY timestamp DESC LIMIT $rowLimit;` +
@@ -104,7 +104,7 @@ export const useEventsBrowser = (state: EventsBrowserState): UseEventsBrowserRes
       return {
         events: Array.isArray(rows) ? rows : [],
         total: Array.isArray(countRows) && countRows[0] ? countRows[0].count : 0,
-        eventTypes: Object.fromEntries((facetRows ?? []).map((row) => [row.event_type, row.count])),
+        eventTypes: Object.fromEntries((filterRows ?? []).map((row) => [row.event_type, row.count])),
         histogram: Array.isArray(bucketRows) ? bucketRows : [],
       }
     },

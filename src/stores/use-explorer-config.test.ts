@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react"
-import { useExplorerConfig, useExplorerColumns, useExplorerFacets } from "./use-explorer-config"
+import { useExplorerConfig, useExplorerColumns, useExplorerFilters } from "./use-explorer-config"
 
 describe("useExplorerConfig", () => {
   it("has the expected default column order", () => {
@@ -7,9 +7,9 @@ describe("useExplorerConfig", () => {
     expect(state.columnOrder).toEqual(["last_updated", "state", "id", "type", "worker"])
   })
 
-  it("has the expected default facet order", () => {
+  it("has the expected default filter order", () => {
     const state = useExplorerConfig.getState()
-    expect(state.facetOrder).toEqual(["state", "type", "result", "worker"])
+    expect(state.filterOrder).toEqual(["state", "type", "result", "worker"])
   })
 })
 
@@ -31,18 +31,18 @@ describe("useExplorerColumns", () => {
   })
 })
 
-describe("useExplorerFacets", () => {
-  it("returns facets with showFacet: true, excluding noFacet columns", () => {
-    const { result } = renderHook(() => useExplorerFacets())
+describe("useExplorerFilters", () => {
+  it("returns filters with showFilter: true, excluding noFilter columns", () => {
+    const { result } = renderHook(() => useExplorerFilters())
 
-    const properties = result.current.map((facet) => facet.property)
+    const properties = result.current.map((filterConfig) => filterConfig.property)
     expect(properties).toEqual(["state", "type", "result", "worker"])
   })
 
-  it("excludes lastUpdated because it has noFacet: true", () => {
-    const { result } = renderHook(() => useExplorerFacets())
+  it("excludes lastUpdated because it has noFilter: true", () => {
+    const { result } = renderHook(() => useExplorerFilters())
 
-    const properties = result.current.map((facet) => facet.property)
+    const properties = result.current.map((filterConfig) => filterConfig.property)
     expect(properties).not.toContain("last_updated")
   })
 })

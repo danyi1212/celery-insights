@@ -3,12 +3,12 @@ import { Button } from "@components/ui/button"
 import { Search, X } from "lucide-react"
 import React from "react"
 
-interface FacetQuickFilterProps {
+interface FilterSearchProps {
   filter: string
   setFilter: (value: string) => void
 }
 
-const FacetQuickFilter: React.FC<FacetQuickFilterProps> = ({ filter, setFilter }) => {
+const FilterSearch: React.FC<FilterSearchProps> = ({ filter, setFilter }) => {
   return (
     <div className="relative p-1">
       <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -32,4 +32,4 @@ const FacetQuickFilter: React.FC<FacetQuickFilterProps> = ({ filter, setFilter }
   )
 }
 
-export default FacetQuickFilter
+export default FilterSearch

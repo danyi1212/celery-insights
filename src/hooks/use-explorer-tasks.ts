@@ -18,7 +18,7 @@ export interface SortConfig {
   direction: "ASC" | "DESC"
 }
 
-export interface FacetCounts {
+export interface FilterCounts {
   state: Record<string, number>
   type: Record<string, number>
   worker: Record<string, number>
@@ -27,7 +27,7 @@ export interface FacetCounts {
 export interface UseExplorerTasksResult {
   data: SurrealTask[]
   total: number
-  facets: FacetCounts
+  filters: FilterCounts
   isLoading: boolean
   error: Error | null
 }
@@ -55,7 +55,7 @@ function buildWhereClause(filters: ExplorerFilters): { clause: string; bindings:
 
 /**
  * Explorer hook — server-side filtering/pagination via SurrealDB queries.
- * Builds SurrealQL from active facet filters, runs data + facet count queries,
+ * Builds SurrealQL from active filters, runs data + filter count queries,
  * and re-runs both (debounced) on any live task notification.
  */
 export const useExplorerTasks = (
@@ -68,7 +68,7 @@ export const useExplorerTasks = (
 
   const [data, setData] = useState<SurrealTask[]>([])
   const [total, setTotal] = useState(0)
-  const [facets, setFacets] = useState<FacetCounts>({ state: {}, type: {}, worker: {} })
+  const [filtersByValue, setFiltersByValue] = useState<FilterCounts>({ state: {}, type: {}, worker: {} })
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
@@ -85,8 +85,8 @@ export const useExplorerTasks = (
     try {
       const allBindings = { ...filterBindings, pageSize, offset }
 
-      // Run data query and facet queries in a single multi-statement query
-      const [dataResult, countResult, stateFacets, typeFacets, workerFacets] = await db.query<
+      // Run data query and filter queries in a single multi-statement query
+      const [dataResult, countResult, stateFilters, typeFilters, workerFilters] = await db.query<
         [
           SurrealTask[],
           [{ count: number }],
@@ -106,17 +106,17 @@ export const useExplorerTasks = (
       setData(Array.isArray(dataResult) ? dataResult : [])
       setTotal(Array.isArray(countResult) && countResult.length > 0 ? countResult[0].count : 0)
 
-      const newFacets: FacetCounts = { state: {}, type: {}, worker: {} }
-      if (Array.isArray(stateFacets)) {
-        for (const row of stateFacets) newFacets.state[row.state] = row.count
+      const nextFilters: FilterCounts = { state: {}, type: {}, worker: {} }
+      if (Array.isArray(stateFilters)) {
+        for (const row of stateFilters) nextFilters.state[row.state] = row.count
       }
-      if (Array.isArray(typeFacets)) {
-        for (const row of typeFacets) newFacets.type[row.type] = row.count
+      if (Array.isArray(typeFilters)) {
+        for (const row of typeFilters) nextFilters.type[row.type] = row.count
       }
-      if (Array.isArray(workerFacets)) {
-        for (const row of workerFacets) newFacets.worker[row.worker] = row.count
+      if (Array.isArray(workerFilters)) {
+        for (const row of workerFilters) nextFilters.worker[row.worker] = row.count
       }
-      setFacets(newFacets)
+      setFiltersByValue(nextFilters)
 
       setError(null)
     } catch (err) {
@@ -202,5 +202,5 @@ export const useExplorerTasks = (
     }
   }, [status, runQueries])
 
-  return { data, total, facets, isLoading, error }
+  return { data, total, filters: filtersByValue, isLoading, error }
 }

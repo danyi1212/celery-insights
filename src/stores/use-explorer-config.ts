@@ -9,8 +9,8 @@ interface ColumnConfig<T, P extends keyof T> {
   label: string
   columnWidth: number
   showColumn: boolean
-  noFacet?: true
-  showFacet?: boolean
+  noFilter?: true
+  showFilter?: boolean
   valueFormatter?: (value: T[P]) => React.ReactElement | string
 }
 
@@ -27,19 +27,19 @@ const formatDateValue = (value: unknown): string => {
 export interface ExplorerConfig {
   configs: Configuration<Task>
   columnOrder: (keyof Task)[]
-  facetOrder: (keyof Task)[]
+  filterOrder: (keyof Task)[]
 }
 
 export const useExplorerConfig = create<ExplorerConfig>(() => ({
   columnOrder: ["last_updated", "state", "id", "type", "worker"],
-  facetOrder: ["state", "type", "result", "worker"],
+  filterOrder: ["state", "type", "result", "worker"],
   configs: {
     last_updated: {
       property: "last_updated",
       label: "Last Updated",
       columnWidth: 160,
       showColumn: true,
-      noFacet: true,
+      noFilter: true,
       valueFormatter: (value) => formatDateValue(value),
     },
     state: {
@@ -47,7 +47,7 @@ export const useExplorerConfig = create<ExplorerConfig>(() => ({
       label: "Status",
       columnWidth: 100,
       showColumn: false,
-      showFacet: true,
+      showFilter: true,
     },
     id: {
       property: "id",
@@ -60,32 +60,32 @@ export const useExplorerConfig = create<ExplorerConfig>(() => ({
       label: "Type (name)",
       columnWidth: 300,
       showColumn: true,
-      showFacet: true,
+      showFilter: true,
     },
     result: {
       property: "result",
       label: "Task Result",
       columnWidth: 100,
       showColumn: false,
-      showFacet: true,
+      showFilter: true,
     },
     worker: {
       property: "worker",
       label: "Worker",
       columnWidth: 100,
       showColumn: false,
-      showFacet: true,
+      showFilter: true,
     },
   },
 }))
 
 const removeUndefined = <T>(arr: (T | undefined)[]): T[] => arr.filter((item): item is T => item !== undefined)
 
-export const useExplorerFacets = () =>
+export const useExplorerFilters = () =>
   useExplorerConfig(
     useShallow((state) =>
-      removeUndefined(state.facetOrder.map((facet) => state.configs[facet])).filter(
-        (facetConfig) => !facetConfig.noFacet && facetConfig.showFacet,
+      removeUndefined(state.filterOrder.map((filterKey) => state.configs[filterKey])).filter(
+        (filterConfig) => !filterConfig.noFilter && filterConfig.showFilter,
       ),
     ),
   )

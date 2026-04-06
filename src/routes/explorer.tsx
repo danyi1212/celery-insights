@@ -5,7 +5,7 @@ import LiveRefreshButton from "@components/common/live-refresh-button"
 import AppTimeRangePicker from "@components/common/time-range-picker"
 import ExplorerActivityChart from "@components/explorer/explorer-activity-chart"
 import ExplorerResultsTable from "@components/explorer/explorer-results-table"
-import Facet from "@components/explorer/facet"
+import FilterSection from "@components/explorer/filter-section"
 import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
@@ -45,7 +45,7 @@ const ExplorerPage = () => {
   const range = useMemo(() => deserializeTimeRange(params.range) ?? createDefaultTimeRange(), [params.range])
   const deferredQuery = useDeferredValue(params.query)
   const mode = params.mode as ExplorerMode
-  const [isFacetMenuOpen, setFacetMenuOpen] = useState(true)
+  const [isFilterPanelOpen, setFilterPanelOpen] = useState(true)
   const rangeBindings = useMemo(() => resolveTimeRangeBindings(range), [range])
   const defaultTaskColumns = ["task", "id", "last_updated", "state", "type", "worker", "runtime"]
   const defaultWorkflowColumns = [
@@ -66,7 +66,7 @@ const ExplorerPage = () => {
         ? params.workflowColumns
         : defaultWorkflowColumns
 
-  const { tasks, workflows, total, histogram, facets, isLoading, isFetching, updatedAt, refetch } = useExplorerData({
+  const { tasks, workflows, total, histogram, filters, isLoading, isFetching, updatedAt, refetch } = useExplorerData({
     mode,
     range,
     rangeKey: params.range,
@@ -97,7 +97,7 @@ const ExplorerPage = () => {
     [],
   )
 
-  const setTaskFacet = (key: "states" | "types" | "workers" | "workflowStates" | "rootTypes", values: Set<string>) => {
+  const setTaskFilter = (key: "states" | "types" | "workers" | "workflowStates" | "rootTypes", values: Set<string>) => {
     startTransition(() => {
       void setParams({ [key]: [...values], pageCount: 1 }, { history: "replace" })
     })
@@ -231,43 +231,43 @@ const ExplorerPage = () => {
       />
 
       <div className="flex flex-col gap-4 xl:flex-row">
-        {isFacetMenuOpen ? (
-          <div id="facets-menu" className="w-full xl:w-[320px] xl:shrink-0">
+        {isFilterPanelOpen ? (
+          <div id="filters-panel" className="w-full xl:w-[320px] xl:shrink-0">
             <div className="space-y-1 pt-1">
               {mode === "tasks" ? (
                 <>
-                  <Facet
+                  <FilterSection
                     title="Status"
-                    counts={new Map(Object.entries(facets.state))}
+                    counts={new Map(Object.entries(filters.state))}
                     selected={new Set(params.states)}
-                    setSelected={(values) => setTaskFacet("states", values)}
+                    setSelected={(values) => setTaskFilter("states", values)}
                   />
-                  <Facet
+                  <FilterSection
                     title="Type"
-                    counts={new Map(Object.entries(facets.type))}
+                    counts={new Map(Object.entries(filters.type))}
                     selected={new Set(params.types)}
-                    setSelected={(values) => setTaskFacet("types", values)}
+                    setSelected={(values) => setTaskFilter("types", values)}
                   />
-                  <Facet
+                  <FilterSection
                     title="Worker"
-                    counts={new Map(Object.entries(facets.worker))}
+                    counts={new Map(Object.entries(filters.worker))}
                     selected={new Set(params.workers)}
-                    setSelected={(values) => setTaskFacet("workers", values)}
+                    setSelected={(values) => setTaskFilter("workers", values)}
                   />
                 </>
               ) : (
                 <>
-                  <Facet
+                  <FilterSection
                     title="Workflow State"
-                    counts={new Map(Object.entries(facets.aggregate_state))}
+                    counts={new Map(Object.entries(filters.aggregate_state))}
                     selected={new Set(params.workflowStates)}
-                    setSelected={(values) => setTaskFacet("workflowStates", values)}
+                    setSelected={(values) => setTaskFilter("workflowStates", values)}
                   />
-                  <Facet
+                  <FilterSection
                     title="Root Task Type"
-                    counts={new Map(Object.entries(facets.root_task_type))}
+                    counts={new Map(Object.entries(filters.root_task_type))}
                     selected={new Set(params.rootTypes)}
-                    setSelected={(values) => setTaskFacet("rootTypes", values)}
+                    setSelected={(values) => setTaskFilter("rootTypes", values)}
                   />
                 </>
               )}
@@ -314,13 +314,13 @@ const ExplorerPage = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setFacetMenuOpen((open) => !open)}
-                    aria-label={isFacetMenuOpen ? "Hide facets" : "Show facets"}
+                    onClick={() => setFilterPanelOpen((open) => !open)}
+                    aria-label={isFilterPanelOpen ? "Hide filters" : "Show filters"}
                   >
-                    {isFacetMenuOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+                    {isFilterPanelOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{isFacetMenuOpen ? "Hide facets" : "Show facets"}</TooltipContent>
+                <TooltipContent>{isFilterPanelOpen ? "Hide filters" : "Show filters"}</TooltipContent>
               </Tooltip>
             }
             toolbarEnd={

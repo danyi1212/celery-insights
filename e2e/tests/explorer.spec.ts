@@ -70,17 +70,17 @@ test.describe("Explorer", () => {
     await expect(page.getByRole("button", { name: "Workflows view" })).toHaveAttribute("aria-pressed", "false")
     await expect(page.getByText("No tasks found.")).toHaveCount(0)
     await expect(page.getByText("No tasks in the selected range")).toHaveCount(0)
-    await expect(page.locator("#facets-menu li")).not.toHaveCount(0)
+    await expect(page.locator("#filters-panel li")).not.toHaveCount(0)
     await expect.poll(() => countExplorerRows(page)).toBeGreaterThan(0)
   })
 
-  test("facet filtering updates the URL and keeps matching rows visible", async ({ page }) => {
+  test("filtering updates the URL and keeps matching rows visible", async ({ page }) => {
     await page.goto("/explorer")
     await waitForExplorerRows(page)
 
     const initialRowCount = await countExplorerRows(page)
     const firstStatusOption = page
-      .locator("#facets-menu")
+      .locator("#filters-panel")
       .getByRole("button")
       .filter({ hasText: /SUCCESS|FAILURE|STARTED|RECEIVED|PENDING|RETRY/ })
       .first()

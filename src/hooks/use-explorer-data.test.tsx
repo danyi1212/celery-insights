@@ -59,7 +59,7 @@ describe("useExplorerData", () => {
     ])
   })
 
-  it("builds facet queries without duplicate WHERE clauses", async () => {
+  it("builds filter queries without duplicate WHERE clauses", async () => {
     renderHook(() => useExplorerData(createState()), { wrapper: createWrapper() })
 
     await waitFor(() => {
