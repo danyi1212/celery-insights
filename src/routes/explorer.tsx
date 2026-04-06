@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { useExplorerData, type ExplorerMode } from "@hooks/use-explorer-data"
 import {
   createDefaultTimeRange,
+  createStaticTimeRange,
   deserializeTimeRange,
   resolveTimeRangeBindings,
   serializeTimeRange,
@@ -228,6 +229,14 @@ const ExplorerPage = () => {
         rangeStart={rangeBindings.from}
         rangeEnd={rangeBindings.to}
         series={chartSeries}
+        onSelectRange={({ start, end }) => {
+          const nextRange = createStaticTimeRange(new Date(start), new Date(end))
+          if (!nextRange) return
+
+          startTransition(() => {
+            void setParams({ range: serializeTimeRange(nextRange), pageCount: 1 }, { history: "push" })
+          })
+        }}
       />
 
       <div className="flex flex-col gap-4 xl:flex-row">

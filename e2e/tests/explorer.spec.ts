@@ -110,6 +110,16 @@ test.describe("Explorer", () => {
     await expect(page.getByRole("button", { name: "Pause live range" })).toHaveCount(0)
   })
 
+  test("clicking a chart bucket narrows the range to that bucket window", async ({ page }) => {
+    await page.goto("/explorer")
+    await waitForExplorerRows(page)
+
+    await page.locator("[data-testid='activity-chart-overlay']").click({ position: { x: 8, y: 20 } })
+
+    await expect(page).toHaveURL(/range=v1:static:/)
+    await expect(page.getByRole("button", { name: "Pause live range" })).toHaveCount(0)
+  })
+
   test("switching to workflow mode does not trigger the global error boundary", async ({
     page,
     scenario,

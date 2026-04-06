@@ -7,6 +7,19 @@ const RANGE_SERIALIZER_VERSION = "v1"
 export const createDefaultTimeRange = (referenceDate: Date = new Date()): TimeRange =>
   parseTimeRange(DEFAULT_TIME_RANGE_INPUT, referenceDate)!
 
+export const createStaticTimeRange = (start: Date, end: Date): TimeRange | null => {
+  if (!isValidDate(start) || !isValidDate(end) || end <= start) {
+    return null
+  }
+
+  return {
+    mode: "static",
+    start,
+    end,
+    isLive: false,
+  }
+}
+
 export const getTimeRangeBucketDuration = (range: TimeRange, referenceDate: Date = new Date()): string => {
   const durationMs = Math.max(getTimeRangeDurationMs(range, referenceDate), 60_000)
 

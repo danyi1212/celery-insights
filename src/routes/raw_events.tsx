@@ -15,6 +15,7 @@ import { useEventsBrowser } from "@hooks/use-events-browser"
 import { useKeyboardShortcuts } from "@hooks/use-keyboard-shortcuts"
 import {
   createDefaultTimeRange,
+  createStaticTimeRange,
   deserializeTimeRange,
   resolveTimeRangeBindings,
   serializeTimeRange,
@@ -126,6 +127,14 @@ const RawEventsPage = () => {
         emptyLabel="No events in the selected range"
         rangeStart={rangeBindings.from}
         rangeEnd={rangeBindings.to}
+        onSelectRange={({ start, end }) => {
+          const nextRange = createStaticTimeRange(new Date(start), new Date(end))
+          if (!nextRange) return
+
+          startTransition(() => {
+            void setParams({ range: serializeTimeRange(nextRange), pageCount: 1 }, { history: "push" })
+          })
+        }}
       />
 
       <div className="flex flex-col gap-4 xl:flex-row">

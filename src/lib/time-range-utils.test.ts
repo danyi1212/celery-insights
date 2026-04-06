@@ -1,4 +1,4 @@
-import { deserializeTimeRange, serializeTimeRange } from "./time-range-utils"
+import { createStaticTimeRange, deserializeTimeRange, serializeTimeRange } from "./time-range-utils"
 
 describe("time range URL serialization", () => {
   const referenceDate = new Date("2026-04-06T10:04:00Z")
@@ -38,5 +38,17 @@ describe("time range URL serialization", () => {
     expect(roundTripped).toMatchObject({ mode: "static" })
     expect(roundTripped?.start.toISOString()).toBe("2026-04-05T13:04:00.000Z")
     expect(roundTripped?.end.toISOString()).toBe("2026-04-05T15:04:00.000Z")
+  })
+
+  it("creates a static range from valid dates", () => {
+    const range = createStaticTimeRange(new Date("2026-04-05T13:04:00.000Z"), new Date("2026-04-05T15:04:00.000Z"))
+
+    expect(range).toMatchObject({ mode: "static", isLive: false })
+    expect(range?.start.toISOString()).toBe("2026-04-05T13:04:00.000Z")
+    expect(range?.end.toISOString()).toBe("2026-04-05T15:04:00.000Z")
+  })
+
+  it("rejects invalid static ranges", () => {
+    expect(createStaticTimeRange(new Date("2026-04-05T15:04:00.000Z"), new Date("2026-04-05T13:04:00.000Z"))).toBeNull()
   })
 })
