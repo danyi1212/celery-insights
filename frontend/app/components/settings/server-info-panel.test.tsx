@@ -123,8 +123,8 @@ describe("ServerInfoPanel", () => {
 
         render(<ServerInfoPanel />, { wrapper: createWrapper() })
 
-        expect(screen.getByText("Live system details are turned off")).toBeInTheDocument()
-        expect(screen.getByText(/sample data/i)).toBeInTheDocument()
+        expect(screen.getByText("Embedded sample data is active")).toBeInTheDocument()
+        expect(screen.getByText(/embedded sample database/i)).toBeInTheDocument()
         expect(fetchSpy).not.toHaveBeenCalled()
     })
 
@@ -148,7 +148,7 @@ describe("ServerInfoPanel", () => {
         })
 
         await waitFor(() => {
-            expect(screen.getByText("Live system details are turned off")).toBeInTheDocument()
+            expect(screen.getByText("Embedded sample data is active")).toBeInTheDocument()
         })
         expect(screen.queryByText("Server info request failed: 500")).not.toBeInTheDocument()
     })

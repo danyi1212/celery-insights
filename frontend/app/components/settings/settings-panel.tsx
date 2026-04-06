@@ -57,8 +57,8 @@ const SettingsPanel = ({ hideHeader = false }: { hideHeader?: boolean }) => {
                 />
                 <SettingRow
                     title="Demo mode"
-                    description="Use sample data instead of the live backend."
-                    helper={isDemo ? "Currently using sample data." : "Currently using the live backend."}
+                    description="Use the embedded sample database instead of the connected backend."
+                    helper={isDemo ? "Currently using embedded sample data." : "Currently using the connected backend."}
                     control={
                         <Switch
                             aria-label="Demo mode"

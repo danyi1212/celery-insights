@@ -65,11 +65,11 @@ export const ServerInfoPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader
                     <div className="rounded-2xl border bg-background/60 p-5">
                         <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="outline">Demo mode</Badge>
-                            <span className="text-sm font-medium">Live system details are turned off</span>
+                            <span className="text-sm font-medium">Embedded sample data is active</span>
                         </div>
                         <p className="mt-3 max-w-3xl text-sm text-muted-foreground">
-                            This browser is using sample data, so Settings does not query a real Celery Insights
-                            instance, SurrealDB deployment, or ingestion runtime from this section.
+                            This browser is using the embedded sample database, so this section does not query
+                            server-side runtime, diagnostics, or backup APIs from a real Celery Insights instance.
                         </p>
                     </div>
                 ) : (

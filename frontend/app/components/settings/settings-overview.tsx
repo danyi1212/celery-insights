@@ -102,7 +102,7 @@ const SettingsOverview = () => {
                 }
                 hint={
                     isDemo
-                        ? "No live SurrealDB details are loaded in demo mode."
+                        ? "Showing the embedded sample database instead of server-side storage details."
                         : data
                           ? describeDurability(durability)
                           : diagnosticsUnavailable
@@ -123,7 +123,7 @@ const SettingsOverview = () => {
                 value={isDemo ? "Demo mode" : snapshotEnabled ? "Snapshot replay" : formatConnectionStatus(status)}
                 hint={
                     isDemo
-                        ? "No live instance connection is used while sample data is active."
+                        ? "Using the embedded sample database; server runtime diagnostics stay disabled."
                         : snapshotEnabled
                           ? "Offline debug bundle loaded at startup."
                           : `${formatIngestionStatus(ingestionStatus)}${data ? ` · ${formatVersion(data.server_version)}` : ""}`
