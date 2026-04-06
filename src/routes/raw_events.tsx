@@ -1,116 +1,215 @@
 import { appShortcuts } from "@components/keyboard/shortcut-definitions"
 import { createFileRoute } from "@tanstack/react-router"
-import WsStateIcon from "@components/common/ws-state-icon"
+import LiveRefreshButton from "@components/common/live-refresh-button"
+import AppTimeRangePicker from "@components/common/time-range-picker"
+import ExplorerActivityChart from "@components/explorer/explorer-activity-chart"
 import Facet from "@components/explorer/facet"
-import { LimitSelect } from "@components/raw_events/limit-select"
 import { RawEventsTable } from "@components/raw_events/raw-events-table"
-import { ToggleConnect } from "@components/raw_events/toggle-connect"
+import { Button } from "@components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@components/ui/dropdown-menu"
+import { Input } from "@components/ui/input"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { useSurrealDB } from "@components/surrealdb-provider"
+import { useEventsBrowser } from "@hooks/use-events-browser"
 import { useKeyboardShortcuts } from "@hooks/use-keyboard-shortcuts"
-import { useLiveEvents } from "@hooks/use-live-events"
-import { ExplorerLayout } from "@layout/explorer/explorer-layout"
-import useSettingsStore from "@stores/use-settings-store"
-import { countUniqueProperties } from "@utils/count-unique-properties"
-import { Loader2 } from "lucide-react"
-import type { SurrealEvent } from "@/types/surreal-records"
-import { ReadyState } from "@/types/ready-state"
-import React, { useEffect, useMemo, useState } from "react"
-
-interface PlaceholderProps {
-  text: React.ReactNode
-  progress?: boolean
-}
-
-const Placeholder: React.FC<PlaceholderProps> = ({ text, progress }) => {
-  return (
-    <div className="my-10 flex items-center justify-center gap-3">
-      {progress && <Loader2 className="size-8 animate-spin text-muted-foreground" />}
-      <h5 className="text-xl font-semibold">{text}</h5>
-    </div>
-  )
-}
-
-const filterEventTypes = (event: SurrealEvent, selectedTypes: string[]) =>
-  selectedTypes.length === 0 || (event?.event_type && selectedTypes.includes(event?.event_type as string))
+import {
+  createDefaultTimeRange,
+  deserializeTimeRange,
+  resolveTimeRangeBindings,
+  serializeTimeRange,
+} from "@lib/time-range-utils"
+import { downloadFile } from "@lib/export-tasks"
+import { Download, Loader2, PanelLeftClose, PanelLeftOpen, Search, Share2 } from "lucide-react"
+import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from "nuqs"
+import { isLiveTimeRange } from "@danyi1212/time-range-picker/time-range"
+import { startTransition, useCallback, useDeferredValue, useMemo, useState } from "react"
 
 const RawEventsPage = () => {
   const { status } = useSurrealDB()
-  const isDemo = useSettingsStore((state) => state.demo)
-  const limit = useSettingsStore((state) => state.rawEventsLimit)
-  const [connect, setConnect] = useState(!isDemo)
-  const { data: liveEvents, isLoading } = useLiveEvents(limit, connect && !isDemo)
-  const [frozenEvents, setFrozenEvents] = useState<SurrealEvent[]>([])
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+  const [params, setParams] = useQueryStates({
+    range: parseAsString.withDefault("1h"),
+    query: parseAsString.withDefault(""),
+    types: parseAsArrayOf(parseAsString).withDefault([]),
+    pageCount: parseAsInteger.withDefault(1),
+  })
 
-  useEffect(() => {
-    if (connect && !isDemo && !isLoading) {
-      setFrozenEvents(liveEvents)
-    }
-  }, [connect, isDemo, isLoading, liveEvents])
-
-  const events = connect && !isDemo ? liveEvents : frozenEvents
-  const groups = useMemo(() => countUniqueProperties(events, ["event_type"]), [events])
-  const filteredEvents = useMemo(
-    () => events.filter((event) => filterEventTypes(event, selectedTypes)),
-    [events, selectedTypes],
-  )
-  const readyState = !connect
-    ? ReadyState.CLOSED
-    : status === "connected"
-      ? ReadyState.OPEN
-      : status === "connecting" || status === "reconnecting"
-        ? ReadyState.CONNECTING
-        : ReadyState.CLOSED
+  const range = useMemo(() => deserializeTimeRange(params.range) ?? createDefaultTimeRange(), [params.range])
+  const deferredQuery = useDeferredValue(params.query)
+  const [isFacetMenuOpen, setFacetMenuOpen] = useState(true)
+  const rangeBindings = useMemo(() => resolveTimeRangeBindings(range), [range])
+  const { events, total, eventTypes, histogram, isLoading, isFetching, updatedAt, refetch } = useEventsBrowser({
+    range,
+    rangeKey: params.range,
+    query: deferredQuery,
+    types: params.types,
+    pageCount: params.pageCount,
+  })
+  const isLive = isLiveTimeRange(range)
 
   const shortcuts = useMemo(
     () => [
       {
         allowInInput: false,
-        description: connect ? "Freeze live events" : "Connect live events",
-        enabled: !isDemo,
-        handler: () => setConnect((current) => !current),
-        id: "toggle-live-events-connection",
+        description: "Reset event filters",
+        handler: () => void setParams({ query: "", types: [], pageCount: 1 }, { history: "replace" }),
+        id: "reset-live-events-filters",
         section: "Current Page",
         sequence: appShortcuts.toggleLiveEventsConnection,
       },
     ],
-    [connect, isDemo],
+    [setParams],
   )
 
   useKeyboardShortcuts(shortcuts)
 
+  const copyCurrentLocation = useCallback(async () => {
+    await navigator.clipboard.writeText(window.location.href)
+  }, [])
+
+  const exportCurrentRows = useCallback(() => {
+    downloadFile(JSON.stringify(events, null, 2), "raw-events.json", "application/json")
+  }, [events])
+
   return (
-    <>
-      <ExplorerLayout
-        actions={
-          <>
-            <WsStateIcon state={readyState} isDemo={isDemo} />
-            <span className="text-sm font-medium truncate">{events.length} Events</span>
-            <ToggleConnect connect={connect} setConnect={setConnect} disabled={isDemo} />
-            <LimitSelect
-              limit={limit}
-              setLimit={(newLimit) => useSettingsStore.setState({ rawEventsLimit: newLimit })}
-            />
-          </>
-        }
-        facets={
-          <Facet
-            title="Event types"
-            counts={groups.get("event_type") || new Map()}
-            selected={new Set(selectedTypes)}
-            setSelected={(values) => setSelectedTypes([...values.values()])}
+    <div className="space-y-4 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[18rem] flex-1 sm:max-w-[28rem]">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            value={params.query}
+            onChange={(event) =>
+              startTransition(() => {
+                void setParams({ query: event.target.value, pageCount: 1 }, { history: "replace" })
+              })
+            }
+            placeholder="Search types, task IDs, hostnames…"
           />
-        }
-      >
-        {isDemo ? (
-          <Placeholder text="Live Events are not available in Demo Mode." />
-        ) : events.length === 0 ? (
-          <Placeholder progress text="Waiting for events..." />
-        ) : (
-          <RawEventsTable events={filteredEvents} />
-        )}
-      </ExplorerLayout>
-    </>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <AppTimeRangePicker
+            value={range}
+            onChange={(nextRange) =>
+              startTransition(() => {
+                void setParams(
+                  { range: serializeTimeRange(nextRange ?? createDefaultTimeRange()), pageCount: 1 },
+                  { history: "push" },
+                )
+              })
+            }
+            className="w-full sm:w-[22rem]"
+          />
+          <LiveRefreshButton
+            isLive={isLive}
+            isFetching={isFetching}
+            updatedAt={updatedAt}
+            onRefresh={() => void refetch()}
+            label="Refresh raw events"
+          />
+        </div>
+      </div>
+
+      <ExplorerActivityChart
+        data={histogram}
+        isLoading={isLoading}
+        emptyLabel="No events in the selected range"
+        rangeStart={rangeBindings.from}
+        rangeEnd={rangeBindings.to}
+      />
+
+      <div className="flex flex-col gap-4 xl:flex-row">
+        {isFacetMenuOpen ? (
+          <div id="facets-menu" className="w-full xl:w-[320px] xl:shrink-0">
+            <div className="space-y-1 pt-1">
+              <Facet
+                title="Event types"
+                counts={new Map(Object.entries(eventTypes))}
+                selected={new Set(params.types)}
+                setSelected={(values) =>
+                  startTransition(() => {
+                    void setParams({ types: [...values], pageCount: 1 }, { history: "replace" })
+                  })
+                }
+              />
+            </div>
+          </div>
+        ) : null}
+
+        <div className="min-w-0 flex-1 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFacetMenuOpen((open) => !open)}
+                    aria-label={isFacetMenuOpen ? "Hide facets" : "Show facets"}
+                  >
+                    {isFacetMenuOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{isFacetMenuOpen ? "Hide facets" : "Show facets"}</TooltipContent>
+              </Tooltip>
+            </div>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" aria-label="Share options">
+                    <Share2 className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Share</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => void copyCurrentLocation()}>
+                    <Share2 className="size-4" />
+                    Copy link
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportCurrentRows}>
+                    <Download className="size-4" />
+                    Download JSON
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          {status !== "connected" ? (
+            <div className="my-10 flex items-center justify-center gap-3">
+              <Loader2 className="size-8 animate-spin text-muted-foreground" />
+              <h5 className="text-xl font-semibold">Connecting to event stream…</h5>
+            </div>
+          ) : (
+            <>
+              <RawEventsTable events={events} />
+              {events.length < total ? (
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    className="rounded-md border px-3 py-2 text-sm hover:bg-accent"
+                    onClick={() =>
+                      startTransition(() => {
+                        void setParams({ pageCount: params.pageCount + 1 }, { history: "replace" })
+                      })
+                    }
+                  >
+                    Load more events
+                  </button>
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 

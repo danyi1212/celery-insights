@@ -1,27 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Table, type ConnectionStatus, type LiveMessage, type LiveSubscription } from "surrealdb"
+import type { TimeRange } from "@danyi1212/time-range-picker"
+import { isLiveTimeRange } from "@danyi1212/time-range-picker/time-range"
 import { useSurrealDB } from "@components/surrealdb-provider"
+import { useNow } from "./use-now"
+import { createDefaultTimeRange, resolveTimeRangeBindings } from "@lib/time-range-utils"
 
 const DEBOUNCE_MS = 2000
-
-export type TimeRange = "1h" | "6h" | "24h" | "7d" | "30d"
-
-const timeRangeToCutoffDuration: Record<TimeRange, string> = {
-  "1h": "3600s",
-  "6h": "21600s",
-  "24h": "86400s",
-  "7d": "604800s",
-  "30d": "2592000s",
-}
-
-/** Bucket size as duration for each time range */
-const timeRangeToBucketDuration: Record<TimeRange, string> = {
-  "1h": "1m",
-  "6h": "10m",
-  "24h": "30m",
-  "7d": "360m",
-  "30d": "1440m",
-}
 
 export interface ThroughputPoint {
   bucket: string
@@ -63,8 +48,9 @@ export interface AnalyticsData {
  * Uses the same debounced-refresh pattern as useExceptionsSummary since
  * aggregation results cannot be incrementally patched from live notifications.
  */
-export const useAnalytics = (timeRange: TimeRange = "24h") => {
+export const useAnalytics = (timeRange: TimeRange = createDefaultTimeRange()) => {
   const { db, status } = useSurrealDB()
+  const now = useNow(isLiveTimeRange(timeRange) ? 60_000 : undefined)
 
   const [data, setData] = useState<AnalyticsData>({
     throughput: [],
@@ -80,10 +66,15 @@ export const useAnalytics = (timeRange: TimeRange = "24h") => {
   const initializedRef = useRef(false)
   const prevStatusRef = useRef<ConnectionStatus>(status)
 
-  const cutoffDuration = timeRangeToCutoffDuration[timeRange]
-  const bucketDuration = timeRangeToBucketDuration[timeRange]
-
-  const bindings = useMemo(() => ({ cutoffDuration, bucketDuration }), [cutoffDuration, bucketDuration])
+  const resolvedBindings = resolveTimeRangeBindings(timeRange, now)
+  const bindings = useMemo(
+    () => ({
+      from: resolvedBindings.from,
+      to: resolvedBindings.to,
+      bucketDuration: resolvedBindings.bucketDuration,
+    }),
+    [resolvedBindings.from, resolvedBindings.to, resolvedBindings.bucketDuration],
+  )
 
   const runQueries = useCallback(async () => {
     try {
@@ -95,7 +86,8 @@ export const useAnalytics = (timeRange: TimeRange = "24h") => {
                     time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket,
                     count() AS count
                 FROM task
-                WHERE last_updated > time::now() - <duration>$cutoffDuration
+                WHERE last_updated >= <datetime>$from
+                    AND last_updated <= <datetime>$to
                 GROUP BY bucket
                 ORDER BY bucket ASC;` +
           // Failure rate: success vs failure per bucket
@@ -106,7 +98,8 @@ export const useAnalytics = (timeRange: TimeRange = "24h") => {
                     count() AS total,
                     math::sum(IF state = 'FAILURE' THEN 1 ELSE 0 END) / count() * 100 AS failure_rate
                 FROM task
-                WHERE last_updated > time::now() - <duration>$cutoffDuration
+                WHERE last_updated >= <datetime>$from
+                    AND last_updated <= <datetime>$to
                     AND state IN ['SUCCESS', 'FAILURE']
                 GROUP BY bucket
                 ORDER BY bucket ASC;` +
@@ -118,7 +111,8 @@ export const useAnalytics = (timeRange: TimeRange = "24h") => {
                     math::max(runtime) AS max_runtime,
                     count() AS count
                 FROM task
-                WHERE last_updated > time::now() - <duration>$cutoffDuration
+                WHERE last_updated >= <datetime>$from
+                    AND last_updated <= <datetime>$to
                     AND runtime != NONE
                     AND type != NONE
                 GROUP BY type
@@ -129,7 +123,8 @@ export const useAnalytics = (timeRange: TimeRange = "24h") => {
                     worker,
                     count() AS count
                 FROM task
-                WHERE last_updated > time::now() - <duration>$cutoffDuration
+                WHERE last_updated >= <datetime>$from
+                    AND last_updated <= <datetime>$to
                     AND worker != NONE
                 GROUP BY worker
                 ORDER BY count DESC;`,
