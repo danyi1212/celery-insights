@@ -1,6 +1,6 @@
 services:
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:4-management-alpine
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -11,7 +11,7 @@ services:
       retries: 15
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     ports:
       - "6379:6379"
     healthcheck:

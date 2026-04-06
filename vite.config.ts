@@ -6,7 +6,6 @@ import react from "@vitejs/plugin-react"
 import mdx from "@mdx-js/rollup"
 import rehypeSlug from "rehype-slug"
 import remarkGfm from "remark-gfm"
-import tsconfigPaths from "vite-tsconfig-paths"
 import { loadTsconfigAliases } from "./tooling/tsconfig-aliases"
 
 const DOCS_SOURCE_SUFFIX = ".source"
@@ -49,7 +48,6 @@ const docsSourcePlugin = () => ({
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    tsconfigPaths(),
     TanStackRouterVite({
       routesDirectory: "src/routes",
       generatedRouteTree: "src/routeTree.gen.ts",
