@@ -37,7 +37,7 @@ class CeleryEventReceiver(Thread):
         with self.app.connection() as connection:
             try:
                 self.app.control.enable_events()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.warning("Failed to broadcast enable_events before consuming Celery events", exc_info=True)
 
             self.receiver = self.app.events.Receiver(
