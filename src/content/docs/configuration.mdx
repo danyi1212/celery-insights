@@ -24,7 +24,30 @@ If you only need the minimum set of values, start with one of these combinations
 
 ### Security
 
-[`SURREALDB_INGESTER_PASS`](#surrealdb_ingester_pass) · [`SURREALDB_FRONTEND_PASS`](#surrealdb_frontend_pass) · [`LOG_FORMAT`](#log_format)
+[`SURREALDB_INGESTER_PASS`](#surrealdb_ingester_pass) · [`SURREALDB_FRONTEND_PASS`](#surrealdb_frontend_pass) · [`MCP_TOKEN`](#mcp_token) · [`MCP_ALLOWED_HOSTS`](#mcp_allowed_hosts) · [`LOG_FORMAT`](#log_format)
+
+## MCP access for agents
+
+The read-only Streamable HTTP endpoint runs at `http://localhost:8555/mcp` on the Bun server.
+It reads stored observations, including on ingestion replicas and in snapshot replay mode.
+See [MCP Interface](/documentation/mcp) for client configuration, tools, and pagination examples.
+
+#### MCP_TOKEN
+
+Default: `SURREALDB_FRONTEND_PASS` when configured, otherwise no token.
+
+Bearer credential for MCP access. Set it for a separate agent credential. MCP uses this token
+when configured; otherwise it requires the dashboard password when dashboard protection is enabled.
+The token is redacted from debug bundles. Use the same token or dashboard password across replicas
+so pagination cursors remain valid across instances.
+
+#### MCP_ALLOWED_HOSTS
+
+Default: `localhost,127.0.0.1,[::1]`.
+
+Comma-separated hostnames accepted by MCP, without schemes, paths, or ports. Configure your public
+hostname for reverse-proxy access, for example `insights.example.com,localhost`. An Origin header,
+if present, must match the request URL's origin.
 
 ## Celery connection
 

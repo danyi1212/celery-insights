@@ -1,0 +1,151 @@
+Connect an agent to Celery Insights to answer questions such as “Where is the task I just spawned?”,
+“Why did this workflow fail?”, and “What is my worker doing?”. The MCP interface reads retained
+task, workflow, event, and worker observations. It never polls or changes your Celery cluster.
+
+## Connect your agent
+
+Use an MCP client that supports Streamable HTTP and point it at `http://localhost:8555/mcp`.
+The endpoint runs on the same Bun server as the dashboard. A client using an `mcpServers`
+configuration can use this example; other clients may use a different configuration format:
+
+```json
+{
+  "mcpServers": {
+    "celery-insights": {
+      "url": "http://localhost:8555/mcp",
+      "headers": { "Authorization": "Bearer YOUR_MCP_TOKEN" }
+    }
+  }
+}
+```
+
+Set `MCP_TOKEN` for a separate agent credential. If it is unset, MCP requires
+`SURREALDB_FRONTEND_PASS` when dashboard password protection is enabled. Omit the header for an
+unprotected local deployment. If you configure an MCP token, use that token for MCP access.
+
+For a remote deployment, use its public URL and set `MCP_ALLOWED_HOSTS` to the accepted hostnames,
+for example `insights.example.com,localhost`. The default accepts only `localhost`, `127.0.0.1`,
+and `[::1]`. Supply hostnames without schemes or ports. An Origin header, if present, must match
+the requested URL's origin. See [Configuration](/documentation/configuration#mcp_token) for details.
+
+The endpoint accepts POST requests and returns JSON without persistent sessions or a GET/SSE stream.
+Use the same MCP token or dashboard password across replicas for cursors to work behind a load balancer.
+An unprotected instance with default database credentials uses a random cursor secret, invalidating
+its cursors on restart.
+
+## Choose a tool
+
+| Tool               | Use it to                                | Main arguments                                                                   | Returns                                                                                  |
+| ------------------ | ---------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `search_workflows` | Find a recently invoked task or workflow | Task-name and worker fragments, relative time, workflow progress, error evidence | Compact workflow candidates, invocation counts by name, and representative task evidence |
+| `inspect_workflow` | Understand a discovered workflow         | Returned workflow ID; overview, tasks, or task names                             | Workflow summary, member states and parent references, or grouped task counts            |
+| `inspect_task`     | Examine a particular invocation          | Returned task ID; overview, input, output, error, or history                     | Timing and relationship details, stored text, or observed events                         |
+| `list_workers`     | Discover workers and their capabilities  | Hostname fragment, online/offline status, registered task-name fragment          | Worker hostnames, queues, capabilities, and compact activity counts                      |
+| `inspect_worker`   | See what a worker is doing               | Exact discovered hostname; overview, activity, registered, or queues             | Stored running/reserved/scheduled tasks, registered names, or queue details              |
+
+### Find a task you just spawned
+
+Start with the name you know and a relative window. These examples show tool argument objects:
+
+```json
+{ "task_name": "reports.render", "within": "15m" }
+```
+
+`search_workflows` defaults to the last hour, five workflow candidates, and `status="all"`.
+This includes tasks that finished before your first search. Names and worker selectors are
+case-insensitive fragments. Exact full task names and exact final name segments rank above
+other fragment matches, then candidates are ordered by recency.
+
+`task_counts` describe the whole workflow; `matching_task_counts` describe invocations matching
+your discovery selectors. Twenty invocations of the same name are twenty invocations, so use the
+returned timing and representative evidence to choose a workflow before inspecting its members.
+
+Keep the initial filters to what you know. Adding a worker fragment requires the name and worker
+to match the same member task. Use a positive integer followed by `m`, `h`, or `d` for `within`,
+up to 30 days; `"all"` searches retained history. With a name or worker selector, the window
+applies to invocation time; without them, it applies to the workflow's latest observed activity.
+
+### Investigate unfinished work and errors
+
+Workflow progress and error evidence are independent:
+
+```json
+{ "status": "running", "has_errors": true, "within": "all" }
+```
+
+`status` accepts `"all"`, `"running"`, and `"finished"`. Running means at least one observed
+member is unfinished, including pending or retrying tasks. Finished means all observed members
+are terminal; it does not imply success.
+
+`has_errors=true` selects workflows with observed failure or exception/traceback evidence,
+including tasks that later recovered. `false` selects workflows with no observed error evidence;
+omit it to apply no error restriction. These filters describe the whole workflow, including members
+whose names do not match your search. `error_task_count` counts affected tasks once, not error events.
+Revocation, rejection, or retry alone does not imply error evidence.
+
+### Inspect a workflow and its tasks
+
+Pass a `workflow_id` returned by discovery to `inspect_workflow`. Its default `view="overview"`
+returns task-name counts and a small sample of problem and running tasks. It includes every member
+only when there are at most 25 and they fit the response budget.
+
+For larger workflows, use `view="tasks"` to page through members and their states, worker, timing,
+parent IDs, and observed child counts. The default is 25 rows; the maximum is 100. A parent can appear
+on a different page, so follow its ID when needed. In this view, `parent_task_id` selects direct
+observed children and `task_name` restricts members to a name fragment.
+
+Use `view="task_names"` for grouped counts, with eight names per page by default and at most 50.
+Always read omitted counts: summary name lists and samples are bounded.
+
+Pass a returned `task_id` to `inspect_task`. The default overview includes timing, relationships,
+and small input/output/error previews. Use `section="input"`, `"output"`, or `"error"` to retrieve
+stored text in chunks; `section="history"` pages observed events, ten per page by default and at
+most 50. Input and result representations are text and are not guaranteed to be JSON.
+
+### Inspect worker activity
+
+Use `list_workers` to discover hostnames. It defaults to ten workers and `status="all"`, and accepts
+at most 50 per page. Its `task_name` filter matches registered capabilities, so it answers which
+workers can run a task. It does not filter current activity.
+
+Pass a discovered hostname to `inspect_worker`. The overview shows counts and up to 15 activity rows,
+prioritizing running, reserved, then scheduled work. Use `section="activity"` with an optional task-name
+fragment to inspect current stored activity; `"registered"` and `"queues"` page capabilities and queue
+details. Activity defaults to 15 rows; registered names and queues default to 25. These sections accept
+at most 100 per page. Task-name filtering is supported only for activity and registered names.
+
+Worker inspection is captured periodically. Sections have separate capture times and may overlap
+during task transitions. Missing inspection counts are unknown rather than zero; fresh heartbeats
+do not guarantee fresh activity. A task observed only in worker inspection can have an ID without
+a retained task or workflow record.
+
+## Continue through large results
+
+Tool data is capped at 24 KiB per response, so a page can contain fewer rows than its requested limit.
+List results return `page.has_more` and `page.next_cursor`. Payload sections return `has_more` and
+`next_cursor` at the top level. Continue until `has_more` is false, even when a worker capability scan
+returns an empty page.
+
+Send the cursor with only the original workflow ID, task ID, or exact worker hostname when that tool
+requires one. The cursor preserves the original selectors, view/section, limit, and search time window;
+do not add new filters to a continuation. Cursors expire after 15 minutes. If one expires, restart the
+original query. Worker snapshot pagination also requires a restart when the inspection changes.
+Other live pages can change as events arrive or retention deletes records.
+
+`response_truncated` means a preview or chunk omits stored text that can be retrieved through another
+call. `source_truncated` means ingestion already discarded part of the value and MCP cannot recover it.
+Unavailable data is explicitly marked; it does not imply empty input or a successful null result.
+
+## Understand observation limits
+
+Every response includes its read time, mode, and warnings. Tools also work on replicas without a local
+ingester and in [debug snapshot replay](/documentation/debug-bundles), where `mode="snapshot"` identifies
+offline observations. Counts describe retained observations, not the complete planned Celery canvas.
+
+An empty search is a successful observation of no matching retained records. A query timeout, database
+failure, expired cursor, or missing record returns an explicit error; it is not evidence that work
+succeeded or that a worker is idle. Each database query has a two-second timeout, with a ten-second
+query budget per tool call. Narrow the name, worker, or time window if the query budget is exceeded.
+
+For the detailed argument and response contract, see
+[MCP_DESIGN.md](https://github.com/danyi1212/celery-insights/blob/main/MCP_DESIGN.md).

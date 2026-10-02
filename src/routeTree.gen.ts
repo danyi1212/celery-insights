@@ -21,6 +21,7 @@ import { Route as TasksCompareRouteImport } from './routes/tasks.compare'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
 import { Route as DocumentationSetupRouteImport } from './routes/documentation.setup'
 import { Route as DocumentationProductionNotesRouteImport } from './routes/documentation.production-notes'
+import { Route as DocumentationMcpRouteImport } from './routes/documentation.mcp'
 import { Route as DocumentationKubernetesRouteImport } from './routes/documentation.kubernetes'
 import { Route as DocumentationDeploymentPatternsRouteImport } from './routes/documentation.deployment-patterns'
 import { Route as DocumentationDebugBundlesRouteImport } from './routes/documentation.debug-bundles'
@@ -88,6 +89,11 @@ const DocumentationProductionNotesRoute =
     path: '/production-notes',
     getParentRoute: () => DocumentationRoute,
   } as any)
+const DocumentationMcpRoute = DocumentationMcpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => DocumentationRoute,
+} as any)
 const DocumentationKubernetesRoute = DocumentationKubernetesRouteImport.update({
   id: '/kubernetes',
   path: '/kubernetes',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/documentation/debug-bundles': typeof DocumentationDebugBundlesRoute
   '/documentation/deployment-patterns': typeof DocumentationDeploymentPatternsRoute
   '/documentation/kubernetes': typeof DocumentationKubernetesRoute
+  '/documentation/mcp': typeof DocumentationMcpRoute
   '/documentation/production-notes': typeof DocumentationProductionNotesRoute
   '/documentation/setup': typeof DocumentationSetupRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/documentation/debug-bundles': typeof DocumentationDebugBundlesRoute
   '/documentation/deployment-patterns': typeof DocumentationDeploymentPatternsRoute
   '/documentation/kubernetes': typeof DocumentationKubernetesRoute
+  '/documentation/mcp': typeof DocumentationMcpRoute
   '/documentation/production-notes': typeof DocumentationProductionNotesRoute
   '/documentation/setup': typeof DocumentationSetupRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/documentation/debug-bundles': typeof DocumentationDebugBundlesRoute
   '/documentation/deployment-patterns': typeof DocumentationDeploymentPatternsRoute
   '/documentation/kubernetes': typeof DocumentationKubernetesRoute
+  '/documentation/mcp': typeof DocumentationMcpRoute
   '/documentation/production-notes': typeof DocumentationProductionNotesRoute
   '/documentation/setup': typeof DocumentationSetupRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
@@ -189,6 +198,7 @@ export interface FileRouteTypes {
     | '/documentation/debug-bundles'
     | '/documentation/deployment-patterns'
     | '/documentation/kubernetes'
+    | '/documentation/mcp'
     | '/documentation/production-notes'
     | '/documentation/setup'
     | '/tasks/$taskId'
@@ -207,6 +217,7 @@ export interface FileRouteTypes {
     | '/documentation/debug-bundles'
     | '/documentation/deployment-patterns'
     | '/documentation/kubernetes'
+    | '/documentation/mcp'
     | '/documentation/production-notes'
     | '/documentation/setup'
     | '/tasks/$taskId'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/documentation/debug-bundles'
     | '/documentation/deployment-patterns'
     | '/documentation/kubernetes'
+    | '/documentation/mcp'
     | '/documentation/production-notes'
     | '/documentation/setup'
     | '/tasks/$taskId'
@@ -332,6 +344,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentationProductionNotesRouteImport
       parentRoute: typeof DocumentationRoute
     }
+    '/documentation/mcp': {
+      id: '/documentation/mcp'
+      path: '/mcp'
+      fullPath: '/documentation/mcp'
+      preLoaderRoute: typeof DocumentationMcpRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
     '/documentation/kubernetes': {
       id: '/documentation/kubernetes'
       path: '/kubernetes'
@@ -376,6 +395,7 @@ interface DocumentationRouteChildren {
   DocumentationDebugBundlesRoute: typeof DocumentationDebugBundlesRoute
   DocumentationDeploymentPatternsRoute: typeof DocumentationDeploymentPatternsRoute
   DocumentationKubernetesRoute: typeof DocumentationKubernetesRoute
+  DocumentationMcpRoute: typeof DocumentationMcpRoute
   DocumentationProductionNotesRoute: typeof DocumentationProductionNotesRoute
   DocumentationSetupRoute: typeof DocumentationSetupRoute
   DocumentationIndexRoute: typeof DocumentationIndexRoute
@@ -387,6 +407,7 @@ const DocumentationRouteChildren: DocumentationRouteChildren = {
   DocumentationDebugBundlesRoute: DocumentationDebugBundlesRoute,
   DocumentationDeploymentPatternsRoute: DocumentationDeploymentPatternsRoute,
   DocumentationKubernetesRoute: DocumentationKubernetesRoute,
+  DocumentationMcpRoute: DocumentationMcpRoute,
   DocumentationProductionNotesRoute: DocumentationProductionNotesRoute,
   DocumentationSetupRoute: DocumentationSetupRoute,
   DocumentationIndexRoute: DocumentationIndexRoute,

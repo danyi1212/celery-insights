@@ -1,6 +1,7 @@
 # Celery Insights
 
 Celery Insights is a real-time dashboard for Celery clusters. It shows workers, tasks, task graphs, and cluster activity in a web UI backed by Celery events and live updates.
+Its read-only MCP interface lets agents find workflows, inspect task inputs/results/errors, and see stored worker activity.
 
 <p align="center">
   <a href="https://celery-insights.vercel.app/" rel="noopener" target="_blank"><img height="40" src="/assets/ViewDemo.svg" alt="View Demo"></a>
@@ -52,10 +53,22 @@ docker run -p 8555:8555 --name celery-insights \
   ghcr.io/danyi1212/celery-insights-all:latest
 ```
 
+## MCP access for agents
+
+Connect an HTTP-capable MCP client to `http://localhost:8555/mcp`. The five tools search workflows,
+inspect workflow members and individual tasks, list workers, and inspect their stored activity.
+Search by task name, worker, and relative time; retrieve large workflows and payloads through pagination.
+
+See [connection and authentication settings](CONFIGURATION.md#mcp-access-for-agents),
+the [full tool contract](MCP_DESIGN.md), or the running app's
+[MCP Interface guide](http://localhost:8555/documentation/mcp).
+For development setup, see [the MCP contributor notes](CONTRIBUTING.md#mcp-development).
+
 ## Documentation
 
 - [`CONFIGURATION.md`](CONFIGURATION.md) for the full environment variable reference, setup patterns, metrics endpoints, and reverse-proxy behavior
 - [`Support Matrix`](CONFIGURATION.md#support-matrix) for broker, serializer, and result-backend compatibility
+- [`MCP_DESIGN.md`](MCP_DESIGN.md) for MCP tool arguments, responses, filters, and pagination
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) for local development, testing, and contribution guidelines
 
 ## Questions, Bugs, and Security Reports

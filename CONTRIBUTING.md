@@ -146,6 +146,34 @@ Or run them in separate terminals:
 
 > **Note:** All application settings are owned by Bun (`runtime/config.ts`) and passed to Python via environment variables. The Bun package root is the repository root, but the application source now lives at the repository root under `src/`, `runtime/`, and `e2e/`. When adding new configuration, define it in the Bun config schema first.
 
+### MCP development
+
+Bun serves MCP at `http://localhost:8555/mcp`. The Vite dev server on port 3000 does not serve
+the MCP endpoint. With SurrealDB and the Python ingester already running, start Bun against
+that database in another terminal:
+
+```shell
+bun run build
+SURREALDB_EXTERNAL_URL=ws://localhost:8557/rpc INGESTION_ENABLED=false bun run start
+```
+
+This Bun process reads the existing database while the separate ingester keeps collecting events.
+Use the same namespace, database, and credentials as your development services.
+
+Tool contracts live in [`MCP_DESIGN.md`](MCP_DESIGN.md); connection settings and client examples
+live in [`CONFIGURATION.md`](CONFIGURATION.md#mcp-access-for-agents). Operator documentation is
+in `src/content/docs/mcp.mdx`, served at `/documentation/mcp` with navigation and Copy as Markdown.
+
+`runtime/mcp/` owns argument validation, read queries, cursor handling, response budgets, and the
+protocol adapter. MCP calls must read stored observations without changing or polling Celery.
+Keep selectors simple and counts scoped correctly; distinguish unavailable data from empty data,
+and response truncation from source truncation. Update the tool contract and in-app docs when
+changing public behavior.
+
+Run the focused MCP integration tests with `bunx vitest run runtime/mcp/mcp.test.ts`, and the
+ingestion regression with `uv run pytest server/events/ingester_integration_test.py`.
+Both use isolated native SurrealDB instances; the CLI must be on PATH.
+
 ## Code Styles
 
 ### General

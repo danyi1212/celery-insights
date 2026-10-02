@@ -59,9 +59,9 @@ credentials uses a random cursor secret, so its cursors expire on restart.
 
 Default: `SURREALDB_FRONTEND_PASS` when configured, otherwise no token.
 
-Bearer credential for MCP access. Set it to use a separate credential for agents. When dashboard
-password protection is enabled, MCP requires either this token or the dashboard password;
-the MCP endpoint cannot bypass protected access. The token is redacted from debug bundles.
+Bearer credential for MCP access. Set it to use a separate credential for agents. MCP uses this
+token when configured; otherwise it requires the dashboard password when dashboard protection
+is enabled. The token is redacted from debug bundles.
 
 #### MCP_ALLOWED_HOSTS
 
