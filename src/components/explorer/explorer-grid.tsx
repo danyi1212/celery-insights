@@ -48,25 +48,23 @@ const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, sort, setSort, page,
           )
         },
       },
-      ...columnConfigs.map(
-        (columnConfig): ColumnDef<SurrealTask> => ({
-          id: columnConfig.property as string,
-          accessorFn: (row) => {
-            const surrealField = SURREAL_FIELD_MAP[columnConfig.property as string] || columnConfig.property
-            return (row as unknown as Record<string, unknown>)[surrealField as string]
-          },
-          header: columnConfig.label,
-          size: columnConfig.columnWidth,
-          cell: ({ getValue }) => {
-            const value = getValue()
-            if (columnConfig.property === "last_updated" && typeof value === "string") {
-              const date = new Date(value)
-              return Number.isNaN(date.getTime()) ? "NaT" : date.toLocaleString()
-            }
-            return columnConfig.valueFormatter ? columnConfig.valueFormatter(value as never) : (value as string)
-          },
-        }),
-      ),
+      ...columnConfigs.map((columnConfig): ColumnDef<SurrealTask> => ({
+        id: columnConfig.property as string,
+        accessorFn: (row) => {
+          const surrealField = SURREAL_FIELD_MAP[columnConfig.property as string] || columnConfig.property
+          return (row as unknown as Record<string, unknown>)[surrealField as string]
+        },
+        header: columnConfig.label,
+        size: columnConfig.columnWidth,
+        cell: ({ getValue }) => {
+          const value = getValue()
+          if (columnConfig.property === "last_updated" && typeof value === "string") {
+            const date = new Date(value)
+            return Number.isNaN(date.getTime()) ? "NaT" : date.toLocaleString()
+          }
+          return columnConfig.valueFormatter ? columnConfig.valueFormatter(value as never) : (value as string)
+        },
+      })),
     ],
     [columnConfigs],
   )

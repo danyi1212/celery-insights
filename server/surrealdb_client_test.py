@@ -4,6 +4,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from surrealdb.errors import ConnectionUnavailableError
 
 import surrealdb_client
 from settings import Settings
@@ -61,7 +62,8 @@ async def test_init_surrealdb_returns_singleton():
 
 
 @pytest.mark.asyncio
-async def test_init_surrealdb_retries_on_failure():
+@pytest.mark.parametrize("error_type", [ConnectionError, ConnectionUnavailableError])
+async def test_init_surrealdb_retries_on_failure(error_type):
     settings = _make_settings()
     mock_db = AsyncMock()
 
@@ -71,7 +73,7 @@ async def test_init_surrealdb_retries_on_failure():
         nonlocal call_count
         call_count += 1
         if call_count < 3:
-            raise ConnectionError("Connection refused")
+            raise error_type("Connection refused")
         return mock_db
 
     with (

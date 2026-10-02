@@ -2,22 +2,23 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING
 
 from surrealdb import AsyncSurreal
+from surrealdb.errors import SurrealError
+from surrealdb.connections.async_http import AsyncHttpSurrealConnection
+from surrealdb.connections.async_ws import AsyncWsSurrealConnection
 
 from settings import Settings
 
-if TYPE_CHECKING:
-    from surrealdb.connections.async_template import AsyncTemplate
+type SurrealConnection = AsyncHttpSurrealConnection | AsyncWsSurrealConnection
 
 logger = logging.getLogger(__name__)
 
-_db: AsyncTemplate | None = None
+_db: SurrealConnection | None = None
 _lock = asyncio.Lock()
 
 
-async def connect_surrealdb(settings: Settings) -> AsyncTemplate:
+async def connect_surrealdb(settings: Settings) -> SurrealConnection:
     """Connect to SurrealDB as the ingester user. Returns the connected client."""
     db = AsyncSurreal(settings.surrealdb_url)
     await db.signin(
@@ -38,7 +39,7 @@ async def connect_surrealdb(settings: Settings) -> AsyncTemplate:
     return db
 
 
-async def init_surrealdb(settings: Settings | None = None) -> AsyncTemplate:
+async def init_surrealdb(settings: Settings | None = None) -> SurrealConnection:
     """Initialize the singleton SurrealDB connection with retry logic.
 
     On connection failure, retries with exponential backoff (1s, 2s, 4s, ... max 30s).
@@ -58,13 +59,13 @@ async def init_surrealdb(settings: Settings | None = None) -> AsyncTemplate:
             try:
                 _db = await connect_surrealdb(settings)
                 return _db
-            except OSError, ConnectionError, RuntimeError:
+            except OSError, ConnectionError, RuntimeError, SurrealError:
                 logger.warning("Failed to connect to SurrealDB, retrying in %.0fs...", delay, exc_info=True)
                 await asyncio.sleep(delay)
                 delay = min(delay * 2, max_delay)
 
 
-def get_db() -> AsyncTemplate:
+def get_db() -> SurrealConnection:
     """Get the singleton SurrealDB connection. Raises RuntimeError if not initialized."""
     if _db is None:
         raise RuntimeError("SurrealDB connection not initialized. Call init_surrealdb() first.")
@@ -78,7 +79,7 @@ async def close_surrealdb() -> None:
         if _db is not None:
             try:
                 await _db.close()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.debug("SurrealDB connection already closed or errored during close", exc_info=True)
             _db = None
             logger.info("SurrealDB connection closed")

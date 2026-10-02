@@ -207,7 +207,13 @@ class SurrealDBIngester:
             try:
                 db = get_db()
                 full_query = "BEGIN TRANSACTION;\n" + ";\n".join(queries) + ";\nCOMMIT TRANSACTION;"
-                await db.query(full_query, params)
+                response = await db.query_raw(full_query, params)
+                if "error" in response:
+                    raise RuntimeError(f"SurrealDB transaction failed: {response['error']}")
+                results = response.get("result", [])
+                errors = [result.get("result") for result in results if result.get("status") == "ERR"]
+                if errors:
+                    raise RuntimeError(f"SurrealDB transaction failed: {errors}")
                 self._stats_events_total += len(events)
                 self._stats_flushes_total += 1
                 logger.debug("Flushed %d events (%d queries) to SurrealDB", len(events), len(queries))
@@ -342,9 +348,9 @@ def build_workflow_membership_upsert(event: dict, idx: int) -> tuple[str, dict]:
         f"THEN <datetime>${p}_ts ELSE last_updated END"
     )
     edge_upsert = (
-        f"UPSERT type::record('workflow_task', ${p}_edge_id) SET "
-        f"`in` = type::record('workflow', ${p}_workflow_id), "
-        f"out = type::record('task', ${p}_task_id), "
+        f"RELATE OR UPDATE (type::record('workflow', ${p}_workflow_id))"
+        f"->(type::record('workflow_task', ${p}_edge_id))"
+        f"->(type::record('task', ${p}_task_id)) SET "
         f"created_at = created_at ?? <datetime>${p}_ts, "
         f"last_updated = <datetime>${p}_ts"
     )

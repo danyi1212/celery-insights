@@ -29,6 +29,8 @@ async def test_config_from_settings(caplog: pytest.LogCaptureFixture):
     assert caplog.messages[-1] == "Loading celery app config from environment variables"
     assert app.conf.broker_url == settings.broker_url
     assert app.conf.result_backend == settings.result_backend
+    assert app.conf.event_queue_exclusive is True
+    assert app.conf.control_queue_exclusive is True
 
 
 @pytest.mark.asyncio()
@@ -51,3 +53,16 @@ async def test_config_from_module(tmp_path, caplog: pytest.LogCaptureFixture):
     assert f"Loading celery app config from {str(config_path)!r}" == caplog.messages[-1]
     assert app.conf.broker_url == "amqp://guest:guest@module/"
     assert app.conf.result_backend == "redis://module"
+    assert app.conf.event_queue_exclusive is True
+    assert app.conf.control_queue_exclusive is True
+
+
+@pytest.mark.asyncio()
+async def test_durable_monitor_queues_remain_nonexclusive(tmp_path):
+    config_path = tmp_path / "config.py"
+    config_path.write_text(fake_config + "\nevent_queue_durable = True\ncontrol_queue_durable = True\n")
+    app = await get_celery_app(Settings(config_file=str(config_path)))
+    assert app.conf.event_queue_durable is True
+    assert app.conf.control_queue_durable is True
+    assert app.conf.event_queue_exclusive is False
+    assert app.conf.control_queue_exclusive is False

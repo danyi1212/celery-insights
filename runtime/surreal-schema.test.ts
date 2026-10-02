@@ -171,7 +171,8 @@ describe("runSchemaMigration", () => {
     expect(coreSchema).toContain("DEFINE INDEX OVERWRITE idx_workflow_last_updated ON workflow FIELDS last_updated")
   })
 
-  it("backfills workflow records after applying schema", async () => {
+  it.each([false, true])("backfills workflow records with typed timestamps: %s", async (typed) => {
+    const timestamp = (value: string) => (typed ? new Date(value) : value)
     mockDb._queryResult.collect = vi
       .fn()
       .mockResolvedValueOnce([])
@@ -184,15 +185,15 @@ describe("runSchemaMigration", () => {
             id: "task:root-1",
             type: "tasks.root",
             state: "SUCCESS",
-            last_updated: "2026-03-10T10:00:00Z",
-            sent_at: "2026-03-10T10:00:00Z",
+            last_updated: timestamp("2026-03-10T10:00:00Z"),
+            sent_at: timestamp("2026-03-10T10:00:00Z"),
           },
           {
             id: "task:child-1",
             type: "tasks.child",
             root_id: "root-1",
             state: "FAILURE",
-            last_updated: "2026-03-10T10:01:00Z",
+            last_updated: timestamp("2026-03-10T10:01:00Z"),
             exception: "boom",
           },
         ],
@@ -202,9 +203,17 @@ describe("runSchemaMigration", () => {
     await runSchemaMigration(createConfig())
 
     const queries = mockDb.query.mock.calls.map((c) => c[0] as string)
+    expect(mockDb.query).toHaveBeenCalledWith(
+      expect.stringContaining("UPSERT type::record('workflow', $workflowId)"),
+      expect.objectContaining({
+        firstSeenAt: typed ? "2026-03-10T10:00:00.000Z" : "2026-03-10T10:00:00Z",
+        lastUpdated: typed ? "2026-03-10T10:01:00.000Z" : "2026-03-10T10:01:00Z",
+        latestExceptionPreview: "boom",
+      }),
+    )
     expect(queries).toContain("SELECT * FROM task")
     expect(queries.some((query) => query.includes("UPSERT type::record('workflow', $workflowId)"))).toBe(true)
-    expect(queries.some((query) => query.includes("UPSERT type::record('workflow_task', $edgeId)"))).toBe(true)
+    expect(queries.some((query) => query.includes("RELATE OR UPDATE"))).toBe(true)
     expect(
       queries.some((query) => query.includes("UPSERT type::record('task', $taskId) SET workflow_id = $workflowId")),
     ).toBe(true)
