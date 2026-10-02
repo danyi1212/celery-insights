@@ -52,14 +52,14 @@ Run the worker parity scenarios for success/failure/retry/revoke, chain/group/ch
 
 | Action | Existing ref | Latest stable release verified | Primary release source |
 | --- | --- | --- | --- |
-| actions/checkout | v4 | v7 | [Upstream](https://github.com/actions/checkout) |
+| actions/checkout | v4 | v7.0.1 | [Upstream](https://github.com/actions/checkout) |
 | actions/setup-python | v5 | v7.0.0 | [Releases](https://github.com/actions/setup-python/releases) |
 | astral-sh/setup-uv | v5 | v10.2.0 | [Releases](https://github.com/astral-sh/setup-uv/releases) |
 | oven-sh/setup-bun | v2 | v2.2.0 | [Releases](https://github.com/oven-sh/setup-bun/releases) |
 | actions/upload-artifact | v4 | v7.0.1 | [Releases](https://github.com/actions/upload-artifact/releases) |
 | actions/dependency-review-action | v4 | v5.0.0 | [Releases](https://github.com/actions/dependency-review-action/releases) |
 | docker/setup-buildx-action | v3 | v4.4.1 | [Releases](https://github.com/docker/setup-buildx-action/releases) |
-| docker/setup-qemu-action | v3 | v4.2.0 | [Releases](https://github.com/docker/setup-qemu-action/releases) |
+| docker/setup-qemu-action | v3 | v4.4.0 | [Releases](https://github.com/docker/setup-qemu-action/releases) |
 | docker/login-action | v3.3.0 | v4.6.0 | [Releases](https://github.com/docker/login-action/releases) |
 | docker/metadata-action | v5 | v6.2.0 | [Releases](https://github.com/docker/metadata-action/releases) |
 | docker/build-push-action | v6 | v7.4.0 | [Releases](https://github.com/docker/build-push-action/releases) |
