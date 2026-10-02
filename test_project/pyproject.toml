@@ -2,7 +2,7 @@
 name = "celery-insights-test-project"
 version = "0.1.0"
 description = "Test harness for celery-insights E2E testing"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "celery[redis]>=5.4,<6",
     "fastapi>=0.115,<1",

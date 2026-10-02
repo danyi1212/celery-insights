@@ -36,12 +36,17 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 FROM oven/bun:1-slim AS front-build
 
-WORKDIR /frontend
+WORKDIR /app
 
-COPY /frontend/package.json /frontend/bun.lock* ./
+COPY /package.json /bun.lock* /tsconfig.json /vite.config.ts ./
+COPY /tooling ./tooling
+COPY /src ./src
+COPY /runtime ./runtime
+COPY /e2e ./e2e
+COPY /public ./public
+COPY /bun-entry.ts /index.html /vitest.config.ts /vitest.setup.ts ./
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 
-COPY /frontend/ .
 RUN bun run build
 RUN bun build bun-entry.ts --target=bun --outfile ./bun-server.js
 
@@ -73,8 +78,8 @@ COPY --from=python-deps /install /usr/local
 COPY ./server ./server
 
 # Copy built frontend SPA and bundled Bun entry point
-COPY --from=front-build /frontend/dist ./dist
-COPY --from=front-build /frontend/bun-server.js ./bun-server.js
+COPY --from=front-build /app/dist ./dist
+COPY --from=front-build /app/bun-server.js ./bun-server.js
 
 # Set environment for production
 ENV NODE_ENV=production

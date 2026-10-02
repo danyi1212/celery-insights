@@ -1,0 +1,45 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "useDefineForClassFields": true,
+        "lib": ["DOM", "DOM.Iterable", "ES2022"],
+        "types": ["vitest/globals", "@testing-library/jest-dom/vitest"],
+        "allowJs": false,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "strict": true,
+        "forceConsistentCasingInFileNames": true,
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "noEmit": true,
+        "jsx": "react-jsx",
+        "baseUrl": "./",
+        "paths": {
+            "@/*": ["src/*"],
+            "@components/*": ["src/components/*"],
+            "@content/*": ["src/content/*"],
+            "@hooks/*": ["src/hooks/*"],
+            "@layout/*": ["src/layout/*"],
+            "@lib/*": ["src/lib/*"],
+            "@stores/*": ["src/stores/*"],
+            "@test-fixtures": ["src/test-fixtures.ts"],
+            "@test-utils": ["src/test-utils.tsx"],
+            "@types/*": ["src/types/*"],
+            "@utils/*": ["src/utils/*"],
+            "app/*": ["src/*"]
+        }
+    },
+    "include": [
+        "src",
+        "runtime",
+        "e2e",
+        "bun-entry.ts",
+        "tooling",
+        "vite.config.ts",
+        "vitest.config.ts",
+        "vitest.setup.ts"
+    ]
+}

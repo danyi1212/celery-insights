@@ -1,0 +1,54 @@
+import { SidebarMenuButton, SidebarMenuItem as SidebarMenuItemWrapper } from "@components/ui/sidebar"
+import { cn } from "@lib/utils"
+import { Link, useLocation } from "@tanstack/react-router"
+import React from "react"
+
+export interface MenuLink {
+  label: string
+  icon: React.ReactElement
+  to: string
+  external: boolean
+}
+
+interface MenuItemProps {
+  link: MenuLink
+  className?: string
+  disabled?: boolean
+}
+
+const MenuItem: React.FC<MenuItemProps> = ({ link, className, disabled }) => {
+  const location = useLocation()
+  const isActive = link.to === "/" ? location.pathname === "/" : location.pathname.startsWith(link.to)
+
+  if (link.external) {
+    return (
+      <SidebarMenuItemWrapper>
+        <SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
+          <a
+            href={link.to}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-disabled={disabled}
+            className={cn(disabled ? "pointer-events-none opacity-50" : undefined, className)}
+          >
+            {link.icon}
+            <span>{link.label}</span>
+          </a>
+        </SidebarMenuButton>
+      </SidebarMenuItemWrapper>
+    )
+  }
+
+  return (
+    <SidebarMenuItemWrapper>
+      <SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
+        <Link to={link.to} className={className}>
+          {link.icon}
+          <span>{link.label}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItemWrapper>
+  )
+}
+
+export default MenuItem

@@ -1,0 +1,7 @@
+{
+    "$schema": "./node_modules/oxfmt/configuration_schema.json",
+    "ignorePatterns": ["dist/**", "frontend/dist/**", "node_modules/**", "frontend/node_modules/**", "src/routeTree.gen.ts"],
+    "tabWidth": 2,
+    "semi": false,
+    "printWidth": 120
+}

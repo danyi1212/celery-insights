@@ -133,6 +133,7 @@ eggs/
 .eggs/
 lib/
 !frontend/app/lib/
+!src/lib/
 lib64/
 parts/
 sdist/
@@ -218,6 +219,12 @@ ipython_config.py
 
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
+
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+*.tsbuildinfo
 #pdm.lock
 #   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
 #   in version control.
@@ -293,6 +300,5 @@ pyrightconfig.json
 .ralphex/progress/
 
 # Playwright
-frontend/e2e/test-results/
-frontend/e2e/playwright-report/
-frontend/test-results/
+playwright-report/
+test-results/
