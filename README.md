@@ -89,7 +89,7 @@ For development setup, see [the MCP contributor notes](CONTRIBUTING.md#mcp-devel
 
 If you hit a bug, please open an issue with a minimal reproduction. For questions, ideas, and feature requests, start with GitHub Discussions when possible.
 
-If you have discovered a security vulnerability, do not file a public issue. Report it privately to `danyi1212@users.noreply.github.com`.
+If you have discovered a security vulnerability, do not file a public issue. Report it privately to `security@danyi.io`.
 
 ## Contributing
 
