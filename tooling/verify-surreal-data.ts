@@ -1,4 +1,5 @@
 import { Surreal } from "surrealdb"
+import { exportSurrealData, importSurrealData } from "../runtime/debug-bundle"
 import { config } from "../runtime/config"
 import { runSchemaMigration } from "../runtime/surreal-schema"
 const url = process.env.SURREAL_UPGRADE_URL ?? "ws://127.0.0.1:18558/rpc"
@@ -17,6 +18,12 @@ if (process.argv[2] === "seed") {
       `CREATE workflow:upgrade_parent SET root_task_id='upgrade_parent', aggregate_state='FAILURE', task_count=2; RELATE workflow:upgrade_parent->workflow_task:⟨upgrade_parent:upgrade_parent⟩->task:upgrade_parent; RELATE workflow:upgrade_parent->workflow_task:⟨upgrade_parent:upgrade_child⟩->task:upgrade_child;`,
     )
     .collect()
+}
+if (process.argv[2] === "check") {
+  // JSON round-trip matches the legacy debug-snapshot replay path.
+  const snapshot = JSON.parse(JSON.stringify(await exportSurrealData(db)))
+  await importSurrealData(db, snapshot)
+  await runSchemaMigration({ ...config, surrealdbUrl: url })
 }
 const result = await db
   .query<
