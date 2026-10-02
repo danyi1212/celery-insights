@@ -17,14 +17,12 @@ on:
     tags:
       - 'v*'
   pull_request:
-    branches:
-      - 'main'
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+# Isolate stacked PR builds and replace stale runs only for that PR.
+# Production/manual builds on the same ref finish before the next run starts.
 concurrency:
-  group: "deployment"
-  cancel-in-progress: true
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build-and-push-image:
