@@ -9,7 +9,7 @@ const DocumentationDeploymentPatternsPage = () => (
     description="Memory, local disk, shared external SurrealDB, and advanced ingestion-control patterns."
     group="Reference"
     source={{ path: "src/content/docs/deployment-patterns.mdx", markdown: deploymentPatternsMarkdown }}
-    previousPage={{ title: "Configuration", href: "/documentation/configuration" }}
+    previousPage={{ title: "MCP Interface", href: "/documentation/mcp" }}
     nextPage={{ title: "Kubernetes and HPA", href: "/documentation/kubernetes" }}
   >
     <DeploymentPatternsContent />

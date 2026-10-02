@@ -31,8 +31,8 @@ class TestBuildTaskUpsert:
         query, params = build_task_upsert(event, 0)
 
         assert "UPSERT type::record('task', $t0_id)" in query
-        assert "state = IF last_updated IS NONE" in query
-        assert "sent_at = IF sent_at IS NONE" in query
+        assert "state = IF $t0_previous.last_updated IS NONE" in query
+        assert "sent_at = IF $t0_previous.sent_at IS NONE" in query
         assert params["t0_id"] == "abc-123"
         assert params["t0_state"] == "PENDING"
         assert params["t0_type"] == "myapp.tasks.add"
@@ -50,7 +50,7 @@ class TestBuildTaskUpsert:
         query, params = build_task_upsert(event, 5)
 
         assert "$t5_id" in query
-        assert "started_at = IF started_at IS NONE" in query
+        assert "started_at = IF $t5_previous.started_at IS NONE" in query
         assert params["t5_state"] == "STARTED"
         assert params["t5_worker"] == "worker1@host"
         assert params["t5_workflow_id"] == "abc-123"
@@ -86,16 +86,22 @@ class TestBuildTaskUpsert:
 
     def test_out_of_order_protection_in_state(self):
         query, _ = build_task_upsert({"type": "task-received", "uuid": "x", "timestamp": 1700000000.0}, 0)
-        expected = "state = IF last_updated IS NONE OR <datetime>$t0_ts > last_updated THEN $t0_state ELSE state END"
+        expected = (
+            "state = IF $t0_previous.last_updated IS NONE OR <datetime>$t0_ts > $t0_previous.last_updated"
+            " THEN $t0_state ELSE $t0_previous.state END"
+        )
         assert expected in query
 
     def test_out_of_order_protection_in_last_updated(self):
         query, _ = build_task_upsert({"type": "task-received", "uuid": "x", "timestamp": 1700000000.0}, 0)
-        assert "<datetime>$t0_ts > last_updated THEN <datetime>$t0_ts ELSE last_updated END" in query
+        assert (
+            "<datetime>$t0_ts > $t0_previous.last_updated THEN <datetime>$t0_ts ELSE $t0_previous.last_updated END"
+            in query
+        )
 
     def test_timestamp_field_keeps_earliest(self):
         query, _ = build_task_upsert({"type": "task-started", "uuid": "x", "timestamp": 1700000000.0}, 0)
-        assert "started_at = IF started_at IS NONE OR <datetime>$t0_ts < started_at" in query
+        assert "started_at = IF $t0_previous.started_at IS NONE OR <datetime>$t0_ts < $t0_previous.started_at" in query
 
     def test_missing_uuid_returns_empty(self):
         query, params = build_task_upsert({"type": "task-sent", "timestamp": 1700000000.0}, 0)
@@ -330,6 +336,7 @@ class TestSurrealDBIngester:
         assert "COMMIT TRANSACTION" in query_str
         assert "UPSERT type::record('task'" in query_str
         assert "UPSERT type::record('workflow'" in query_str
+        assert "->(type::record('workflow_task'" in query_str
         assert "RELATE OR UPDATE" in query_str
         assert "CREATE event SET" in query_str
 
@@ -506,3 +513,27 @@ class TestSurrealDBIngester:
         await ingester._flush()
 
         mock_db.query_raw.assert_not_called()
+
+
+class TestMcpObservationEvidence:
+    def test_later_events_preserve_known_workflow(self):
+        event = {"type": "task-succeeded", "uuid": "child", "timestamp": 1700000010.0}
+        query, _ = build_task_upsert(event, 0)
+        assert "workflow_id = $t0_previous.workflow_id ?? $t0_workflow_id" in query
+        membership, _ = build_workflow_membership_upsert(event, 0)
+        summary, _ = build_workflow_summary_recompute(event, 0)
+        assert "SELECT VALUE workflow_id FROM type::record('task', $wfrel0_task_id)" in membership
+        assert "SELECT VALUE workflow_id FROM type::record('task', $wfs0_task_id)" in summary
+
+    def test_errors_survive_success_and_observation_time_keeps_earliest(self):
+        failure, _ = build_task_upsert(
+            {"type": "task-retried", "uuid": "child", "timestamp": 1700000000.0, "exception": "TimeoutError()"}, 0
+        )
+        success, _ = build_task_upsert({"type": "task-succeeded", "uuid": "child", "timestamp": 1700000010.0}, 1)
+        assert "had_error = true" in failure
+        assert "had_error = false" not in success
+        assert "<datetime>$t1_ts < $t1_previous.first_observed_at" in success
+
+    def test_intentional_retry_does_not_imply_error(self):
+        query, _ = build_task_upsert({"type": "task-retried", "uuid": "child", "timestamp": 1700000000.0}, 0)
+        assert "had_error = true" not in query

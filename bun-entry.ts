@@ -9,6 +9,7 @@
 import path from "node:path"
 import readline from "node:readline"
 import { spawn, type ChildProcess } from "node:child_process"
+import { randomBytes } from "node:crypto"
 import { Surreal } from "surrealdb"
 import { config, type Config } from "./runtime/config"
 import {
@@ -27,6 +28,7 @@ import {
 import { bunLogger, registerLogSink, surrealLogger } from "./runtime/logger"
 import { LeaderElection, generateInstanceId, type IngestionStatus } from "./runtime/leader-election"
 import { runSchemaMigration } from "./runtime/surreal-schema"
+import { createMcpHandler } from "./runtime/mcp"
 
 const LOGO = `
   ░██████             ░██                                ░██████                      ░██           ░██           ░██
@@ -111,6 +113,7 @@ const indexHtml = await Bun.file(path.join(DIST_DIR, "index.html")).text()
 let surrealProcess: ChildProcess | null = null
 let pythonProcess: ChildProcess | null = null
 let leaderElection: LeaderElection | null = null
+let mcpDb: Surreal | null = null
 let ingestionStatus: IngestionStatus = "disabled"
 let shuttingDown = false
 const instanceId = generateInstanceId()
@@ -443,6 +446,7 @@ async function shutdown(signal: string): Promise<void> {
   if (leaderElection) {
     await leaderElection.stop()
   }
+  await mcpDb?.close()
 
   // 2. Kill child processes and wait for them to exit (with timeout)
   const exitPromises: Promise<void>[] = []
@@ -547,6 +551,31 @@ if (replaySnapshot) {
 }
 
 // 6. Start serving
+// Keep MCP reads on their own VIEWER connection, including replicas without Python.
+mcpDb = new Surreal()
+await mcpDb.connect(runtimeConfig.surrealdbUrl, {
+  namespace: runtimeConfig.surrealdbNamespace,
+  database: runtimeConfig.surrealdbDatabase,
+  authentication: {
+    namespace: runtimeConfig.surrealdbNamespace,
+    database: runtimeConfig.surrealdbDatabase,
+    username: "viewer",
+    password: "viewer",
+  },
+})
+const mcpCursorCredential =
+  runtimeConfig.mcpToken ??
+  runtimeConfig.surrealdbFrontendPass ??
+  (runtimeConfig.surrealdbIngesterPass !== "changeme"
+    ? runtimeConfig.surrealdbIngesterPass
+    : randomBytes(32).toString("hex"))
+const handleMcp = createMcpHandler({
+  db: mcpDb,
+  cursorSecret: `${mcpCursorCredential}:${runtimeConfig.surrealdbNamespace}:${runtimeConfig.surrealdbDatabase}`,
+  token: runtimeConfig.mcpToken ?? runtimeConfig.surrealdbFrontendPass,
+  allowedHosts: runtimeConfig.mcpAllowedHosts?.split(",").map((host) => host.trim()),
+  mode: () => (replaySnapshot ? "snapshot" : runtimeConfig.ingestionEnabled ? "live" : "ingestion_disabled"),
+})
 const server = Bun.serve({
   port: runtimeConfig.port,
   async fetch(req: Request, server: any) {
@@ -562,6 +591,8 @@ const server = Bun.serve({
     }
     // Keep the root health endpoint available for container probes.
     if (url.pathname !== "/health") url.pathname = url.pathname.slice(prefix.length)
+
+    if (url.pathname === "/mcp") return handleMcp(req)
 
     const isUpgrade = req.headers.get("upgrade")?.toLowerCase() === "websocket"
 

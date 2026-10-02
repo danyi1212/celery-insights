@@ -56,11 +56,32 @@ test.describe("Public mount path", () => {
     expect(await download.failure()).toBeNull()
   })
 
+  test("MCP exposes tools through the mount path and retains origin checks", async ({ request }) => {
+    const headers = { Accept: "application/json, text/event-stream" }
+    const data = { jsonrpc: "2.0", id: 1, method: "tools/list" }
+    const response = await request.post(appURL("/mcp"), { headers, data })
+    expect(response.status()).toBe(200)
+    const payload = await response.json()
+    expect(payload.result.tools.map((tool: { name: string }) => tool.name).sort()).toEqual([
+      "inspect_task",
+      "inspect_worker",
+      "inspect_workflow",
+      "list_workers",
+      "search_workflows",
+    ])
+    expect((await request.get(appURL("/mcp"))).status()).toBe(405)
+    const denied = await request.post(appURL("/mcp"), {
+      headers: { ...headers, Origin: "https://other.example" },
+      data,
+    })
+    expect(denied.status()).toBe(403)
+  })
+
   test("shared proxy leaves sibling paths alone and redirects the bare prefix", async ({ request }) => {
     test.skip(!urlPrefix, "Only applies to the shared reverse proxy deployment")
     const root = await request.get(`${appOrigin}/`)
     expect(await root.text()).toBe("Shared application root")
-    for (const path of ["/api/config", "/assets/missing.js", `${appPath("")}-other/`]) {
+    for (const path of ["/api/config", "/mcp", "/assets/missing.js", `${appPath("")}-other/`]) {
       expect((await request.get(`${appOrigin}${path}`)).status()).toBe(404)
     }
     const redirect = await request.get(appURL("") + "?example=1", { maxRedirects: 0 })

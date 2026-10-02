@@ -156,3 +156,9 @@ describe("parseConfig", () => {
     expect(config.debugBundlePath).toBe("/snapshots/debug-bundle.zip")
   })
 })
+
+it("accepts MCP credentials and allowed hosts", () => {
+  const config = parseConfig({ MCP_TOKEN: "agent-token", MCP_ALLOWED_HOSTS: "localhost,insights.example.com" })
+  expect(config.mcpToken).toBe("agent-token")
+  expect(config.mcpAllowedHosts).toBe("localhost,insights.example.com")
+})
