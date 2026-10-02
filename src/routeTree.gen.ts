@@ -9,43 +9,28 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as Raw_eventsRouteImport } from './routes/raw_events'
-import { Route as ExplorerRouteImport } from './routes/explorer'
-import { Route as DocumentationRouteImport } from './routes/documentation'
-import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
+import { Route as DocumentationRouteImport } from './routes/documentation'
+import { Route as ExplorerRouteImport } from './routes/explorer'
+import { Route as Raw_eventsRouteImport } from './routes/raw_events'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as DocumentationIndexRouteImport } from './routes/documentation.index'
-import { Route as WorkersWorkerIdRouteImport } from './routes/workers.$workerId'
-import { Route as TasksCompareRouteImport } from './routes/tasks.compare'
-import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
-import { Route as DocumentationSetupRouteImport } from './routes/documentation.setup'
-import { Route as DocumentationProductionNotesRouteImport } from './routes/documentation.production-notes'
-import { Route as DocumentationMcpRouteImport } from './routes/documentation.mcp'
-import { Route as DocumentationKubernetesRouteImport } from './routes/documentation.kubernetes'
-import { Route as DocumentationDeploymentPatternsRouteImport } from './routes/documentation.deployment-patterns'
-import { Route as DocumentationDebugBundlesRouteImport } from './routes/documentation.debug-bundles'
-import { Route as DocumentationConfigurationRouteImport } from './routes/documentation.configuration'
 import { Route as DocumentationCeleryClustersRouteImport } from './routes/documentation.celery-clusters'
+import { Route as DocumentationConfigurationRouteImport } from './routes/documentation.configuration'
+import { Route as DocumentationDebugBundlesRouteImport } from './routes/documentation.debug-bundles'
+import { Route as DocumentationDeploymentPatternsRouteImport } from './routes/documentation.deployment-patterns'
+import { Route as DocumentationKubernetesRouteImport } from './routes/documentation.kubernetes'
+import { Route as DocumentationMcpRouteImport } from './routes/documentation.mcp'
+import { Route as DocumentationProductionNotesRouteImport } from './routes/documentation.production-notes'
+import { Route as DocumentationSetupRouteImport } from './routes/documentation.setup'
+import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
+import { Route as TasksCompareRouteImport } from './routes/tasks.compare'
+import { Route as WorkersWorkerIdRouteImport } from './routes/workers.$workerId'
 
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const Raw_eventsRoute = Raw_eventsRouteImport.update({
-  id: '/raw_events',
-  path: '/raw_events',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExplorerRoute = ExplorerRouteImport.update({
-  id: '/explorer',
-  path: '/explorer',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocumentationRoute = DocumentationRouteImport.update({
-  id: '/documentation',
-  path: '/documentation',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnalyticsRoute = AnalyticsRouteImport.update({
@@ -53,9 +38,24 @@ const AnalyticsRoute = AnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const DocumentationRoute = DocumentationRouteImport.update({
+  id: '/documentation',
+  path: '/documentation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExplorerRoute = ExplorerRouteImport.update({
+  id: '/explorer',
+  path: '/explorer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Raw_eventsRoute = Raw_eventsRouteImport.update({
+  id: '/raw_events',
+  path: '/raw_events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocumentationIndexRoute = DocumentationIndexRouteImport.update({
@@ -63,52 +63,10 @@ const DocumentationIndexRoute = DocumentationIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DocumentationRoute,
 } as any)
-const WorkersWorkerIdRoute = WorkersWorkerIdRouteImport.update({
-  id: '/workers/$workerId',
-  path: '/workers/$workerId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TasksCompareRoute = TasksCompareRouteImport.update({
-  id: '/tasks/compare',
-  path: '/tasks/compare',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
-  id: '/tasks/$taskId',
-  path: '/tasks/$taskId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocumentationSetupRoute = DocumentationSetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
-  getParentRoute: () => DocumentationRoute,
-} as any)
-const DocumentationProductionNotesRoute =
-  DocumentationProductionNotesRouteImport.update({
-    id: '/production-notes',
-    path: '/production-notes',
-    getParentRoute: () => DocumentationRoute,
-  } as any)
-const DocumentationMcpRoute = DocumentationMcpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => DocumentationRoute,
-} as any)
-const DocumentationKubernetesRoute = DocumentationKubernetesRouteImport.update({
-  id: '/kubernetes',
-  path: '/kubernetes',
-  getParentRoute: () => DocumentationRoute,
-} as any)
-const DocumentationDeploymentPatternsRoute =
-  DocumentationDeploymentPatternsRouteImport.update({
-    id: '/deployment-patterns',
-    path: '/deployment-patterns',
-    getParentRoute: () => DocumentationRoute,
-  } as any)
-const DocumentationDebugBundlesRoute =
-  DocumentationDebugBundlesRouteImport.update({
-    id: '/debug-bundles',
-    path: '/debug-bundles',
+const DocumentationCeleryClustersRoute =
+  DocumentationCeleryClustersRouteImport.update({
+    id: '/celery-clusters',
+    path: '/celery-clusters',
     getParentRoute: () => DocumentationRoute,
   } as any)
 const DocumentationConfigurationRoute =
@@ -117,12 +75,54 @@ const DocumentationConfigurationRoute =
     path: '/configuration',
     getParentRoute: () => DocumentationRoute,
   } as any)
-const DocumentationCeleryClustersRoute =
-  DocumentationCeleryClustersRouteImport.update({
-    id: '/celery-clusters',
-    path: '/celery-clusters',
+const DocumentationDebugBundlesRoute =
+  DocumentationDebugBundlesRouteImport.update({
+    id: '/debug-bundles',
+    path: '/debug-bundles',
     getParentRoute: () => DocumentationRoute,
   } as any)
+const DocumentationDeploymentPatternsRoute =
+  DocumentationDeploymentPatternsRouteImport.update({
+    id: '/deployment-patterns',
+    path: '/deployment-patterns',
+    getParentRoute: () => DocumentationRoute,
+  } as any)
+const DocumentationKubernetesRoute = DocumentationKubernetesRouteImport.update({
+  id: '/kubernetes',
+  path: '/kubernetes',
+  getParentRoute: () => DocumentationRoute,
+} as any)
+const DocumentationMcpRoute = DocumentationMcpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => DocumentationRoute,
+} as any)
+const DocumentationProductionNotesRoute =
+  DocumentationProductionNotesRouteImport.update({
+    id: '/production-notes',
+    path: '/production-notes',
+    getParentRoute: () => DocumentationRoute,
+  } as any)
+const DocumentationSetupRoute = DocumentationSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => DocumentationRoute,
+} as any)
+const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
+  id: '/tasks/$taskId',
+  path: '/tasks/$taskId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksCompareRoute = TasksCompareRouteImport.update({
+  id: '/tasks/compare',
+  path: '/tasks/compare',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkersWorkerIdRoute = WorkersWorkerIdRouteImport.update({
+  id: '/workers/$workerId',
+  path: '/workers/$workerId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -260,32 +260,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/raw_events': {
-      id: '/raw_events'
-      path: '/raw_events'
-      fullPath: '/raw_events'
-      preLoaderRoute: typeof Raw_eventsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/explorer': {
-      id: '/explorer'
-      path: '/explorer'
-      fullPath: '/explorer'
-      preLoaderRoute: typeof ExplorerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/documentation': {
-      id: '/documentation'
-      path: '/documentation'
-      fullPath: '/documentation'
-      preLoaderRoute: typeof DocumentationRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analytics': {
@@ -295,11 +274,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/documentation': {
+      id: '/documentation'
+      path: '/documentation'
+      fullPath: '/documentation'
+      preLoaderRoute: typeof DocumentationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explorer': {
+      id: '/explorer'
+      path: '/explorer'
+      fullPath: '/explorer'
+      preLoaderRoute: typeof ExplorerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/raw_events': {
+      id: '/raw_events'
+      path: '/raw_events'
+      fullPath: '/raw_events'
+      preLoaderRoute: typeof Raw_eventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/documentation/': {
@@ -309,67 +309,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentationIndexRouteImport
       parentRoute: typeof DocumentationRoute
     }
-    '/workers/$workerId': {
-      id: '/workers/$workerId'
-      path: '/workers/$workerId'
-      fullPath: '/workers/$workerId'
-      preLoaderRoute: typeof WorkersWorkerIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tasks/compare': {
-      id: '/tasks/compare'
-      path: '/tasks/compare'
-      fullPath: '/tasks/compare'
-      preLoaderRoute: typeof TasksCompareRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tasks/$taskId': {
-      id: '/tasks/$taskId'
-      path: '/tasks/$taskId'
-      fullPath: '/tasks/$taskId'
-      preLoaderRoute: typeof TasksTaskIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/documentation/setup': {
-      id: '/documentation/setup'
-      path: '/setup'
-      fullPath: '/documentation/setup'
-      preLoaderRoute: typeof DocumentationSetupRouteImport
-      parentRoute: typeof DocumentationRoute
-    }
-    '/documentation/production-notes': {
-      id: '/documentation/production-notes'
-      path: '/production-notes'
-      fullPath: '/documentation/production-notes'
-      preLoaderRoute: typeof DocumentationProductionNotesRouteImport
-      parentRoute: typeof DocumentationRoute
-    }
-    '/documentation/mcp': {
-      id: '/documentation/mcp'
-      path: '/mcp'
-      fullPath: '/documentation/mcp'
-      preLoaderRoute: typeof DocumentationMcpRouteImport
-      parentRoute: typeof DocumentationRoute
-    }
-    '/documentation/kubernetes': {
-      id: '/documentation/kubernetes'
-      path: '/kubernetes'
-      fullPath: '/documentation/kubernetes'
-      preLoaderRoute: typeof DocumentationKubernetesRouteImport
-      parentRoute: typeof DocumentationRoute
-    }
-    '/documentation/deployment-patterns': {
-      id: '/documentation/deployment-patterns'
-      path: '/deployment-patterns'
-      fullPath: '/documentation/deployment-patterns'
-      preLoaderRoute: typeof DocumentationDeploymentPatternsRouteImport
-      parentRoute: typeof DocumentationRoute
-    }
-    '/documentation/debug-bundles': {
-      id: '/documentation/debug-bundles'
-      path: '/debug-bundles'
-      fullPath: '/documentation/debug-bundles'
-      preLoaderRoute: typeof DocumentationDebugBundlesRouteImport
+    '/documentation/celery-clusters': {
+      id: '/documentation/celery-clusters'
+      path: '/celery-clusters'
+      fullPath: '/documentation/celery-clusters'
+      preLoaderRoute: typeof DocumentationCeleryClustersRouteImport
       parentRoute: typeof DocumentationRoute
     }
     '/documentation/configuration': {
@@ -379,12 +323,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentationConfigurationRouteImport
       parentRoute: typeof DocumentationRoute
     }
-    '/documentation/celery-clusters': {
-      id: '/documentation/celery-clusters'
-      path: '/celery-clusters'
-      fullPath: '/documentation/celery-clusters'
-      preLoaderRoute: typeof DocumentationCeleryClustersRouteImport
+    '/documentation/debug-bundles': {
+      id: '/documentation/debug-bundles'
+      path: '/debug-bundles'
+      fullPath: '/documentation/debug-bundles'
+      preLoaderRoute: typeof DocumentationDebugBundlesRouteImport
       parentRoute: typeof DocumentationRoute
+    }
+    '/documentation/deployment-patterns': {
+      id: '/documentation/deployment-patterns'
+      path: '/deployment-patterns'
+      fullPath: '/documentation/deployment-patterns'
+      preLoaderRoute: typeof DocumentationDeploymentPatternsRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
+    '/documentation/kubernetes': {
+      id: '/documentation/kubernetes'
+      path: '/kubernetes'
+      fullPath: '/documentation/kubernetes'
+      preLoaderRoute: typeof DocumentationKubernetesRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
+    '/documentation/mcp': {
+      id: '/documentation/mcp'
+      path: '/mcp'
+      fullPath: '/documentation/mcp'
+      preLoaderRoute: typeof DocumentationMcpRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
+    '/documentation/production-notes': {
+      id: '/documentation/production-notes'
+      path: '/production-notes'
+      fullPath: '/documentation/production-notes'
+      preLoaderRoute: typeof DocumentationProductionNotesRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
+    '/documentation/setup': {
+      id: '/documentation/setup'
+      path: '/setup'
+      fullPath: '/documentation/setup'
+      preLoaderRoute: typeof DocumentationSetupRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
+    '/tasks/$taskId': {
+      id: '/tasks/$taskId'
+      path: '/tasks/$taskId'
+      fullPath: '/tasks/$taskId'
+      preLoaderRoute: typeof TasksTaskIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks/compare': {
+      id: '/tasks/compare'
+      path: '/tasks/compare'
+      fullPath: '/tasks/compare'
+      preLoaderRoute: typeof TasksCompareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workers/$workerId': {
+      id: '/workers/$workerId'
+      path: '/workers/$workerId'
+      fullPath: '/workers/$workerId'
+      preLoaderRoute: typeof WorkersWorkerIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }

@@ -14,7 +14,7 @@ from events.ingester import build_task_upsert, build_workflow_membership_upsert,
 from tasks.result_fetcher import _build_task_meta_upsert
 
 
-@pytest.mark.skipif(shutil.which("surreal") is None, reason="SurrealDB 3.x CLI required")
+@pytest.mark.skipif(shutil.which("surreal") is None, reason="SurrealDB 3.3+ CLI required")
 @pytest.mark.asyncio
 async def test_batched_recovery_preserves_workflow_invocation_and_errors():
     with socket.socket() as listener:

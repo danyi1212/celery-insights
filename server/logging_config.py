@@ -128,6 +128,8 @@ def build_logging_config() -> dict:
             "fastapi": {"level": "WARNING"},
             "uvicorn": {"level": "WARNING"},
             "uvicorn.access": {"level": "WARNING"},
+            "opentelemetry": {"level": "WARNING"},
+            "pydantic_settings": {"level": "WARNING"},
             "fastapi_cache": {"level": "WARNING"},
             "kombu": {"level": "WARNING"},
             "redis": {"level": "WARNING"},

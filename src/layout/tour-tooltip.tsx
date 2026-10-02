@@ -6,7 +6,7 @@ import useSettingsStore from "@stores/use-settings-store"
 import { useLiveTasks } from "@hooks/use-live-tasks"
 import { useTourStore } from "@stores/use-tour-store"
 import React from "react"
-import { TooltipRenderProps } from "react-joyride"
+import type { TooltipRenderProps } from "react-joyride"
 
 const TourTooltip: React.FC<TooltipRenderProps> = ({
   index,
@@ -33,7 +33,7 @@ const TourTooltip: React.FC<TooltipRenderProps> = ({
         </CardContent>
         <CardFooter className="justify-end gap-2 px-6 py-4">
           {index > 0 ? (
-            <Button variant="ghost" disabled={[2, 8, 11].includes(index)} {...backProps}>
+            <Button variant="ghost" disabled={!step.buttons.includes("back")} {...backProps}>
               Back
             </Button>
           ) : (
@@ -64,7 +64,7 @@ const TourTooltip: React.FC<TooltipRenderProps> = ({
           )}
           <Button
             variant={isLastStep ? "secondary" : "default"}
-            disabled={step.hideFooter || !hasTasks}
+            disabled={!step.buttons.includes("primary") || !hasTasks}
             {...primaryProps}
           >
             {index > 0 ? (isLastStep ? "Finish" : "Next") : "Start"}

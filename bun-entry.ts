@@ -768,7 +768,7 @@ const server = Bun.serve({
         ws._backendWs = backendWs
         // Flush any messages that arrived before backend connected
         const pending = ws._pendingMessages as (string | Buffer)[]
-        for (const msg of pending) backendWs.send(msg)
+        for (const msg of pending) backendWs.send(typeof msg === "string" ? msg : new Uint8Array(msg))
         pending.length = 0
       }
 
@@ -782,7 +782,7 @@ const server = Bun.serve({
     message(ws: any, message: string | Buffer) {
       const backendWs = ws._backendWs as WebSocket | undefined
       if (backendWs && backendWs.readyState === WebSocket.OPEN) {
-        backendWs.send(message)
+        backendWs.send(typeof message === "string" ? message : new Uint8Array(message))
       } else {
         // Buffer messages until backend connects
         ;(ws._pendingMessages as (string | Buffer)[] | undefined)?.push(message)

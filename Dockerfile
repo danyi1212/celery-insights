@@ -1,40 +1,39 @@
-# syntax=docker/dockerfile:1.7
-FROM python:3.14-slim AS python-base
+# syntax=docker/dockerfile:1.27.1
+ARG SURREALDB_VERSION=v3.3.0
+
+FROM python:3.14.8-slim-trixie AS python-base
 
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
     PYTHONUNBUFFERED=1
 
-RUN pip install --upgrade pip
-
 FROM python-base AS requirements-stage
 
 WORKDIR /tmp
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.12.20 /uv /usr/local/bin/uv
 COPY ./pyproject.toml ./uv.lock* /tmp/
 
 ARG VARIANT=regular
 RUN if [ "$VARIANT" = "all" ]; then \
-        uv export --no-hashes --frozen --no-emit-project --group all -o requirements.txt; \
+        uv export --no-dev --no-hashes --frozen --no-emit-project --group all -o requirements.txt; \
     else \
-        uv export --no-hashes --frozen --no-emit-project -o requirements.txt; \
+        uv export --no-dev --no-hashes --frozen --no-emit-project -o requirements.txt; \
     fi
 
 FROM python-base AS python-deps
 
 WORKDIR /tmp
 
-# Build-time toolchain for native Python deps (e.g. surrealdb via Rust/maturin)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential cargo rustc \
-    && rm -rf /var/lib/apt/lists/*
-
+COPY --from=requirements-stage /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=requirements-stage /tmp/requirements.txt ./requirements.txt
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade --prefix=/install -r ./requirements.txt --no-warn-script-location
+# Native dependencies have wheels for both supported architectures. The two
+# source-only packages in the all variant build pure Python wheels.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --python /usr/local/bin/python --prefix=/install --link-mode=copy -r ./requirements.txt
 
-FROM oven/bun:1-slim AS front-build
+# The SPA and Bun JavaScript bundle are architecture-independent.
+FROM --platform=$BUILDPLATFORM oven/bun:1.4.2-slim AS front-build
 
 WORKDIR /app
 
@@ -42,13 +41,18 @@ COPY /package.json /bun.lock* /tsconfig.json /vite.config.ts ./
 COPY /tooling ./tooling
 COPY /src ./src
 COPY /runtime ./runtime
-COPY /e2e ./e2e
 COPY /public ./public
-COPY /bun-entry.ts /index.html /vitest.config.ts /vitest.setup.ts ./
+COPY /bun-entry.ts /index.html ./
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 
 RUN bun run build
 RUN bun build bun-entry.ts --target=bun --outfile ./bun-server.js
+
+# Keep the runtime binary on the target architecture, even when front-build
+# runs on a different architecture.
+FROM oven/bun:1.4.2-slim AS bun-runtime
+
+FROM surrealdb/surrealdb:${SURREALDB_VERSION} AS surreal-runtime
 
 FROM python-base
 
@@ -59,14 +63,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl unzip zip libstdc++6 libgcc-s1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Bun runtime from the build image instead of installing it again.
-COPY --from=front-build /usr/local/bin/bun /usr/local/bin/bun
-
-# Install SurrealDB binary (pinned v3.0.x)
-ARG SURREALDB_VERSION=v3.0.2
-RUN curl -fsSL https://install.surrealdb.com | sh -s -- --version ${SURREALDB_VERSION} \
-    && command -v surreal \
-    && rm -rf /var/lib/apt/lists/*
+# Copy the pinned runtime binaries for the target architecture.
+COPY --from=bun-runtime /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=surreal-runtime /surreal /usr/local/bin/surreal
 
 # Create data directory for persistent SurrealDB storage
 RUN mkdir /data

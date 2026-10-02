@@ -35,7 +35,7 @@ const startDatabase = async (): Promise<string> => {
   })
   const end = Date.now() + 10_000
   while (Date.now() < end) {
-    if (failure) throw new Error("MCP tests require the SurrealDB 3.x CLI on PATH", { cause: failure })
+    if (failure) throw new Error("MCP tests require the SurrealDB 3.3+ CLI on PATH", { cause: failure })
     try {
       if ((await fetch(`http://127.0.0.1:${port}/health`)).ok) return `ws://127.0.0.1:${port}/rpc`
     } catch {

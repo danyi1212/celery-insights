@@ -42,7 +42,7 @@ To contribute to the project, follow these steps:
 
 - Python 3.14+
 - [Bun](https://bun.sh/)
-- [SurrealDB](https://surrealdb.com/install) (v3.0+)
+- [SurrealDB](https://surrealdb.com/install) (v3.3+, production and CI use v3.3.0)
 - An IDE (we suggest PyCharm, but you can use your preferred IDE)
 
 ### Create dev environment
@@ -252,8 +252,8 @@ uv run pytest server/tasks/model_test.py   # single file
 Frontend unit tests use [Vitest](https://vitest.dev/) with [Testing Library](https://testing-library.com/) and happy-dom.
 Tests are colocated next to the module they test, suffixed `.test.ts` or `.test.tsx` (e.g., `task-avatar.tsx` -> `task-avatar.test.tsx`).
 
-MCP integration tests start an isolated in-memory SurrealDB process and require the SurrealDB 3.x CLI
-on PATH (production and CI use v3.0.2). They exercise real queries, paging, viewer permissions,
+MCP integration tests start an isolated in-memory SurrealDB process and require the SurrealDB 3.3+ CLI
+on PATH (production and CI use v3.3.0). They exercise real queries, paging, viewer permissions,
 schema migration, and the HTTP protocol. Set `MCP_TEST_URL` only for a disposable test server;
 the tests clear data in its `test/mcp` database.
 The Python ingestion integration test also starts an isolated SurrealDB process; it skips when

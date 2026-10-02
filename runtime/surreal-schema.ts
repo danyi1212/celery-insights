@@ -316,9 +316,7 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
       memberTaskIds.map((taskId) =>
         db
           .query(
-            `RELATE (type::record('workflow', $workflowId))
-                    ->(type::record('workflow_task', $edgeId))
-                    ->(type::record('task', $taskId))`,
+            `RELATE OR UPDATE (type::record('workflow', $workflowId))->(type::record('workflow_task', $edgeId))->(type::record('task', $taskId))`,
             {
               edgeId: `${workflowId}:${taskId}`,
               workflowId,

@@ -180,6 +180,7 @@ class TestBuildWorkflowMembershipUpsert:
         query, params = build_workflow_membership_upsert(event, 0)
 
         assert "UPSERT type::record('workflow', $wfrel0_workflow_id)" in query
+        assert "RELATE OR UPDATE" in query
         assert "->(type::record('workflow_task', $wfrel0_edge_id))" in query
         assert params["wfrel0_workflow_id"] == "root-1"
         assert params["wfrel0_task_id"] == "child-1"
@@ -312,6 +313,7 @@ class TestSurrealDBIngester:
     @pytest.fixture()
     def mock_db(self, mocker: MockerFixture):
         mock = mocker.AsyncMock()
+        mock.query_raw.return_value = {"result": [{"status": "OK", "result": []}]}
         mocker.patch("events.ingester.get_db", return_value=mock)
         return mock
 
@@ -328,13 +330,14 @@ class TestSurrealDBIngester:
 
         await ingester._flush()
 
-        mock_db.query.assert_called_once()
-        query_str = mock_db.query.call_args[0][0]
+        mock_db.query_raw.assert_called_once()
+        query_str = mock_db.query_raw.call_args[0][0]
         assert "BEGIN TRANSACTION" in query_str
         assert "COMMIT TRANSACTION" in query_str
         assert "UPSERT type::record('task'" in query_str
         assert "UPSERT type::record('workflow'" in query_str
         assert "->(type::record('workflow_task'" in query_str
+        assert "RELATE OR UPDATE" in query_str
         assert "CREATE event SET" in query_str
 
     @pytest.mark.asyncio
@@ -413,7 +416,7 @@ class TestSurrealDBIngester:
 
     @pytest.mark.asyncio
     async def test_flush_handles_db_error_gracefully(self, mock_db, queue):
-        mock_db.query.side_effect = Exception("Connection lost")
+        mock_db.query_raw.side_effect = Exception("Connection lost")
         ingester = SurrealDBIngester(queue)
         events = [
             {"type": "task-sent", "uuid": "abc", "timestamp": 1700000000.0},
@@ -426,10 +429,27 @@ class TestSurrealDBIngester:
         assert ingester._buffer == events
 
     @pytest.mark.asyncio
+    async def test_later_statement_failure_requeues_events(self, mock_db, queue, mocker: MockerFixture):
+        mock_db.query_raw.return_value = {
+            "result": [
+                {"status": "OK", "result": []},
+                {"status": "ERR", "result": "relation constraint failed"},
+            ]
+        }
+        callback = mocker.AsyncMock()
+        ingester = SurrealDBIngester(queue, on_terminal=callback)
+        events = [{"type": "task-succeeded", "uuid": "abc", "timestamp": 1700000000.0}]
+        ingester._buffer = list(events)
+        await ingester._flush()
+        assert ingester._buffer == events
+        assert ingester._stats_events_total == 0
+        callback.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_empty_flush_is_noop(self, mock_db, queue):
         ingester = SurrealDBIngester(queue)
         await ingester._flush()
-        mock_db.query.assert_not_called()
+        mock_db.query_raw.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_mixed_task_and_worker_events(self, mock_db, queue):
@@ -441,7 +461,7 @@ class TestSurrealDBIngester:
 
         await ingester._flush()
 
-        query_str = mock_db.query.call_args[0][0]
+        query_str = mock_db.query_raw.call_args[0][0]
         assert "type::record('task'" in query_str
         assert "type::record('worker'" in query_str
 
@@ -459,7 +479,7 @@ class TestSurrealDBIngester:
 
         await ingester._flush()
 
-        query_str = mock_db.query.call_args[0][0]
+        query_str = mock_db.query_raw.call_args[0][0]
         assert "array::union" in query_str
 
     @pytest.mark.asyncio
@@ -492,7 +512,7 @@ class TestSurrealDBIngester:
 
         await ingester._flush()
 
-        mock_db.query.assert_not_called()
+        mock_db.query_raw.assert_not_called()
 
 
 class TestMcpObservationEvidence:

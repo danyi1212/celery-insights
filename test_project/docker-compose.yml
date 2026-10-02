@@ -1,6 +1,8 @@
 services:
   rabbitmq:
-    image: rabbitmq:4-management-alpine
+    image: rabbitmq:4.3.6-management-alpine
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/conf.d/20-celery.conf:ro
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -11,7 +13,7 @@ services:
       retries: 15
 
   redis:
-    image: redis:8-alpine
+    image: redis:8.10.2-alpine
     ports:
       - "6379:6379"
     healthcheck:

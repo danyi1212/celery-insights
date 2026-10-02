@@ -5,11 +5,11 @@ describe("cn", () => {
     expect(cn("foo", "bar")).toBe("foo bar")
   })
 
-  it("handles conditional classes via clsx", () => {
+  it("handles conditional classes", () => {
     expect(cn("base", { hidden: false, shown: true }, "visible")).toBe("base shown visible")
   })
 
-  it("resolves Tailwind conflicts via twMerge", () => {
+  it("resolves Tailwind class conflicts", () => {
     expect(cn("px-2", "px-4")).toBe("px-4")
     expect(cn("text-red-500", "text-blue-500")).toBe("text-blue-500")
   })
@@ -23,7 +23,7 @@ describe("cn", () => {
     expect(cn("")).toBe("")
   })
 
-  it("handles object syntax from clsx", () => {
+  it("handles object syntax", () => {
     expect(cn({ "font-bold": true, hidden: false })).toBe("font-bold")
   })
 })

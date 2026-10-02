@@ -139,6 +139,20 @@ describe("SearchBox", () => {
     expect(screen.getByText("celery@worker-1")).toBeInTheDocument()
   })
 
+  it("keeps task and worker search enabled in demo mode", async () => {
+    const user = userEvent.setup()
+    useSettingsStore.setState({ demo: true })
+
+    render(<SearchBox />)
+
+    await user.click(screen.getByRole("button", { name: "Open quick search" }))
+    await user.type(screen.getByPlaceholderText("Search tasks, workers, pages, and features..."), "noop")
+
+    expect(mockUseSearch).toHaveBeenLastCalledWith("noop", 6)
+    expect(screen.getByRole("option", { name: /tasks\.basic\.noop/i })).toBeInTheDocument()
+    expect(screen.getByText("celery@worker-1")).toBeInTheDocument()
+  })
+
   it("navigates to the highlighted destination when Enter is pressed", async () => {
     const user = userEvent.setup()
 
@@ -149,5 +163,19 @@ describe("SearchBox", () => {
     await user.keyboard("{Enter}")
 
     expect(mockNavigate).toHaveBeenCalledWith({ to: "/settings" })
+  })
+
+  it("searches demo tasks and opens a matching task", async () => {
+    useSettingsStore.setState({ demo: true })
+    const user = userEvent.setup()
+    render(<SearchBox />)
+
+    await user.click(screen.getByRole("button", { name: "Open quick search" }))
+    await user.type(screen.getByPlaceholderText("Search tasks, workers, pages, and features..."), "noop")
+
+    expect(mockUseSearch).toHaveBeenCalledWith("noop", 6)
+    expect(screen.getByText("celery@worker-1")).toBeInTheDocument()
+    await user.click(screen.getByRole("option", { name: /tasks\.basic\.noop/i }))
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/tasks/$taskId", params: { taskId: "abc123" } })
   })
 })
