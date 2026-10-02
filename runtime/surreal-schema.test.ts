@@ -29,6 +29,7 @@ const { runSchemaMigration } = await import("./surreal-schema")
 function createConfig(overrides: Partial<Config> = {}): Config {
   return {
     port: 8555,
+    urlPrefix: "",
     surrealdbUrl: "ws://localhost:8557/rpc",
     surrealdbIngesterPass: "test-pass",
     surrealdbNamespace: "celery_insights",

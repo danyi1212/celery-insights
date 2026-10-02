@@ -15,6 +15,7 @@ function createMockDb() {
 function createConfig(overrides: Partial<Config> = {}): Config {
   return {
     port: 8555,
+    urlPrefix: "",
     surrealdbUrl: "ws://localhost:8557/rpc",
     surrealdbIngesterPass: "changeme",
     surrealdbNamespace: "celery_insights",

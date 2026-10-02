@@ -8,6 +8,9 @@ Start Celery Insights and check that you can open `http://localhost:8555` in you
 MCP is included: there is no extra server or package to install. **No authentication is required
 by default**, just like the dashboard. Choose your agent below and use `http://localhost:8555/mcp`.
 
+When using [`URL_PREFIX`](/documentation/configuration#url_prefix) behind a shared reverse proxy,
+include it in the MCP URL, for example `https://example.com/tools/celery/mcp`.
+
 ### Claude Code
 
 Run this from the project where you use Claude Code:

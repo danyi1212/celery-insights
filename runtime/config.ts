@@ -12,6 +12,19 @@ const configSchema = z
   .object({
     // Server
     port: z.coerce.number().int().positive().default(8555),
+    urlPrefix: z
+      .string()
+      .default("")
+      .transform((value) => value.replace(/^\/+|\/+$/g, ""))
+      .refine(
+        (value) =>
+          value === "" ||
+          value
+            .split("/")
+            .every((segment) => /^[A-Za-z0-9_-][A-Za-z0-9._~-]*$/.test(segment) && segment !== "." && segment !== ".."),
+        { message: "URL_PREFIX must be a URL path with no query, fragment, or dot segments" },
+      )
+      .transform((value) => (value ? `/${value}` : "")),
     mcpToken: z.string().min(1).optional(),
     mcpAllowedHosts: z.string().min(1).optional(),
 
@@ -67,6 +80,7 @@ export type Config = z.infer<typeof configSchema>
 
 const ENV_KEY_MAP: Record<string, string> = {
   PORT: "port",
+  URL_PREFIX: "urlPrefix",
   MCP_TOKEN: "mcpToken",
   MCP_ALLOWED_HOSTS: "mcpAllowedHosts",
   SURREALDB_URL: "surrealdbUrl",

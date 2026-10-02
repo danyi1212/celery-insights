@@ -2,6 +2,23 @@ import { describe, expect, it } from "vitest"
 import { parseConfig } from "./config"
 
 describe("parseConfig", () => {
+  it.each([
+    [undefined, ""],
+    ["", ""],
+    ["/", ""],
+    ["tools/celery", "/tools/celery"],
+    ["/tools/celery/", "/tools/celery"],
+  ])("normalizes URL_PREFIX %s", (input, expected) => {
+    expect(parseConfig({ URL_PREFIX: input }).urlPrefix).toBe(expected)
+  })
+
+  it.each(["https://example.com/path", "/a//b", "/a/../b", "/a/./b", "/a?b", "/a#b", '/a"b', "/a%2fb", "/a\\b"])(
+    "rejects invalid URL_PREFIX %s",
+    (urlPrefix) => {
+      expect(() => parseConfig({ URL_PREFIX: urlPrefix })).toThrow("URL_PREFIX must be a URL path")
+    },
+  )
+
   it("returns defaults when no env vars set", () => {
     const config = parseConfig({})
     expect(config.port).toBe(8555)

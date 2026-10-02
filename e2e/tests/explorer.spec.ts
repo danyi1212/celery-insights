@@ -1,8 +1,8 @@
+import { appURL } from "../helpers/app-url"
 import type { Page } from "@playwright/test"
 import { test, expect } from "../fixtures/base"
 
-const E2E_HOST = process.env.E2E_HOST ?? "127.0.0.1"
-const SURREAL_API = `http://${E2E_HOST}:8555/surreal`
+const SURREAL_API = appURL("/surreal")
 
 async function queryRecentTaskCount(): Promise<number> {
   const response = await fetch(`${SURREAL_API}/sql`, {
@@ -103,10 +103,12 @@ test.describe("Explorer", () => {
 
     await page.getByRole("button", { name: "Pause live range" }).click()
 
-    await expect(page).toHaveURL(/range=v1:static:/)
+    await expect.poll(() => new URL(page.url()).searchParams.get("range")).toMatch(/^v1:static:/)
+    const pausedRange = new URL(page.url()).searchParams.get("range")
     await page.reload()
     await waitForExplorerRows(page)
-    await expect(page).toHaveURL(/range=v1:static:/)
+    expect(new URL(page.url()).pathname).toBe(new URL(appURL("/explorer")).pathname)
+    expect(new URL(page.url()).searchParams.get("range")).toBe(pausedRange)
     await expect(page.getByRole("button", { name: "Pause live range" })).toHaveCount(0)
   })
 
@@ -116,7 +118,7 @@ test.describe("Explorer", () => {
 
     await page.locator("[data-testid='activity-chart-overlay']").click({ position: { x: 8, y: 20 } })
 
-    await expect(page).toHaveURL(/range=v1:static:/)
+    await expect.poll(() => new URL(page.url()).searchParams.get("range")).toMatch(/^v1:static:/)
     await expect(page.getByRole("button", { name: "Pause live range" })).toHaveCount(0)
   })
 

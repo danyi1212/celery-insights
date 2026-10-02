@@ -1,3 +1,4 @@
+import { appURL } from "./helpers/app-url"
 import { randomBytes } from "node:crypto"
 import http from "node:http"
 import { composeLogs, composePs, composeUp } from "./helpers/docker-compose"
@@ -6,8 +7,8 @@ const E2E_HOST = process.env.E2E_HOST ?? "127.0.0.1"
 const HEALTH_TIMEOUT = 60_000
 const HEALTH_INTERVAL = 2_000
 const EVENT_WARMUP_TIMEOUT = 60_000
-const INSIGHTS_API = `http://${E2E_HOST}:8555/api`
-const SURREAL_API = `http://${E2E_HOST}:8555/surreal`
+const INSIGHTS_API = appURL("/api")
+const SURREAL_API = appURL("/surreal")
 const INTERACTIVE_API = `http://${E2E_HOST}:8000`
 
 type SurrealTaskResult = { result?: Array<Record<string, unknown>> }
@@ -113,10 +114,7 @@ async function waitForSurrealRpcReady() {
 
 async function probeWebSocketUpgrade(): Promise<UpgradeProbeResult> {
   return new Promise((resolve) => {
-    const req = http.request({
-      host: E2E_HOST,
-      port: 8555,
-      path: "/surreal/rpc",
+    const req = http.request(new URL(appURL("/surreal/rpc")), {
       headers: {
         Connection: "Upgrade",
         Upgrade: "websocket",
@@ -169,7 +167,7 @@ async function logDiagnostics(stage: string) {
   const healthChecks = [
     [`${INSIGHTS_API}/settings/info`, "celery-insights settings"],
     [`${INTERACTIVE_API}/scenarios`, "interactive scenarios"],
-    [`http://${E2E_HOST}:8555/health`, "bun health"],
+    [appURL("/health"), "bun health"],
     [`${SURREAL_API}/health`, "surreal health"],
   ] as const
 

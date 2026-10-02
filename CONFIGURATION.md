@@ -93,6 +93,41 @@ or ports, for example `insights.example.com,localhost`. Configure the public hos
 MCP through a reverse proxy. Requests carrying an Origin must match the requested URL's origin.
 The host allowlist also limits DNS rebinding exposure for local deployments.
 
+## Hosting under a shared reverse proxy
+
+#### URL_PREFIX
+
+Default: empty (serve at `/`).
+
+Set `URL_PREFIX=/tools/celery` to host the entire app at `/tools/celery/` on a shared domain. Leading and trailing slashes are normalized; nested paths are supported. Use plain URL path segments without query strings, fragments, encoded separators, or `.`/`..` segments.
+
+The setting is read at container startup and requires no image rebuild. It covers navigation, deep links, static assets, API calls, metrics, downloads, MCP, and the SurrealDB WebSocket. `/health` also remains available at the container root for health probes.
+
+Forward the prefix unchanged to Bun and enable WebSocket upgrades. For nginx:
+
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+server {
+    listen 80;
+    location = /tools/celery {
+        proxy_pass http://celery-insights:8555;
+    }
+    location /tools/celery/ {
+        proxy_pass http://celery-insights:8555;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+    }
+    # Other locations can serve your other applications.
+}
+```
+
+Set `URL_PREFIX=/tools/celery` on the Celery Insights container. The `proxy_pass` URL deliberately has no trailing slash, so nginx preserves the prefix. Requests to the bare prefix redirect to the trailing-slash URL and retain their query string. TLS can terminate at the proxy; the browser uses `wss:` when the public page uses HTTPS.
+
 ## Celery Connection
 
 #### BROKER_URL

@@ -16,6 +16,7 @@ These are the operational behaviors most likely to matter once the app is behind
 ## Reverse proxy and TLS
 
 - Bun is the single entrypoint: it serves the SPA and proxies `/api`, `/metrics`, and `/surreal/*` internally.
+- Set [`URL_PREFIX`](/documentation/configuration#url_prefix) for a shared path such as `/tools/celery/`; preserve that prefix in proxy forwarding and enable WebSocket upgrades.
 - The built-in proxy is HTTP-only. Terminate TLS in your ingress, load balancer, or edge proxy.
 - If you expose the app publicly, prefer the frontend password and keep internal SurrealDB endpoints private.
 

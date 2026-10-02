@@ -1,3 +1,4 @@
+import { appUrl } from "@lib/app-url"
 import { Button } from "@components/ui/button"
 import useSettingsStore from "@stores/use-settings-store"
 import { startTour } from "@stores/use-tour-store"
@@ -37,7 +38,7 @@ const DashboardWelcomeBanner: React.FC<DashboardWelcomeBannerProps> = ({ isDemo 
       <div className="flex items-center gap-2 self-start">
         <Button onClick={() => startTour()}>Start Tour</Button>
         <Button variant="ghost" asChild>
-          <a href="/documentation/setup" className="gap-2">
+          <a href={appUrl("/documentation/setup")} className="gap-2">
             <BookOpenText className="size-4" />
             Setup
           </a>

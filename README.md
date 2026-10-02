@@ -40,6 +40,7 @@ Keep the rest of the event-related settings at their Celery defaults unless your
 The default image assumes RabbitMQ as the broker and Redis as the result backend, both reachable from inside Docker via `host.docker.internal`.
 
 - Use [`BROKER_URL`](CONFIGURATION.md#broker_url) and [`RESULT_BACKEND`](CONFIGURATION.md#result_backend) when your Celery cluster uses different endpoints.
+- Set [`URL_PREFIX`](CONFIGURATION.md#url_prefix) when hosting under a shared reverse proxy path such as `/tools/celery/`.
 - Use [`CONFIG_FILE`](CONFIGURATION.md#config_file) when the cluster needs Redis Sentinel, transport options, TLS settings, or custom serializers.
 - Use `ghcr.io/danyi1212/celery-insights-all:latest` when your Celery setup needs optional extras such as `msgpack`, S3, Memcache, or other non-default drivers.
 - Pick the right SurrealDB topology with [`SURREALDB_STORAGE`](CONFIGURATION.md#surrealdb_storage) or [`SURREALDB_EXTERNAL_URL`](CONFIGURATION.md#surrealdb_external_url).

@@ -76,7 +76,7 @@ function printBanner(runtimeConfig: Config, replaySnapshot: ParsedDebugSnapshot 
     retention.push(`dead workers: ${runtimeConfig.deadWorkerRetentionHours}h`)
 
   const lines = [
-    `  ${c.dim}Server${c.reset}      http://localhost:${runtimeConfig.port}`,
+    `  ${c.dim}Server${c.reset}      http://localhost:${runtimeConfig.port}${runtimeConfig.urlPrefix}/`,
     `  ${c.dim}Broker${c.reset}      ${runtimeConfig.brokerUrl}`,
     `  ${c.dim}Backend${c.reset}     ${runtimeConfig.resultBackend}`,
     `  ${c.dim}SurrealDB${c.reset}   ${surrealInfo}`,
@@ -108,7 +108,7 @@ const PYTHON_WS_BACKEND = `ws://localhost:${PYTHON_PORT}`
 const DIST_DIR = path.resolve(import.meta.dir, "dist")
 
 // Read index.html once at startup for SPA fallback
-const indexHtml = Bun.file(path.join(DIST_DIR, "index.html"))
+const indexHtml = await Bun.file(path.join(DIST_DIR, "index.html")).text()
 
 let surrealProcess: ChildProcess | null = null
 let pythonProcess: ChildProcess | null = null
@@ -580,8 +580,19 @@ const server = Bun.serve({
   port: runtimeConfig.port,
   async fetch(req: Request, server: any) {
     const url = new URL(req.url)
-    if (url.pathname === "/mcp") return handleMcp(req)
     const { httpBase: surrealHttpBase } = getSurrealBases(runtimeConfig)
+
+    const prefix = runtimeConfig.urlPrefix
+    if (prefix && url.pathname === prefix) {
+      return new Response(null, { status: 308, headers: { Location: `${prefix}/${url.search}` } })
+    }
+    if (prefix && url.pathname !== "/health" && !url.pathname.startsWith(`${prefix}/`)) {
+      return new Response("Not Found", { status: 404 })
+    }
+    // Keep the root health endpoint available for container probes.
+    if (url.pathname !== "/health") url.pathname = url.pathname.slice(prefix.length)
+
+    if (url.pathname === "/mcp") return handleMcp(req)
 
     const isUpgrade = req.headers.get("upgrade")?.toLowerCase() === "websocket"
 
@@ -614,7 +625,7 @@ const server = Bun.serve({
         runtimeConfig.surrealdbFrontendPass !== null && runtimeConfig.surrealdbFrontendPass !== undefined
       return Response.json({
         authRequired,
-        surrealPath: "/surreal/rpc",
+        surrealPath: `${runtimeConfig.urlPrefix}/surreal/rpc`,
         ingestionStatus: leaderElection?.status ?? ingestionStatus,
         debugSnapshot: getSnapshotSummary(replaySnapshot),
         // When auth is not required, pass viewer credentials so the frontend
@@ -736,7 +747,7 @@ const server = Bun.serve({
     // Serve static assets (JS/CSS bundles, SVGs, fonts, images)
     if (url.pathname.startsWith("/assets/") || url.pathname.match(/\.(svg|png|ico|jpg|css|js|woff2?|ttf|map)$/)) {
       const filePath = path.resolve(DIST_DIR, "." + url.pathname)
-      if (!filePath.startsWith(DIST_DIR)) return new Response("Forbidden", { status: 403 })
+      if (!filePath.startsWith(DIST_DIR + path.sep)) return new Response("Forbidden", { status: 403 })
       const file = Bun.file(filePath)
       if (await file.exists()) {
         return new Response(file, {
@@ -747,12 +758,19 @@ const server = Bun.serve({
           },
         })
       }
+      return new Response("Not Found", { status: 404 })
     }
 
     // SPA fallback — serve index.html for all other routes
-    return new Response(indexHtml, {
-      headers: { "Content-Type": "text/html" },
-    })
+    return new Response(
+      indexHtml.replace(
+        '<base href="/" />',
+        `<base href="${runtimeConfig.urlPrefix}/"><meta name="url-prefix" content="${runtimeConfig.urlPrefix}">`,
+      ),
+      {
+        headers: { "Content-Type": "text/html" },
+      },
+    )
   },
   websocket: {
     open(ws: any) {
@@ -797,4 +815,4 @@ const server = Bun.serve({
   },
 })
 
-bunLogger.info(`Celery Insights running at http://localhost:${server.port}`)
+bunLogger.info(`Celery Insights running at http://localhost:${server.port}${runtimeConfig.urlPrefix}/`)
