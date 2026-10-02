@@ -75,3 +75,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
+          # Keep variants separate and include intermediate dependency/build stages.
+          cache-from: type=gha,version=2,scope=deploy-${{ matrix.variant || 'regular' }}
+          cache-to: type=gha,version=2,mode=max,scope=deploy-${{ matrix.variant || 'regular' }}
