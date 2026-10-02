@@ -2,6 +2,7 @@ import TourTooltip from "@layout/tour-tooltip"
 import useSettingsStore from "@stores/use-settings-store"
 import { backStep, nextStep, stopTour, useTourStore } from "@stores/use-tour-store"
 import React, { useMemo } from "react"
+import { useNavigate } from "@tanstack/react-router"
 import { useShallow } from "zustand/shallow"
 import { Joyride, ACTIONS, type EventData, EVENTS, STATUS, type Step } from "react-joyride"
 
@@ -223,13 +224,19 @@ export const handleTourEvent = (
 }
 
 const JoyrideTour: React.FC = () => {
+  const navigate = useNavigate()
   const state = useTourStore(useShallow((s) => s))
   const steps = useMemo(() => createSteps(), [])
 
   return (
     <Joyride
       steps={steps}
-      onEvent={handleTourEvent}
+      onEvent={async (data) => {
+        if (data.type === EVENTS.STEP_AFTER && data.index === 0 && data.action === ACTIONS.NEXT) {
+          await navigate({ to: "/" })
+        }
+        handleTourEvent(data)
+      }}
       run={state.run}
       stepIndex={state.stepIndex}
       continuous
