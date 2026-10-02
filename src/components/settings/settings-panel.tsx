@@ -3,7 +3,11 @@ import { LimitSelect } from "@components/raw_events/limit-select"
 import ThemeSelector from "@components/settings/theme-selector"
 import { Button } from "@components/ui/button"
 import { Switch } from "@components/ui/switch"
-import useSettingsStore, { resetSettings, useIsDefaultSettings } from "@stores/use-settings-store"
+import useSettingsStore, {
+  resetSettings,
+  useIsDefaultSettings,
+  useDeploymentSettings,
+} from "@stores/use-settings-store"
 import { startTour } from "@stores/use-tour-store"
 
 const SettingRow = ({
@@ -31,6 +35,7 @@ const SettingsPanel = ({ hideHeader = false }: { hideHeader?: boolean }) => {
   const hideWelcomeBanner = useSettingsStore((state) => state.hideWelcomeBanner)
   const isDemo = useSettingsStore((state) => state.demo)
   const rawEventsLimit = useSettingsStore((state) => state.rawEventsLimit)
+  const demoAvailable = useDeploymentSettings((state) => state.demoAvailable)
 
   return (
     <Panel title="Workspace" hideHeader={hideHeader}>
@@ -59,7 +64,7 @@ const SettingsPanel = ({ hideHeader = false }: { hideHeader?: boolean }) => {
             <Switch
               aria-label="Demo mode"
               checked={isDemo}
-              disabled={Boolean(import.meta.env.VITE_DEMO_MODE)}
+              disabled={!demoAvailable || Boolean(import.meta.env.VITE_DEMO_MODE)}
               onCheckedChange={(checked) => useSettingsStore.setState({ demo: checked })}
             />
           }

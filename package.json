@@ -7,7 +7,7 @@
     "scripts": {
         "dev": "bunx --bun vite dev --port 3000",
         "build": "bunx --bun vite build",
-        "start": "bun run bun-entry.ts",
+        "start": "bun --no-env-file run bun-entry.ts",
         "typecheck": "tsc --noEmit",
         "check:frontend": "bun run typecheck && bun run lint && bun run format && bun run test",
         "format": "oxfmt --check src runtime bun-entry.ts e2e tooling vite.config.ts vitest.config.ts vitest.setup.ts",
@@ -20,8 +20,9 @@
         "test": "vitest run",
         "test:watch": "vitest",
         "dev:surreal": "surreal start --bind 0.0.0.0:8557 --username root --password root memory",
-        "dev:server": "cd server && python run.py",
-        "dev:all": "concurrently \"bun run dev:surreal\" \"bun run dev:server\" \"bun run dev\""
+        "dev:server": "uv run --no-sync bun --no-env-file run runtime/config-cli.ts python",
+        "dev:all": "concurrently \"bun run dev:surreal\" \"bun run dev:server\" \"bun run dev\"",
+        "config": "bun --no-env-file run runtime/config-cli.ts"
     },
     "dependencies": {
         "@danyi1212/time-range-picker": "^0.1.1",
@@ -39,6 +40,7 @@
         "class-variance-authority": "^0.7.1",
         "cn": "^0.4.0",
         "date-fns": "^4.4.0",
+        "dotenv": "^18.0.5",
         "html-to-image": "^1.11.13",
         "lucide-react": "^1.49.0",
         "minidenticons": "^4.2.1",
@@ -55,6 +57,7 @@
         "remark-gfm": "^4.0.1",
         "semver": "^7.8.5",
         "shiki": "^4.5.0",
+        "smol-toml": "^1.9.0",
         "string-to-color": "^2.2.2",
         "surrealdb": "^2.0.9",
         "tailwindcss": "^4.3.3",

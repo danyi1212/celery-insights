@@ -11,7 +11,7 @@ def test_default_settings(monkeypatch: pytest.MonkeyPatch):
     for key in ("DEBUG", "PORT", "BROKER_URL", "RESULT_BACKEND"):
         monkeypatch.delenv(key, raising=False)
 
-    settings = Settings(_env_file=None)  # type: ignore[call-arg]
+    settings = Settings()
     assert settings.debug is False
     assert settings.timezone == "UTC"
     assert settings.host == "0.0.0.0"

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from celery import Celery
 
-from settings import Settings
+from settings import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 _celery_app_cache: Celery | None = None
@@ -16,16 +16,17 @@ async def get_celery_app(settings: Settings | None = None):
     if _celery_app_cache is not None:
         return _celery_app_cache
 
-    settings = settings or Settings()
+    settings = settings or get_settings()
 
     config_path = Path(settings.config_file)
-    if not await asyncio.to_thread(config_path.exists):
-        logger.info("Loading celery app config from environment variables")
+    if not settings.config_file or not await asyncio.to_thread(config_path.exists):
+        logger.info("Loading Celery from resolved Bun configuration")
         app = Celery(
             broker=settings.broker_url,
             backend=settings.result_backend,
             timezone=settings.timezone,
         )
+        app.conf.update(settings.celery_options)
         _configure_monitor_queues(app)
         _celery_app_cache = app
         return app

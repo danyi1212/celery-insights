@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, Field
 from starlette.requests import Request
 
-from settings import Settings
+from settings import Settings, get_settings
 from surrealdb_client import get_db
 
 
@@ -165,7 +165,7 @@ class ServerInfo(BaseModel):
 
         settings = getattr(request.app.state, "settings", None)
         if not isinstance(settings, Settings):
-            settings = Settings()
+            settings = get_settings()
 
         ingester = getattr(request.app.state, "ingester", None)
 

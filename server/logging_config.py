@@ -1,4 +1,3 @@
-import os
 import sys
 from datetime import UTC, datetime
 from typing import ClassVar
@@ -71,10 +70,8 @@ LOG_LEVEL_MAP: dict[str, str] = {
 }
 
 
-def build_logging_config() -> dict:
-    log_format = os.getenv("LOG_FORMAT", "pretty")
-    log_level_env = os.getenv("LOG_LEVEL", "info").lower()
-    log_level = LOG_LEVEL_MAP.get(log_level_env, "INFO")
+def build_logging_config(log_format: str = "pretty", level: str = "info") -> dict:
+    log_level = LOG_LEVEL_MAP[level]
 
     if log_format == "json":
         formatter_config: dict = {

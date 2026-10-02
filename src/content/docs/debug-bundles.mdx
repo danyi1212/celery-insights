@@ -7,7 +7,7 @@ Debug bundles are the fastest way to move a real Celery Insights incident from a
 It includes:
 
 - effective runtime config, with secrets redacted by default
-- optional mounted `config.py`
+- redacted effective configuration; raw TOML, secret files, and mounted `config.py` are excluded from newly generated bundles
 - runtime diagnostics, retention settings, health metadata, and version details
 - a full SurrealDB export of `task`, `event`, and `worker`
 - browser and UI settings for reference

@@ -6,6 +6,7 @@ import { z } from "zod"
  */
 const booleanFromEnv = z
   .union([z.boolean(), z.string()])
+  .refine((v) => typeof v === "boolean" || ["true", "false", "1", "0"].includes(v), "Expected a boolean")
   .transform((v) => (typeof v === "string" ? v === "true" || v === "1" : v))
 
 const configSchema = z
@@ -33,7 +34,7 @@ const configSchema = z
     cleanupIntervalSeconds: z.coerce.number().int().positive().default(60),
     taskMaxCount: z.coerce.number().int().positive().optional(),
     taskRetentionHours: z.coerce.number().positive().optional(),
-    deadWorkerRetentionHours: z.coerce.number().positive().optional().default(24),
+    deadWorkerRetentionHours: z.coerce.number().positive().nullable().optional().default(24),
 
     // Ingestion performance
     ingestionBatchIntervalMs: z.coerce.number().int().positive().default(100),
@@ -49,6 +50,14 @@ const configSchema = z
     // Logging
     logFormat: z.enum(["pretty", "json"]).default("pretty"),
     logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
+    apiHost: z.string().min(1).optional(),
+    apiPort: z.coerce.number().int().min(1).max(65535).optional(),
+    celeryOptions: z.record(z.string(), z.unknown()).optional(),
+    demoAvailable: z.boolean().optional(),
+    uiTheme: z.enum(["light", "dark", "system"]).optional(),
+    uiHideWelcomeBanner: z.boolean().optional(),
+    uiRawEventsLimit: z.number().int().positive().optional(),
+    publicUrl: z.string().url().optional(),
   })
   .transform((c) => ({
     ...c,
@@ -63,7 +72,7 @@ const configSchema = z
 
 export type Config = z.infer<typeof configSchema>
 
-const ENV_KEY_MAP: Record<string, string> = {
+export const ENV_KEY_MAP: Record<string, string> = {
   PORT: "port",
   SURREALDB_URL: "surrealdbUrl",
   SURREALDB_EXTERNAL_URL: "surrealdbExternalUrl",
@@ -103,7 +112,26 @@ function envToConfig(env: Record<string, string | undefined>): Record<string, st
 }
 
 export function parseConfig(env: Record<string, string | undefined> = process.env): Config {
-  return configSchema.parse(envToConfig(env))
+  return validateConfig(envToConfig(env))
 }
 
-export const config = parseConfig()
+export function validateConfig(values: Record<string, unknown>): Config {
+  const result = configSchema.safeParse(values)
+  if (!result.success) {
+    throw new Error(
+      result.error.issues
+        .map(
+          (issue) =>
+            `${issue.path.join(".")}: ${issue.code === "custom" ? issue.message : "Invalid configuration value"}`,
+        )
+        .join("; "),
+    )
+  }
+  if (result.data.port > 65535 || result.data.surrealdbPort > 65535) throw new Error("Port must be between 1 and 65535")
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: result.data.timezone })
+  } catch {
+    throw new Error("celery.timezone: Invalid timezone")
+  }
+  return result.data
+}

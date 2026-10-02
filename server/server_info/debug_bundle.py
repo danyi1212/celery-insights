@@ -10,7 +10,7 @@ from pydantic_core import to_json
 from starlette.requests import Request
 
 from server_info.models import ClientDebugInfo, ServerInfo, StateDump
-from settings import Settings
+from settings import Settings, get_settings
 from surrealdb_client import get_db
 
 logger = logging.getLogger(__name__)
@@ -56,16 +56,18 @@ async def _read_file_safe(path: Path) -> str | None:
 
 
 async def generate_bundle_file(data: DebugBundleData) -> BytesIO:
-    # Read async file contents
-    config_content = await _read_file_safe(Path(data.settings.config_file))
-
     # Write to ZIP sequentially (zipfile is not thread-safe)
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as file:
-        if config_content:
-            file.writestr("config.py", config_content)
         redacted_settings = data.settings.model_dump()
-        for key in ("surrealdb_ingester_pass", "broker_url", "result_backend"):
+        for key in (
+            "surrealdb_ingester_pass",
+            "surrealdb_url",
+            "surrealdb_external_url",
+            "broker_url",
+            "result_backend",
+            "celery_options",
+        ):
             if key in redacted_settings:
                 redacted_settings[key] = "***REDACTED***"
         dump_json(file, "settings.json", redacted_settings)
@@ -99,7 +101,7 @@ async def create_debug_bundle(request: Request, client_info: ClientDebugInfo) ->
     server_info = await ServerInfo.create(request)
     return await generate_bundle_file(
         DebugBundleData(
-            settings=Settings(),
+            settings=get_settings(),
             client_info=client_info,
             state_dump=state_dump,
             server_info=server_info,

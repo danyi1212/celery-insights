@@ -8,7 +8,7 @@ from surrealdb.errors import SurrealError
 from surrealdb.connections.async_http import AsyncHttpSurrealConnection
 from surrealdb.connections.async_ws import AsyncWsSurrealConnection
 
-from settings import Settings
+from settings import Settings, get_settings
 
 type SurrealConnection = AsyncHttpSurrealConnection | AsyncWsSurrealConnection
 
@@ -50,7 +50,7 @@ async def init_surrealdb(settings: Settings | None = None) -> SurrealConnection:
             return _db
 
         if settings is None:
-            settings = Settings()
+            settings = get_settings()
 
         delay = 1.0
         max_delay = 30.0

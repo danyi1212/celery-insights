@@ -107,7 +107,6 @@ async def test_generate_bundle_file(tmp_path: Path):
 
     with zipfile.ZipFile(content, "r") as zip_file:
         assert set(zip_file.namelist()) == {
-            "config.py",
             "settings.json",
             "client_info.json",
             "state.json",

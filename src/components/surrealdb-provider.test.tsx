@@ -373,6 +373,7 @@ describe("SurrealDBProvider — remote mode", () => {
 
 describe("SurrealDBProvider — demo mode", () => {
   beforeEach(() => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Frontend-only demo has no deployment config"))
     vi.clearAllMocks()
     sessionStorage.clear()
     // Enable demo mode
@@ -460,7 +461,7 @@ describe("SurrealDBProvider — demo mode", () => {
     })
   })
 
-  it("does not fetch /api/config in demo mode", async () => {
+  it("checks deployment settings in demo mode without using a remote database", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch")
 
     render(
@@ -473,7 +474,8 @@ describe("SurrealDBProvider — demo mode", () => {
       expect(screen.getByTestId("ingestion")).toHaveTextContent("disabled")
     })
 
-    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(fetchSpy).toHaveBeenCalledWith("/api/config")
+    expect(mockConnect).toHaveBeenCalledWith("mem://")
   })
 
   it("shows error when WASM initialization fails", async () => {
