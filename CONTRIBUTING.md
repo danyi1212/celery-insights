@@ -7,7 +7,7 @@ This guide covers bug reports, feature requests, local development, and the proj
 > :warning: **WARNING**
 >
 > If you have discovered a security vulnerability, please **DO NOT** file a public issue.
-> Instead, please report them directly to <danyi1212@users.noreply.github.com>.
+> Instead, please report them directly to <security@danyi.io>.
 
 If you have found a bug, we would like to know. Before you file a bug report, make sure the issue can be reproduced consistently.
 
