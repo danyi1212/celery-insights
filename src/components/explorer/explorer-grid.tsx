@@ -5,7 +5,15 @@ import { useExplorerColumns } from "@stores/use-explorer-config"
 import { TaskState, extractId } from "@/types/surreal-records"
 import type { SurrealTask } from "@/types/surreal-records"
 import type { SortConfig } from "@hooks/use-explorer-tasks"
-import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
+import {
+  flexRender,
+  tableFeatures,
+  columnSizingFeature,
+  columnVisibilityFeature,
+  rowSortingFeature,
+  useTable,
+  type ColumnDef,
+} from "@tanstack/react-table"
 import React, { useMemo } from "react"
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ChevronsUpDown } from "lucide-react"
 
@@ -28,11 +36,13 @@ const SURREAL_FIELD_MAP: Record<string, string> = {
   worker: "worker",
 }
 
+const features = tableFeatures({ columnSizingFeature, columnVisibilityFeature, rowSortingFeature })
+
 const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, sort, setSort, page, setPage, pageSize, total }) => {
   const columnConfigs = useExplorerColumns()
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
-  const columns: ColumnDef<SurrealTask>[] = useMemo(
+  const columns: ColumnDef<typeof features, SurrealTask>[] = useMemo(
     () => [
       {
         id: "avatar",
@@ -48,7 +58,7 @@ const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, sort, setSort, page,
           )
         },
       },
-      ...columnConfigs.map((columnConfig): ColumnDef<SurrealTask> => ({
+      ...columnConfigs.map((columnConfig): ColumnDef<typeof features, SurrealTask> => ({
         id: columnConfig.property as string,
         accessorFn: (row) => {
           const surrealField = SURREAL_FIELD_MAP[columnConfig.property as string] || columnConfig.property
@@ -56,8 +66,8 @@ const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, sort, setSort, page,
         },
         header: columnConfig.label,
         size: columnConfig.columnWidth,
-        cell: ({ getValue }) => {
-          const value = getValue()
+        cell: ({ cell }) => {
+          const value = cell.getValue()
           if (columnConfig.property === "last_updated" && typeof value === "string") {
             const date = new Date(value)
             return Number.isNaN(date.getTime()) ? "NaT" : date.toLocaleString()
@@ -78,10 +88,10 @@ const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, sort, setSort, page,
     }
   }
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: tasks,
     columns,
-    getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => extractId(row.id),
     manualSorting: true,
   })
