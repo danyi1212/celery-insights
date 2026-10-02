@@ -28,9 +28,10 @@ If you only need the minimum set of values, start with one of these combinations
 
 ## MCP access for agents
 
-The read-only Streamable HTTP endpoint runs at `http://localhost:8555/mcp` on the Bun server.
-It reads stored observations, including on ingestion replicas and in snapshot replay mode.
-See [MCP Interface](/documentation/mcp) for client configuration, tools, and pagination examples.
+Connect your agent to `http://localhost:8555/mcp`. Authentication is off by default, just like
+the dashboard: no token or header is needed when `MCP_TOKEN` and `SURREALDB_FRONTEND_PASS` are unset.
+See [MCP Interface](/documentation/mcp) for Claude Code, Codex, and Cursor setup, optional authentication,
+and troubleshooting recipes.
 
 #### MCP_TOKEN
 

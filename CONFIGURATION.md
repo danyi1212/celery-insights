@@ -30,26 +30,47 @@ If you only need the minimum set of values, start with one of these combinations
 
 ## MCP access for agents
 
-Bun exposes a read-only, stateless Streamable HTTP MCP endpoint at `http://localhost:8555/mcp`.
-It reads retained SurrealDB observations without polling or changing the Celery cluster, including
-on ingestion replicas and in snapshot mode. The five tools discover workflows and workers,
-inspect workflow members, and retrieve task payloads, errors, and event history.
-See [the tool contract](MCP_DESIGN.md) for arguments, response shapes, and pagination.
+Start Celery Insights, then connect your agent to `http://localhost:8555/mcp`.
+**Authentication is off by default**, just like the dashboard. No token or header is needed
+unless you set `MCP_TOKEN` or `SURREALDB_FRONTEND_PASS`.
 
-Connect an HTTP-capable MCP client to that URL. A client using an `mcpServers` configuration can use:
+For Claude Code, run:
+
+```shell
+claude mcp add --transport http celery-insights http://localhost:8555/mcp
+```
+
+For Codex, run:
+
+```shell
+codex mcp add celery-insights --url http://localhost:8555/mcp
+```
+
+For Cursor, add this to `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` for all projects:
 
 ```json
 {
   "mcpServers": {
     "celery-insights": {
-      "url": "http://localhost:8555/mcp",
-      "headers": { "Authorization": "Bearer YOUR_MCP_TOKEN" }
+      "url": "http://localhost:8555/mcp"
     }
   }
 }
 ```
 
-Client configuration formats vary. Omit the header for an unprotected local deployment.
+Restart your agent session after configuring it. See the running app's
+[MCP Interface guide](http://localhost:8555/documentation/mcp) for connection checks,
+[optional authentication](http://localhost:8555/documentation/mcp#optional-authentication),
+and troubleshooting recipes. Client configuration details are documented by
+[Claude Code](https://code.claude.com/docs/en/mcp), [Codex](https://developers.openai.com/codex/mcp),
+and [Cursor](https://cursor.com/docs/mcp).
+
+To enable authentication, set `MCP_TOKEN` in your deployment and restart Celery Insights.
+Send it as `Authorization: Bearer YOUR_MCP_TOKEN` from the agent. If dashboard protection is already
+enabled with `SURREALDB_FRONTEND_PASS` and you do not set `MCP_TOKEN`, use the dashboard password
+as the bearer token. Setting `MCP_TOKEN` overrides that fallback for MCP and does not enable dashboard
+authentication. See the in-app guide above for the exact authenticated configuration for each agent.
+
 The endpoint accepts POST requests and does not maintain sessions or provide an SSE stream.
 For load-balanced deployments, configure the same MCP token or dashboard password across replicas
 so pagination cursors remain valid across instances. An unprotected instance with default database

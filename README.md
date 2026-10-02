@@ -56,13 +56,24 @@ docker run -p 8555:8555 --name celery-insights \
 ## MCP access for agents
 
 Use MCP when you want an agent to find a task you just spawned, investigate a workflow's errors,
-or check what a worker is doing. Connect an HTTP-capable MCP client to `http://localhost:8555/mcp`,
-then try: “Find the `reports.render` task I spawned in the last 15 minutes and tell me whether it finished.”
+or check what a worker is doing. It is included and requires no authentication by default.
+Connect Claude Code or Codex with:
+
+```shell
+# Claude Code
+claude mcp add --transport http celery-insights http://localhost:8555/mcp
+
+# Codex
+codex mcp add celery-insights --url http://localhost:8555/mcp
+```
+
+For Cursor, follow the [copyable configuration](CONFIGURATION.md#mcp-access-for-agents).
+Restart your agent session, then try: “Find the `reports.render` task I spawned in the last 15 minutes and tell me whether it finished.”
 Start with a known task name and approximate time; the agent can discover the workflow and follow
 its task IDs into inputs, results, and error details.
 
 Use the running app's [MCP Interface guide](http://localhost:8555/documentation/mcp) for client setup,
-troubleshooting recipes, and continuing large results. See
+optional authentication, troubleshooting recipes, and continuing large results. See
 [connection and authentication settings](CONFIGURATION.md#mcp-access-for-agents) for deployment options,
 or the [full tool contract](MCP_DESIGN.md) for every argument and response field.
 For development setup, see [the MCP contributor notes](CONTRIBUTING.md#mcp-development).

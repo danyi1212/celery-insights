@@ -344,6 +344,16 @@ describe("MCP tools against SurrealDB", () => {
       request({ jsonrpc: "2.0", id: 2, method: "tools/list" }, { authorization: "Bearer secret-token" }),
     )
     expect((await list.json()).result.tools.map((tool: Row) => tool.name)).toHaveLength(5)
+    const defaultConfig = parseConfig({})
+    const publicHandler = createMcpHandler({
+      db,
+      cursorSecret: "secret",
+      mode: () => "live",
+      token: defaultConfig.mcpToken ?? defaultConfig.surrealdbFrontendPass,
+    })
+    const publicList = await publicHandler(request({ jsonrpc: "2.0", id: 3, method: "tools/list" }))
+    expect(publicList.status).toBe(200)
+    expect((await publicList.json()).result.tools).toHaveLength(5)
   })
 })
 

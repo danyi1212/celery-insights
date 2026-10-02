@@ -6,7 +6,7 @@ import { createFileRoute } from "@tanstack/react-router"
 const DocumentationMcpPage = () => (
   <DocsPage
     title="MCP Interface"
-    description="Connect agents to Celery observations with compact discovery, workflow inspection, and paginated task details."
+    description="Set up Claude Code, Codex, or Cursor, add authentication when needed, and investigate tasks and workers."
     group="Reference"
     source={{ path: "src/content/docs/mcp.mdx", markdown: mcpMarkdown }}
     previousPage={{ title: "Configuration", href: "/documentation/configuration" }}
