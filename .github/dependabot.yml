@@ -9,7 +9,25 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      npm-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      npm-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
   - package-ecosystem: "pip" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    groups:
+      python-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      python-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
