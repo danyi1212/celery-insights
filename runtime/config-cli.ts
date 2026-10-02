@@ -5,6 +5,7 @@ import { parse as parseEnv } from "dotenv"
 import { resolveConfig, describeConfig } from "./config-loader"
 import { SETTINGS } from "./config-registry"
 import { pythonConfig, pythonEnvironment } from "./python-config"
+import { configurationJsonSchema } from "./config-json-schema"
 
 export function exampleConfig(): string {
   return `schema_version = 1
@@ -61,10 +62,17 @@ function main(): void {
     const flag = args.shift()
     if (flag === "--config" && args[0]) configFile = args.shift()
     else if (flag === "--env-file" && args[0]) envFile = args.shift()
-    else throw new Error("Usage: config validate|show|example|migrate-env|python [--config PATH] [--env-file PATH]")
+    else
+      throw new Error(
+        "Usage: config validate|show|example|schema|reference|migrate-env|python [--config PATH] [--env-file PATH]",
+      )
   }
   if (command === "reference") {
     process.stdout.write(configReference())
+    return
+  }
+  if (command === "schema") {
+    process.stdout.write(`${JSON.stringify(configurationJsonSchema(), null, 2)}\n`)
     return
   }
   if (command === "example") {
@@ -125,7 +133,9 @@ function main(): void {
     for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, () => child.kill(signal))
     return
   }
-  throw new Error("Usage: config validate|show|example|migrate-env|python [--config PATH] [--env-file PATH]")
+  throw new Error(
+    "Usage: config validate|show|example|schema|reference|migrate-env|python [--config PATH] [--env-file PATH]",
+  )
 }
 
 if (import.meta.main) {

@@ -1,0 +1,331 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Celery Insights configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "port": {
+          "default": 8555,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "debug": {
+          "default": false,
+          "type": "boolean"
+        },
+        "api": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "host": {
+              "type": "string",
+              "minLength": 1
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            }
+          }
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "observation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "url_file": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ingester_password": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ingester_password_file": {
+              "type": "string",
+              "minLength": 1
+            },
+            "namespace": {
+              "default": "celery_insights",
+              "type": "string",
+              "minLength": 1
+            },
+            "database": {
+              "default": "main",
+              "type": "string",
+              "minLength": 1
+            },
+            "embedded": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "storage": {
+                  "default": "memory",
+                  "type": "string"
+                },
+                "port": {
+                  "default": 8557,
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                }
+              }
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "embedded",
+                "external"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "legacy_frontend_password": {
+          "type": "string",
+          "minLength": 1
+        },
+        "legacy_frontend_password_file": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "ingestion": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "type": "boolean"
+        },
+        "leader_election": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "default": true,
+              "type": "boolean"
+            },
+            "ttl_seconds": {
+              "default": 30,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "heartbeat_seconds": {
+              "default": 10,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "batch_interval_ms": {
+          "default": 100,
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cleanup_interval_seconds": {
+          "default": 60,
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "tasks": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_count": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "max_age_hours": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "workers": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_age_hours": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "default": 24,
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "celery": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "broker_url": {
+          "type": "string"
+        },
+        "broker_url_file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result_backend": {
+          "type": "string"
+        },
+        "result_backend_file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "legacy_python_config_file": {
+          "default": "",
+          "type": "string"
+        },
+        "timezone": {
+          "default": "UTC",
+          "type": "string"
+        },
+        "options": {
+          "type": "object",
+          "description": "Data-only connection options supported by the pinned Celery adapter; validated by the resolver."
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "replay_bundle_file": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "default": "pretty",
+          "type": "string",
+          "enum": [
+            "pretty",
+            "json"
+          ]
+        },
+        "level": {
+          "default": "info",
+          "type": "string",
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ]
+        }
+      }
+    },
+    "installation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "public_url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "demo_available": {
+          "type": "boolean"
+        },
+        "defaults": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "theme": {
+              "type": "string",
+              "enum": [
+                "light",
+                "dark",
+                "system"
+              ]
+            },
+            "hide_welcome_banner": {
+              "type": "boolean"
+            },
+            "raw_events_limit": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        }
+      }
+    }
+  }
+}
