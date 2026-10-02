@@ -1,3 +1,4 @@
+import { appUrl } from "@lib/app-url"
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { Surreal, type ConnectionStatus } from "surrealdb"
 import useSettingsStore from "@stores/use-settings-store"
@@ -54,7 +55,7 @@ const NAMESPACE = "celery_insights"
 const DATABASE = "main"
 
 async function fetchConfig(): Promise<AppConfig> {
-  const res = await fetch("/api/config")
+  const res = await fetch(appUrl("/api/config"))
   if (!res.ok) throw new Error(`Failed to fetch config: ${res.status}`)
   return res.json()
 }

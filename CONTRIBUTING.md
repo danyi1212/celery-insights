@@ -263,6 +263,18 @@ E2E_SKIP_COMPOSE=1 bun run e2e:ui
 
 > **Tip:** When iterating locally, keep the docker-compose stack running and use `E2E_SKIP_COMPOSE=1` to skip the slow build step. Use `--headed` to see what the tests are doing, or `--ui` for the full Playwright inspector.
 
+### Reverse proxy E2E coverage
+
+For new frontend features, use `appUrl` from `src/lib/app-url.ts` for same-origin endpoints and public assets, and `appHref` for plain anchor links. TanStack Router links apply the mount path automatically.
+
+CI runs the complete Playwright suite at the origin root and behind nginx at `/tools/celery/`. Run the proxy deployment locally with:
+
+```shell
+URL_PREFIX=/tools/celery bun run e2e
+```
+
+Use the shared `e2e/fixtures/base` fixture for new browser tests. Its `page.goto("/...")` destinations are relative to the app mount. In the proxy deployment it also fails tests when app HTTP requests or WebSockets escape the prefix. Use `appURL` from `e2e/helpers/app-url` for direct endpoint requests. The proxy serves a sibling application at `/` and returns 404 for other paths outside the prefix.
+
 ## License
 
 Celery Insights is licensed under the [BSD 3-Clause License](LICENSE).

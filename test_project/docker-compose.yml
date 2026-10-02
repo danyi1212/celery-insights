@@ -80,14 +80,29 @@ services:
     profiles:
       - interactive
 
+  reverse-proxy:
+    profiles:
+      - reverse-proxy
+    image: nginx:alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
+    ports:
+      - "${E2E_PROXY_PORT:-8558}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/templates/default.conf.template:ro
+    environment:
+      URL_PREFIX: ${URL_PREFIX:-/tools/celery}
+      NGINX_ENVSUBST_FILTER: URL_PREFIX
+    depends_on:
+      - celery-insights
+
   celery-insights:
     image: celery-insights-app:local
     build:
       context: ..
       dockerfile: Dockerfile
     ports:
-      - "8555:8555"
+      - "${E2E_APP_PORT:-8555}:8555"
     environment:
+      URL_PREFIX: ${URL_PREFIX:-}
       BROKER_URL: amqp://guest:guest@rabbitmq/
       RESULT_BACKEND: redis://redis:6379/0
     depends_on:

@@ -1,8 +1,8 @@
+import { appURL, appPath, appOrigin, urlPrefix } from "../helpers/app-url"
 import { expect, test as base } from "../../tooling/playwright"
 import { ScenarioClient } from "../helpers/scenario-client"
 
-const E2E_HOST = process.env.E2E_HOST ?? "127.0.0.1"
-const SURREAL_API = `http://${E2E_HOST}:8555/surreal`
+const SURREAL_API = appURL("/surreal")
 
 type TaskState = "PENDING" | "RECEIVED" | "STARTED" | "SUCCESS" | "FAILURE" | "RETRY" | "REVOKED"
 type SurrealStateResult = { result?: Array<{ state?: TaskState }> }
@@ -13,6 +13,24 @@ export const test = base.extend<{
   waitForTask: (taskId: string, states: TaskState[], opts?: { timeout?: number; interval?: number }) => Promise<void>
   waitForTaskVisible: (taskId: string, opts?: { timeout?: number; interval?: number }) => Promise<void>
 }>({
+  page: async ({ page }, use) => {
+    // Test destinations are app-relative; product requests still use real URLs.
+    const goto = page.goto.bind(page)
+    page.goto = (url, options) => goto(url.startsWith("/") ? appPath(url) : url, options)
+    const escapedRequests: string[] = []
+    if (urlPrefix) {
+      const checkURL = (value: string) => {
+        const url = new URL(value)
+        if (url.host === new URL(appOrigin).host && !url.pathname.startsWith(appPath("/"))) {
+          escapedRequests.push(value)
+        }
+      }
+      page.on("request", (request) => checkURL(request.url()))
+      page.on("websocket", (socket) => checkURL(socket.url()))
+    }
+    await use(page)
+    expect(escapedRequests, "App requests must stay inside URL_PREFIX").toEqual([])
+  },
   scenario: async ({ page: _page }, use) => {
     await use(new ScenarioClient())
   },

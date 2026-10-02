@@ -1,3 +1,4 @@
+import { appUrl } from "@lib/app-url"
 import Panel from "@components/common/panel"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import { Badge } from "@components/ui/badge"
@@ -29,7 +30,7 @@ interface RetentionInfo {
 }
 
 const fetchRetention = async (): Promise<RetentionInfo> => {
-  const res = await fetch("/api/settings/retention")
+  const res = await fetch(appUrl("/api/settings/retention"))
   if (!res.ok) throw new Error(`Failed to load retention settings: ${res.status}`)
   return res.json()
 }
@@ -105,7 +106,7 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
         task_retention_hours: taskRetentionHours ? parseFloat(taskRetentionHours) : null,
         dead_worker_retention_hours: deadWorkerRetentionHours ? parseFloat(deadWorkerRetentionHours) : null,
       }
-      const res = await fetch("/api/settings/retention", {
+      const res = await fetch(appUrl("/api/settings/retention"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -125,7 +126,7 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
     setIsCleaning(true)
     setStatusMessage(null)
     try {
-      const res = await fetch("/api/settings/cleanup", { method: "POST" })
+      const res = await fetch(appUrl("/api/settings/cleanup"), { method: "POST" })
       if (!res.ok) throw new Error(`Cleanup failed: ${res.status}`)
       const result = await res.json()
       if (result.success) {

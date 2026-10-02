@@ -1,3 +1,4 @@
+import { appUrl } from "@lib/app-url"
 import AnimatedList from "@components/common/animated-list"
 import AnimatedListItem from "@components/common/animated-list-item"
 import CodeBlock from "@components/common/code-block"
@@ -82,7 +83,7 @@ const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
           <span>
             For more information, see the{" "}
             <a
-              href="/documentation/celery-clusters#baseline-event-settings"
+              href={appUrl("/documentation/celery-clusters#baseline-event-settings")}
               className="text-primary underline underline-offset-4 hover:text-primary/80"
             >
               in-app documentation

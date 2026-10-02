@@ -1,3 +1,4 @@
+import { appUrl } from "@lib/app-url"
 import { useIsDark } from "@hooks/use-is-dark"
 import { useSidebar } from "@components/ui/sidebar"
 import { Link } from "@tanstack/react-router"
@@ -14,11 +15,11 @@ const SidebarLogo: React.FC = () => {
         src={
           isDark
             ? expanded
-              ? "/LogoTextGreen.svg"
-              : "/LogoGreen.svg"
+              ? appUrl("/LogoTextGreen.svg")
+              : appUrl("/LogoGreen.svg")
             : expanded
-              ? "/LogoTextDark.svg"
-              : "/LogoDark.svg"
+              ? appUrl("/LogoTextDark.svg")
+              : appUrl("/LogoDark.svg")
         }
         alt="Celery Insights"
         className="h-auto transition-[width] duration-200"

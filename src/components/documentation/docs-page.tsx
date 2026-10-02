@@ -1,3 +1,4 @@
+import { appHref } from "@lib/app-url"
 import CodeBlock from "@components/common/code-block"
 import { Button, buttonVariants } from "@components/ui/button"
 import { cn } from "@lib/utils"
@@ -46,7 +47,7 @@ const AnchorHeading = ({
     <Tag id={id} className={cn("group flex items-center gap-2", className)}>
       <span>{children}</span>
       <a
-        href={`#${id}`}
+        href={appHref(`#${id}`)}
         aria-label="Copy section link"
         className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
       >
@@ -114,8 +115,9 @@ const mdxComponents = {
   li: ({ className, ...props }: React.ComponentProps<"li">) => (
     <li className={cn("pl-1 [&>p]:mt-0 [&>p]:leading-7 [&>ol]:mt-3 [&>ul]:mt-3", className)} {...props} />
   ),
-  a: ({ className, children, ...props }: React.ComponentProps<"a">) => (
+  a: ({ className, children, href, ...props }: React.ComponentProps<"a">) => (
     <a
+      href={href ? appHref(href) : undefined}
       className={cn(
         "font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-primary",
         className,
@@ -295,7 +297,7 @@ const DocsTableOfContents = ({
         {headings.map((heading) => (
           <a
             key={heading.id}
-            href={`#${heading.id}`}
+            href={appHref(`#${heading.id}`)}
             className={cn(
               "block border-l border-transparent py-1 text-sm leading-5 text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground",
               heading.level === 2 ? "-ml-px pl-4" : heading.level === 3 ? "pl-8" : "pl-12 text-xs",

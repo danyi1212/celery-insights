@@ -1,7 +1,7 @@
+import { appURL } from "../helpers/app-url"
 import { test, expect } from "../fixtures/base"
 
-const E2E_HOST = process.env.E2E_HOST ?? "127.0.0.1"
-const BASE_URL = `http://${E2E_HOST}:8555`
+const BASE_URL = appURL("")
 
 test.describe("Prometheus Metrics", () => {
   test("GET /metrics returns Prometheus text format with core metrics", async ({ request }) => {
