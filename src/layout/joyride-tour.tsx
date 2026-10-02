@@ -3,7 +3,7 @@ import useSettingsStore from "@stores/use-settings-store"
 import { backStep, nextStep, stopTour, useTourStore } from "@stores/use-tour-store"
 import React, { useMemo } from "react"
 import { useShallow } from "zustand/shallow"
-import Joyride, { ACTIONS, CallBackProps, EVENTS, STATUS, Step } from "react-joyride"
+import { Joyride, ACTIONS, type EventData, EVENTS, STATUS, type Step } from "react-joyride"
 
 const createSteps = (): Step[] => [
   {
@@ -18,13 +18,13 @@ const createSteps = (): Step[] => [
         We will use it to get some insights.
       </span>
     ),
-    disableBeacon: true,
+    skipBeacon: true,
   },
   {
     // step index 1
     target: "#recent-tasks",
     placement: "top",
-    placementBeacon: "top",
+    beaconPlacement: "top",
     title: "Locate Your Task",
     content: (
       <span>
@@ -34,9 +34,9 @@ const createSteps = (): Step[] => [
       </span>
     ),
     isFixed: true,
-    disableScrolling: true,
-    spotlightClicks: true,
-    hideFooter: true, // Disable the next button (automatic on navigation)
+    skipScroll: true,
+    blockTargetInteraction: false,
+    buttons: [], // Disable the next button (automatic on navigation)
   },
   {
     // step index 2
@@ -51,9 +51,9 @@ const createSteps = (): Step[] => [
       </p>
     ),
     isFixed: true,
-    disableScrolling: true,
-    disableBeacon: true,
-    hideBackButton: true,
+    skipScroll: true,
+    skipBeacon: true,
+    buttons: ["close", "primary"],
   },
   {
     // step index 3
@@ -69,8 +69,8 @@ const createSteps = (): Step[] => [
       </span>
     ),
     isFixed: true,
-    disableScrolling: true,
-    spotlightClicks: true,
+    skipScroll: true,
+    blockTargetInteraction: false,
   },
   {
     // step index 4
@@ -79,9 +79,9 @@ const createSteps = (): Step[] => [
     title: "Switch to Timeline view",
     content: "To see when each task started and finished, switch to the timeline view.",
     isFixed: true,
-    disableScrolling: true,
-    spotlightClicks: true,
-    hideFooter: true,
+    skipScroll: true,
+    blockTargetInteraction: false,
+    buttons: [],
   },
   {
     // step index 5
@@ -92,8 +92,8 @@ const createSteps = (): Step[] => [
       "The timeline chart view allows you to see the start and finish times of each task, as well as the " +
       "duration. The white line indicates when the task was sent.",
     isFixed: true,
-    disableScrolling: true,
-    spotlightClicks: true,
+    skipScroll: true,
+    blockTargetInteraction: false,
   },
   {
     // step index 6
@@ -104,7 +104,7 @@ const createSteps = (): Step[] => [
       "The lifetime chart shows the changes in task status over time, giving you a glimpse of how long " +
       "the task remained in each stage.",
     isFixed: true,
-    spotlightClicks: true,
+    blockTargetInteraction: false,
   },
   {
     // step index 7
@@ -121,8 +121,8 @@ const createSteps = (): Step[] => [
       </>
     ),
     isFixed: true,
-    spotlightClicks: true,
-    hideFooter: true,
+    blockTargetInteraction: false,
+    buttons: [],
   },
   {
     // step index 8
@@ -131,10 +131,10 @@ const createSteps = (): Step[] => [
     title: "Examine Worker Details",
     content: "This section provides information about the worker.",
     isFixed: true,
-    disableScrolling: true,
-    disableBeacon: true,
-    spotlightClicks: true,
-    hideBackButton: true,
+    skipScroll: true,
+    skipBeacon: true,
+    blockTargetInteraction: false,
+    buttons: ["close", "primary"],
   },
   {
     // step index 9
@@ -148,8 +148,8 @@ const createSteps = (): Step[] => [
       </span>
     ),
     isFixed: true,
-    disableScrolling: true,
-    spotlightClicks: true,
+    skipScroll: true,
+    blockTargetInteraction: false,
   },
   {
     // step index 10
@@ -166,8 +166,8 @@ const createSteps = (): Step[] => [
       </>
     ),
     isFixed: true,
-    spotlightClicks: true,
-    hideFooter: true,
+    blockTargetInteraction: false,
+    buttons: [],
   },
   {
     // step index 11
@@ -176,8 +176,8 @@ const createSteps = (): Step[] => [
     title: "Discover the Explorer",
     content: "Use the Explorer to search for tasks and compare them.",
     isFixed: true,
-    disableBeacon: true,
-    hideBackButton: true,
+    skipBeacon: true,
+    buttons: ["close", "primary"],
   },
   {
     // step index 12
@@ -191,7 +191,7 @@ const createSteps = (): Step[] => [
       </span>
     ),
     isFixed: true,
-    spotlightClicks: true,
+    blockTargetInteraction: false,
   },
   {
     // step index 13
@@ -203,51 +203,47 @@ const createSteps = (): Step[] => [
   },
 ]
 
+export const handleTourEvent = (
+  data: Pick<EventData, "type" | "action" | "status"> & { step: Pick<EventData["step"], "buttons"> },
+) => {
+  if (
+    data.type === EVENTS.TARGET_NOT_FOUND ||
+    data.action === ACTIONS.RESET ||
+    data.status === STATUS.SKIPPED ||
+    data.type === EVENTS.ERROR ||
+    data.action === ACTIONS.CLOSE ||
+    data.status === STATUS.FINISHED
+  ) {
+    if (useTourStore.getState().demoMode) useSettingsStore.setState({ demo: false })
+    stopTour()
+  } else if (data.type === EVENTS.STEP_AFTER) {
+    if (data.action === ACTIONS.PREV) backStep()
+    else if (data.step.buttons.includes("primary")) nextStep() // Don't increment on steps with next disabled
+  }
+}
+
 const JoyrideTour: React.FC = () => {
   const state = useTourStore(useShallow((s) => s))
   const steps = useMemo(() => createSteps(), [])
 
-  const handleCallback = (data: CallBackProps) => {
-    /* eslint-disable no-console */
-    if (data.action === ACTIONS.START) console.log("Starting tour...")
-    else if (data.status === STATUS.FINISHED) console.log("Tour finished")
-    else if (data.type === EVENTS.STEP_AFTER) console.log("Tour step ", data.step.title)
-    /* eslint-enable no-console */
-
-    if (
-      data.type === EVENTS.TARGET_NOT_FOUND ||
-      data.action === ACTIONS.RESET ||
-      data.status === STATUS.SKIPPED ||
-      data.status === STATUS.ERROR ||
-      data.status === STATUS.FINISHED
-    ) {
-      if (state.demoMode) useSettingsStore.setState({ demo: false })
-      stopTour()
-    } else if (data.type === EVENTS.STEP_AFTER) {
-      if (data.action === ACTIONS.PREV) backStep()
-      else if (!data.step.hideFooter) nextStep() // Don't increment on steps with next disabled
-    }
-  }
-
   return (
     <Joyride
       steps={steps}
-      callback={handleCallback}
+      onEvent={handleTourEvent}
       run={state.run}
       stepIndex={state.stepIndex}
       continuous
       scrollToFirstStep
-      disableOverlayClose
       tooltipComponent={TourTooltip}
-      spotlightPadding={0}
-      styles={{
-        options: {
-          arrowColor: "var(--card)",
-          backgroundColor: "var(--card)",
-          primaryColor: "var(--color-primary)",
-          textColor: "var(--foreground)",
-          zIndex: 1500,
-        },
+      options={{
+        overlayClickAction: false,
+        blockTargetInteraction: true,
+        spotlightPadding: 0,
+        arrowColor: "var(--card)",
+        backgroundColor: "var(--card)",
+        primaryColor: "var(--color-primary)",
+        textColor: "var(--foreground)",
+        zIndex: 1500,
       }}
     />
   )
