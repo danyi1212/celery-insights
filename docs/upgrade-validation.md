@@ -23,11 +23,13 @@ Oxlint enables new React Compiler-oriented defaults (purity, refs, set-state-in-
 
 ## Evidence
 
-- Python 3.14.7 locally: backend pytest/doctest suite passes (205 tests before the added SDK retry case); Ruff and ty pass.
-- Bun 1.4.2 locally: 50 frontend/runtime test files, 416 tests pass; type/lint/format and production Vite build pass.
+- Python 3.14.7 locally: backend pytest/doctest suite passes; CI verifies Python 3.14.8; Ruff and ty pass.
+- Bun 1.4.2 locally: frontend/runtime tests pass (416 before the added timestamp regression; separate Table and Joyride PRs add 12 cases); type/lint/format and production Vite build pass.
 - Frozen Bun install and both uv locks resolve; all optional Python groups install locally on macOS arm64.
 - Python 3.14.8 is pinned for Docker/CI; the local uv 0.12.17 downloader only lists 3.14.7, so local Python checks alone do not verify the pinned patch.
-- Docker Desktop startup requires completion of its macOS administrator prompt. Container builds, browser E2E, persisted-volume upgrade and both architecture builds remain pending CI/local validation.
+- CI on the RabbitMQ compatibility commit passes every check, including real Celery 5.6.3 E2E, Python 3.14.8, production previews, CodeQL, dependency review, and regular/all image builds for amd64 and arm64. The following persistence fixes must pass the same checks before merge.
+- Actual native SurrealDB 3.0.2 → 3.3.0 SurrealKV opening and old-binary export → fresh 3.3.0 import both pass using application schema migration. Task contents, workflow membership edges, raw events and workers survive. The maintained harness runs as the `Database upgrade and restore` CI job and uploads evidence. Set `SURREAL_OLD_BINARY`, `SURREAL_NEW_BINARY`, and optionally `BUN_BINARY`, then run `python tooling/verify-surreal-upgrade.py` with Python 3.14.
+- Actual Python SDK ingestion on 3.3.0 stores both tasks and both membership edges and recomputes the workflow task count correctly. Browser sanity covers demo/WASM startup, task detail, canvas/timeline, explorer sorting and column menu, quick search, settings and theme selection.
 
 ## Release gate
 
@@ -36,3 +38,7 @@ Do not infer release readiness from unit tests. Require green PR CI, regular/all
 ## RabbitMQ 4.3 compatibility
 
 The initial real-container E2E startup failed because RabbitMQ 4.3 rejects non-durable, non-exclusive queues. The monitor now uses exclusive event/control queues unless the user's Celery config explicitly enables durable queues; durable queues stay nonexclusive. The worker harness uses exclusive control queues too. This adopts the queue modes supported by RabbitMQ, without enabling its deprecated feature flag. Upstream Celery 5.6 defaults both exclusive settings to false, so applications running their own workers against RabbitMQ 4.3 should set `control_queue_exclusive = True` (or use durable control queues). [RabbitMQ queue guidance](https://www.rabbitmq.com/docs/queues), [Celery stable configuration](https://docs.celeryq.dev/en/stable/userguide/configuration.html).
+
+## Persisted-data compatibility fixes
+
+The JS SDK now returns typed `DateTime` values. Workflow backfill converts them to ISO strings before comparisons; string fixtures remain supported. Backfill now initializes its latest timestamp correctly instead of falling back to the first-seen timestamp. The existing edge UPSERT statement created ordinary records in a relation-only table and failed in real servers: both backfill and Python ingestion now use `RELATE OR UPDATE` with the same deterministic edge IDs. This is idempotent on SurrealDB 3.3.0. Transaction ingestion inspects every raw query result; the SDK's convenience query checks only the first statement. Later statement failures now retain the batch for retry and skip terminal callbacks. Regression cases cover typed timestamps and later-statement failure.

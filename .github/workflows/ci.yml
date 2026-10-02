@@ -139,3 +139,34 @@ jobs:
       - name: Cleanup docker compose
         if: always()
         run: docker compose -f test_project/docker-compose.yml --profile interactive down -v --remove-orphans || true
+
+  database-upgrade:
+    name: Database upgrade and restore
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: "1.4.2"
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version-file: ".python-version"
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Download official database binaries
+        run: |
+          mkdir -p "$RUNNER_TEMP/surreal-old" "$RUNNER_TEMP/surreal-new"
+          curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.0.2/surreal-v3.0.2.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-old"
+          curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.3.0/surreal-v3.3.0.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-new"
+          echo "SURREAL_OLD_BINARY=$RUNNER_TEMP/surreal-old/surreal" >> "$GITHUB_ENV"
+          echo "SURREAL_NEW_BINARY=$RUNNER_TEMP/surreal-new/surreal" >> "$GITHUB_ENV"
+      - name: Validate existing datastore and backup restore
+        run: python tooling/verify-surreal-upgrade.py
+      - name: Upload database validation evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: database-upgrade-evidence
+          path: /tmp/celery-surreal-upgrade-*/
+          retention-days: 7
