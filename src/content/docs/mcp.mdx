@@ -1,0 +1,283 @@
+Use the MCP interface when you want an agent to investigate a Celery task, explain a workflow's errors,
+or check what a worker is doing. It is useful when you know a task name and roughly when you invoked
+it, but do not have the task ID. The agent reads the same retained observations as Celery Insights.
+
+## Connect your agent
+
+Start Celery Insights and check that you can open `http://localhost:8555` in your browser.
+MCP is included: there is no extra server or package to install. **No authentication is required
+by default**, just like the dashboard. Choose your agent below and use `http://localhost:8555/mcp`.
+
+### Claude Code
+
+Run this from the project where you use Claude Code:
+
+```shell
+claude mcp add --transport http celery-insights http://localhost:8555/mcp
+```
+
+Start a new Claude Code session, run `/mcp`, and check that `celery-insights` is connected.
+This registers it for your current project; add `--scope user` to use it across projects.
+See [Claude Code's MCP setup guide](https://code.claude.com/docs/en/mcp) for other configuration options.
+
+### Codex
+
+With the Codex CLI installed, run:
+
+```shell
+codex mcp add celery-insights --url http://localhost:8555/mcp
+codex mcp list
+```
+
+Start a new Codex session and use `/mcp` to check the connection. If you prefer editing a file,
+add this to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.celery-insights]
+url = "http://localhost:8555/mcp"
+```
+
+Codex clients share this configuration. Restart your app or IDE session after adding the server.
+See [Codex's MCP setup guide](https://developers.openai.com/codex/mcp) for client-specific settings.
+
+### Cursor
+
+Create `.cursor/mcp.json` in your project, or use `~/.cursor/mcp.json` for all projects:
+
+```json
+{
+  "mcpServers": {
+    "celery-insights": {
+      "url": "http://localhost:8555/mcp"
+    }
+  }
+}
+```
+
+If the file already contains servers, add `celery-insights` inside its existing `mcpServers` object.
+Check Cursor's MCP server list and enable the server if needed, then use it in an Agent chat.
+See [Cursor's MCP setup guide](https://cursor.com/docs/mcp) for other configuration options.
+
+### Try your first question
+
+Ask: “Find the `reports.render` task I spawned in the last 15 minutes and tell me whether it finished.”
+Replace the example name with one of your tasks. The recipes below show how to investigate further.
+Their examples show the tool name and argument object; replace uppercase placeholders with values
+returned by an earlier call.
+
+## Optional authentication
+
+Skip this section for the default unprotected deployment. To require a token for agents, set
+`MCP_TOKEN` in your Celery Insights deployment and restart it. You can generate a token with
+`openssl rand -hex 32`. For a new Docker deployment, pass it like this:
+
+```shell
+docker run -p 8555:8555 \
+  -e MCP_TOKEN=YOUR_MCP_TOKEN \
+  ghcr.io/danyi1212/celery-insights:latest
+```
+
+Replace `YOUR_MCP_TOKEN` with your chosen token. For an existing deployment, add the environment
+variable to its current configuration and restart it, keeping your other settings.
+This protects MCP; the dashboard stays unprotected unless you also set `SURREALDB_FRONTEND_PASS`.
+
+If you already protect the dashboard with `SURREALDB_FRONTEND_PASS`, MCP requires that same password
+as its bearer token when `MCP_TOKEN` is unset. Setting `MCP_TOKEN` gives agents a separate credential
+and takes precedence for MCP. No browser sign-in or OAuth setup is needed.
+
+### Claude Code with a token
+
+If you added the unauthenticated entry above, remove it before adding the authenticated version.
+Run these commands from the same project:
+
+```shell
+claude mcp remove celery-insights
+claude mcp add --transport http celery-insights http://localhost:8555/mcp \
+  --header "Authorization: Bearer YOUR_MCP_TOKEN"
+```
+
+For an entry registered with `--scope user`, use that scope for both commands. If you have not added
+an entry yet, run only the second command. Restart Claude Code and check `/mcp`.
+
+### Codex with a token
+
+Update the server entry in `~/.codex/config.toml` and restart your Codex session:
+
+```toml
+[mcp_servers.celery-insights]
+url = "http://localhost:8555/mcp"
+http_headers = { Authorization = "Bearer YOUR_MCP_TOKEN" }
+```
+
+For CLI use, you can instead add `bearer_token_env_var = "CELERY_INSIGHTS_MCP_TOKEN"` to that entry
+and omit `http_headers`. Export `CELERY_INSIGHTS_MCP_TOKEN` with your token before starting `codex`.
+
+### Cursor with a token
+
+Add `headers` to the existing entry in your MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "celery-insights": {
+      "url": "http://localhost:8555/mcp",
+      "headers": { "Authorization": "Bearer YOUR_MCP_TOKEN" }
+    }
+  }
+}
+```
+
+Use your MCP token, or your dashboard password when no separate MCP token is configured, in these
+examples. Keep configuration containing real tokens out of version control. If a connection returns
+`401`, check that the agent sends the same credential configured on Celery Insights.
+
+## Connect to a remote deployment
+
+Replace `http://localhost:8555/mcp` in your agent configuration with your deployment's URL,
+for example `https://insights.example.com/mcp`. Set `MCP_ALLOWED_HOSTS=insights.example.com,localhost`
+on Celery Insights and restart it. Use hostnames without schemes or ports. Authentication remains
+optional; use the token instructions above when you enable it.
+
+For an agent running in a container or on another machine, use a URL reachable from that environment;
+`localhost` refers to the machine running the MCP client. A `403` mentioning the host means you need
+to add that hostname to `MCP_ALLOWED_HOSTS`. An Origin header, if present, must match the request URL's
+origin. Use the same MCP token or dashboard password across replicas so pagination keeps working.
+See [Configuration](/documentation/configuration#mcp_token) for the environment variable reference.
+
+## Find a task you just spawned
+
+Use this when you know the task name and an approximate invocation time. Start with those two clues:
+
+```json
+{ "name": "search_workflows", "arguments": { "task_name": "reports.render", "within": "15m" } }
+```
+
+Choose a candidate using its matching invocation time, worker, and task-name counts. Then inspect
+its members to find the invocation you want:
+
+```json
+{ "name": "inspect_workflow", "arguments": { "workflow_id": "WORKFLOW_ID_FROM_SEARCH" } }
+```
+
+The overview includes every member for small workflows. If `member_list_included` is false, use
+`view="tasks"` as shown in the large-workflow recipe below. Once you have the invocation's task ID,
+request `inspect_task` with that ID to see timing and short input/output previews.
+
+Keep the first search broad enough to include a task that already finished: the default `status="all"`
+does this. Add `worker` only when you know where the task ran; name and worker must match the same member.
+Use name fragments such as `render` when you do not know the fully qualified name. If there are no
+matches, widen `within`, remove uncertain filters, or use `within="all"` for retained history.
+
+## Investigate a failed or recovered workflow
+
+Use this when you want to understand an error, including one followed by a successful retry.
+Ask your agent: “Find recent workflows that encountered an error and explain the first relevant failure.”
+
+```json
+{ "name": "search_workflows", "arguments": { "has_errors": true, "within": "2h" } }
+```
+
+Add a known `task_name` or `worker` to narrow the investigation. Use `status="running"` to focus on
+workflows that still have unfinished members, or `"finished"` to examine completed workflows.
+Progress and error evidence are independent: a successfully recovered workflow can be finished
+and still have `has_errors=true`.
+
+Inspect the chosen workflow and use its `problem_tasks` to select a task. Read its error detail:
+
+```json
+{ "name": "inspect_task", "arguments": { "task_id": "TASK_ID_FROM_WORKFLOW", "section": "error" } }
+```
+
+Use `section="input"` to examine what it received, `"output"` to examine its result, or `"history"`
+to follow observed events through retries and completion. Input and result values are stored text;
+do not assume they can be parsed as JSON. Follow the payload cursor when the first chunk is incomplete.
+
+`has_errors=false` means no error evidence was observed. Omit the selector when you do not want an
+error restriction. Intentional retry, rejection, or revocation alone does not imply an error, and
+finished does not imply success. Counts describe retained tasks, so missing observations can limit
+what the agent can conclude.
+
+## Check what a worker is doing
+
+Use this when a worker seems busy or a task appears to be waiting. First discover its exact hostname:
+
+```json
+{ "name": "list_workers", "arguments": { "hostname": "render", "status": "online" } }
+```
+
+Pass a returned hostname to inspect its running, reserved, and scheduled work:
+
+```json
+{ "name": "inspect_worker", "arguments": { "hostname": "HOSTNAME_FROM_LIST", "section": "activity" } }
+```
+
+Add `task_name` to the activity call to focus on a particular kind of task. Follow an activity row's
+`task_id` with `inspect_task` when `task_record_available` is true; follow its `workflow_id` to understand
+the surrounding workflow. An inspect-only task can have an ID without a retained task record.
+
+For “Which workers can run `reports.render`?”, use `list_workers` with `task_name="reports.render"`.
+That selector matches registered capabilities, rather than current activity. Use `inspect_worker`
+with `section="registered"` to browse a worker's registered names, or `"queues"` to inspect the queues
+it consumes.
+
+Check each inspection section's `observed_at` and the response warnings before calling a worker idle.
+A missing count is unknown, rather than zero; a fresh heartbeat can accompany stale activity.
+These calls read periodically captured inspection data and do not trigger a new Celery poll.
+
+## Explore a large workflow
+
+Use this when the overview omits members, or when you need to follow one branch in a large fan-out.
+Request a manageable member page:
+
+```json
+{ "name": "inspect_workflow", "arguments": { "workflow_id": "WORKFLOW_ID_FROM_SEARCH", "view": "tasks", "limit": 25 } }
+```
+
+Read the states and `parent_task_id` references to find the branch you need. Add `parent_task_id` to a
+new `view="tasks"` call to select that parent's direct observed children, or add a `task_name` fragment
+to focus on one task type. A parent can be on another page, so follow its ID when needed.
+
+If you first need to understand which task types dominate the workflow, start with `view="task_names"`
+and browse the grouped counts. Read omitted counts in overviews and samples before assuming a list
+is complete.
+
+### Continue a result
+
+For member lists, grouped names, history, or worker lists, check `page.has_more`. Pass `page.next_cursor`
+back to the same tool, keeping only its required identity:
+
+```json
+{
+  "name": "inspect_workflow",
+  "arguments": { "workflow_id": "WORKFLOW_ID_FROM_SEARCH", "cursor": "NEXT_CURSOR_FROM_PAGE" }
+}
+```
+
+For task input/output/error chunks, use the top-level `has_more` and `next_cursor` with `inspect_task`
+and the original `task_id`. Worker inspection continuation requires the exact hostname. Discovery
+continuation needs only the cursor.
+
+Keep following cursors until `has_more` is false, including when a capability search returns an empty
+page. A cursor preserves the original selectors, view/section, limit, and search time window; start a
+new search to change them. Cursors expire after 15 minutes. Restart the original query if one expires,
+or if a worker inspection snapshot changes. Other live pages can change as events arrive or retention
+removes records.
+
+Use a detail section to recover text omitted by `response_truncated`. Data marked `source_truncated`
+was already discarded during ingestion and cannot be recovered through MCP. Unavailable payloads
+are not evidence of empty input or a successful null result.
+
+## Investigate an offline snapshot
+
+Use [debug snapshot replay](/documentation/debug-bundles) when you need an agent to investigate captured
+history without reconnecting to the original cluster. Start Celery Insights with the bundle, then
+connect the agent to the same `/mcp` URL and use the recipes above. Responses identify this as
+`mode="snapshot"`; interpret worker activity and timing as captured observations.
+
+For an empty search, broaden only the clues you are uncertain about. For `query_budget_exceeded`,
+narrow the name, worker, or time window. For a missing record, check whether retention removed it
+between discovery and inspection. Database failures and timeouts return explicit errors, so the agent
+should not interpret them as evidence that a task succeeded or a worker is idle.
+
+See [the full tool contract](https://github.com/danyi1212/celery-insights/blob/main/MCP_DESIGN.md)
+for every argument, default, page limit, and response field.

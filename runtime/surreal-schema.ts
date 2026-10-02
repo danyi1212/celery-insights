@@ -42,6 +42,8 @@ DEFINE FIELD OVERWRITE revoked_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE rejected_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE runtime ON task TYPE option<float>;
 DEFINE FIELD OVERWRITE last_updated ON task TYPE datetime;
+DEFINE FIELD OVERWRITE first_observed_at ON task TYPE option<datetime>;
+DEFINE FIELD OVERWRITE had_error ON task TYPE bool DEFAULT false;
 DEFINE FIELD OVERWRITE args ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE kwargs ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE eta ON task TYPE option<string>;
@@ -65,6 +67,7 @@ DEFINE INDEX OVERWRITE idx_task_worker ON task FIELDS worker;
 DEFINE INDEX OVERWRITE idx_task_root_id ON task FIELDS root_id;
 DEFINE INDEX OVERWRITE idx_task_workflow_id ON task FIELDS workflow_id;
 DEFINE INDEX OVERWRITE idx_task_last_updated ON task FIELDS last_updated;
+DEFINE INDEX OVERWRITE idx_task_parent_id ON task FIELDS parent_id;
 
 DEFINE TABLE IF NOT EXISTS workflow SCHEMAFULL
   PERMISSIONS
@@ -148,6 +151,7 @@ interface BackfillTaskRecord {
   type?: string | null
   state?: string | null
   root_id?: string | null
+  workflow_id?: string | null
   worker?: string | null
   exception?: string | null
   sent_at?: string | { toISOString(): string } | null
@@ -184,6 +188,9 @@ const compareMaybeIsoAsc = (left: string | null, right: string | null) => {
   return left.localeCompare(right)
 }
 
+const datetimeToIso = (value: BackfillTaskRecord["sent_at"]): string | null =>
+  typeof value === "string" ? value : (value?.toISOString() ?? null)
+
 async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
   const [tasks] = await db.query<[BackfillTaskRecord[]]>("SELECT * FROM task").collect()
   if (!Array.isArray(tasks) || tasks.length === 0) {
@@ -195,7 +202,7 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
 
   for (const task of tasks) {
     const taskId = recordIdToPlainId(task.id)
-    const workflowId = task.root_id || taskId
+    const workflowId = task.root_id || task.workflow_id || taskId
     workflowIdsByTask.set(taskId, workflowId)
 
     const existing = summaries.get(workflowId)
@@ -221,14 +228,15 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
     if (task.state && !ACTIVE_STATES.has(task.state) && task.state !== "RETRY") summary.completedCount += 1
     if (task.worker) summary.workerIds.add(task.worker)
 
-    const lastUpdated =
-      typeof task.last_updated === "string" ? task.last_updated : (task.last_updated?.toISOString() ?? null)
-    const sentAt = typeof task.sent_at === "string" ? task.sent_at : (task.sent_at?.toISOString() ?? null)
-    const firstSeenCandidate = sentAt || lastUpdated
+    const firstSeenCandidate = datetimeToIso(task.sent_at) ?? datetimeToIso(task.last_updated)
     if (compareMaybeIsoAsc(firstSeenCandidate, summary.firstSeenAt) < 0) {
       summary.firstSeenAt = firstSeenCandidate
     }
-    if (lastUpdated && (!summary.lastUpdated || compareMaybeIsoAsc(lastUpdated, summary.lastUpdated) > 0)) {
+    const lastUpdated = datetimeToIso(task.last_updated)
+    if (
+      lastUpdated !== null &&
+      (summary.lastUpdated === null || compareMaybeIsoAsc(lastUpdated, summary.lastUpdated) > 0)
+    ) {
       summary.lastUpdated = lastUpdated
       summary.latestExceptionPreview = task.exception || summary.latestExceptionPreview
     }
@@ -271,7 +279,7 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
       .query(
         `UPSERT type::record('workflow', $workflowId) SET
                     root_task_id = $rootTaskId,
-                    root_task_type = $rootTaskType,
+                    root_task_type = IF $rootTaskType = NULL THEN NONE ELSE $rootTaskType END,
                     aggregate_state = $aggregateState,
                     first_seen_at = <datetime>$firstSeenAt,
                     last_updated = <datetime>$lastUpdated,
@@ -281,7 +289,7 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
                     retry_count = $retryCount,
                     active_count = $activeCount,
                     worker_count = $workerCount,
-                    latest_exception_preview = $latestExceptionPreview`,
+                    latest_exception_preview = IF $latestExceptionPreview = NULL THEN NONE ELSE $latestExceptionPreview END`,
         {
           workflowId,
           rootTaskId: summary.rootTaskId,
@@ -361,6 +369,20 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
     // Apply core schema (tables, fields, indexes, permissions)
     await db.query(CORE_SCHEMA).collect()
     await backfillWorkflows(db, log)
+
+    // Preserve evidence independently of the task's latest state. Historical events
+    // are used once at migration time, rather than scanned by every MCP search.
+    await db
+      .query(`UPDATE task SET
+      first_observed_at = first_observed_at ?? sent_at ?? received_at ?? started_at ?? last_updated,
+      had_error = had_error OR state = 'FAILURE' OR failed_at != NONE
+        OR (exception ?? '') != '' OR (traceback ?? '') != '';
+      LET $errors = SELECT task_id FROM event WHERE task_id != NONE AND
+        (event_type = 'task-failed' OR (exception ?? '') != '' OR (traceback ?? '') != '') GROUP BY task_id;
+      FOR $error IN $errors {
+        UPDATE type::record('task', $error.task_id) SET had_error = true;
+      };`)
+      .collect()
 
     // Always create a read-only viewer user for the frontend.
     // SurrealDB requires authentication even for tables with FULL select permissions —

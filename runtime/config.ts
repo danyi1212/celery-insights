@@ -12,6 +12,8 @@ const configSchema = z
   .object({
     // Server
     port: z.coerce.number().int().positive().default(8555),
+    mcpToken: z.string().min(1).optional(),
+    mcpAllowedHosts: z.string().min(1).optional(),
 
     // SurrealDB
     surrealdbUrl: z.string().url().default("ws://localhost:8557/rpc"),
@@ -65,6 +67,8 @@ export type Config = z.infer<typeof configSchema>
 
 const ENV_KEY_MAP: Record<string, string> = {
   PORT: "port",
+  MCP_TOKEN: "mcpToken",
+  MCP_ALLOWED_HOSTS: "mcpAllowedHosts",
   SURREALDB_URL: "surrealdbUrl",
   SURREALDB_EXTERNAL_URL: "surrealdbExternalUrl",
   SURREALDB_INGESTER_PASS: "surrealdbIngesterPass",

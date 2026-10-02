@@ -26,7 +26,72 @@ If you only need the minimum set of values, start with one of these combinations
 
 ### Security
 
-[`SURREALDB_INGESTER_PASS`](#surrealdb_ingester_pass) · [`SURREALDB_FRONTEND_PASS`](#surrealdb_frontend_pass) · [`LOG_FORMAT`](#log_format)
+[`SURREALDB_INGESTER_PASS`](#surrealdb_ingester_pass) · [`SURREALDB_FRONTEND_PASS`](#surrealdb_frontend_pass) · [`MCP_TOKEN`](#mcp_token) · [`MCP_ALLOWED_HOSTS`](#mcp_allowed_hosts) · [`LOG_FORMAT`](#log_format)
+
+## MCP access for agents
+
+Start Celery Insights, then connect your agent to `http://localhost:8555/mcp`.
+**Authentication is off by default**, just like the dashboard. No token or header is needed
+unless you set `MCP_TOKEN` or `SURREALDB_FRONTEND_PASS`.
+
+For Claude Code, run:
+
+```shell
+claude mcp add --transport http celery-insights http://localhost:8555/mcp
+```
+
+For Codex, run:
+
+```shell
+codex mcp add celery-insights --url http://localhost:8555/mcp
+```
+
+For Cursor, add this to `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` for all projects:
+
+```json
+{
+  "mcpServers": {
+    "celery-insights": {
+      "url": "http://localhost:8555/mcp"
+    }
+  }
+}
+```
+
+Restart your agent session after configuring it. See the running app's
+[MCP Interface guide](http://localhost:8555/documentation/mcp) for connection checks,
+[optional authentication](http://localhost:8555/documentation/mcp#optional-authentication),
+and troubleshooting recipes. Client configuration details are documented by
+[Claude Code](https://code.claude.com/docs/en/mcp), [Codex](https://developers.openai.com/codex/mcp),
+and [Cursor](https://cursor.com/docs/mcp).
+
+To enable authentication, set `MCP_TOKEN` in your deployment and restart Celery Insights.
+Send it as `Authorization: Bearer YOUR_MCP_TOKEN` from the agent. If dashboard protection is already
+enabled with `SURREALDB_FRONTEND_PASS` and you do not set `MCP_TOKEN`, use the dashboard password
+as the bearer token. Setting `MCP_TOKEN` overrides that fallback for MCP and does not enable dashboard
+authentication. See the in-app guide above for the exact authenticated configuration for each agent.
+
+The endpoint accepts POST requests and does not maintain sessions or provide an SSE stream.
+For load-balanced deployments, configure the same MCP token or dashboard password across replicas
+so pagination cursors remain valid across instances. An unprotected instance with default database
+credentials uses a random cursor secret, so its cursors expire on restart.
+
+#### MCP_TOKEN
+
+Default: `SURREALDB_FRONTEND_PASS` when configured, otherwise no token.
+
+Bearer credential for MCP access. Set it to use a separate credential for agents. MCP uses this
+token when configured; otherwise it requires the dashboard password when dashboard protection
+is enabled. The token is redacted from debug bundles.
+
+#### MCP_ALLOWED_HOSTS
+
+Default: `localhost,127.0.0.1,[::1]`.
+
+Comma-separated hostnames accepted by the MCP endpoint. Use hostnames without schemes, paths,
+or ports, for example `insights.example.com,localhost`. Configure the public hostname when accessing
+MCP through a reverse proxy. Requests carrying an Origin must match the requested URL's origin.
+The host allowlist also limits DNS rebinding exposure for local deployments.
 
 ## Celery Connection
 
