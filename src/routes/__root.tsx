@@ -1,4 +1,4 @@
-import { createRootRoute, Outlet, Link as RouterLink } from "@tanstack/react-router"
+import { createRootRoute, Outlet, Link as RouterLink, type ErrorComponentProps } from "@tanstack/react-router"
 import { ReadOnlyBanner } from "@components/connection-status"
 import { AppKeyboardShortcuts } from "@components/keyboard/app-keyboard-shortcuts"
 import { SearchBoxControllerProvider } from "@components/search/search-box-controller"
@@ -43,13 +43,14 @@ const RootComponent = () => {
   )
 }
 
-const ErrorComponent = ({ error }: { error: Error }) => {
+const ErrorComponent = ({ error }: ErrorComponentProps) => {
   console.error(error)
+  const displayError = error instanceof Error ? error : new Error(String(error))
   return (
     <TooltipProvider>
       <div className="min-h-screen flex justify-center items-center flex-col bg-background text-foreground">
-        <h1 className="text-4xl font-bold">{error.name}</h1>
-        <p className="text-xl mt-2">{error.message}</p>
+        <h1 className="text-4xl font-bold">{displayError.name}</h1>
+        <p className="text-xl mt-2">{displayError.message}</p>
         <RouterLink to="/" className="text-primary underline mt-4">
           Back Home
         </RouterLink>

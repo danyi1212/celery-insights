@@ -16,13 +16,13 @@ jobs:
     name: Lint backend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: actions/setup-python@v7.0.0
         with:
-          python-version: "3.12"
+          python-version-file: ".python-version"
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --locked
       - name: Ruff check
         run: uv run ruff check
       - name: Ruff format
@@ -35,17 +35,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint-backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: actions/setup-python@v7.0.0
         with:
-          python-version: "3.12"
+          python-version-file: ".python-version"
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --locked
       - name: Run pytest
         run: uv run pytest server --doctest-modules --junitxml=junit/test-results.xml --cov=server --cov-report=xml --cov-report=html -n auto
       - name: Publish test results
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        uses: EnricoMi/publish-unit-test-result-action@v2.24.0
         if: always()
         with:
           files: junit/test-results.xml
@@ -54,8 +54,13 @@ jobs:
     name: Lint frontend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: "26.10.0"
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: "1.4.2"
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Oxlint
@@ -70,8 +75,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint-frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: "26.10.0"
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: "1.4.2"
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Vitest
@@ -83,15 +93,20 @@ jobs:
     timeout-minutes: 15
     needs: [lint-frontend, lint-backend]
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v7.0.1
+      - uses: docker/setup-buildx-action@v4.4.1
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: "26.10.0"
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: "1.4.2"
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
       - name: Build E2E images
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@v7.4.0
         with:
           files: ./docker-bake.hcl
           targets: e2e
@@ -102,7 +117,7 @@ jobs:
           CI: "true"
           E2E_SKIP_BUILD: "1"
       - name: Publish Playwright summary
-        uses: daun/playwright-report-summary@v3
+        uses: daun/playwright-report-summary@v4.1.0
         if: always() && hashFiles('playwright-report/results.json') != ''
         with:
           report-file: playwright-report/results.json
@@ -110,13 +125,13 @@ jobs:
           comment-title: E2E test results
           job-summary: true
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         if: always()
         with:
           name: playwright-report
           path: playwright-report/
       - name: Upload traces on failure
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         if: failure()
         with:
           name: playwright-traces
@@ -124,3 +139,34 @@ jobs:
       - name: Cleanup docker compose
         if: always()
         run: docker compose -f test_project/docker-compose.yml --profile interactive down -v --remove-orphans || true
+
+  database-upgrade:
+    name: Database upgrade and restore
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: "1.4.2"
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version-file: ".python-version"
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Download official database binaries
+        run: |
+          mkdir -p "$RUNNER_TEMP/surreal-old" "$RUNNER_TEMP/surreal-new"
+          curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.0.2/surreal-v3.0.2.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-old"
+          curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.3.0/surreal-v3.3.0.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-new"
+          echo "SURREAL_OLD_BINARY=$RUNNER_TEMP/surreal-old/surreal" >> "$GITHUB_ENV"
+          echo "SURREAL_NEW_BINARY=$RUNNER_TEMP/surreal-new/surreal" >> "$GITHUB_ENV"
+      - name: Validate existing datastore and backup restore
+        run: python tooling/verify-surreal-upgrade.py
+      - name: Upload database validation evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: database-upgrade-evidence
+          path: /tmp/celery-surreal-upgrade-*/
+          retention-days: 7

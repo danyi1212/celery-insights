@@ -10,6 +10,11 @@
         "no-var": "error",
         "prefer-const": "error",
         "vitest/require-mock-type-parameters": "off",
-        "unicorn/no-useless-fallback-in-spread": "error"
+        "unicorn/no-useless-fallback-in-spread": "error",
+        "react/incompatible-library": "off",
+        "react/set-state-in-effect": "off",
+        "react/refs": "off",
+        "react/purity": "off",
+        "jsx-a11y/prefer-tag-over-role": "off"
     }
 }

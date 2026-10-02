@@ -18,12 +18,9 @@ const TimeSince: React.FC<TimeSinceProps> = ({ time, addSuffix, unit, roundingMe
     const diffInHours = differenceInHours(now, time)
     const diffInDays = differenceInDays(now, time)
 
-    if (diffInMinutes < 1)
-      return 1000 // update every 1s if less than 1 minute
-    else if (diffInHours < 1)
-      return 60 * 1000 // update every 1m if less than 1 hour
-    else if (diffInDays < 1)
-      return 60 * 60 * 1000 // update every 1h if less than 1 day
+    if (diffInMinutes < 1) return 1000 // update every 1s if less than 1 minute
+    else if (diffInHours < 1) return 60 * 1000 // update every 1m if less than 1 hour
+    else if (diffInDays < 1) return 60 * 60 * 1000 // update every 1h if less than 1 day
     else return 24 * 60 * 60 * 1000 // update every 1d if more than 1 day
   }, [time])
 

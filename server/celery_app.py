@@ -26,6 +26,7 @@ async def get_celery_app(settings: Settings | None = None):
             backend=settings.result_backend,
             timezone=settings.timezone,
         )
+        _configure_monitor_queues(app)
         _celery_app_cache = app
         return app
 
@@ -43,5 +44,12 @@ async def get_celery_app(settings: Settings | None = None):
         app.config_from_object(config)
     except Exception as e:
         raise RuntimeError(f"Failed to load celery app config from {settings.config_file!r}") from e
+    _configure_monitor_queues(app)
     _celery_app_cache = app
     return app
+
+
+def _configure_monitor_queues(app: Celery) -> None:
+    """Use connection-owned temporary queues accepted by RabbitMQ 4.3+."""
+    app.conf.event_queue_exclusive = not app.conf.event_queue_durable
+    app.conf.control_queue_exclusive = not app.conf.control_queue_durable

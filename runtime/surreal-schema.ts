@@ -150,8 +150,8 @@ interface BackfillTaskRecord {
   root_id?: string | null
   worker?: string | null
   exception?: string | null
-  sent_at?: string | null
-  last_updated?: string | null
+  sent_at?: string | { toISOString(): string } | null
+  last_updated?: string | { toISOString(): string } | null
 }
 
 interface WorkflowSummarySeed {
@@ -221,12 +221,15 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
     if (task.state && !ACTIVE_STATES.has(task.state) && task.state !== "RETRY") summary.completedCount += 1
     if (task.worker) summary.workerIds.add(task.worker)
 
-    const firstSeenCandidate = task.sent_at || task.last_updated || null
+    const lastUpdated =
+      typeof task.last_updated === "string" ? task.last_updated : (task.last_updated?.toISOString() ?? null)
+    const sentAt = typeof task.sent_at === "string" ? task.sent_at : (task.sent_at?.toISOString() ?? null)
+    const firstSeenCandidate = sentAt || lastUpdated
     if (compareMaybeIsoAsc(firstSeenCandidate, summary.firstSeenAt) < 0) {
       summary.firstSeenAt = firstSeenCandidate
     }
-    if (compareMaybeIsoAsc(task.last_updated || null, summary.lastUpdated) > 0) {
-      summary.lastUpdated = task.last_updated || null
+    if (lastUpdated && (!summary.lastUpdated || compareMaybeIsoAsc(lastUpdated, summary.lastUpdated) > 0)) {
+      summary.lastUpdated = lastUpdated
       summary.latestExceptionPreview = task.exception || summary.latestExceptionPreview
     }
 
@@ -305,9 +308,7 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
       memberTaskIds.map((taskId) =>
         db
           .query(
-            `UPSERT type::record('workflow_task', $edgeId) SET
-                            in = type::record('workflow', $workflowId),
-                            out = type::record('task', $taskId)`,
+            `RELATE OR UPDATE (type::record('workflow', $workflowId))->(type::record('workflow_task', $edgeId))->(type::record('task', $taskId))`,
             {
               edgeId: `${workflowId}:${taskId}`,
               workflowId,
