@@ -348,6 +348,7 @@ const DATETIME_FIELDS: Record<"task" | "event" | "worker", readonly string[]> = 
     "revoked_at",
     "rejected_at",
     "last_updated",
+    "first_observed_at",
   ],
   event: ["timestamp"],
   worker: ["last_updated"],
