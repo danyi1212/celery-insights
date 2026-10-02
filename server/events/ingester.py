@@ -279,13 +279,22 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
     }
 
     set_clauses = [
-        f"state = IF last_updated IS NONE OR <datetime>${p}_ts > last_updated THEN ${p}_state ELSE state END",
-        f"last_updated = IF last_updated IS NONE OR <datetime>${p}_ts > last_updated"
-        f" THEN <datetime>${p}_ts ELSE last_updated END",
-        f"{ts_field} = IF {ts_field} IS NONE OR <datetime>${p}_ts < {ts_field}"
-        f" THEN <datetime>${p}_ts ELSE {ts_field} END",
-        f"workflow_id = ${p}_workflow_id",
+        f"state = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts > ${p}_previous.last_updated"
+        f" THEN ${p}_state ELSE ${p}_previous.state END",
+        f"last_updated = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts > ${p}_previous.last_updated"
+        f" THEN <datetime>${p}_ts ELSE ${p}_previous.last_updated END",
+        f"{ts_field} = IF ${p}_previous.{ts_field} IS NONE OR <datetime>${p}_ts < ${p}_previous.{ts_field}"
+        f" THEN <datetime>${p}_ts ELSE ${p}_previous.{ts_field} END",
+        f"first_observed_at = IF ${p}_previous.first_observed_at IS NONE"
+        f" OR <datetime>${p}_ts < ${p}_previous.first_observed_at"
+        f" THEN <datetime>${p}_ts ELSE ${p}_previous.first_observed_at END",
+        f"workflow_id = ${p}_workflow_id"
+        if event.get("root_id")
+        else f"workflow_id = ${p}_previous.workflow_id ?? ${p}_workflow_id",
     ]
+
+    if event_type == "task-failed" or event.get("exception") or event.get("traceback"):
+        set_clauses.append("had_error = true")
 
     for event_field, db_field in TASK_FIELD_MAP.items():
         value = event.get(event_field)
@@ -293,18 +302,24 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
             pname = f"{p}_{db_field}"
             params[pname] = value if isinstance(value, int | float) else str(value)
             set_clauses.append(
-                f"{db_field} = IF last_updated IS NONE OR <datetime>${p}_ts >= last_updated"
-                f" THEN ${pname} ELSE {db_field} END"
+                f"{db_field} = IF ${p}_previous.last_updated IS NONE"
+                f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
+                f" THEN ${pname} ELSE ${p}_previous.{db_field} END"
             )
 
     hostname = event.get("hostname")
     if hostname:
         params[f"{p}_worker"] = hostname
         set_clauses.append(
-            f"worker = IF last_updated IS NONE OR <datetime>${p}_ts >= last_updated THEN ${p}_worker ELSE worker END"
+            f"worker = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts >= ${p}_previous.last_updated"
+            f" THEN ${p}_worker ELSE ${p}_previous.worker END"
         )
 
-    query = f"UPSERT type::record('task', ${p}_id) SET " + ", ".join(set_clauses)
+    target = f"type::record('task', ${p}_id)"
+    assignments = ", ".join(set_clauses)
+    # Read persisted values explicitly: UPSERT can evaluate against a creation
+    # candidate, including multiple updates to the same task in one transaction.
+    query = f"LET ${p}_previous = (SELECT * FROM {target})[0] ?? {{}}; UPSERT {target} SET {assignments}"
     return query, params
 
 
@@ -342,13 +357,20 @@ def build_workflow_membership_upsert(event: dict, idx: int) -> tuple[str, dict]:
         f"THEN <datetime>${p}_ts ELSE last_updated END"
     )
     edge_upsert = (
-        f"UPSERT type::record('workflow_task', ${p}_edge_id) SET "
-        f"`in` = type::record('workflow', ${p}_workflow_id), "
-        f"out = type::record('task', ${p}_task_id), "
+        f"RELATE (type::record('workflow', ${p}_workflow_id))"
+        f"->(type::record('workflow_task', ${p}_edge_id))"
+        f"->(type::record('task', ${p}_task_id)) SET "
         f"created_at = created_at ?? <datetime>${p}_ts, "
         f"last_updated = <datetime>${p}_ts"
     )
-    query = f"{workflow_upsert};\n{edge_upsert}"
+    # The task upsert precedes membership updates. Its persisted grouping is the
+    # source of truth when subsequent Celery events omit root_id.
+    resolve_workflow = (
+        f"LET ${p}_workflow_id = (SELECT VALUE workflow_id FROM type::record('task', ${p}_task_id))[0]"
+        f" ?? ${p}_workflow_id; "
+        f"LET ${p}_edge_id = string::concat(${p}_workflow_id, ':', ${p}_task_id)"
+    )
+    query = f"{resolve_workflow};\n{workflow_upsert};\n{edge_upsert}"
     return query, params
 
 
@@ -361,10 +383,13 @@ def build_workflow_summary_recompute(event: dict, idx: int) -> tuple[str, dict]:
     p = f"wfs{idx}"
     params = {
         f"{p}_workflow_id": workflow_id,
+        f"{p}_task_id": event.get("uuid"),
         f"{p}_active_states": list(ACTIVE_STATES),
     }
 
     query_parts = [
+        f"LET ${p}_workflow_id = (SELECT VALUE workflow_id FROM type::record('task', ${p}_task_id))[0]"
+        f" ?? ${p}_workflow_id",
         (
             f"LET ${p}_task_count = "
             f"(SELECT count() AS count FROM task WHERE workflow_id = ${p}_workflow_id GROUP ALL)[0].count ?? 0"
@@ -392,8 +417,9 @@ def build_workflow_summary_recompute(event: dict, idx: int) -> tuple[str, dict]:
         ),
         f"LET ${p}_root = (SELECT * FROM type::record('task', ${p}_workflow_id))[0]",
         (
-            f"LET ${p}_first_seen_at = (SELECT VALUE last_updated FROM task "
-            f"WHERE workflow_id = ${p}_workflow_id ORDER BY last_updated ASC LIMIT 1)[0]"
+            f"LET ${p}_first_seen_at = (SELECT VALUE first_observed_at FROM task "
+            f"WHERE workflow_id = ${p}_workflow_id AND first_observed_at != NONE"
+            " ORDER BY first_observed_at ASC LIMIT 1)[0]"
         ),
         (
             f"LET ${p}_last_updated = (SELECT VALUE last_updated FROM task "

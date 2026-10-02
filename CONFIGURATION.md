@@ -26,7 +26,51 @@ If you only need the minimum set of values, start with one of these combinations
 
 ### Security
 
-[`SURREALDB_INGESTER_PASS`](#surrealdb_ingester_pass) · [`SURREALDB_FRONTEND_PASS`](#surrealdb_frontend_pass) · [`LOG_FORMAT`](#log_format)
+[`SURREALDB_INGESTER_PASS`](#surrealdb_ingester_pass) · [`SURREALDB_FRONTEND_PASS`](#surrealdb_frontend_pass) · [`MCP_TOKEN`](#mcp_token) · [`MCP_ALLOWED_HOSTS`](#mcp_allowed_hosts) · [`LOG_FORMAT`](#log_format)
+
+## MCP access for agents
+
+Bun exposes a read-only, stateless Streamable HTTP MCP endpoint at `http://localhost:8555/mcp`.
+It reads retained SurrealDB observations without polling or changing the Celery cluster, including
+on ingestion replicas and in snapshot mode. The five tools discover workflows and workers,
+inspect workflow members, and retrieve task payloads, errors, and event history.
+See [the tool contract](MCP_DESIGN.md) for arguments, response shapes, and pagination.
+
+Connect an HTTP-capable MCP client to that URL. A client using an `mcpServers` configuration can use:
+
+```json
+{
+  "mcpServers": {
+    "celery-insights": {
+      "url": "http://localhost:8555/mcp",
+      "headers": { "Authorization": "Bearer YOUR_MCP_TOKEN" }
+    }
+  }
+}
+```
+
+Client configuration formats vary. Omit the header for an unprotected local deployment.
+The endpoint accepts POST requests and does not maintain sessions or provide an SSE stream.
+For load-balanced deployments, configure the same MCP token or dashboard password across replicas
+so pagination cursors remain valid across instances. An unprotected instance with default database
+credentials uses a random cursor secret, so its cursors expire on restart.
+
+#### MCP_TOKEN
+
+Default: `SURREALDB_FRONTEND_PASS` when configured, otherwise no token.
+
+Bearer credential for MCP access. Set it to use a separate credential for agents. When dashboard
+password protection is enabled, MCP requires either this token or the dashboard password;
+the MCP endpoint cannot bypass protected access. The token is redacted from debug bundles.
+
+#### MCP_ALLOWED_HOSTS
+
+Default: `localhost,127.0.0.1,[::1]`.
+
+Comma-separated hostnames accepted by the MCP endpoint. Use hostnames without schemes, paths,
+or ports, for example `insights.example.com,localhost`. Configure the public hostname when accessing
+MCP through a reverse proxy. Requests carrying an Origin must match the requested URL's origin.
+The host allowlist also limits DNS rebinding exposure for local deployments.
 
 ## Celery Connection
 

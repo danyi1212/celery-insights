@@ -224,6 +224,13 @@ uv run pytest server/tasks/model_test.py   # single file
 Frontend unit tests use [Vitest](https://vitest.dev/) with [Testing Library](https://testing-library.com/) and happy-dom.
 Tests are colocated next to the module they test, suffixed `.test.ts` or `.test.tsx` (e.g., `task-avatar.tsx` -> `task-avatar.test.tsx`).
 
+MCP integration tests start an isolated in-memory SurrealDB process and require the SurrealDB 3.x CLI
+on PATH (production and CI use v3.0.2). They exercise real queries, paging, viewer permissions,
+schema migration, and the HTTP protocol. Set `MCP_TEST_URL` only for a disposable test server;
+the tests clear data in its `test/mcp` database.
+The Python ingestion integration test also starts an isolated SurrealDB process; it skips when
+the CLI is unavailable locally, and CI installs the CLI to run it.
+
 ```shell
 bun run test          # all tests (single run)
 bun run test:watch    # watch mode

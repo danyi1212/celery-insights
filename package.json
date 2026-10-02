@@ -24,8 +24,10 @@
         "dev:all": "concurrently \"bun run dev:surreal\" \"bun run dev:server\" \"bun run dev\""
     },
     "dependencies": {
+        "@danyi1212/time-range-picker": "^0.1.1",
         "@floating-ui/react": "^0.27.19",
         "@mdx-js/react": "^3.1.1",
+        "@modelcontextprotocol/sdk": "^1.31.0",
         "@surrealdb/wasm": "^3.0.3",
         "@tailwindcss/vite": "^4.2.1",
         "@tanstack/react-hotkeys": "^0.4.1",
@@ -59,7 +61,6 @@
         "tailwind-merge": "^3.5.0",
         "tailwindcss": "^4.2.1",
         "tailwindcss-animate": "^1.0.7",
-        "@danyi1212/time-range-picker": "^0.1.1",
         "uuid": "^13.0.0",
         "zod": "^4.3.6",
         "zustand": "^5.0.11"

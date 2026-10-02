@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
-import { exportSurrealData, extractSurrealTableData, importSurrealData } from "./debug-bundle"
+import { parseConfig } from "./config"
+import { exportSurrealData, extractSurrealTableData, importSurrealData, redactConfig } from "./debug-bundle"
 
 describe("debug-bundle surreal helpers", () => {
   it("extracts only table data statements from a native surreal export", () => {
@@ -152,4 +153,8 @@ INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
       workers_0: [{ id: "1", data: { last_updated: new Date("2026-03-14T18:43:05.917351Z") } }],
     })
   })
+})
+
+it("redacts the MCP token in diagnostic bundles", () => {
+  expect(redactConfig(parseConfig({ MCP_TOKEN: "private-token" }), false).mcpToken).toBe("***REDACTED***")
 })

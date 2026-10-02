@@ -131,7 +131,7 @@ async function resolveQueryResult(result: unknown): Promise<unknown> {
 export function redactConfig(config: Config, includeSecrets: boolean): Record<string, unknown> {
   const data: Record<string, unknown> = { ...config }
   if (!includeSecrets) {
-    for (const key of ["surrealdbIngesterPass", "surrealdbFrontendPass", "brokerUrl", "resultBackend"]) {
+    for (const key of ["surrealdbIngesterPass", "surrealdbFrontendPass", "mcpToken", "brokerUrl", "resultBackend"]) {
       if (key in data && data[key] !== null && data[key] !== undefined) {
         data[key] = "***REDACTED***"
       }

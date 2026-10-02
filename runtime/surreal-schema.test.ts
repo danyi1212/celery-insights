@@ -204,7 +204,7 @@ describe("runSchemaMigration", () => {
     const queries = mockDb.query.mock.calls.map((c) => c[0] as string)
     expect(queries).toContain("SELECT * FROM task")
     expect(queries.some((query) => query.includes("UPSERT type::record('workflow', $workflowId)"))).toBe(true)
-    expect(queries.some((query) => query.includes("UPSERT type::record('workflow_task', $edgeId)"))).toBe(true)
+    expect(queries.some((query) => query.includes("->(type::record('workflow_task', $edgeId))"))).toBe(true)
     expect(
       queries.some((query) => query.includes("UPSERT type::record('task', $taskId) SET workflow_id = $workflowId")),
     ).toBe(true)

@@ -89,18 +89,19 @@ def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
         "worker = $worker",
         "retries = $retries",
         "routing_key = $routing_key",
-        "workflow_id = $workflow_id",
+        "workflow_id = $meta_previous.workflow_id ?? $workflow_id",
         "last_updated = <datetime>$last_updated",
-        "sent_at = sent_at ?? <datetime>$last_updated",
-        "children = children ?? []",
+        "first_observed_at = $meta_previous.first_observed_at ?? <datetime>$last_updated",
+        "sent_at = $meta_previous.sent_at ?? <datetime>$last_updated",
+        "children = $meta_previous.children ?? []",
     ]
 
     if state == "SUCCESS":
-        set_clauses.append("succeeded_at = succeeded_at ?? <datetime>$last_updated")
+        set_clauses.append("succeeded_at = $meta_previous.succeeded_at ?? <datetime>$last_updated")
     elif state == "FAILURE":
-        set_clauses.append("failed_at = failed_at ?? <datetime>$last_updated")
+        set_clauses.append("failed_at = $meta_previous.failed_at ?? <datetime>$last_updated")
     elif state == "RETRY":
-        set_clauses.append("retried_at = retried_at ?? <datetime>$last_updated")
+        set_clauses.append("retried_at = $meta_previous.retried_at ?? <datetime>$last_updated")
 
     result_value = meta.get("result")
     if result_value is not None:
@@ -119,7 +120,12 @@ def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
         params["exception"] = repr(result_value)
         set_clauses.append("exception = $exception")
 
-    query = f"UPSERT type::record('task', $task_id) SET {', '.join(set_clauses)}"
+    if state == "FAILURE" or meta.get("traceback"):
+        set_clauses.append("had_error = true")
+
+    target = "type::record('task', $task_id)"
+    assignments = ", ".join(set_clauses)
+    query = f"LET $meta_previous = (SELECT * FROM {target})[0] ?? {{}}; UPSERT {target} SET {assignments}"
     return query, params
 
 
@@ -157,6 +163,9 @@ class ResultFetcher:
             for key, value in data.items():
                 params[key] = value
                 set_clauses.append(f"{key} = ${key}")
+
+            if data.get("exception") or data.get("traceback"):
+                set_clauses.append("had_error = true")
 
             query = f"UPDATE type::record('task', $task_id) SET {', '.join(set_clauses)}"
             result = await db.query(query, params)

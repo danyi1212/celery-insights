@@ -42,6 +42,8 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: uv sync
+      - name: Install SurrealDB for ingestion integration tests
+        run: curl -fsSL https://install.surrealdb.com | sh -s -- --version v3.0.2
       - name: Run pytest
         run: uv run pytest server --doctest-modules --junitxml=junit/test-results.xml --cov=server --cov-report=xml --cov-report=html -n auto
       - name: Publish test results
@@ -74,6 +76,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      - name: Install SurrealDB for MCP integration tests
+        run: curl -fsSL https://install.surrealdb.com | sh -s -- --version v3.0.2
       - name: Vitest
         run: bun run test
 

@@ -224,3 +224,15 @@ class TestWorkerPoller:
         poller._stop_event.set()
         # Should exit after one iteration since stop event is set
         await poller._poll_loop()
+
+
+def test_inspection_sections_record_their_capture_time(mocker: MockerFixture):
+    inspect = mocker.MagicMock()
+    inspect.active.return_value = {"worker@host": []}
+    for name in ("stats", "registered", "scheduled", "reserved", "active_queues"):
+        getattr(inspect, name).return_value = {}
+    app = mocker.MagicMock()
+    app.control.inspect.return_value = inspect
+    result = _inspect_sync(app)
+    assert "active" in result["worker@host"]["_observed_at"]
+    assert "stats" not in result["worker@host"]["_observed_at"]
