@@ -37,13 +37,15 @@ FROM --platform=$BUILDPLATFORM oven/bun:1.4.2-slim AS front-build
 
 WORKDIR /app
 
-COPY /package.json /bun.lock* /tsconfig.json /vite.config.ts ./
+COPY /package.json /bun.lock* ./
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
+
+COPY /tsconfig.json /vite.config.ts ./
 COPY /tooling ./tooling
 COPY /src ./src
 COPY /runtime ./runtime
 COPY /public ./public
 COPY /bun-entry.ts /index.html ./
-RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 
 RUN bun run build
 RUN bun build bun-entry.ts --target=bun --outfile ./bun-server.js
