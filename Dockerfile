@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1.7
-FROM python:3.14-slim AS python-base
+# syntax=docker/dockerfile:1.27.1
+FROM python:3.14.8-slim-trixie AS python-base
 
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
@@ -11,14 +11,14 @@ FROM python-base AS requirements-stage
 
 WORKDIR /tmp
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.12.20 /uv /usr/local/bin/uv
 COPY ./pyproject.toml ./uv.lock* /tmp/
 
 ARG VARIANT=regular
 RUN if [ "$VARIANT" = "all" ]; then \
-        uv export --no-hashes --frozen --no-emit-project --group all -o requirements.txt; \
+        uv export --no-dev --no-hashes --frozen --no-emit-project --group all -o requirements.txt; \
     else \
-        uv export --no-hashes --frozen --no-emit-project -o requirements.txt; \
+        uv export --no-dev --no-hashes --frozen --no-emit-project -o requirements.txt; \
     fi
 
 FROM python-base AS python-deps
@@ -34,7 +34,7 @@ COPY --from=requirements-stage /tmp/requirements.txt ./requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade --prefix=/install -r ./requirements.txt --no-warn-script-location
 
-FROM oven/bun:1-slim AS front-build
+FROM oven/bun:1.4.2-slim AS front-build
 
 WORKDIR /app
 
@@ -62,8 +62,8 @@ RUN apt-get update \
 # Copy Bun runtime from the build image instead of installing it again.
 COPY --from=front-build /usr/local/bin/bun /usr/local/bin/bun
 
-# Install SurrealDB binary (pinned v3.0.x)
-ARG SURREALDB_VERSION=v3.0.2
+# Install SurrealDB binary (pinned v3.3.x)
+ARG SURREALDB_VERSION=v3.3.0
 RUN curl -fsSL https://install.surrealdb.com | sh -s -- --version ${SURREALDB_VERSION} \
     && command -v surreal \
     && rm -rf /var/lib/apt/lists/*

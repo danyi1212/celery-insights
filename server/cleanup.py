@@ -1,5 +1,9 @@
 import asyncio
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from surrealdb.types import Value
 
 from surrealdb_client import get_db
 
@@ -158,9 +162,14 @@ class CleanupJob:
             logger.exception("Failed to load workflow members for %d workflows", len(workflow_ids))
             return
 
-        task_ids = [task["id"] for task in tasks]
-        task_id_strings = [str(tid).removeprefix("task:").strip("⟨⟩") for tid in task_ids]
+        task_ids: list[Value] = [task["id"] for task in tasks]
+        task_id_strings: list[Value] = [str(tid).removeprefix("task:").strip("⟨⟩") for tid in task_ids]
 
+        params: dict[str, Value] = {
+            "workflow_ids": workflow_ids,
+            "task_ids": task_id_strings,
+            "task_records": task_ids,
+        }
         try:
             await db.query(
                 "\n".join(
@@ -173,11 +182,7 @@ class CleanupJob:
                         "COMMIT TRANSACTION;",
                     ]
                 ),
-                {
-                    "workflow_ids": workflow_ids,
-                    "task_ids": task_id_strings,
-                    "task_records": task_ids,
-                },
+                params,
             )
         except Exception:
             logger.exception("Failed to delete %d workflows", len(workflow_ids))
