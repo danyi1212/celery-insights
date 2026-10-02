@@ -32,3 +32,7 @@ Oxlint enables new React Compiler-oriented defaults (purity, refs, set-state-in-
 ## Release gate
 
 Do not infer release readiness from unit tests. Require green PR CI, regular/all images on amd64 and arm64, real Celery E2E scenarios, demo/WASM sanity, and persisted database upgrade/backup/replay evidence. Preserve a backup made with the old binary before upgrading a disk-backed SurrealDB instance. SurrealDB 3.1+ adds metadata that can limit downgrades: test restore rather than promising binary-only rollback.
+
+## RabbitMQ 4.3 compatibility
+
+The initial real-container E2E startup failed because RabbitMQ 4.3 rejects non-durable, non-exclusive queues. The monitor now uses exclusive event/control queues unless the user's Celery config explicitly enables durable queues; durable queues stay nonexclusive. The worker harness uses exclusive control queues too. This adopts the queue modes supported by RabbitMQ, without enabling its deprecated feature flag. Upstream Celery 5.6 defaults both exclusive settings to false, so applications running their own workers against RabbitMQ 4.3 should set `control_queue_exclusive = True` (or use durable control queues). [RabbitMQ queue guidance](https://www.rabbitmq.com/docs/queues), [Celery stable configuration](https://docs.celeryq.dev/en/stable/userguide/configuration.html).

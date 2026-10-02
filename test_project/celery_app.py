@@ -19,6 +19,8 @@ app.conf.task_send_sent_event = True
 app.conf.task_track_started = True
 app.conf.result_extended = True
 app.conf.enable_utc = True
+app.conf.event_queue_exclusive = True
+app.conf.control_queue_exclusive = True
 app.conf.task_reject_on_worker_lost = True
 app.conf.task_acks_late = True
 
