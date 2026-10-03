@@ -1,0 +1,13 @@
+# Create this claim first. The upstream chart does not provide existingClaim.
+surrealdb:
+  surrealdb:
+    path: rocksdb:/data/surreal
+  persistence:
+    enabled: false
+  volumes:
+    - name: existing-data
+      persistentVolumeClaim:
+        claimName: surrealdb-data
+  volumeMounts:
+    - name: existing-data
+      mountPath: /data

@@ -6,6 +6,7 @@ import time
 from prometheus_client import CollectorRegistry, Gauge, Histogram, generate_latest
 
 from events.ingester import SurrealDBIngester
+from runtime_state import IngestionStats
 from metrics.queries import (
     query_exceptions_by_type,
     query_runtime_by_type,
@@ -157,7 +158,7 @@ async def collect_tier2() -> bytes:
     return generate_latest(registry)
 
 
-async def collect_tier3(ingester: SurrealDBIngester | None) -> bytes:
+async def collect_tier3(ingester: SurrealDBIngester | IngestionStats | None) -> bytes:
     registry = CollectorRegistry(auto_describe=False)
 
     Gauge("celery_insights_uptime_seconds", "Process uptime in seconds", registry=registry).set(
@@ -177,19 +178,16 @@ async def collect_tier3(ingester: SurrealDBIngester | None) -> bytes:
     Gauge("celery_insights_memory_rss_bytes", "Resident set size in bytes", registry=registry).set(rusage.ru_maxrss)
 
     if ingester:
+        stats = ingester if isinstance(ingester, IngestionStats) else IngestionStats.from_ingester(ingester)
         Gauge("celery_insights_events_ingested_total", "Total events ingested", registry=registry).set(
-            ingester._stats_events_total
+            stats.events_ingested_total
         )
         Gauge(
             "celery_insights_events_dropped_total", "Total events dropped due to backpressure", registry=registry
-        ).set(ingester._dropped_count)
-        Gauge("celery_insights_flushes_total", "Total flush operations", registry=registry).set(
-            ingester._stats_flushes_total
-        )
-        Gauge("celery_insights_buffer_size", "Current ingester buffer size", registry=registry).set(
-            len(ingester._buffer)
-        )
-        Gauge("celery_insights_queue_size", "Current event queue size", registry=registry).set(ingester.queue.qsize())
+        ).set(stats.dropped_events)
+        Gauge("celery_insights_flushes_total", "Total flush operations", registry=registry).set(stats.flushes_total)
+        Gauge("celery_insights_buffer_size", "Current ingester buffer size", registry=registry).set(stats.buffer_size)
+        Gauge("celery_insights_queue_size", "Current event queue size", registry=registry).set(stats.queue_size)
 
     table_counts = await query_table_counts()
     Gauge("celery_insights_db_tasks_count", "Number of task records in SurrealDB", registry=registry).set(

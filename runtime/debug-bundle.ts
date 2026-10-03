@@ -131,7 +131,14 @@ async function resolveQueryResult(result: unknown): Promise<unknown> {
 export function redactConfig(config: Config, includeSecrets: boolean): Record<string, unknown> {
   const data: Record<string, unknown> = { ...config }
   if (!includeSecrets) {
-    for (const key of ["surrealdbIngesterPass", "surrealdbFrontendPass", "mcpToken", "brokerUrl", "resultBackend"]) {
+    for (const key of [
+      "surrealdbRootPass",
+      "surrealdbIngesterPass",
+      "surrealdbFrontendPass",
+      "mcpToken",
+      "brokerUrl",
+      "resultBackend",
+    ]) {
       if (key in data && data[key] !== null && data[key] !== undefined) {
         data[key] = "***REDACTED***"
       }
@@ -140,9 +147,12 @@ export function redactConfig(config: Config, includeSecrets: boolean): Record<st
   return data
 }
 
-async function runCommand(cmd: string[], cwd?: string): Promise<string> {
+async function runCommand(cmd: string[], cwd?: string, credentials?: Config): Promise<string> {
   const proc = Bun.spawn(cmd, {
     cwd,
+    env: credentials
+      ? { ...process.env, SURREAL_USER: credentials.surrealdbRootUser, SURREAL_PASS: credentials.surrealdbRootPass }
+      : undefined,
     stdout: "pipe",
     stderr: "pipe",
   })
@@ -242,30 +252,30 @@ function getSurrealHttpEndpoint(config: Config): string {
 }
 
 export async function exportSurrealNative(config: Config): Promise<string> {
-  const fullExport = await runCommand([
-    "surreal",
-    "export",
-    "--log",
-    "none",
-    "--endpoint",
-    getSurrealHttpEndpoint(config),
-    "--username",
-    "root",
-    "--password",
-    "root",
-    "--auth-level",
-    "root",
-    "--namespace",
-    config.surrealdbNamespace,
-    "--database",
-    config.surrealdbDatabase,
-    "--only",
-    "--records",
-    "true",
-    "--tables",
-    "task,event,worker",
-    "-",
-  ])
+  const fullExport = await runCommand(
+    [
+      "surreal",
+      "export",
+      "--log",
+      "none",
+      "--endpoint",
+      getSurrealHttpEndpoint(config),
+      "--auth-level",
+      "root",
+      "--namespace",
+      config.surrealdbNamespace,
+      "--database",
+      config.surrealdbDatabase,
+      "--only",
+      "--records",
+      "true",
+      "--tables",
+      "task,event,worker",
+      "-",
+    ],
+    undefined,
+    config,
+  )
   return extractSurrealTableData(fullExport, ["event", "task", "worker"])
 }
 
@@ -295,25 +305,25 @@ export async function importSurrealNative(config: Config, db: Surreal, sourcePat
 
   try {
     await cp(sourcePath, importPath)
-    await runCommand([
-      "surreal",
-      "import",
-      "--log",
-      "none",
-      "--endpoint",
-      getSurrealHttpEndpoint(config),
-      "--username",
-      "root",
-      "--password",
-      "root",
-      "--auth-level",
-      "root",
-      "--namespace",
-      config.surrealdbNamespace,
-      "--database",
-      config.surrealdbDatabase,
-      importPath,
-    ])
+    await runCommand(
+      [
+        "surreal",
+        "import",
+        "--log",
+        "none",
+        "--endpoint",
+        getSurrealHttpEndpoint(config),
+        "--auth-level",
+        "root",
+        "--namespace",
+        config.surrealdbNamespace,
+        "--database",
+        config.surrealdbDatabase,
+        importPath,
+      ],
+      undefined,
+      config,
+    )
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     throw new Error(`Failed to import native SurrealDB snapshot: ${message}`)

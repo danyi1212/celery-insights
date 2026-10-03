@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +11,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
+    process_role: Literal["standalone", "api", "ingester"] = "standalone"
     debug: bool = False
     timezone: str = "UTC"
 

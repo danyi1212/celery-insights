@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "insights.fullname" . }}-test
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  automountServiceAccountToken: false
+  restartPolicy: Never
+  containers:
+    - name: health
+      image: {{ .Values.test.image | quote }}
+      command: [wget]
+      args: ["--spider", "http://{{ include "insights.fullname" . }}:{{ .Values.service.port }}/ready"]

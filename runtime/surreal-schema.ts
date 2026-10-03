@@ -25,6 +25,7 @@ function toSurrealStrand(value: string): string {
  * Fields and indexes use OVERWRITE to allow schema evolution.
  */
 export const CORE_SCHEMA = `
+DEFINE TABLE IF NOT EXISTS runtime_state TYPE NORMAL SCHEMALESS PERMISSIONS NONE;
 DEFINE TABLE IF NOT EXISTS task SCHEMAFULL
   PERMISSIONS
     FOR select FULL
@@ -348,8 +349,8 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
     // Connect as root (only Bun knows root credentials)
     await db.connect(config.surrealdbUrl, {
       authentication: {
-        username: "root",
-        password: "root",
+        username: config.surrealdbRootUser,
+        password: config.surrealdbRootPass,
       },
     })
 

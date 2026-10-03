@@ -15,6 +15,7 @@ from server_info.models import (
     query_table_count,
 )
 from surrealdb_client import get_db
+from runtime_state import apply_retention, save_retention
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,8 @@ async def _get_record_counts() -> RecordCounts:
 @settings_router.get("/retention")
 async def get_retention_settings(request: Request) -> RetentionInfo:
     cleanup_job = request.app.state.cleanup_job
+    if getattr(getattr(request.app.state, "settings", None), "process_role", "standalone") == "api":
+        await apply_retention(cleanup_job)
     settings = RetentionSettings(
         cleanup_interval_seconds=cleanup_job.interval_seconds,
         task_max_count=cleanup_job.task_max_count,
@@ -114,6 +117,8 @@ async def update_retention_settings(request: Request, new_settings: RetentionSet
     if _is_debug_snapshot_mode(request):
         return _read_only_response()
     cleanup_job = request.app.state.cleanup_job
+    if getattr(getattr(request.app.state, "settings", None), "process_role", "standalone") == "api":
+        await save_retention(new_settings)
     cleanup_job.task_max_count = new_settings.task_max_count
     cleanup_job.task_retention_hours = new_settings.task_retention_hours
     cleanup_job.dead_worker_retention_hours = new_settings.dead_worker_retention_hours
@@ -138,6 +143,8 @@ async def trigger_cleanup(request: Request) -> dict:
         return _read_only_response()
     cleanup_job = request.app.state.cleanup_job
     try:
+        if getattr(getattr(request.app.state, "settings", None), "process_role", "standalone") == "api":
+            await apply_retention(cleanup_job)
         await cleanup_job._run_cleanup()
         counts = await _get_record_counts()
         return {"success": True, "counts": counts.model_dump()}

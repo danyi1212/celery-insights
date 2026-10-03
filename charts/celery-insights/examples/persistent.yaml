@@ -1,0 +1,6 @@
+surrealdb:
+  surrealdb:
+    path: rocksdb:/data/surreal
+  persistence:
+    enabled: true
+    size: 10Gi

@@ -302,3 +302,6 @@ pyrightconfig.json
 # Playwright
 playwright-report/
 test-results/
+
+# Helm dependencies are reproducibly fetched from Chart.lock
+charts/*/charts/

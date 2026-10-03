@@ -79,6 +79,10 @@ optional authentication, troubleshooting recipes, and continuing large results. 
 or the [full tool contract](MCP_DESIGN.md) for every argument and response field.
 For development setup, see [the MCP contributor notes](CONTRIBUTING.md#mcp-development).
 
+## Kubernetes
+
+An official Helm chart is being developed in [`charts/celery-insights`](charts/celery-insights/README.md). It deploys Insights with a shared single-instance SurrealDB or connects to an external database. See the chart README for its current release prerequisites.
+
 ## Documentation
 
 - [`CONFIGURATION.md`](CONFIGURATION.md) for the full environment variable reference, setup patterns, metrics endpoints, and reverse-proxy behavior

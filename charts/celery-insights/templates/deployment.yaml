@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "insights.fullname" . }}
+  labels:
+    {{- include "insights.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+  selector:
+    matchLabels:
+      {{- include "insights.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "insights.selector" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: insights
+          image: {{ if .Values.image.digest }}{{ printf "%s@%s" .Values.image.repository .Values.image.digest | quote }}{{ else }}{{ printf "%s:%s" .Values.image.repository (default .Chart.AppVersion .Values.image.tag) | quote }}{{ end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8555
+          env:
+            - {name: PORT, value: "8555"}
+            - {name: INGESTION_LEADER_ELECTION, value: "true"}
+            - name: SURREALDB_EXTERNAL_URL
+              value: {{ include "insights.databaseUrl" . | quote }}
+            - name: SURREALDB_NAMESPACE
+              value: {{ .Values.database.namespace | quote }}
+            - name: SURREALDB_DATABASE
+              value: {{ .Values.database.name | quote }}
+            {{- range $env, $key := dict "BROKER_URL" "brokerUrl" "RESULT_BACKEND" "resultBackend" "SURREALDB_ROOT_USER" "rootUser" "SURREALDB_ROOT_PASS" "rootPassword" "SURREALDB_INGESTER_PASS" "ingesterPassword" "SURREALDB_FRONTEND_PASS" "frontendPassword" }}
+            {{- include "insights.secretEnv" (dict "root" $ "env" $env "key" $key) | nindent 12 }}
+            {{- end }}
+            {{- range $name, $value := .Values.config.env }}
+            - name: {{ $name }}
+              value: {{ $value | toString | quote }}
+            {{- end }}
+            {{- if .Values.config.toml.enabled }}
+            - {name: CI_CONFIG_FILE, value: /etc/celery-insights/config.toml}
+            {{- end }}
+            {{- if or .Values.config.python.content .Values.config.python.existingConfigMap .Values.config.python.existingSecret }}
+            - {name: CONFIG_FILE, value: /etc/celery-insights/config.py}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- range $kind := list "toml" "python" }}
+            {{- $file := index $.Values.config $kind }}
+            {{- if or $file.content $file.structured $file.existingConfigMap $file.existingSecret }}
+            - name: config-{{ $kind }}
+              mountPath: /etc/celery-insights/config.{{ if eq $kind "python" }}py{{ else }}toml{{ end }}
+              subPath: config.{{ if eq $kind "python" }}py{{ else }}toml{{ end }}
+              readOnly: true
+            {{- end }}{{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        {{- range $kind := list "toml" "python" }}
+        {{- $file := index $.Values.config $kind }}
+        {{- if or $file.content $file.structured $file.existingConfigMap $file.existingSecret }}
+        - name: config-{{ $kind }}
+          {{- if $file.existingSecret }}
+          secret:
+            secretName: {{ $file.existingSecret | quote }}
+          {{- else }}
+          configMap:
+            name: {{ default (printf "%s-config" (include "insights.fullname" $)) $file.existingConfigMap | quote }}
+          {{- end }}
+            items:
+              - key: {{ if or $file.existingSecret $file.existingConfigMap }}{{ $file.key | quote }}{{ else }}config.{{ if eq $kind "python" }}py{{ else }}toml{{ end }}{{ end }}
+                path: config.{{ if eq $kind "python" }}py{{ else }}toml{{ end }}
+        {{- end }}{{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -31,6 +31,8 @@ function createConfig(overrides: Partial<Config> = {}): Config {
     port: 8555,
     urlPrefix: "",
     surrealdbUrl: "ws://localhost:8557/rpc",
+    surrealdbRootUser: "root",
+    surrealdbRootPass: "root",
     surrealdbIngesterPass: "test-pass",
     surrealdbNamespace: "celery_insights",
     surrealdbDatabase: "main",
@@ -82,6 +84,13 @@ describe("assertIdent", () => {
 describe("runSchemaMigration", () => {
   beforeEach(() => {
     mockDb = createMockDb()
+  })
+
+  it("uses configured administrative credentials", async () => {
+    await runSchemaMigration(createConfig({ surrealdbRootUser: "operator", surrealdbRootPass: "unique-secret" }))
+    expect(mockDb.connect).toHaveBeenCalledWith("ws://localhost:8557/rpc", {
+      authentication: { username: "operator", password: "unique-secret" },
+    })
   })
 
   it("connects as root", async () => {

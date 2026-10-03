@@ -1,0 +1,144 @@
+# The application image must include this PR's always-on API and root credential changes.
+# Publication is gated until appVersion identifies such a released image.
+image:
+  repository: ghcr.io/danyi1212/celery-insights
+  tag: ""
+  digest: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+replicaCount: 1
+nameOverride: ""
+fullnameOverride: ""
+credentials:
+  existingSecret: celery-insights-credentials
+  keys:
+    brokerUrl: broker-url
+    resultBackend: result-backend
+    rootUser: surrealdb-root-user
+    rootPassword: surrealdb-root-password
+    ingesterPassword: surrealdb-ingester-password
+    frontendPassword: frontend-password
+# Existing frontend password is transitional until #139 replaces browser DB authentication.
+database:
+  externalUrl: ""
+  namespace: celery_insights
+  name: main
+config:
+  env:
+    LOG_FORMAT: json
+    LOG_LEVEL: info
+  toml:
+    # Requires the #138 configuration-capable image. Never silently ignored.
+    enabled: false
+    structured: {}
+    content: ""
+    existingConfigMap: ""
+    existingSecret: ""
+    key: config.toml
+  python:
+    content: ""
+    existingConfigMap: ""
+    existingSecret: ""
+    key: config.py
+service:
+  type: ClusterIP
+  port: 80
+  annotations: {}
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: insights.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    memory: 1Gi
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  runAsNonRoot: true
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: [ALL]
+  seccompProfile:
+    type: RuntimeDefault
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+extraEnv: []
+extraVolumes: []
+extraVolumeMounts: []
+terminationGracePeriodSeconds: 30
+startupProbe:
+  httpGet: {path: /ready, port: http}
+  periodSeconds: 5
+  failureThreshold: 60
+readinessProbe:
+  httpGet: {path: /ready, port: http}
+  periodSeconds: 5
+livenessProbe:
+  httpGet: {path: /health, port: http}
+  periodSeconds: 10
+test:
+  image: busybox:1.37.0
+surrealdb:
+  enabled: true
+  replicaCount: 1
+  image:
+    tag: v3.3.0
+  strategy:
+    type: Recreate
+  surrealdb:
+    path: memory
+    unauthenticated: false
+  horizontalPodAutoscaler:
+    enabled: false
+  ingress:
+    enabled: false
+  service:
+    type: ClusterIP
+    port: 8000
+  serviceAccount:
+    create: false
+  podSecurityContext:
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
+    runAsNonRoot: true
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+    seccompProfile:
+      type: RuntimeDefault
+  podExtraEnv:
+    - name: SURREAL_USER
+      valueFrom:
+        secretKeyRef: {name: celery-insights-credentials, key: surrealdb-root-user}
+    - name: SURREAL_PASS
+      valueFrom:
+        secretKeyRef: {name: celery-insights-credentials, key: surrealdb-root-password}
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {memory: 512Mi}
+  persistence:
+    enabled: false
+    size: 10Gi
+    storageClassName: ""
+    annotations:
+      helm.sh/resource-policy: keep
+# For existing claims use the upstream volume/volumeMounts interface; see examples.

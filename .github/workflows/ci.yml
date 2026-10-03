@@ -27,6 +27,7 @@ jobs:
       backend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.backend == 'true' }}
       frontend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.frontend == 'true' }}
       e2e: ${{ github.event_name != 'pull_request' || steps.filter.outputs.backend == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.integration == 'true' }}
+      helm: ${{ github.event_name != 'pull_request' || steps.filter.outputs.helm == 'true' }}
       database: ${{ github.event_name != 'pull_request' || steps.filter.outputs.database == 'true' }}
     steps:
       - uses: actions/checkout@v7.0.1
@@ -232,12 +233,78 @@ jobs:
           path: /tmp/celery-surreal-upgrade-*/
           retention-days: 7
 
+  helm:
+    name: Helm chart and Kubernetes E2E (${{ matrix.helm }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: changes
+    if: needs.changes.outputs.helm == 'true'
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        helm: ["3.19.0", "4.3.0"]
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version-file: ".python-version"
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: "1.4.2"
+      - uses: docker/setup-buildx-action@v4.4.1
+      - name: Install pinned Kubernetes tools
+        env:
+          HELM_VERSION: ${{ matrix.helm }}
+        run: bash tooling/helm/install-tools.sh
+      - name: Install application test dependencies
+        run: |
+          uv sync --locked
+          bun install --frozen-lockfile
+          bunx playwright install --with-deps chromium
+      - name: Validate chart contracts and Kubernetes schemas
+        run: |
+          helm dependency build charts/celery-insights
+          helm lint --strict charts/celery-insights
+          uv run python tooling/helm/chart_test.py
+          bash tooling/helm/validate-manifests.sh
+      - name: Build Kubernetes E2E images
+        uses: docker/bake-action@v7.4.0
+        with:
+          files: ./docker-bake.hcl
+          targets: e2e
+          load: true
+      - name: Run Kubernetes lifecycle and browser E2E
+        env:
+          HELM_E2E_KEEP: "1"
+        run: |
+          docker tag celery-insights-app:local celery-insights-helm:e2e
+          kind create cluster --name celery-helm-ci --image kindest/node:v1.35.0
+          kind load docker-image celery-insights-helm:e2e celery-insights-test-project:local --name celery-helm-ci
+          uv run python tooling/helm/e2e.py
+      - name: Collect Kubernetes diagnostics on failure
+        if: failure()
+        run: |
+          mkdir -p test-results/helm
+          kubectl -n celery-helm-e2e get pods,deploy,svc,pvc,hpa -o wide > test-results/helm/resources.txt || true
+          kubectl -n celery-helm-e2e get events > test-results/helm/events.txt || true
+      - uses: actions/upload-artifact@v7.0.1
+        if: failure()
+        with:
+          name: helm-e2e-${{ matrix.helm }}
+          path: test-results/helm/
+      - name: Cleanup isolated cluster
+        if: always()
+        run: kind delete cluster --name celery-helm-ci
+
   results:
     # Preserve the existing required check even when Python tests are skipped.
     name: Test Results
     runs-on: ubuntu-latest
     if: always()
-    needs: [changes, lint-backend, test-backend, lint-frontend, test-frontend, e2e, database-upgrade]
+    needs: [changes, lint-backend, test-backend, lint-frontend, test-frontend, e2e, database-upgrade, helm]
     steps:
       - name: Verify all applicable checks passed
         env:
@@ -259,6 +326,7 @@ jobs:
               'test-frontend': 'frontend',
               'e2e': 'e2e',
               'database-upgrade': 'database',
+              'helm': 'helm',
           }
           for job, component in checks.items():
               result = jobs[job]['result']

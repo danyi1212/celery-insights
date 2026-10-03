@@ -13,6 +13,7 @@ from cleanup import CleanupJob
 from events.ingester import SurrealDBIngester
 from events.receiver import CeleryEventReceiver
 from settings import Settings
+from runtime_state import apply_retention
 from surrealdb_client import close_surrealdb, init_surrealdb
 from tasks.result_fetcher import ResultBackendPoller, ResultFetcher
 from workers.poller import WorkerPoller
@@ -42,7 +43,7 @@ async def lifespan(_):
 
     result_backend_poller = None
 
-    if not settings.debug_snapshot_mode:
+    if not settings.debug_snapshot_mode and settings.process_role != "api":
         # 2. Connect to Celery broker
         celery_app = await get_celery_app()
 
@@ -64,7 +65,11 @@ async def lifespan(_):
         worker_poller.start()
         result_backend_poller.start()
     else:
-        logger.info("Debug snapshot mode enabled; starting control-plane-only services")
+        logger.info(
+            "Starting API services without ingestion (role=%s, snapshot=%s)",
+            settings.process_role,
+            settings.debug_snapshot_mode,
+        )
 
     cleanup_job = CleanupJob(
         interval_seconds=settings.cleanup_interval_seconds,
@@ -72,7 +77,9 @@ async def lifespan(_):
         task_retention_hours=settings.task_retention_hours,
         dead_worker_retention_hours=settings.dead_worker_retention_hours,
     )
-    if not settings.debug_snapshot_mode:
+    if settings.process_role == "ingester":
+        await apply_retention(cleanup_job)
+    if not settings.debug_snapshot_mode and settings.process_role != "api":
         cleanup_job.start()
 
     # Expose services on app.state for other routers
@@ -87,7 +94,7 @@ async def lifespan(_):
         logger.info("Stopping server...")
     finally:
         # Shutdown in reverse order — await async tasks before closing DB
-        if not settings.debug_snapshot_mode:
+        if not settings.debug_snapshot_mode and settings.process_role != "api":
             await cleanup_job.stop()
         if result_backend_poller is not None:
             await result_backend_poller.stop()

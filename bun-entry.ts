@@ -112,6 +112,7 @@ const indexHtml = await Bun.file(path.join(DIST_DIR, "index.html")).text()
 
 let surrealProcess: ChildProcess | null = null
 let pythonProcess: ChildProcess | null = null
+let ingestionProcess: ChildProcess | null = null
 let leaderElection: LeaderElection | null = null
 let mcpDb: Surreal | null = null
 let ingestionStatus: IngestionStatus = "disabled"
@@ -262,18 +263,15 @@ function spawnSurrealDB(): ChildProcess {
   )
   const proc = spawn(
     "surreal",
-    [
-      "start",
-      "--no-banner",
-      "--bind",
-      `0.0.0.0:${runtimeConfig.surrealdbPort}`,
-      "--user",
-      "root",
-      "--pass",
-      "root",
-      runtimeConfig.surrealdbStorage,
-    ],
-    { stdio: ["ignore", "pipe", "pipe"] },
+    ["start", "--no-banner", "--bind", `0.0.0.0:${runtimeConfig.surrealdbPort}`, runtimeConfig.surrealdbStorage],
+    {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        ...process.env,
+        SURREAL_USER: runtimeConfig.surrealdbRootUser,
+        SURREAL_PASS: runtimeConfig.surrealdbRootPass,
+      },
+    },
   )
 
   // Pipe stdout and stderr through surrealLogger with line buffering
@@ -364,13 +362,17 @@ const PYTHON_BACKOFF_BASE_MS = 1000
 const PYTHON_BACKOFF_MAX_MS = 30000
 let pythonRestartAttempts = 0
 
-function spawnPython(): ChildProcess {
-  bunLogger.info(replaySnapshot ? "Spawning Python control-plane subprocess" : "Spawning Python ingester subprocess")
-  const proc = spawn("python", ["run.py"], {
+function spawnPython(role: "api" | "ingester" = "api"): ChildProcess {
+  bunLogger.info(`Spawning Python ${role} subprocess`)
+  const proc = spawn("python", [role === "api" ? "run.py" : "ingestion_worker.py"], {
     cwd: path.resolve(import.meta.dir, "server"),
     env: {
       ...process.env,
       PORT: String(PYTHON_PORT),
+      HOST: "127.0.0.1",
+      PROCESS_ROLE: role,
+      SURREALDB_ROOT_USER: undefined,
+      SURREALDB_ROOT_PASS: undefined,
       SURREALDB_URL: runtimeConfig.surrealdbUrl,
       ...(runtimeConfig.surrealdbExternalUrl ? { SURREALDB_EXTERNAL_URL: runtimeConfig.surrealdbExternalUrl } : {}),
       SURREALDB_INGESTER_PASS: runtimeConfig.surrealdbIngesterPass,
@@ -416,20 +418,19 @@ function spawnPython(): ChildProcess {
   }
 
   proc.on("exit", (code) => {
+    if (role === "api" && pythonProcess === proc) pythonProcess = null
+    if (role === "ingester" && ingestionProcess === proc) ingestionProcess = null
     if (shuttingDown) return
-    bunLogger.error(`Python ingester exited with code ${code}`)
-    pythonProcess = null
-    // If we're still leader, restart Python with backoff
-    if (replaySnapshot || leaderElection?.isLeader) {
-      const backoffMs = Math.min(PYTHON_BACKOFF_BASE_MS * 2 ** pythonRestartAttempts, PYTHON_BACKOFF_MAX_MS)
-      pythonRestartAttempts++
-      bunLogger.warn(`Restarting Python subprocess in ${backoffMs}ms (attempt ${pythonRestartAttempts})`)
-      setTimeout(() => {
-        if (!shuttingDown && (replaySnapshot || leaderElection?.isLeader)) {
-          pythonProcess = spawnPython()
-        }
-      }, backoffMs)
-    }
+    const wanted = () => role === "api" || leaderElection?.isLeader
+    if (!wanted()) return
+    bunLogger.warn(`Python ${role} exited with code ${code}; restarting`)
+    const backoffMs = Math.min(PYTHON_BACKOFF_BASE_MS * 2 ** pythonRestartAttempts, PYTHON_BACKOFF_MAX_MS)
+    pythonRestartAttempts++
+    setTimeout(() => {
+      if (shuttingDown || !wanted()) return
+      if (role === "api" && !pythonProcess) pythonProcess = spawnPython(role)
+      if (role === "ingester" && !ingestionProcess) ingestionProcess = spawnPython(role)
+    }, backoffMs)
   })
 
   return proc
@@ -442,14 +443,17 @@ async function shutdown(signal: string): Promise<void> {
   shuttingDown = true
   bunLogger.info(`Received ${signal} — shutting down`)
 
-  // 1. Release ingestion lock (if held)
-  if (leaderElection) {
-    await leaderElection.stop()
-  }
+  // Stop the ingestion worker before handing its lease to another replica.
   await mcpDb?.close()
 
   // 2. Kill child processes and wait for them to exit (with timeout)
   const exitPromises: Promise<void>[] = []
+
+  if (ingestionProcess) {
+    const proc = ingestionProcess
+    exitPromises.push(new Promise<void>((resolve) => proc.on("exit", () => resolve())))
+    proc.kill("SIGTERM")
+  }
 
   if (pythonProcess) {
     const proc = pythonProcess
@@ -468,6 +472,9 @@ async function shutdown(signal: string): Promise<void> {
     await Promise.race([Promise.all(exitPromises), Bun.sleep(10000)])
   }
 
+  // If shutdown timed out, terminate the worker before releasing the lease.
+  if (ingestionProcess && ingestionProcess.exitCode === null) ingestionProcess.kill("SIGKILL")
+  if (leaderElection) await leaderElection.stop()
   process.exit(0)
 }
 
@@ -529,21 +536,19 @@ if (replaySnapshot) {
   pythonProcess = spawnPython()
   ingestionStatus = "read-only"
 } else {
-  // 5. Run leader election (spawns Python if this instance becomes leader)
+  // APIs stay available on every replica; only the background worker follows leadership.
+  pythonProcess = spawnPython()
+  // 5. Run leader election
   leaderElection = new LeaderElection({
     db,
     config: runtimeConfig,
     instanceId,
     onBecomeLeader() {
       pythonRestartAttempts = 0
-      pythonProcess = spawnPython()
+      if (!ingestionProcess) ingestionProcess = spawnPython("ingester")
     },
     onLoseLeadership() {
-      if (pythonProcess) {
-        bunLogger.warn("Lost leadership — stopping Python ingester")
-        pythonProcess.kill("SIGTERM")
-        pythonProcess = null
-      }
+      ingestionProcess?.kill("SIGTERM")
     },
   })
 
@@ -586,11 +591,11 @@ const server = Bun.serve({
     if (prefix && url.pathname === prefix) {
       return new Response(null, { status: 308, headers: { Location: `${prefix}/${url.search}` } })
     }
-    if (prefix && url.pathname !== "/health" && !url.pathname.startsWith(`${prefix}/`)) {
+    if (prefix && !["/health", "/ready"].includes(url.pathname) && !url.pathname.startsWith(`${prefix}/`)) {
       return new Response("Not Found", { status: 404 })
     }
     // Keep the root health endpoint available for container probes.
-    if (url.pathname !== "/health") url.pathname = url.pathname.slice(prefix.length)
+    if (!["/health", "/ready"].includes(url.pathname)) url.pathname = url.pathname.slice(prefix.length)
 
     if (url.pathname === "/mcp") return handleMcp(req)
 
@@ -691,6 +696,11 @@ const server = Bun.serve({
       })
     }
 
+    if (url.pathname === "/ready") {
+      const ready = await fetchJsonFromPython<{ status: string }>("/health")
+      return Response.json({ status: ready ? "ok" : "starting" }, { status: ready ? 200 : 503 })
+    }
+
     // Bun-served endpoint: health check (always available)
     if (url.pathname === "/health") {
       return Response.json({
@@ -724,7 +734,7 @@ const server = Bun.serve({
     // Proxy API and metrics routes to the Python backend (only if Python is running)
     if (url.pathname.startsWith("/api") || url.pathname.startsWith("/metrics")) {
       if (!pythonProcess) {
-        return new Response("Backend not available (ingestion not active on this instance)", { status: 503 })
+        return new Response("API process not available", { status: 503 })
       }
 
       const targetUrl = `${PYTHON_BACKEND}${url.pathname}${url.search}`

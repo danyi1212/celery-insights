@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from starlette.requests import Request
 
 from settings import Settings
+from runtime_state import IngestionStats, read_ingestion_stats
 from surrealdb_client import get_db
 
 
@@ -91,6 +92,9 @@ class IngestionRuntimeInfo(BaseModel):
 
     @classmethod
     def from_runtime(cls, settings: Settings, ingester: object | None) -> Self:
+        if isinstance(ingester, IngestionStats):
+            return cls(batch_interval_ms=settings.ingestion_batch_interval_ms, **ingester.model_dump())
+
         queue_size = 0
         buffer_size = 0
         dropped_events = 0
@@ -168,6 +172,8 @@ class ServerInfo(BaseModel):
             settings = Settings()
 
         ingester = getattr(request.app.state, "ingester", None)
+        if settings.process_role == "api":
+            ingester = await read_ingestion_stats()
 
         rusage = resource.getrusage(resource.RUSAGE_SELF)
         return cls(

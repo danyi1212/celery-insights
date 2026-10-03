@@ -1,0 +1,10 @@
+Access Celery Insights:
+  kubectl --namespace {{ .Release.Namespace }} port-forward service/{{ include "insights.fullname" . }} 8555:{{ .Values.service.port }}
+Open http://localhost:8555{{ default "" .Values.config.env.URL_PREFIX }}/
+
+Credentials remain in your existing Secret {{ .Values.credentials.existingSecret }}.
+{{ if and .Values.surrealdb.enabled (eq .Values.surrealdb.surrealdb.path "memory") }}
+WARNING: the default database is in-memory. Database pod replacement loses observation history.
+{{ end }}
+Existing Secret/ConfigMap updates require an explicit rollout restart.
+See the chart README for storage transitions, authentication dependencies, and upgrades.

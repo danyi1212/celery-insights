@@ -121,7 +121,7 @@ export class LeaderElection {
                     WHERE
                         holder = NONE
                         OR holder = $id
-                        OR heartbeat < time::now() - $ttl * 1s`,
+                        OR heartbeat < time::now() - duration::from_secs($ttl)`,
           {
             id: this.instanceId,
             ttl: this.config.ingestionLockTtlSeconds,
@@ -141,6 +141,7 @@ export class LeaderElection {
   }
 
   private promoteToLeader(): void {
+    if (this.stopped) return
     this._isLeader = true
     this._status = "leader"
     this.clearTimers()
@@ -150,11 +151,13 @@ export class LeaderElection {
   }
 
   private async enterStandby(): Promise<void> {
+    if (this.stopped) return
     this._isLeader = false
     this._status = "standby"
     this.clearTimers()
 
     const currentLeader = await this.getCurrentLeader()
+    if (this.stopped) return
     this.log.info(`Standby mode — instance ${currentLeader ?? "unknown"} is ingesting`)
 
     this.startStandbyPolling()
@@ -171,6 +174,8 @@ export class LeaderElection {
           )
           .collect<[{ holder: string }[]]>()
 
+        if (this.stopped) return
+
         if (!result || result.length === 0 || result[0].holder !== this.instanceId) {
           this.log.warn("Lost ingestion lock — another instance may have taken over")
           this._isLeader = false
@@ -180,6 +185,12 @@ export class LeaderElection {
         }
       } catch (err) {
         this.log.error(`Failed to refresh heartbeat: ${err}`)
+        if (!this.stopped && this._isLeader) {
+          this._isLeader = false
+          this.clearTimers()
+          this.onLoseLeadership()
+          await this.enterStandby()
+        }
       }
     }, this.config.ingestionLockHeartbeatSeconds * 1000)
   }

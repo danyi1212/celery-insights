@@ -1,0 +1,51 @@
+name: Publish Helm chart
+on:
+  push:
+    tags: ['chart-v*']
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version-file: '.python-version'
+      - name: Enforce release prerequisites
+        run: |
+          uv sync --locked
+          uv run python - <<'PY'
+          import os
+          import yaml
+          chart = yaml.safe_load(open('charts/celery-insights/Chart.yaml'))
+          assert chart['annotations']['celery-insights.io/release-ready'] == 'true', 'Configuration/authentication integration and release validation are not complete'
+          assert os.environ['GITHUB_REF_NAME'] == 'chart-v' + chart['version'], 'Tag must match chart version'
+          PY
+      - name: Install pinned validation tools
+        run: bash tooling/helm/install-tools.sh
+      - name: Validate the chart and released application image
+        run: |
+          helm dependency build charts/celery-insights
+          helm lint --strict charts/celery-insights
+          uv run python tooling/helm/chart_test.py
+          bash tooling/helm/validate-manifests.sh
+          app_version=$(uv run python -c 'import yaml; print(yaml.safe_load(open("charts/celery-insights/Chart.yaml"))["appVersion"])')
+          docker pull "ghcr.io/danyi1212/celery-insights:$app_version"
+          docker run --rm --entrypoint python "ghcr.io/danyi1212/celery-insights:$app_version" -c 'from pathlib import Path; assert Path("/app/server/ingestion_worker.py").exists(), "Image lacks Helm replica runtime"'
+      - name: Package and publish OCI chart
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | helm registry login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+          mkdir -p chart-dist
+          helm package charts/celery-insights --destination chart-dist
+          helm push chart-dist/*.tgz oci://ghcr.io/danyi1212/charts
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: helm-chart
+          path: chart-dist/*.tgz
