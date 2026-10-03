@@ -4,62 +4,7 @@ it, but do not have the task ID. The agent reads the same retained observations 
 
 ## Connect your agent
 
-Start Celery Insights and check that you can open `http://localhost:8555` in your browser.
-MCP is included: there is no extra server or package to install. **No authentication is required
-by default**, just like the dashboard. Choose your agent below and use `http://localhost:8555/mcp`.
-
-When using [`URL_PREFIX`](/documentation/configuration#url_prefix) behind a shared reverse proxy,
-include it in the MCP URL, for example `https://example.com/tools/celery/mcp`.
-
-### Claude Code
-
-Run this from the project where you use Claude Code:
-
-```shell
-claude mcp add --transport http celery-insights http://localhost:8555/mcp
-```
-
-Start a new Claude Code session, run `/mcp`, and check that `celery-insights` is connected.
-This registers it for your current project; add `--scope user` to use it across projects.
-See [Claude Code's MCP setup guide](https://code.claude.com/docs/en/mcp) for other configuration options.
-
-### Codex
-
-With the Codex CLI installed, run:
-
-```shell
-codex mcp add celery-insights --url http://localhost:8555/mcp
-codex mcp list
-```
-
-Start a new Codex session and use `/mcp` to check the connection. If you prefer editing a file,
-add this to `~/.codex/config.toml`:
-
-```toml
-[mcp_servers.celery-insights]
-url = "http://localhost:8555/mcp"
-```
-
-Codex clients share this configuration. Restart your app or IDE session after adding the server.
-See [Codex's MCP setup guide](https://developers.openai.com/codex/mcp) for client-specific settings.
-
-### Cursor
-
-Create `.cursor/mcp.json` in your project, or use `~/.cursor/mcp.json` for all projects:
-
-```json
-{
-  "mcpServers": {
-    "celery-insights": {
-      "url": "http://localhost:8555/mcp"
-    }
-  }
-}
-```
-
-If the file already contains servers, add `celery-insights` inside its existing `mcpServers` object.
-Check Cursor's MCP server list and enable the server if needed, then use it in an Agent chat.
-See [Cursor's MCP setup guide](https://cursor.com/docs/mcp) for other configuration options.
+Configure a remote HTTP MCP client with the installation's HTTPS URL, such as `https://insights.example.com/mcp`, including any URL prefix. Set the authentication headers described below in the client's secret configuration. Anonymous access and independent bearer tokens are not supported. Current payload access requires administrator grants.
 
 ### Try your first question
 
@@ -68,71 +13,17 @@ Replace the example name with one of your tasks. The recipes below show how to i
 Their examples show the tool name and argument object; replace uppercase placeholders with values
 returned by an earlier call.
 
-## Optional authentication
+## Authentication
 
-Skip this section for the default unprotected deployment. To require a token for agents, set
-`MCP_TOKEN` in your Celery Insights deployment and restart it. You can generate a token with
-`openssl rand -hex 32`. For a new Docker deployment, pass it like this:
+Use the same explicitly configured account as the dashboard. Configure the client to send:
 
-```shell
-docker run -p 8555:8555 \
-  -e MCP_TOKEN=YOUR_MCP_TOKEN \
-  ghcr.io/danyi1212/celery-insights:latest
+```text
+Authorization: Basic BASE64_OF_USERNAME_COLON_PASSWORD
+Origin: https://insights.example.com
+X-Celery-Insights-Request: 1
 ```
 
-Replace `YOUR_MCP_TOKEN` with your chosen token. For an existing deployment, add the environment
-variable to its current configuration and restart it, keeping your other settings.
-This protects MCP; the dashboard stays unprotected unless you also set `SURREALDB_FRONTEND_PASS`.
-
-If you already protect the dashboard with `SURREALDB_FRONTEND_PASS`, MCP requires that same password
-as its bearer token when `MCP_TOKEN` is unset. Setting `MCP_TOKEN` gives agents a separate credential
-and takes precedence for MCP. No browser sign-in or OAuth setup is needed.
-
-### Claude Code with a token
-
-If you added the unauthenticated entry above, remove it before adding the authenticated version.
-Run these commands from the same project:
-
-```shell
-claude mcp remove celery-insights
-claude mcp add --transport http celery-insights http://localhost:8555/mcp \
-  --header "Authorization: Bearer YOUR_MCP_TOKEN"
-```
-
-For an entry registered with `--scope user`, use that scope for both commands. If you have not added
-an entry yet, run only the second command. Restart Claude Code and check `/mcp`.
-
-### Codex with a token
-
-Update the server entry in `~/.codex/config.toml` and restart your Codex session:
-
-```toml
-[mcp_servers.celery-insights]
-url = "http://localhost:8555/mcp"
-http_headers = { Authorization = "Bearer YOUR_MCP_TOKEN" }
-```
-
-For CLI use, you can instead add `bearer_token_env_var = "CELERY_INSIGHTS_MCP_TOKEN"` to that entry
-and omit `http_headers`. Export `CELERY_INSIGHTS_MCP_TOKEN` with your token before starting `codex`.
-
-### Cursor with a token
-
-Add `headers` to the existing entry in your MCP configuration:
-
-```json
-{
-  "mcpServers": {
-    "celery-insights": {
-      "url": "http://localhost:8555/mcp",
-      "headers": { "Authorization": "Bearer YOUR_MCP_TOKEN" }
-    }
-  }
-}
-```
-
-Use your MCP token, or your dashboard password when no separate MCP token is configured, in these
-examples. Keep configuration containing real tokens out of version control. If a connection returns
-`401`, check that the agent sends the same credential configured on Celery Insights.
+Keep credentials in client secret configuration. `mcp.cursor_secret` signs pagination only and never authenticates a request. There is no separate bearer-token login or dashboard-password fallback. OIDC support is a planned integration; account lifecycle belongs at the identity provider.
 
 ## Connect to a remote deployment
 
@@ -145,7 +36,7 @@ For an agent running in a container or on another machine, use a URL reachable f
 `localhost` refers to the machine running the MCP client. A `403` mentioning the host means you need
 to add that hostname to `MCP_ALLOWED_HOSTS`. An Origin header, if present, must match the request URL's
 origin. Use the same MCP token or dashboard password across replicas so pagination keeps working.
-See [Configuration](/documentation/configuration#mcp_token) for the environment variable reference.
+See [Configuration](/documentation/configuration#mcp-cursor-signing) for the environment variable reference.
 
 ## Find a task you just spawned
 

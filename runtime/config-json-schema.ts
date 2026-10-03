@@ -40,8 +40,15 @@ export function configurationJsonSchema(): SchemaNode {
       schema.type = "number"
       schema.exclusiveMinimum = 0
     }
+    if (setting.key === "authAccounts") {
+      const item = schema.items as SchemaNode
+      item.required = ["username", "roles"]
+      item.properties!.password_file = { type: "string", minLength: 1 }
+      item.properties!.password_env = { type: "string", pattern: "^[A-Za-z_][A-Za-z0-9_]*$" }
+      item.oneOf = ["password", "password_file", "password_env"].map((source) => ({ required: [source] }))
+    }
     add(setting.path, schema)
-    if (setting.secret) add(`${setting.path}_file`, { type: "string", minLength: 1 })
+    if (setting.secret && setting.type === "string") add(`${setting.path}_file`, { type: "string", minLength: 1 })
   }
   add("database.observation.mode", { type: "string", enum: ["embedded", "external"] })
   for (const limit of ["retention.tasks.max_count", "retention.tasks.max_age_hours", "retention.workers.max_age_hours"])

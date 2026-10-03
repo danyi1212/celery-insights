@@ -18,12 +18,12 @@ function fromToml(toml: string, env: Record<string, string> = {}, files: Record<
 describe("Bun configuration resolver", () => {
   it("preserves reverse-proxy and MCP settings through the structured resolver", () => {
     const resolved = fromToml(
-      '[server]\nurl_prefix = "insights"\n[mcp]\ntoken_file = "mcp-secret"\nallowed_hosts = "insights.example"',
+      '[server]\nurl_prefix = "insights"\n[mcp]\ncursor_secret_file = "mcp-secret"\nallowed_hosts = "insights.example"',
       {},
       { "/config/mcp-secret": "synthetic-mcp-token\n" },
     )
     expect(resolved.config.urlPrefix).toBe("/insights")
-    expect(resolved.config.mcpToken).toBe("synthetic-mcp-token")
+    expect(resolved.config.mcpCursorSecret).toBe("synthetic-mcp-token")
     expect(resolved.config.mcpAllowedHosts).toBe("insights.example")
     expect(JSON.stringify(describeConfig(resolved))).not.toContain("synthetic-mcp-token")
     expect(() => fromToml('[server]\nurl_prefix = "../insights"')).toThrow("URL_PREFIX must be a URL path")

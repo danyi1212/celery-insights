@@ -1,0 +1,39 @@
+schema_version = 1
+
+[installation]
+public_url = "https://insights.example.com"
+
+[authentication]
+mode = "basic"
+
+[[authentication.accounts]]
+username = "admin"
+password_file = "/run/secrets/insights/admin-password"
+roles = ["administrator"]
+
+[server]
+port = 8555
+
+[celery]
+broker_url_file = "/run/secrets/insights/broker-url"
+result_backend_file = "/run/secrets/insights/result-backend"
+timezone = "UTC"
+
+[database.observation]
+mode = "embedded"
+
+[database.observation.embedded]
+storage = "rocksdb:///data/surreal"
+
+[ingestion.leader_election]
+enabled = true
+ttl_seconds = 30
+heartbeat_seconds = 10
+
+[retention.workers.max_age_hours]
+enabled = true
+value = 24
+
+[logging]
+format = "json"
+level = "info"

@@ -19,6 +19,7 @@
         "e2e:headed": "playwright test --config e2e/playwright.config.ts --headed",
         "test": "vitest run",
         "test:observation": "bun run tooling/verify-observation.ts",
+        "test:security": "bun run tooling/verify-authentication.ts",
         "test:watch": "vitest",
         "dev:surreal": "surreal start --bind 127.0.0.1:8557 --username root --password root memory",
         "dev:server": "uv run --no-sync bun --no-env-file run bun-entry.ts",
