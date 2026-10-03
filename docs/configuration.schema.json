@@ -47,11 +47,11 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "token": {
+        "cursor_secret": {
           "type": "string",
           "minLength": 1
         },
-        "token_file": {
+        "cursor_secret_file": {
           "type": "string",
           "minLength": 1
         },
@@ -119,20 +119,6 @@
               ]
             }
           }
-        }
-      }
-    },
-    "migration": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "legacy_frontend_password": {
-          "type": "string",
-          "minLength": 1
-        },
-        "legacy_frontend_password_file": {
-          "type": "string",
-          "minLength": 1
         }
       }
     },
@@ -342,6 +328,80 @@
               "exclusiveMinimum": 0,
               "maximum": 9007199254740991
             }
+          }
+        }
+      }
+    },
+    "authentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "default": "basic",
+          "type": "string",
+          "enum": [
+            "basic",
+            "oidc"
+          ]
+        },
+        "accounts": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "username": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"
+              },
+              "password": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              "roles": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "viewer",
+                    "operator",
+                    "administrator"
+                  ]
+                }
+              },
+              "password_file": {
+                "type": "string",
+                "minLength": 1
+              },
+              "password_env": {
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+              }
+            },
+            "required": [
+              "username",
+              "roles"
+            ],
+            "additionalProperties": false,
+            "oneOf": [
+              {
+                "required": [
+                  "password"
+                ]
+              },
+              {
+                "required": [
+                  "password_file"
+                ]
+              },
+              {
+                "required": [
+                  "password_env"
+                ]
+              }
+            ]
           }
         }
       }

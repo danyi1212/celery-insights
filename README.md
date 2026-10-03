@@ -9,13 +9,15 @@ Its read-only MCP interface lets agents find workflows, inspect task inputs/resu
 
 ## Quick Start
 
-Run the published container:
+Configure an explicit account in a secret-backed TOML file and HTTPS ingress before starting the container. See [application authentication](CONFIGURATION.md#application-authentication) for password-file and environment references. Then run:
 
 ```shell
-docker run -p 8555:8555 --name celery-insights ghcr.io/danyi1212/celery-insights:latest
+docker run -p 127.0.0.1:8555:8555 --name celery-insights \
+  -v "$PWD/config.toml:/etc/celery-insights/config.toml:ro" \
+  --env-file deployment.env ghcr.io/danyi1212/celery-insights:latest
 ```
 
-Then open <http://localhost:8555/>. Once the app is running, the built-in operator docs are also available at <http://localhost:8555/documentation>.
+Open the HTTPS public URL configured in `installation.public_url`. The browser prompts for a configured username and password. Built-in operator docs are available under `/documentation` at the same URL.
 
 ## Required Celery Event Settings
 
@@ -48,7 +50,8 @@ The default image assumes RabbitMQ as the broker and Redis as the result backend
 Example with Redis as the broker and Memcache as the result backend:
 
 ```shell
-docker run -p 8555:8555 --name celery-insights \
+docker run -p 127.0.0.1:8555:8555 --name celery-insights \
+  -v "$PWD/config.toml:/etc/celery-insights/config.toml:ro" --env-file deployment.env \
   -e BROKER_URL=redis://host.docker.internal:6379/0 \
   -e RESULT_BACKEND=cache+memcached://host.docker.internal:11211/ \
   ghcr.io/danyi1212/celery-insights-all:latest
@@ -56,28 +59,9 @@ docker run -p 8555:8555 --name celery-insights \
 
 ## MCP access for agents
 
-Use MCP when you want an agent to find a task you just spawned, investigate a workflow's errors,
-or check what a worker is doing. It is included and requires no authentication by default.
-Connect Claude Code or Codex with:
+The read-only MCP endpoint uses the same configured-account authentication and permissions as the dashboard. Configure clients to send Basic credentials, the configured Origin and `X-Celery-Insights-Request: 1` over HTTPS. See [MCP client setup](CONFIGURATION.md#mcp-access-for-agents) for the header contract and cursor signing. There is no separate token login or anonymous default.
 
-```shell
-# Claude Code
-claude mcp add --transport http celery-insights http://localhost:8555/mcp
-
-# Codex
-codex mcp add celery-insights --url http://localhost:8555/mcp
-```
-
-For Cursor, follow the [copyable configuration](CONFIGURATION.md#mcp-access-for-agents).
-Restart your agent session, then try: “Find the `reports.render` task I spawned in the last 15 minutes and tell me whether it finished.”
-Start with a known task name and approximate time; the agent can discover the workflow and follow
-its task IDs into inputs, results, and error details.
-
-Use the running app's [MCP Interface guide](http://localhost:8555/documentation/mcp) for client setup,
-optional authentication, troubleshooting recipes, and continuing large results. See
-[connection and authentication settings](CONFIGURATION.md#mcp-access-for-agents) for deployment options,
-or the [full tool contract](MCP_DESIGN.md) for every argument and response field.
-For development setup, see [the MCP contributor notes](CONTRIBUTING.md#mcp-development).
+Ask an agent: “Find the `reports.render` task I spawned in the last 15 minutes and tell me whether it finished.” See [the tool contract](MCP_DESIGN.md) for arguments, responses and pagination.
 
 ## Documentation
 

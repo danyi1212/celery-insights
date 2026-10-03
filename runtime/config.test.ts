@@ -82,7 +82,6 @@ describe("parseConfig", () => {
   it("leaves optional fields undefined when not set", () => {
     const config = parseConfig({})
     expect(config.surrealdbExternalUrl).toBeUndefined()
-    expect(config.surrealdbFrontendPass).toBeUndefined()
     expect(config.taskMaxCount).toBeUndefined()
     expect(config.taskRetentionHours).toBeUndefined()
     expect(config.debugBundlePath).toBeUndefined()
@@ -142,11 +141,8 @@ describe("parseConfig", () => {
     expect(config.port).toBe(8555)
   })
 
-  it("accepts frontend password", () => {
-    const config = parseConfig({
-      SURREALDB_FRONTEND_PASS: "mysecret",
-    })
-    expect(config.surrealdbFrontendPass).toBe("mysecret")
+  it("rejects retired frontend password configuration", () => {
+    expect(() => parseConfig({ SURREALDB_FRONTEND_PASS: "mysecret" })).toThrow("authentication.accounts")
   })
 
   it("accepts a debug bundle path", () => {
@@ -157,8 +153,8 @@ describe("parseConfig", () => {
   })
 })
 
-it("accepts MCP credentials and allowed hosts", () => {
+it("accepts legacy MCP cursor signing and allowed hosts", () => {
   const config = parseConfig({ MCP_TOKEN: "agent-token", MCP_ALLOWED_HOSTS: "localhost,insights.example.com" })
-  expect(config.mcpToken).toBe("agent-token")
+  expect(config.mcpCursorSecret).toBe("agent-token")
   expect(config.mcpAllowedHosts).toBe("localhost,insights.example.com")
 })

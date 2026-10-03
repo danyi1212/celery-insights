@@ -1,8 +1,7 @@
-import { appURL, appPath, appOrigin, urlPrefix } from "../helpers/app-url"
+import { privateObservationQuery } from "../helpers/docker-compose"
+import { appPath, appOrigin, urlPrefix } from "../helpers/app-url"
 import { expect, test as base } from "../../tooling/playwright"
 import { ScenarioClient } from "../helpers/scenario-client"
-
-const SURREAL_API = appURL("/surreal")
 
 type TaskState = "PENDING" | "RECEIVED" | "STARTED" | "SUCCESS" | "FAILURE" | "RETRY" | "REVOKED"
 type SurrealStateResult = { result?: Array<{ state?: TaskState }> }
@@ -44,14 +43,7 @@ export const test = base.extend<{
 
       while (Date.now() < deadline) {
         try {
-          const res = await fetch(`${SURREAL_API}/sql`, {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              Authorization: "Basic " + btoa("root:root"),
-            },
-            body: query,
-          })
+          const res = await privateObservationQuery(query)
           if (res.ok) {
             const data = (await res.json()) as SurrealStateResult[]
             const state = data?.[1]?.result?.[0]?.state
@@ -75,14 +67,7 @@ export const test = base.extend<{
 
       while (Date.now() < deadline) {
         try {
-          const res = await fetch(`${SURREAL_API}/sql`, {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              Authorization: "Basic " + btoa("root:root"),
-            },
-            body: query,
-          })
+          const res = await privateObservationQuery(query)
           if (res.ok) {
             const data = (await res.json()) as SurrealTaskResult[]
             const resultCount = data?.[1]?.result?.length ?? 0
