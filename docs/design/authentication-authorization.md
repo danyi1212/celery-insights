@@ -45,16 +45,17 @@ OIDC is planned, not implemented by PR #143. Selecting `oidc` fails startup; it 
 
 Resolve principals from verified issuer and subject, with explicitly configured claim/group-to-role mapping and default deny. Validate the configured issuer, audience and authentication response using the integration library. Test callback state/nonce/PKCE, key rotation, redirect restrictions, logout, expiry and live-connection authorization. Document the library's session model and its multi-replica/revocation tradeoffs. Never accept identity from untrusted headers or silently link accounts by email. Avoid introducing a second custom session engine alongside the library.
 
-## OPA follow-up (#140)
+## Restrictive OPA policies (#140)
 
-Bun asks OPA about an authenticated principal, action and resource after builtin permission checks. OPA can restrict builtin grants, never enlarge them. Strictly validate responses; deny on timeout, failure or malformed results. Policies and their deployment remain operator-owned. Enforce decisions for reads, field projection, exports and streams as well as writes. Do not build a policy-management UI or account platform.
+Bun asks OPA about an authenticated principal, required actions and normalized operation context after builtin permission checks. OPA can restrict builtin grants, never enlarge them. Strict boolean responses, bounded deadlines and response sizes fail closed. Policies and their deployment remain operator-owned. Queries cover APIs, broad RPC, exports, individual MCP tools and live messages/delivery. See [the implemented contract](../../AUTHORIZATION.md). No resource identifiers or field filtering are supported until typed observation reads/streams replace broad RPC.
 
 ## Delivery plan
 
 1. Land the TOML resolver and strict Python handoff (#142, merged).
 2. Simplify #143 to configured Basic accounts, request authorization and the private Python bridge. Remove old identity modules, settings, frontend login and lifecycle tests. Verify real Basic browser/WebSocket traffic at root and a shared prefix over TLS.
-3. Introduce typed observation reads/streams and retire browser DB credentials; verify restricted-role reads cannot expose payloads through another transport.
-4. Add maintained OIDC integration and deployment documentation with provider-managed lifecycle.
-5. Add restrictive OPA decisions and equivalent resource/field enforcement across all transports.
+3. Add optional restrictive OPA queries across existing request and live gates.
+4. Introduce typed observation reads/streams and retire browser DB credentials; verify restricted-role reads cannot expose payloads through another transport.
+5. Add maintained OIDC integration and deployment documentation with provider-managed lifecycle.
+6. Extend OPA with resource/field enforcement across the typed transports.
 
 Do not ship unsupported modes, direct database access or anonymous fallbacks as compatibility bypasses. Existing frontend-password deployments must explicitly configure accounts before upgrading.

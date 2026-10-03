@@ -6,7 +6,30 @@ services:
   interactive:
     ports: !override
       - "${E2E_INTERACTIVE_PORT:-8000}:8000"
+  opa:
+    image: openpolicyagent/opa:1.21.1
+    command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies/opa.rego", "/policies/data.json"]
+    volumes:
+      - ../examples/opa:/examples:ro
+      - ../e2e/opa.rego:/policies/opa.rego:ro
+      - ../e2e/opa-data.json:/policies/data.json:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/opa",
+          "eval",
+          "--fail",
+          "--format=raw",
+          'http.send({"method":"GET","url":"http://127.0.0.1:8181/health"}).status_code == 200',
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 15
   celery-insights:
+    depends_on:
+      opa:
+        condition: service_healthy
     image: ${E2E_APP_IMAGE:-celery-insights-app:local}
     environment:
       CELERY_INSIGHTS_CONFIG_FILE: /fixture/authentication.toml

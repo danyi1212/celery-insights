@@ -378,6 +378,9 @@ How often the cleanup job evaluates and applies retention policies.
 | `ui.defaults.theme` | string | — | — |
 | `ui.defaults.hide_welcome_banner` | boolean | — | — |
 | `ui.defaults.raw_events_limit` | number | — | — |
+| `authorization.opa.decision_url` | string | — | — |
+| `authorization.opa.timeout_ms` | number | — | — |
+| `authorization.opa.bearer_token` / `_file` | string; sensitive | `CELERY_INSIGHTS_OPA_BEARER_TOKEN` / `_FILE` | — |
 | `authentication.mode` | string | — | — |
 | `authentication.accounts` | object; sensitive | — | — |
 
@@ -413,3 +416,19 @@ Passwords never enter Python, configuration output, backups or debug bundles. Ba
 The ingress must preserve Authorization/Origin, keep Bun and the database private, and serve HTTPS. Mutating API clients must send the configured Origin and `X-Celery-Insights-Request: 1`. WebSocket upgrades require Origin. Application account passwords are unrelated to internal database credentials.
 
 Current RPC browsing requires all payload grants and therefore administrator access. Viewer/operator browsing awaits typed reads and field enforcement. The old `SURREALDB_FRONTEND_PASS` setting and database login dialog are retired; explicitly configure accounts when upgrading.
+
+## Custom authorization with OPA
+
+Optional OPA policies restrict permissions granted by account roles. Add a decision endpoint to TOML:
+
+```toml
+[authorization.opa]
+decision_url = "http://opa:8181/v1/data/celery_insights/allow"
+timeout_ms = 1000
+```
+
+OPA must return a literal boolean `result`. Denial blocks the operation; policy errors, missing/malformed results and timeouts fail closed. Keep OPA private, with operator-managed policies. Remote bearer credentials require HTTPS and can use `bearer_token_file` or `CELERY_INSIGHTS_OPA_BEARER_TOKEN` / `_FILE`.
+
+Policies cover application APIs, exports, metrics, MCP tools and live database connections. They cannot grant missing role permissions. Browser database RPC is still broad: denying a payload permission denies the entire connection/export rather than filtering individual tasks or fields. Live connections recheck on each message/delivery; idle connections recheck on their next activity. Identity reports role grants; contextual policies may deny individual requests even when UI controls remain visible.
+
+See [the full decision contract, enforcement table and tested Rego examples](https://github.com/danyi1212/celery-insights/blob/main/AUTHORIZATION.md).

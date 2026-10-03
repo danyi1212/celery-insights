@@ -19,11 +19,15 @@ Keep Bun/database listeners private behind HTTPS ingress, and preserve Authoriza
 
 Roles are `viewer`, `operator`, and `administrator`. Current RPC/MCP payload access requires administrator permissions; restricted-role UI browsing awaits typed reads. Account secrets never enter Python, diagnostics, config output or observation backups.
 
+## Custom authorization
+
+See [OPA configuration, enforcement coverage and Rego examples](AUTHORIZATION.md) to restrict role-permitted actions using an external policy service.
+
 # Configuration
 
-Celery Insights is configured through environment variables passed to the container entrypoint. The settings panel inside the app covers UI preferences and some local behavior, but the variables below control Celery connectivity, storage, ingestion, cleanup, and logs.
+Celery Insights resolves a structured TOML file in Bun, with selected environment overrides. The settings panel inside the app covers UI preferences and some local behavior, but the variables below control Celery connectivity, storage, ingestion, cleanup, and logs.
 
-Use environment variables for standard deployments. Mount a Celery config file only when broker and result-backend URLs are no longer enough.
+Use TOML for application accounts and policy configuration. Existing environment variables remain supported for Celery connectivity and storage.
 
 > If Celery Insights needs to reach a service running on your machine from inside Docker, use `host.docker.internal` rather than `localhost`.
 
@@ -464,8 +468,8 @@ scrape_configs:
 
 Bun is the public entrypoint and built-in reverse proxy:
 
-- `/surreal/*` is proxied to SurrealDB, including WebSocket traffic
-- `/api/*` and `/metrics` are proxied to the Python ingester
+- `/surreal/rpc` provides authorized read-only database transport, including WebSockets
+- application `/api/*`, `/metrics` and `/mcp` run in Bun; Python handles only the private Celery bridge
 - all other routes serve the SPA
 
 The built-in proxy is HTTP-only. Terminate TLS in your ingress, load balancer, or edge proxy.

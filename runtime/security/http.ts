@@ -1,6 +1,7 @@
+import { Authorization, type PolicyContext } from "./opa"
 import { timingSafeEqual } from "node:crypto"
 import type { AuthenticationSnapshot } from "../authentication-config"
-import { AuthError, authorize, grants, payloadPermissions, routePermissions, type Principal } from "./permissions"
+import { AuthError, grants, payloadPermissions, routePermissions, type Principal } from "./permissions"
 
 export const requestHeader = "X-Celery-Insights-Request"
 export const noStore = (response: Response): Response => {
@@ -44,11 +45,23 @@ export async function secureApplicationRequest(
       throw new AuthError(403, "Request origin denied")
     if (normalized === "/api/auth/identity" && request.method === "GET") {
       const principal = auth.principal(request)
+      await auth.authorization.check(
+        principal,
+        [],
+        { method: request.method, path: normalized, transport: "http" },
+        replay,
+      )
       return noStore(Response.json({ account_id: principal.account_id, permissions: [...grants(principal)].sort() }))
     }
     if (/^\/(api(?:\/|$)|metrics(?:\/|$)|surreal(?:\/|$)|mcp(?:\/|$)|ws(?:\/|$))/.test(normalized))
-      auth.gate(request, normalized, replay)
-    else auth.principal(request) // Challenge browser navigation before loading the UI.
+      await auth.gate(request, normalized, replay)
+    else
+      await auth.authorization.check(
+        auth.principal(request),
+        [],
+        { method: request.method, path: normalized, transport: "http" },
+        replay,
+      ) // Challenge browser navigation before loading the UI.
     const response = await dispatch()
     return response ? noStore(response) : undefined
   } catch (error) {
@@ -58,7 +71,10 @@ export async function secureApplicationRequest(
 
 export class AuthenticationHttp {
   readonly origin: string
-  constructor(private readonly snapshot: AuthenticationSnapshot) {
+  constructor(
+    private readonly snapshot: AuthenticationSnapshot,
+    readonly authorization = new Authorization(),
+  ) {
     this.origin = snapshot.public_origin
   }
 
@@ -97,7 +113,7 @@ export class AuthenticationHttp {
     return account ? { account_id: account.username, roles: [...account.roles] } : null
   }
 
-  gate(request: Request, pathname: string, replay: boolean): Principal {
+  async gate(request: Request, pathname: string, replay: boolean): Promise<Principal> {
     const principal = this.principal(request)
     const websocket = request.headers.get("upgrade")?.toLowerCase() === "websocket"
     if (websocket || !["GET", "HEAD"].includes(request.method)) {
@@ -108,11 +124,19 @@ export class AuthenticationHttp {
     if (pathname === "/surreal/rpc" && ["GET", "POST"].includes(request.method)) actions = payloadPermissions
     if (pathname === "/mcp") actions = payloadPermissions
     if (!actions) throw new AuthError(403, "Access denied")
-    authorize(principal, actions, replay)
+    const context: PolicyContext = {
+      method: request.method,
+      path: pathname,
+      transport: websocket ? "websocket" : "http",
+    }
+    await this.authorization.check(principal, actions, context, replay)
     return principal
   }
 }
 
-export function initializeAuthentication(snapshot: AuthenticationSnapshot): AuthenticationHttp {
-  return new AuthenticationHttp(snapshot)
+export function initializeAuthentication(
+  snapshot: AuthenticationSnapshot,
+  authorization = new Authorization(),
+): AuthenticationHttp {
+  return new AuthenticationHttp(snapshot, authorization)
 }
