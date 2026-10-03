@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
+import { HttpError } from "../http-error"
 import type { Surreal } from "surrealdb"
 import { createLogger } from "../logger"
 import { Cursors, Queries, Results, ToolError, schemas, type ToolName, type Row, type Mode } from "./common"
@@ -27,6 +28,7 @@ export interface McpOptions {
   cursorSecret: string
   mode: () => Mode
   allowedHosts?: string[]
+  authorize?: (request: Request, tool: ToolName) => Promise<void>
   now?: () => number
 }
 export class McpTools {
@@ -85,13 +87,19 @@ export const createMcpHandler = (options: McpOptions): ((request: Request) => Pr
         },
         async (input: Row) => {
           try {
+            await options.authorize?.(request, tool)
             const result = await tools.call(tool, input)
             return { content: [{ type: "text" as const, text: JSON.stringify(result) }], structuredContent: result }
           } catch (error) {
             const failure =
-              error instanceof ToolError
-                ? error
-                : new ToolError("unavailable", "Inspection failed; no conclusion about the cluster can be drawn.")
+              error instanceof HttpError
+                ? new ToolError(
+                    error.status === 403 ? "access_denied" : "unavailable",
+                    error.status === 403 ? "Access denied by policy." : "Authorization policy unavailable.",
+                  )
+                : error instanceof ToolError
+                  ? error
+                  : new ToolError("unavailable", "Inspection failed; no conclusion about the cluster can be drawn.")
             logger.warn(`Tool ${tool} failed (${failure.code})`)
             return {
               isError: true,

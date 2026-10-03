@@ -171,6 +171,15 @@ export const SETTINGS: readonly Setting[] = [
   },
   { path: "authentication.oidc.scopes", key: "oidcScopes", type: "string" },
   { path: "authentication.oidc.role_mappings", key: "oidcRoleMappings", type: "object" },
+  { path: "authorization.opa.decision_url", key: "opaDecisionUrl", type: "string" },
+  { path: "authorization.opa.timeout_ms", key: "opaTimeoutMs", type: "number" },
+  {
+    path: "authorization.opa.bearer_token",
+    key: "opaBearerToken",
+    type: "string",
+    secret: true,
+    env: "CELERY_INSIGHTS_OPA_BEARER_TOKEN",
+  },
   { path: "authentication.mode", key: "authMode", type: "string" },
   { path: "authentication.accounts", key: "authAccounts", type: "object", secret: true },
 ]

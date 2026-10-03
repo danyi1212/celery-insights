@@ -14,6 +14,10 @@ The previous frontend database password/login/token path has been retired. Legac
 
 Session tests cover replicas, credential/configuration rotation, expiry, secure cookie attributes, constrained return paths, login/logout CSRF, bounded input and real RSA-signed OIDC tokens with invalid issuer, audience, state, nonce and unmapped roles. Browser E2E uses the login form for normal application navigation.
 
+## Restrictive OPA policies (stacked on #143)
+
+Bun queries an optional external OPA Data API after role checks. Decisions cover navigation/identity, registered APIs, broad RPC, exports, individual MCP tools and live messages/delivery. Strict boolean results, timeouts, bounded responses and no caching provide fail-closed behavior. Policies remain operator-owned. See [the contract and examples](../../AUTHORIZATION.md). Resource/field filtering still requires typed reads and streams.
+
 ## Verification
 
 Configuration tests cover all three password sources, missing/conflicting sources, invalid roles, duplicates, obsolete settings and secret exclusion from Python/diagnostics. Request tests cover login redirects and cookies, invalid credentials, roles, browser navigation, Origin/custom-header enforcement, unknown operations, WebSockets and prefixes. Native Bun acceptance covers independent configured replicas, credential rotation and real observation metrics/CSV/backup/restore/cleanup on disposable SurrealDB 3.3.0. TLS browser suites exercise root and shared-prefix deployments without an identity database or provisioning service.

@@ -74,6 +74,28 @@ export const flatConfigSchema = z.object({
   uiHideWelcomeBanner: z.boolean().optional(),
   uiRawEventsLimit: z.number().int().positive().optional(),
   publicUrl: z.string().url().optional(),
+  opaDecisionUrl: z
+    .string()
+    .url()
+    .refine((value) => {
+      const url = new URL(value)
+      return (
+        ["http:", "https:"].includes(url.protocol) &&
+        !url.username &&
+        !url.password &&
+        !url.search &&
+        !url.hash &&
+        /^\/v1\/data\/[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/.test(url.pathname)
+      )
+    }, "Expected an HTTP(S) OPA /v1/data decision URL without credentials, query or fragment")
+    .optional(),
+  opaTimeoutMs: z.coerce.number().int().min(50).max(10000).default(1000),
+  opaBearerToken: z
+    .string()
+    .min(1)
+    .max(4096)
+    .regex(/^[\x21-\x7e]+$/)
+    .optional(),
   authMode: z.enum(["basic", "oidc"]).default("basic"),
   authSessionSecret: z
     .string()
@@ -194,5 +216,9 @@ export function validateConfig(values: Record<string, unknown>): Config {
   } catch {
     throw new Error("celery.timezone: Invalid timezone")
   }
+  if (result.data.opaBearerToken && !result.data.opaDecisionUrl)
+    throw new Error("authorization.opa.bearer_token requires decision_url")
+  if (result.data.opaBearerToken && new URL(result.data.opaDecisionUrl!).protocol !== "https:")
+    throw new Error("authorization.opa.bearer_token requires HTTPS")
   return result.data
 }

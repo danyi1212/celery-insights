@@ -348,6 +348,38 @@
         }
       }
     },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "opa": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "decision_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "timeout_ms": {
+              "default": 1000,
+              "type": "integer",
+              "minimum": 50,
+              "maximum": 10000
+            },
+            "bearer_token": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^[\\x21-\\x7e]+$"
+            },
+            "bearer_token_file": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
     "authentication": {
       "type": "object",
       "additionalProperties": false,
