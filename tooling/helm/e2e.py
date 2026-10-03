@@ -331,11 +331,9 @@ class HelmLifecycle(unittest.TestCase):
             standby = next(pod for pod, status in statuses.items() if status == "standby")
             # Crash PID 1 to leave the lease behind, rather than exercising only
             # graceful SIGTERM/release. A subsequent query must reclaim expiry.
-            try:
-                kube("exec", leader, "--", "sh", "-c", "kill -KILL 1")
-            except subprocess.CalledProcessError as error:
-                if error.returncode != 137:
-                    raise
+            pod = json.loads(kube("get", "pod", leader, "-o", "json"))
+            container = pod["status"]["containerStatuses"][0]["containerID"].removeprefix("containerd://")
+            command("docker", "exec", pod["spec"]["nodeName"], "crictl", "stop", "--timeout", "0", container)
             kube("delete", "pod", leader, "--wait=false")
 
             # A replacement may win before the original standby. Both are valid

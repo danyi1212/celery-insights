@@ -11,5 +11,11 @@ spec:
   containers:
     - name: health
       image: {{ .Values.test.image | quote }}
-      command: [wget]
-      args: ["--spider", "http://{{ include "insights.fullname" . }}:{{ .Values.service.port }}/ready"]
+      command: [sh, -c]
+      args:
+        - >-
+          for attempt in 1 2 3 4 5 6; do
+            wget -T 5 --spider "http://{{ include "insights.fullname" . }}:{{ .Values.service.port }}/ready" && exit 0;
+            sleep 2;
+          done;
+          exit 1
