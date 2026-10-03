@@ -38,6 +38,7 @@ def _inspect_sync(celery_app: Celery) -> dict[str, dict]:
             response = {}
         for hostname, data in response.items():
             results.setdefault(hostname, {})[key] = data
+            results[hostname].setdefault("_observed_at", {})[key] = datetime.now(UTC).isoformat()
 
     return results
 
@@ -103,13 +104,15 @@ class WorkerPoller:
                     "id": hostname,
                     "ts": now,
                     "data": json.dumps(data),
+                    "inspect_data": data,
                 }
                 query = (
                     "UPSERT type::record('worker', $id) SET "
                     "status = 'online', "
                     "last_updated = <datetime>$ts, "
                     "missed_polls = 0, "
-                    "inspect = $data"
+                    "inspect = $data, "
+                    "inspect_data = $inspect_data"
                 )
                 await db.query(query, params)
             except Exception:

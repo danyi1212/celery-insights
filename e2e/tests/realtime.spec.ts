@@ -25,7 +25,7 @@ test.describe("Realtime", () => {
 
     // Give the live query a window to pick up the task without a page reload.
     const recentTasks = page.locator("#recent-tasks")
-    const taskLink = recentTasks.locator(`a[href="/tasks/${task_id}"]`).first()
+    const taskLink = recentTasks.locator(`a[href$="/tasks/${task_id}"]`).first()
     const appearedViaLiveQuery = await taskLink
       .waitFor({ state: "visible", timeout: 10_000 })
       .then(() => true)
@@ -36,7 +36,7 @@ test.describe("Realtime", () => {
       // Reload to re-run the initial query so we still verify the data is present.
       await page.reload()
       await expect(page.getByTestId("app-connection-loading")).toBeHidden({ timeout: 15_000 })
-      await expect(recentTasks.locator(`a[href="/tasks/${task_id}"]`).first()).toBeVisible({ timeout: 15_000 })
+      await expect(recentTasks.locator(`a[href$="/tasks/${task_id}"]`).first()).toBeVisible({ timeout: 15_000 })
     }
   })
 })

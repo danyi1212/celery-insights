@@ -136,6 +136,8 @@ def build_logging_config(log_format: str = "pretty", level: str = "info") -> dic
             "charset_normalizer": {"level": "WARNING"},
             "requests": {"level": "WARNING"},
             "httpx": {"level": "WARNING"},
+            "httpcore": {"level": "WARNING"},
+            "websockets": {"level": "WARNING"},
             "urllib3": {"level": "WARNING"},
         },
     }

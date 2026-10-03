@@ -29,6 +29,7 @@ const { runSchemaMigration } = await import("./surreal-schema")
 function createConfig(overrides: Partial<Config> = {}): Config {
   return {
     port: 8555,
+    urlPrefix: "",
     surrealdbUrl: "ws://localhost:8557/rpc",
     surrealdbIngesterPass: "test-pass",
     surrealdbNamespace: "celery_insights",
@@ -213,6 +214,7 @@ describe("runSchemaMigration", () => {
     )
     expect(queries).toContain("SELECT * FROM task")
     expect(queries.some((query) => query.includes("UPSERT type::record('workflow', $workflowId)"))).toBe(true)
+    expect(queries.some((query) => query.includes("->(type::record('workflow_task', $edgeId))"))).toBe(true)
     expect(queries.some((query) => query.includes("RELATE OR UPDATE"))).toBe(true)
     expect(
       queries.some((query) => query.includes("UPSERT type::record('task', $taskId) SET workflow_id = $workflowId")),

@@ -1,3 +1,4 @@
+import { appUrl } from "@lib/app-url"
 import { Alert, AlertDescription, AlertTitle } from "@components/ui/alert"
 import { Button } from "@components/ui/button"
 import { Checkbox } from "@components/ui/checkbox"
@@ -48,7 +49,7 @@ export const DownloadDebugBundleButton: React.FC<{ label?: string }> = ({ label 
     setErrorMessage(null)
     setStatusMessage("Preparing debug bundle. This can take a moment.")
     try {
-      const response = await fetch("/api/settings/download-debug-bundle", {
+      const response = await fetch(appUrl("/api/settings/download-debug-bundle"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

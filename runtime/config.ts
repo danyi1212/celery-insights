@@ -12,6 +12,21 @@ const booleanFromEnv = z
 export const flatConfigSchema = z.object({
   // Server
   port: z.coerce.number().int().min(1).max(65535).default(8555),
+  urlPrefix: z
+    .string()
+    .default("")
+    .transform((value) => value.replace(/^\/+|\/+$/g, ""))
+    .refine(
+      (value) =>
+        value === "" ||
+        value
+          .split("/")
+          .every((segment) => /^[A-Za-z0-9_-][A-Za-z0-9._~-]*$/.test(segment) && segment !== "." && segment !== ".."),
+      { message: "URL_PREFIX must be a URL path with no query, fragment, or dot segments" },
+    )
+    .transform((value) => (value ? `/${value}` : "")),
+  mcpToken: z.string().min(1).optional(),
+  mcpAllowedHosts: z.string().min(1).optional(),
 
   // SurrealDB
   surrealdbUrl: z.string().url().default("ws://localhost:8557/rpc"),
@@ -75,6 +90,9 @@ export type Config = z.infer<typeof configSchema>
 
 export const ENV_KEY_MAP: Record<string, string> = {
   PORT: "port",
+  URL_PREFIX: "urlPrefix",
+  MCP_TOKEN: "mcpToken",
+  MCP_ALLOWED_HOSTS: "mcpAllowedHosts",
   SURREALDB_URL: "surrealdbUrl",
   SURREALDB_EXTERNAL_URL: "surrealdbExternalUrl",
   SURREALDB_INGESTER_PASS: "surrealdbIngesterPass",

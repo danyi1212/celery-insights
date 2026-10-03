@@ -1,3 +1,4 @@
+import { urlPrefix } from "./app-url"
 import { execFileSync } from "child_process"
 import { dirname, resolve } from "path"
 import { fileURLToPath } from "url"
@@ -14,7 +15,9 @@ export function composeUp() {
     return
   }
   logInfo("Starting docker compose stack...")
-  const args = ["compose", "-f", COMPOSE_FILE, "--profile", "interactive", "up", "-d"]
+  const args = ["compose", "-f", COMPOSE_FILE, "--profile", "interactive"]
+  if (urlPrefix) args.push("--profile", "reverse-proxy")
+  args.push("up", "-d")
   if (SHOULD_BUILD) {
     args.push("--build")
   } else {
@@ -33,7 +36,18 @@ export function composeDown() {
   try {
     execFileSync(
       "docker",
-      ["compose", "-f", COMPOSE_FILE, "--profile", "interactive", "down", "-v", "--remove-orphans"],
+      [
+        "compose",
+        "-f",
+        COMPOSE_FILE,
+        "--profile",
+        "interactive",
+        "--profile",
+        "reverse-proxy",
+        "down",
+        "-v",
+        "--remove-orphans",
+      ],
       { stdio: "inherit", timeout: 60_000 },
     )
   } catch (e) {
@@ -47,10 +61,14 @@ function captureComposeOutput(args: string[]): string {
   }
 
   try {
-    return execFileSync("docker", ["compose", "-f", COMPOSE_FILE, "--profile", "interactive", ...args], {
-      encoding: "utf8",
-      timeout: 60_000,
-    })
+    return execFileSync(
+      "docker",
+      ["compose", "-f", COMPOSE_FILE, "--profile", "interactive", "--profile", "reverse-proxy", ...args],
+      {
+        encoding: "utf8",
+        timeout: 60_000,
+      },
+    )
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return `docker compose ${args.join(" ")} failed: ${message}`

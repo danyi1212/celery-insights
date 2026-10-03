@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
-import { exportSurrealData, extractSurrealTableData, importSurrealData } from "./debug-bundle"
+import { parseConfig } from "./config"
+import { exportSurrealData, extractSurrealTableData, importSurrealData, redactConfig } from "./debug-bundle"
 
 describe("debug-bundle surreal helpers", () => {
   it("extracts only table data statements from a native surreal export", () => {
@@ -141,15 +142,35 @@ INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
 
     await importSurrealData(db as never, {
       version: 1,
-      tasks: [{ id: "task:1", state: "SUCCESS", failed_at: "2026-03-14T18:43:05.917351Z" }],
+      tasks: [
+        {
+          id: "task:1",
+          state: "SUCCESS",
+          failed_at: "2026-03-14T18:43:05.917351Z",
+          first_observed_at: "2026-03-14T18:40:00.000000Z",
+        },
+      ],
       events: [{ id: "event:1", timestamp: "2026-03-14T18:43:05.917351Z" }],
       workers: [{ id: "worker:1", last_updated: "2026-03-14T18:43:05.917351Z" }],
     })
 
     expect(db.query).toHaveBeenCalledWith(expect.any(String), {
-      tasks_0: [{ id: "1", data: { state: "SUCCESS", failed_at: new Date("2026-03-14T18:43:05.917351Z") } }],
+      tasks_0: [
+        {
+          id: "1",
+          data: {
+            state: "SUCCESS",
+            failed_at: new Date("2026-03-14T18:43:05.917351Z"),
+            first_observed_at: new Date("2026-03-14T18:40:00.000000Z"),
+          },
+        },
+      ],
       events_0: [{ id: "1", data: { timestamp: new Date("2026-03-14T18:43:05.917351Z") } }],
       workers_0: [{ id: "1", data: { last_updated: new Date("2026-03-14T18:43:05.917351Z") } }],
     })
   })
+})
+
+it("redacts the MCP token in diagnostic bundles", () => {
+  expect(redactConfig(parseConfig({ MCP_TOKEN: "private-token" }), false).mcpToken).toBe("***REDACTED***")
 })

@@ -19,6 +19,11 @@ const documentationPages = [
     sourcePath: "src/content/docs/configuration.mdx",
   },
   {
+    title: "MCP Interface",
+    href: "/documentation/mcp",
+    sourcePath: "src/content/docs/mcp.mdx",
+  },
+  {
     title: "Deployment Patterns",
     href: "/documentation/deployment-patterns",
     sourcePath: "src/content/docs/deployment-patterns.mdx",

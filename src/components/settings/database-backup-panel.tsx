@@ -1,3 +1,4 @@
+import { appUrl } from "@lib/app-url"
 import Panel from "@components/common/panel"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import { Button } from "@components/ui/button"
@@ -20,7 +21,7 @@ export const DatabaseBackupPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHe
     setIsExporting(true)
     setImportResult(null)
     try {
-      const response = await fetch("/api/settings/export")
+      const response = await fetch(appUrl("/api/settings/export"))
       if (!response.ok) return
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
@@ -52,7 +53,7 @@ export const DatabaseBackupPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHe
       try {
         const formData = new FormData()
         formData.append("file", file)
-        const response = await fetch("/api/settings/import", {
+        const response = await fetch(appUrl("/api/settings/import"), {
           method: "POST",
           body: formData,
         })

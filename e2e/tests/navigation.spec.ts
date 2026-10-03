@@ -1,3 +1,4 @@
+import { appURL } from "../helpers/app-url"
 import { test, expect } from "../fixtures/base"
 
 test.describe("Navigation", () => {
@@ -21,13 +22,13 @@ test.describe("Navigation", () => {
     await expect(page.getByRole("link", { name: "Configuration", exact: true })).toBeVisible()
 
     await page.getByRole("link", { name: "Back to Dashboard" }).click()
-    await expect(page).toHaveURL("/")
+    await expect(page).toHaveURL(appURL("/"))
 
     await page.getByRole("link", { name: "Settings" }).click()
     await expect(page).toHaveURL(/\/settings/)
 
     await page.getByRole("link", { name: "Dashboard" }).click()
-    await expect(page).toHaveURL("/")
+    await expect(page).toHaveURL(appURL("/"))
   })
 
   test("unknown route shows 404", async ({ page }) => {

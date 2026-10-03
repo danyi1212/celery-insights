@@ -11,7 +11,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <>
       <RouterProvider router={router} />
-      <Analytics />
+      {import.meta.env.VITE_VERCEL_ANALYTICS && <Analytics />}
     </>
   </StrictMode>,
 )

@@ -1,3 +1,4 @@
+import { appUrl } from "@lib/app-url"
 import Panel from "@components/common/panel"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import { useSettingsDiagnostics } from "@components/settings/use-settings-diagnostics"
@@ -33,7 +34,7 @@ const DangerZonePanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fals
     setIsClearing(true)
     setStatusMessage(null)
     try {
-      const res = await fetch("/api/settings/clear", { method: "POST" })
+      const res = await fetch(appUrl("/api/settings/clear"), { method: "POST" })
       const success = res.ok ? ((await res.json()) as boolean) : false
       if (!success) throw new Error("clear failed")
 

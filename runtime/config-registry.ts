@@ -11,6 +11,9 @@ export interface Setting {
 
 export const SETTINGS: readonly Setting[] = [
   { path: "server.port", key: "port", type: "number", env: "CI_PORT", legacy: "PORT" },
+  { path: "server.url_prefix", key: "urlPrefix", type: "string", env: "CI_URL_PREFIX", legacy: "URL_PREFIX" },
+  { path: "mcp.token", key: "mcpToken", type: "string", env: "CI_MCP_TOKEN", legacy: "MCP_TOKEN", secret: true },
+  { path: "mcp.allowed_hosts", key: "mcpAllowedHosts", type: "string", legacy: "MCP_ALLOWED_HOSTS" },
   {
     path: "database.observation.url",
     key: "surrealdbUrl",

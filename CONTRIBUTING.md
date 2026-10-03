@@ -7,7 +7,7 @@ This guide covers bug reports, feature requests, local development, and the proj
 > :warning: **WARNING**
 >
 > If you have discovered a security vulnerability, please **DO NOT** file a public issue.
-> Instead, please report them directly to <danyi1212@users.noreply.github.com>.
+> Instead, please report them directly to <security@danyi.io>.
 
 If you have found a bug, we would like to know. Before you file a bug report, make sure the issue can be reproduced consistently.
 
@@ -42,7 +42,7 @@ To contribute to the project, follow these steps:
 
 - Python 3.14+
 - [Bun](https://bun.sh/)
-- [SurrealDB](https://surrealdb.com/install) (v3.0+)
+- [SurrealDB](https://surrealdb.com/install) (v3.3+, production and CI use v3.3.0)
 - An IDE (we suggest PyCharm, but you can use your preferred IDE)
 
 ### Create dev environment
@@ -146,6 +146,34 @@ Or run them in separate terminals:
 
 > **Note:** All application settings are owned by Bun (`runtime/config.ts`) and passed to Python via environment variables. The Bun package root is the repository root, but the application source now lives at the repository root under `src/`, `runtime/`, and `e2e/`. When adding new configuration, define it in the Bun config schema first.
 
+### MCP development
+
+Bun serves MCP at `http://localhost:8555/mcp`. The Vite dev server on port 3000 does not serve
+the MCP endpoint. With SurrealDB and the Python ingester already running, start Bun against
+that database in another terminal:
+
+```shell
+bun run build
+SURREALDB_EXTERNAL_URL=ws://localhost:8557/rpc INGESTION_ENABLED=false bun run start
+```
+
+This Bun process reads the existing database while the separate ingester keeps collecting events.
+Use the same namespace, database, and credentials as your development services.
+
+Tool contracts live in [`MCP_DESIGN.md`](MCP_DESIGN.md); connection settings and client examples
+live in [`CONFIGURATION.md`](CONFIGURATION.md#mcp-access-for-agents). Operator documentation is
+in `src/content/docs/mcp.mdx`, served at `/documentation/mcp` with navigation and Copy as Markdown.
+
+`runtime/mcp/` owns argument validation, read queries, cursor handling, response budgets, and the
+protocol adapter. MCP calls must read stored observations without changing or polling Celery.
+Keep selectors simple and counts scoped correctly; distinguish unavailable data from empty data,
+and response truncation from source truncation. Update the tool contract and in-app docs when
+changing public behavior.
+
+Run the focused MCP integration tests with `bunx vitest run runtime/mcp/mcp.test.ts`, and the
+ingestion regression with `uv run pytest server/events/ingester_integration_test.py`.
+Both use isolated native SurrealDB instances; the CLI must be on PATH.
+
 ## Code Styles
 
 ### General
@@ -224,6 +252,13 @@ uv run pytest server/tasks/model_test.py   # single file
 Frontend unit tests use [Vitest](https://vitest.dev/) with [Testing Library](https://testing-library.com/) and happy-dom.
 Tests are colocated next to the module they test, suffixed `.test.ts` or `.test.tsx` (e.g., `task-avatar.tsx` -> `task-avatar.test.tsx`).
 
+MCP integration tests start an isolated in-memory SurrealDB process and require the SurrealDB 3.3+ CLI
+on PATH (production and CI use v3.3.0). They exercise real queries, paging, viewer permissions,
+schema migration, and the HTTP protocol. Set `MCP_TEST_URL` only for a disposable test server;
+the tests clear data in its `test/mcp` database.
+The Python ingestion integration test also starts an isolated SurrealDB process; it skips when
+the CLI is unavailable locally, and CI installs the CLI to run it.
+
 ```shell
 bun run test          # all tests (single run)
 bun run test:watch    # watch mode
@@ -262,6 +297,18 @@ E2E_SKIP_COMPOSE=1 bun run e2e:ui
 ```
 
 > **Tip:** When iterating locally, keep the docker-compose stack running and use `E2E_SKIP_COMPOSE=1` to skip the slow build step. Use `--headed` to see what the tests are doing, or `--ui` for the full Playwright inspector.
+
+### Reverse proxy E2E coverage
+
+For new frontend features, use `appUrl` from `src/lib/app-url.ts` for same-origin endpoints and public assets, and `appHref` for plain anchor links. TanStack Router links apply the mount path automatically.
+
+CI runs the complete Playwright suite at the origin root and behind nginx at `/tools/celery/`. Run the proxy deployment locally with:
+
+```shell
+URL_PREFIX=/tools/celery bun run e2e
+```
+
+Use the shared `e2e/fixtures/base` fixture for new browser tests. Its `page.goto("/...")` destinations are relative to the app mount. In the proxy deployment it also fails tests when app HTTP requests or WebSockets escape the prefix. Use `appURL` from `e2e/helpers/app-url` for direct endpoint requests. The proxy serves a sibling application at `/` and returns 404 for other paths outside the prefix.
 
 ## License
 

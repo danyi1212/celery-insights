@@ -1,3 +1,4 @@
+import { appHref } from "@lib/app-url"
 import { createFileRoute } from "@tanstack/react-router"
 import { DebugSnapshotPanel } from "@components/settings/debug-snapshot-panel"
 import { useSurrealDB } from "@components/surrealdb-provider"
@@ -25,7 +26,7 @@ const SectionBlock = ({
       <div className="group flex items-center gap-2">
         <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">{label}</h2>
         <a
-          href={`#${id}`}
+          href={appHref(`#${id}`)}
           aria-label={`Link to ${label}`}
           className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
         >
@@ -99,7 +100,7 @@ const SettingsPage = () => {
             {sections.map((section) => (
               <a
                 key={section.id}
-                href={`#${section.id}`}
+                href={appHref(`#${section.id}`)}
                 className="rounded-2xl px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
               >
                 {section.label}

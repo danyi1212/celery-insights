@@ -1,7 +1,8 @@
 import { defineConfig } from "../tooling/playwright"
 
+import { appBaseURL } from "./helpers/app-url"
+
 const isCI = !!process.env.CI
-const e2eHost = process.env.E2E_HOST ?? "127.0.0.1"
 
 export default defineConfig({
   testDir: "./tests",
@@ -22,7 +23,7 @@ export default defineConfig({
       ]
     : [["html", { outputFolder: "../playwright-report" }]],
   use: {
-    baseURL: `http://${e2eHost}:8555`,
+    baseURL: appBaseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "on-first-retry",

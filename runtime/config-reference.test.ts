@@ -6,8 +6,8 @@ import { resolveConfig } from "./config-loader"
 it("keeps the published setting catalog generated from the registry", () => {
   const docs = readFileSync("src/content/docs/configuration.mdx", "utf8")
   const generated = docs
-    .split("<!-- BEGIN GENERATED CONFIG REFERENCE -->\n")[1]
-    .split("<!-- END GENERATED CONFIG REFERENCE -->")[0]
+    .split("{/* BEGIN GENERATED CONFIG REFERENCE */}\n")[1]
+    .split("{/* END GENERATED CONFIG REFERENCE */}")[0]
   const cells = (markdown: string) =>
     markdown
       .split("\n")

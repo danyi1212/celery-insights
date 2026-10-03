@@ -21,6 +21,7 @@
           "minimum": 1,
           "maximum": 65535
         },
+        "url_prefix": {},
         "debug": {
           "default": false,
           "type": "boolean"
@@ -39,6 +40,24 @@
               "maximum": 65535
             }
           }
+        }
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 1
+        },
+        "token_file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowed_hosts": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },

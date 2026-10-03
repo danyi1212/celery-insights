@@ -1,6 +1,7 @@
 # Celery Insights
 
 Celery Insights is a real-time dashboard for Celery clusters. It shows workers, tasks, task graphs, and cluster activity in a web UI backed by Celery events and live updates.
+Its read-only MCP interface lets agents find workflows, inspect task inputs/results/errors, and see stored worker activity.
 
 <p align="center">
   <a href="https://celery-insights.vercel.app/" rel="noopener" target="_blank"><img height="40" src="/assets/ViewDemo.svg" alt="View Demo"></a>
@@ -39,6 +40,7 @@ Keep the rest of the event-related settings at their Celery defaults unless your
 The default image assumes RabbitMQ as the broker and Redis as the result backend, both reachable from inside Docker via `host.docker.internal`.
 
 - Use [`BROKER_URL`](CONFIGURATION.md#broker_url) and [`RESULT_BACKEND`](CONFIGURATION.md#result_backend) when your Celery cluster uses different endpoints.
+- Set [`URL_PREFIX`](CONFIGURATION.md#url_prefix) when hosting under a shared reverse proxy path such as `/tools/celery/`.
 - Use [`CONFIG_FILE`](CONFIGURATION.md#config_file) when the cluster needs Redis Sentinel, transport options, TLS settings, or custom serializers.
 - Use `ghcr.io/danyi1212/celery-insights-all:latest` when your Celery setup needs optional extras such as `msgpack`, S3, Memcache, or other non-default drivers.
 - Pick the right SurrealDB topology with [`SURREALDB_STORAGE`](CONFIGURATION.md#surrealdb_storage) or [`SURREALDB_EXTERNAL_URL`](CONFIGURATION.md#surrealdb_external_url).
@@ -52,17 +54,43 @@ docker run -p 8555:8555 --name celery-insights \
   ghcr.io/danyi1212/celery-insights-all:latest
 ```
 
+## MCP access for agents
+
+Use MCP when you want an agent to find a task you just spawned, investigate a workflow's errors,
+or check what a worker is doing. It is included and requires no authentication by default.
+Connect Claude Code or Codex with:
+
+```shell
+# Claude Code
+claude mcp add --transport http celery-insights http://localhost:8555/mcp
+
+# Codex
+codex mcp add celery-insights --url http://localhost:8555/mcp
+```
+
+For Cursor, follow the [copyable configuration](CONFIGURATION.md#mcp-access-for-agents).
+Restart your agent session, then try: “Find the `reports.render` task I spawned in the last 15 minutes and tell me whether it finished.”
+Start with a known task name and approximate time; the agent can discover the workflow and follow
+its task IDs into inputs, results, and error details.
+
+Use the running app's [MCP Interface guide](http://localhost:8555/documentation/mcp) for client setup,
+optional authentication, troubleshooting recipes, and continuing large results. See
+[connection and authentication settings](CONFIGURATION.md#mcp-access-for-agents) for deployment options,
+or the [full tool contract](MCP_DESIGN.md) for every argument and response field.
+For development setup, see [the MCP contributor notes](CONTRIBUTING.md#mcp-development).
+
 ## Documentation
 
 - [`CONFIGURATION.md`](CONFIGURATION.md) for the full environment variable reference, setup patterns, metrics endpoints, and reverse-proxy behavior
 - [`Support Matrix`](CONFIGURATION.md#support-matrix) for broker, serializer, and result-backend compatibility
+- [`MCP_DESIGN.md`](MCP_DESIGN.md) for MCP tool arguments, responses, filters, and pagination
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) for local development, testing, and contribution guidelines
 
 ## Questions, Bugs, and Security Reports
 
 If you hit a bug, please open an issue with a minimal reproduction. For questions, ideas, and feature requests, start with GitHub Discussions when possible.
 
-If you have discovered a security vulnerability, do not file a public issue. Report it privately to `danyi1212@users.noreply.github.com`.
+If you have discovered a security vulnerability, do not file a public issue. Report it privately to `security@danyi.io`.
 
 ## Contributing
 

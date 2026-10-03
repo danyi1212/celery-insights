@@ -12,6 +12,12 @@ export const helpNavigation = [
     group: "Reference",
   },
   {
+    title: "MCP Interface",
+    href: "/documentation/mcp",
+    description: "Connect agents to workflows, tasks, and worker activity.",
+    group: "Reference",
+  },
+  {
     title: "Deployment Patterns",
     href: "/documentation/deployment-patterns",
     description: "Choose the right SurrealDB topology.",

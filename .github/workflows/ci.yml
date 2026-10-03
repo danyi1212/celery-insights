@@ -70,6 +70,11 @@ jobs:
           python-version-file: ".python-version"
       - name: Install dependencies
         run: uv sync --locked
+      - name: Install SurrealDB for native integration tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/surreal-integration"
+          curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.3.0/surreal-v3.3.0.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-integration"
+          echo "$RUNNER_TEMP/surreal-integration" >> "$GITHUB_PATH"
       - name: Run pytest
         run: uv run pytest server --doctest-modules --junitxml=junit/test-results.xml --cov=server --cov-report=xml --cov-report=html -n auto
       - name: Publish test results
@@ -117,11 +122,26 @@ jobs:
           bun-version: "1.4.2"
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      - name: Install SurrealDB for native integration tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/surreal-integration"
+          curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.3.0/surreal-v3.3.0.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-integration"
+          echo "$RUNNER_TEMP/surreal-integration" >> "$GITHUB_PATH"
       - name: Vitest
         run: bun run test
 
   e2e:
-    name: E2E tests
+    name: E2E tests (${{ matrix.deployment.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        deployment:
+          - name: root
+            prefix: ""
+          - name: shared-proxy
+            prefix: /tools/celery
+    env:
+      URL_PREFIX: ${{ matrix.deployment.prefix }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [changes, lint-frontend, lint-backend]
@@ -160,20 +180,20 @@ jobs:
         if: always() && hashFiles('playwright-report/results.json') != ''
         with:
           report-file: playwright-report/results.json
-          report-tag: e2e
-          comment-title: E2E test results
+          report-tag: e2e-${{ matrix.deployment.name }}
+          comment-title: E2E test results (${{ matrix.deployment.name }})
           job-summary: true
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7.0.1
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.deployment.name }}
           path: playwright-report/
       - name: Upload traces on failure
         uses: actions/upload-artifact@v7.0.1
         if: failure()
         with:
-          name: playwright-traces
+          name: playwright-traces-${{ matrix.deployment.name }}
           path: test-results/playwright/
       - name: Cleanup docker compose
         if: always()
