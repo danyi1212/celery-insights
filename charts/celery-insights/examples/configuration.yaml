@@ -1,0 +1,14 @@
+# Only for images implementing #138.
+config:
+  toml:
+    enabled: true
+    structured:
+      schema_version: 1
+      logging:
+        format: json
+        level: info
+  python:
+    content: |
+      import os
+      broker_url = os.environ["BROKER_URL"]
+      result_backend = os.environ["RESULT_BACKEND"]

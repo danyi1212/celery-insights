@@ -239,6 +239,10 @@ Default: `main`
 
 Database name inside the configured SurrealDB namespace.
 
+#### SURREALDB_ROOT_USER / SURREALDB_ROOT_PASS
+
+Defaults: `root` / `root` for local compatibility. Override both through Secret-backed environment variables for managed/external deployments. Bun uses them for embedded startup, schema initialization, and native diagnostics export/import; they are not passed to Python subprocesses. Passwords are redacted from normal diagnostic config and delivered to native commands through environment variables instead of command arguments.
+
 #### SURREALDB_INGESTER_PASS
 
 Default: `changeme`

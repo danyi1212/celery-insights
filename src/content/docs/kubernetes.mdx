@@ -1,127 +1,27 @@
-Treat Celery Insights as a stateless web service once you move to Kubernetes. Autoscaling only makes sense after task history and leader election are backed by shared infrastructure.
+Install Celery Insights using the [official Helm chart source](https://github.com/danyi1212/celery-insights/tree/main/charts/celery-insights). The chart is currently a draft pending the configuration/authentication runtime and a matching image release; follow its README for development installation. It connects to your existing Celery cluster and does not install workers, a broker, or a result backend.
 
-## One key rule
+## Default topology
 
-Use external SurrealDB before you scale the app horizontally. That one decision removes most of the complexity around failover, HPA, and pod replacement.
+The chart runs one shared, private SurrealDB instance in memory. Insights pods connect to that Service instead of starting an embedded database per pod. Replacing an Insights pod preserves history; replacing the in-memory database loses it.
 
-## Preferred topology
+## Installation
 
-- Use an external SurrealDB when running more than one pod.
-- Keep `INGESTION_LEADER_ELECTION=true` so only one pod writes Celery events at a time.
-- Back the Deployment with a ClusterIP Service and terminate TLS at the ingress or load balancer.
+Create the explicit connection/credential Secret shown in the [chart README](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md), then install the chart using a tested image containing the Helm runtime changes. Access the ClusterIP Service through port-forwarding first; add ingress/TLS or a LoadBalancer when ready.
 
-## When to use a PVC
+## Persistence and external databases
 
-- A PVC only makes sense for a single-replica Deployment using embedded RocksDB or SurrealKV.
-- Do not combine HPA with embedded local storage unless each replica is intentionally isolated.
-- For autoscaling or failover, move the database out of the pod and into shared infrastructure first.
+Enable a PVC and disk-backed datastore together to preserve observation history. Existing claims are supported without Helm taking ownership. Chart-created PVCs are retained on uninstall by default. Switching from memory to disk needs an explicit export/restore if you want to retain existing history.
 
-## HPA expectations
+For SurrealDB Cloud or a separately managed database, disable the bundled dependency and supply its endpoint and Secret-backed credentials. Advanced database scaling is managed outside this chart.
 
-- Scale replicas for availability and frontend throughput, not ingestion throughput.
-- Leader election means one replica is the active ingester at any moment.
-- If the active ingester dies, another replica takes over after the lease expires and renews.
+## Insights replicas and autoscaling
 
-## Deployment and service example
+Insights APIs run on every replica, while leader election controls background ingestion and automatic cleanup. The chart defaults to one replica and offers optional CPU HPA. Install Metrics Server and configure requests/minimum/maximum replicas before enabling it. Scaling increases frontend/API capacity, not ingestion throughput.
 
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: celery-insights
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: celery-insights
-  template:
-    metadata:
-      labels:
-        app: celery-insights
-    spec:
-      containers:
-        - name: app
-          image: ghcr.io/danyi1212/celery-insights:latest
-          ports:
-            - containerPort: 8555
-          env:
-            - name: BROKER_URL
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: broker-url
-            - name: RESULT_BACKEND
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: result-backend
-            - name: SURREALDB_EXTERNAL_URL
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: surrealdb-url
-            - name: SURREALDB_INGESTER_PASS
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: surrealdb-ingester-pass
-            - name: SURREALDB_FRONTEND_PASS
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: surrealdb-frontend-pass
-            - name: INGESTION_LEADER_ELECTION
-              value: "true"
-            - name: LOG_FORMAT
-              value: "json"
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8555
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8555
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: celery-insights
-spec:
-  selector:
-    app: celery-insights
-  ports:
-    - port: 80
-      targetPort: 8555
-```
+The bundled database stays a single instance. Database upgrades use Recreate and interrupt access; Insights pods roll independently. Authentication requires durable identity/control storage even when observation history is disposable; see the chart's release prerequisites.
 
-## HPA example
+## Operational notes
 
-Use this only with an external SurrealDB or advanced non-ingester viewer pods.
+Chart-managed file changes roll the Insights pods. Existing ConfigMaps/Secrets require an explicit rollout restart after updates. The public URL prefix must match the ingress path, and live WebSocket traffic must be forwarded. Core metrics describe shared history and should not be summed across replicas.
 
-```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: celery-insights
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: celery-insights
-  minReplicas: 2
-  maxReplicas: 6
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 70
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 80
-```
+Use `/health` for process liveness and `/ready` for API responsiveness. These do not guarantee broker connectivity or ongoing ingestion. Helm rollback does not reverse database migrations; back up persistent storage before upgrades.

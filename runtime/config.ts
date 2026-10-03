@@ -31,6 +31,8 @@ const configSchema = z
     // SurrealDB
     surrealdbUrl: z.string().url().default("ws://localhost:8557/rpc"),
     surrealdbExternalUrl: z.string().url().optional(),
+    surrealdbRootUser: z.string().min(1).default("root"),
+    surrealdbRootPass: z.string().min(1).default("root"),
     surrealdbIngesterPass: z.string().min(1).default("changeme"),
     surrealdbFrontendPass: z.string().min(1).optional(),
     surrealdbNamespace: z.string().min(1).default("celery_insights"),
@@ -83,6 +85,8 @@ const ENV_KEY_MAP: Record<string, string> = {
   URL_PREFIX: "urlPrefix",
   MCP_TOKEN: "mcpToken",
   MCP_ALLOWED_HOSTS: "mcpAllowedHosts",
+  SURREALDB_ROOT_USER: "surrealdbRootUser",
+  SURREALDB_ROOT_PASS: "surrealdbRootPass",
   SURREALDB_URL: "surrealdbUrl",
   SURREALDB_EXTERNAL_URL: "surrealdbExternalUrl",
   SURREALDB_INGESTER_PASS: "surrealdbIngesterPass",
@@ -121,6 +125,11 @@ function envToConfig(env: Record<string, string | undefined>): Record<string, st
 }
 
 export function parseConfig(env: Record<string, string | undefined> = process.env): Config {
+  if (env.CI_CONFIG_FILE) {
+    throw new Error(
+      "CI_CONFIG_FILE requires the TOML configuration runtime from #138; use environment variables or CONFIG_FILE with this image",
+    )
+  }
   return configSchema.parse(envToConfig(env))
 }
 

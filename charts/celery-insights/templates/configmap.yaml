@@ -1,0 +1,21 @@
+{{- if or .Values.config.toml.content .Values.config.toml.structured .Values.config.python.content }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "insights.fullname" . }}-config
+  labels:
+    {{- include "insights.labels" . | nindent 4 }}
+data:
+  {{- if or .Values.config.toml.content .Values.config.toml.structured }}
+  config.toml: |
+    {{- if .Values.config.toml.content }}
+    {{- .Values.config.toml.content | nindent 4 }}
+    {{- else }}
+    {{- include "insights.toml" (dict "data" .Values.config.toml.structured "path" (list)) | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.config.python.content }}
+  config.py: |
+    {{- .Values.config.python.content | nindent 4 }}
+  {{- end }}
+{{- end }}

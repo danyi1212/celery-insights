@@ -174,3 +174,9 @@ INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
 it("redacts the MCP token in diagnostic bundles", () => {
   expect(redactConfig(parseConfig({ MCP_TOKEN: "private-token" }), false).mcpToken).toBe("***REDACTED***")
 })
+
+it("redacts the database administrative password", () => {
+  const config = parseConfig({ SURREALDB_ROOT_PASS: "private-admin-password" })
+  expect(redactConfig(config, false).surrealdbRootPass).toBe("***REDACTED***")
+  expect(redactConfig(config, true).surrealdbRootPass).toBe("private-admin-password")
+})

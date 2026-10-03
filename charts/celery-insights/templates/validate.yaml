@@ -1,0 +1,52 @@
+{{- if .Values.surrealdb.enabled -}}
+{{- if .Values.database.externalUrl }}{{ fail "Choose managed SurrealDB or database.externalUrl, not both" }}{{ end -}}
+{{- if or (ne (int .Values.surrealdb.replicaCount) 1) .Values.surrealdb.horizontalPodAutoscaler.enabled }}{{ fail "Managed SurrealDB supports one instance only; use an external database for scaling" }}{{ end -}}
+{{- if ne .Values.surrealdb.strategy.type "Recreate" }}{{ fail "Managed SurrealDB requires strategy.type=Recreate" }}{{ end -}}
+{{- if or .Values.surrealdb.ingress.enabled (ne .Values.surrealdb.service.type "ClusterIP") .Values.surrealdb.surrealdb.unauthenticated }}{{ fail "Managed SurrealDB must remain private and authenticated" }}{{ end -}}
+{{- if or .Values.surrealdb.surrealdb.initial_user .Values.surrealdb.surrealdb.initial_pass }}{{ fail "Supply database bootstrap credentials through Secrets, not values" }}{{ end -}}
+{{- $path := .Values.surrealdb.surrealdb.path -}}
+{{- if and .Values.surrealdb.persistence.enabled (not (regexMatch "^(rocksdb|surrealkv):/data(/|$)" $path)) }}{{ fail "PVC persistence requires rocksdb:/data/... or surrealkv:/data/... storage" }}{{ end -}}
+{{- if and (ne $path "memory") (not (regexMatch "^(rocksdb|surrealkv):/data(/|$)" $path)) }}{{ fail "Managed SurrealDB supports only memory or local disk; use an external database for TiKV" }}{{ end -}}
+{{- $dbCredentials := dict -}}
+{{- range $env := .Values.surrealdb.podExtraEnv -}}
+{{- if or (eq $env.name "SURREAL_USER") (eq $env.name "SURREAL_PASS") -}}
+{{- if hasKey $dbCredentials $env.name }}{{ fail "Managed database credentials must not be duplicated" }}{{ end -}}
+{{- $_ := set $dbCredentials $env.name true -}}
+{{- $key := ternary "rootUser" "rootPassword" (eq $env.name "SURREAL_USER") -}}
+{{- if or (ne (dig "valueFrom" "secretKeyRef" "name" "" $env) $.Values.credentials.existingSecret) (ne (dig "valueFrom" "secretKeyRef" "key" "" $env) (index $.Values.credentials.keys $key)) }}{{ fail "Managed database podExtraEnv credentials must match credentials.existingSecret and keys" }}{{ end -}}
+{{- end -}}{{- end -}}
+{{- if ne (len $dbCredentials) 2 }}{{ fail "Managed database requires both SURREAL_USER and SURREAL_PASS Secret references" }}{{ end -}}
+{{- if and (ne $path "memory") (not .Values.surrealdb.persistence.enabled) -}}
+{{- $mountedClaim := false -}}
+{{- range $volume := .Values.surrealdb.volumes -}}
+{{- if $volume.persistentVolumeClaim -}}
+{{- range $mount := $.Values.surrealdb.volumeMounts -}}
+{{- if and (eq $mount.name $volume.name) (eq $mount.mountPath "/data") }}{{ $mountedClaim = true }}{{ end -}}
+{{- end -}}{{- end -}}{{- end -}}
+{{- if not $mountedClaim }}{{ fail "Disk storage requires persistence.enabled or an existing PVC mounted at /data" }}{{ end -}}
+{{- end -}}
+{{- else -}}
+{{- $_ := required "database.externalUrl is required when surrealdb.enabled=false" .Values.database.externalUrl -}}
+{{- end -}}
+{{- if and .Values.autoscaling.enabled (not .Values.resources.requests.cpu) }}{{ fail "CPU autoscaling requires resources.requests.cpu" }}{{ end -}}
+{{- if gt (int .Values.autoscaling.minReplicas) (int .Values.autoscaling.maxReplicas) }}{{ fail "autoscaling.minReplicas must not exceed maxReplicas" }}{{ end -}}
+{{- range $kind := list "toml" "python" -}}
+{{- $file := index $.Values.config $kind -}}
+{{- $count := 0 -}}
+{{- range $key := list "content" "structured" "existingConfigMap" "existingSecret" -}}
+{{- if index $file $key }}{{ $count = add1 $count }}{{ end -}}
+{{- end -}}
+{{- if gt (int $count) 1 }}{{ fail (printf "config.%s accepts exactly one source: structured, content, existingConfigMap, or existingSecret" $kind) }}{{ end -}}
+{{- if eq $kind "toml" -}}
+{{- if and (gt (int $count) 0) (not $file.enabled) }}{{ fail "Set config.toml.enabled=true and select a #138-compatible image to use TOML" }}{{ end -}}
+{{- if and $file.enabled (eq (int $count) 0) }}{{ fail "config.toml.enabled requires a configuration source" }}{{ end -}}
+{{- end -}}{{- end -}}
+{{- $owned := list "BROKER_URL" "RESULT_BACKEND" "PORT" "HOST" "PROCESS_ROLE" "SURREALDB_URL" "SURREALDB_EXTERNAL_URL" "SURREALDB_ROOT_USER" "SURREALDB_ROOT_PASS" "SURREALDB_INGESTER_PASS" "SURREALDB_FRONTEND_PASS" "SURREALDB_NAMESPACE" "SURREALDB_DATABASE" "CI_CONFIG_FILE" "CONFIG_FILE" "INGESTION_LEADER_ELECTION" "DEBUG_BUNDLE_PATH" -}}
+{{- range $name, $value := .Values.config.env -}}
+{{- if or (has $name $owned) (regexMatch "(?i)(password|pass$|token|secret|broker_url|result_backend)" $name) }}{{ fail (printf "%s must use chart configuration or Secret references, not config.env" $name) }}{{ end -}}
+{{- end -}}
+{{- $seen := dict -}}
+{{- range .Values.extraEnv -}}
+{{- if or (has .name $owned) (hasKey $.Values.config.env .name) (hasKey $seen .name) }}{{ fail (printf "extraEnv duplicates chart-owned variable %s" .name) }}{{ end -}}
+{{- $_ := set $seen .name true -}}
+{{- end -}}

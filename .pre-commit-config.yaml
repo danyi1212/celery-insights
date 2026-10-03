@@ -15,6 +15,7 @@ repos:
       - id: check-json
       - id: check-toml
       - id: check-yaml
+        exclude: ^charts/[^/]+/templates/
       - id: check-xml
       - id: check-merge-conflict
       - id: mixed-line-ending

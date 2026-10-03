@@ -162,3 +162,12 @@ it("accepts MCP credentials and allowed hosts", () => {
   expect(config.mcpToken).toBe("agent-token")
   expect(config.mcpAllowedHosts).toBe("localhost,insights.example.com")
 })
+
+it("accepts external database administrative credentials", () => {
+  const config = parseConfig({ SURREALDB_ROOT_USER: "operator", SURREALDB_ROOT_PASS: "unique-secret" })
+  expect(config.surrealdbRootUser).toBe("operator")
+  expect(config.surrealdbRootPass).toBe("unique-secret")
+})
+it("rejects TOML selection until the configuration runtime is available", () => {
+  expect(() => parseConfig({ CI_CONFIG_FILE: "/etc/celery-insights/config.toml" })).toThrow("#138")
+})

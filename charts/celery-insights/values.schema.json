@@ -1,0 +1,351 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Celery Insights values",
+  "type": "object",
+  "properties": {
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string"
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^$|^sha256:[a-f0-9]{64}$"
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      }
+    },
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "nameOverride": {
+      "type": "string"
+    },
+    "fullnameOverride": {
+      "type": "string"
+    },
+    "credentials": {
+      "type": "object",
+      "properties": {
+        "existingSecret": {
+          "type": "string",
+          "minLength": 1
+        },
+        "keys": {
+          "type": "object",
+          "properties": {
+            "brokerUrl": {
+              "type": "string",
+              "minLength": 1
+            },
+            "resultBackend": {
+              "type": "string",
+              "minLength": 1
+            },
+            "rootUser": {
+              "type": "string",
+              "minLength": 1
+            },
+            "rootPassword": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ingesterPassword": {
+              "type": "string",
+              "minLength": 1
+            },
+            "frontendPassword": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "database": {
+      "type": "object",
+      "properties": {
+        "externalUrl": {
+          "type": "string",
+          "pattern": "^$|^wss?://[^\\s]+/rpc$"
+        },
+        "namespace": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "env": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "toml": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "structured": {
+              "type": "object"
+            },
+            "content": {
+              "type": "string"
+            },
+            "existingConfigMap": {
+              "type": "string"
+            },
+            "existingSecret": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "python": {
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "existingConfigMap": {
+              "type": "string"
+            },
+            "existingSecret": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ClusterIP",
+            "NodePort",
+            "LoadBalancer"
+          ]
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "annotations": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "className": {
+          "type": "string"
+        },
+        "annotations": {
+          "type": "object"
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string"
+              },
+              "paths": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^/"
+                    },
+                    "pathType": {
+                      "type": "string",
+                      "enum": [
+                        "Prefix",
+                        "Exact",
+                        "ImplementationSpecific"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "path",
+                    "pathType"
+                  ]
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "host",
+              "paths"
+            ]
+          }
+        },
+        "tls": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "autoscaling": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "minReplicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxReplicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "targetCPUUtilizationPercentage": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "additionalProperties": false
+    },
+    "resources": {
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "type": "object"
+    },
+    "securityContext": {
+      "type": "object"
+    },
+    "podAnnotations": {
+      "type": "object"
+    },
+    "nodeSelector": {
+      "type": "object"
+    },
+    "tolerations": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "affinity": {
+      "type": "object"
+    },
+    "extraEnv": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "extraVolumes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "extraVolumeMounts": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "terminationGracePeriodSeconds": {
+      "type": "integer",
+      "minimum": 15
+    },
+    "startupProbe": {
+      "type": "object"
+    },
+    "readinessProbe": {
+      "type": "object"
+    },
+    "livenessProbe": {
+      "type": "object"
+    },
+    "test": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "surrealdb": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

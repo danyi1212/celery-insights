@@ -22,6 +22,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pyyaml>=6.0.3",
     "pytest>=9",
     "pytest-xdist",
     "pytest-mock",

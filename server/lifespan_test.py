@@ -31,6 +31,7 @@ class TestLifespan:
             settings.task_retention_hours = None
             settings.dead_worker_retention_hours = 24
             settings.debug_snapshot_mode = False
+            settings.process_role = "standalone"
 
             get_app.return_value = MagicMock()
 
@@ -142,3 +143,16 @@ class TestLifespan:
         self.result_backend_poller.stop.assert_not_called()
         self.cleanup.stop.assert_not_called()
         assert self.mock_app.state.debug_snapshot_mode is True
+
+    @pytest.mark.asyncio
+    async def test_api_role_connects_database_without_starting_background_jobs(self):
+        self.settings.process_role = "api"
+        async with lifespan(self.mock_app):
+            self.init_surrealdb.assert_called_once()
+            assert self.mock_app.state.cleanup_job is self.cleanup
+            assert self.mock_app.state.ingester is None
+        self.get_celery_app.assert_not_called()
+        self.receiver.start.assert_not_called()
+        self.poller.start.assert_not_called()
+        self.cleanup.start.assert_not_called()
+        self.close_surrealdb.assert_called_once()
