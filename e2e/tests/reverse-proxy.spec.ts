@@ -57,7 +57,13 @@ test.describe("Public mount path", () => {
   })
 
   test("MCP exposes tools through the mount path and retains origin checks", async ({ request }) => {
-    const headers = { Accept: "application/json, text/event-stream" }
+    const session = await request.get(appURL("/api/auth/identity"))
+    expect(session.status()).toBe(200)
+    const headers = {
+      Accept: "application/json, text/event-stream",
+      Origin: appOrigin,
+      "X-Celery-Insights-Request": "1",
+    }
     const data = { jsonrpc: "2.0", id: 1, method: "tools/list" }
     const response = await request.post(appURL("/mcp"), { headers, data })
     expect(response.status()).toBe(200)

@@ -131,6 +131,11 @@ async function resolveQueryResult(result: unknown): Promise<unknown> {
 
 export function redactConfig(config: Config, includeSecrets: boolean): Record<string, unknown> {
   const data: Record<string, unknown> = { ...config }
+  // Configured account credentials never belong in task diagnostics,
+  // including the legacy includeSecrets export mode.
+  for (const setting of SETTINGS)
+    if (setting.secret && setting.path.startsWith("authentication."))
+      if (data[setting.key] !== undefined) data[setting.key] = "***REDACTED***"
   if (!includeSecrets) {
     for (const key of [
       ...SETTINGS.filter((setting) => setting.secret).map((setting) => setting.key),

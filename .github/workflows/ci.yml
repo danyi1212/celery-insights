@@ -131,6 +131,8 @@ jobs:
         run: bun run test
       - name: Bun observation API acceptance
         run: bun run test:observation
+      - name: Bun configured-account acceptance
+        run: bun run test:security
 
   e2e:
     name: E2E tests (${{ matrix.deployment.name }})

@@ -302,3 +302,6 @@ pyrightconfig.json
 # Playwright
 playwright-report/
 test-results/
+
+# Disposable authentication E2E certificate and sessions
+test_project/.e2e-auth/

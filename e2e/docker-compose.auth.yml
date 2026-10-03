@@ -1,0 +1,20 @@
+services:
+  rabbitmq:
+    ports: !reset []
+  redis:
+    ports: !reset []
+  interactive:
+    ports: !override
+      - "${E2E_INTERACTIVE_PORT:-8000}:8000"
+  celery-insights:
+    image: ${E2E_APP_IMAGE:-celery-insights-app:local}
+    environment:
+      CELERY_INSIGHTS_CONFIG_FILE: /fixture/authentication.toml
+    volumes:
+      - ../test_project/.e2e-auth:/fixture:ro
+  reverse-proxy:
+    ports: !override
+      - "${E2E_PROXY_PORT:-8558}:443"
+    volumes: !override
+      - ../test_project/.e2e-auth/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../test_project/.e2e-auth:/fixture:ro

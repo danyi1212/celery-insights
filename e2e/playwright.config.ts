@@ -1,5 +1,6 @@
 import { defineConfig } from "../tooling/playwright"
 
+import { fixtureCredentials } from "./helpers/authentication"
 import { appBaseURL } from "./helpers/app-url"
 
 const isCI = !!process.env.CI
@@ -24,6 +25,8 @@ export default defineConfig({
     : [["html", { outputFolder: "../playwright-report" }]],
   use: {
     baseURL: appBaseURL,
+    ignoreHTTPSErrors: true,
+    httpCredentials: { ...fixtureCredentials, origin: new URL(appBaseURL).origin, send: "always" },
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "on-first-retry",

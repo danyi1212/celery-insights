@@ -1,7 +1,15 @@
 import { appURL } from "./helpers/app-url"
 import { randomBytes } from "node:crypto"
 import http from "node:http"
-import { composeLogs, composePs, composeUp } from "./helpers/docker-compose"
+import https from "node:https"
+import {
+  prepareAuthenticationFixture,
+  verifyAuthenticationFixture,
+  fixtureFetch,
+  fixtureTlsOptions,
+  fixtureAuthenticationHeaders,
+} from "./helpers/authentication"
+import { composeLogs, composePs, composeUp, privateObservationQuery } from "./helpers/docker-compose"
 
 const E2E_HOST = process.env.E2E_HOST ?? "127.0.0.1"
 const HEALTH_TIMEOUT = 60_000
@@ -9,7 +17,7 @@ const HEALTH_INTERVAL = 2_000
 const EVENT_WARMUP_TIMEOUT = 60_000
 const INSIGHTS_API = appURL("/api")
 const SURREAL_API = appURL("/surreal")
-const INTERACTIVE_API = `http://${E2E_HOST}:8000`
+const INTERACTIVE_API = process.env.E2E_INTERACTIVE_URL ?? `http://${E2E_HOST}:8000`
 
 type SurrealTaskResult = { result?: Array<Record<string, unknown>> }
 
@@ -27,7 +35,7 @@ async function pollHealth(url: string, label: string) {
   const deadline = Date.now() + HEALTH_TIMEOUT
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(url)
+      const res = await fixtureFetch(url)
       if (res.ok) {
         logInfo(`  ${label} is ready`)
         return
@@ -47,14 +55,7 @@ async function waitForTaskVisible(taskId: string, timeout: number) {
 
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(`${SURREAL_API}/sql`, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          Authorization: "Basic " + btoa("root:root"),
-        },
-        body: query,
-      })
+      const res = await privateObservationQuery(query)
       if (res.ok) {
         const data = (await res.json()) as SurrealTaskResult[]
         // The result for the SELECT will be in the second element of the array (after USE)
@@ -74,7 +75,7 @@ async function warmupEventStream() {
   const deadline = Date.now() + EVENT_WARMUP_TIMEOUT
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(`${INTERACTIVE_API}/scenarios/noop`, { method: "POST" })
+      const res = await fixtureFetch(`${INTERACTIVE_API}/scenarios/noop`, { method: "POST" })
       if (res.ok) {
         const data = (await res.json()) as { task_id?: string }
         if (data.task_id) {
@@ -114,8 +115,11 @@ async function waitForSurrealRpcReady() {
 
 async function probeWebSocketUpgrade(): Promise<UpgradeProbeResult> {
   return new Promise((resolve) => {
-    const req = http.request(new URL(appURL("/surreal/rpc")), {
+    const destination = new URL(appURL("/surreal/rpc"))
+    const req = (destination.protocol === "https:" ? https : http).request(destination, {
+      ...fixtureTlsOptions(),
       headers: {
+        ...fixtureAuthenticationHeaders(),
         Connection: "Upgrade",
         Upgrade: "websocket",
         "Sec-WebSocket-Version": "13",
@@ -173,7 +177,7 @@ async function logDiagnostics(stage: string) {
 
   for (const [url, label] of healthChecks) {
     try {
-      const res = await fetch(url)
+      const res = await fixtureFetch(url)
       const body = await res.text()
       console.error(`  ${label}: ${res.status} ${res.statusText} body=${JSON.stringify(body.slice(0, 300))}`)
     } catch (error) {
@@ -191,14 +195,17 @@ async function logDiagnostics(stage: string) {
 }
 
 export default async function globalSetup() {
-  composeUp()
+  prepareAuthenticationFixture()
 
   try {
+    composeUp()
     logInfo("Waiting for services to be healthy...")
     await Promise.all([
-      pollHealth(`${INSIGHTS_API}/settings/info`, "celery-insights"),
+      pollHealth(appURL("/health"), "celery-insights"),
       pollHealth(`${INTERACTIVE_API}/scenarios`, "interactive API"),
     ])
+    await verifyAuthenticationFixture()
+    await pollHealth(`${INSIGHTS_API}/settings/info`, "authenticated settings")
     await waitForSurrealRpcReady()
     await warmupEventStream()
     logInfo("All services healthy. Starting tests.")

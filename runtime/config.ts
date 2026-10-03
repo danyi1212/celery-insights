@@ -25,14 +25,13 @@ export const flatConfigSchema = z.object({
       { message: "URL_PREFIX must be a URL path with no query, fragment, or dot segments" },
     )
     .transform((value) => (value ? `/${value}` : "")),
-  mcpToken: z.string().min(1).optional(),
+  mcpCursorSecret: z.string().min(1).optional(),
   mcpAllowedHosts: z.string().min(1).optional(),
 
   // SurrealDB
   surrealdbUrl: z.string().url().default("ws://localhost:8557/rpc"),
   surrealdbExternalUrl: z.string().url().optional(),
   surrealdbIngesterPass: z.string().min(1).default("changeme"),
-  surrealdbFrontendPass: z.string().min(1).optional(),
   surrealdbNamespace: z.string().min(1).default("celery_insights"),
   surrealdbDatabase: z.string().min(1).default("main"),
   surrealdbStorage: z.string().default("memory"),
@@ -75,6 +74,23 @@ export const flatConfigSchema = z.object({
   uiHideWelcomeBanner: z.boolean().optional(),
   uiRawEventsLimit: z.number().int().positive().optional(),
   publicUrl: z.string().url().optional(),
+  authMode: z.enum(["basic", "oidc"]).default("basic"),
+  authAccounts: z
+    .array(
+      z
+        .object({
+          username: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/),
+          password: z
+            .string()
+            .min(1)
+            .max(4096)
+            .refine((value) => ![...value].some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)),
+          roles: z.array(z.enum(["viewer", "operator", "administrator"])).min(1),
+        })
+        .strict(),
+    )
+    .max(100)
+    .default([]),
 })
 
 const configSchema = flatConfigSchema
@@ -94,12 +110,11 @@ export type Config = z.infer<typeof configSchema>
 export const ENV_KEY_MAP: Record<string, string> = {
   PORT: "port",
   URL_PREFIX: "urlPrefix",
-  MCP_TOKEN: "mcpToken",
+  MCP_TOKEN: "mcpCursorSecret",
   MCP_ALLOWED_HOSTS: "mcpAllowedHosts",
   SURREALDB_URL: "surrealdbUrl",
   SURREALDB_EXTERNAL_URL: "surrealdbExternalUrl",
   SURREALDB_INGESTER_PASS: "surrealdbIngesterPass",
-  SURREALDB_FRONTEND_PASS: "surrealdbFrontendPass",
   SURREALDB_NAMESPACE: "surrealdbNamespace",
   SURREALDB_DATABASE: "surrealdbDatabase",
   SURREALDB_STORAGE: "surrealdbStorage",
@@ -135,6 +150,8 @@ function envToConfig(env: Record<string, string | undefined>): Record<string, st
 }
 
 export function parseConfig(env: Record<string, string | undefined> = process.env): Config {
+  if (env.SURREALDB_FRONTEND_PASS !== undefined)
+    throw new Error("SURREALDB_FRONTEND_PASS was replaced by authentication.accounts in TOML")
   return validateConfig(envToConfig(env))
 }
 

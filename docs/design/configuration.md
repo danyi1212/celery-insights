@@ -1,12 +1,12 @@
 # TOML configuration prerequisite
 
-Status: proposed, not implemented. Date: 2026-10-03. Prerequisite for [authentication and authorization](authentication-authorization.md); urgent security containment can proceed independently.
+Status: prerequisite implemented in merged PR #142; this document records the design and follow-up constraints. Updated 2026-10-03. Prerequisite for [authentication and authorization](authentication-authorization.md); urgent security containment can proceed independently.
 
 Tracking: [configuration #138](https://github.com/danyi1212/celery-insights/issues/138) → [authentication #139](https://github.com/danyi1212/celery-insights/issues/139) → [OPA authorization #140](https://github.com/danyi1212/celery-insights/issues/140).
 
-## Scope and current behavior
+## Baseline before the prerequisite
 
-Celery Insights currently has no structured application configuration file. `runtime/config.ts` maps 26 environment variables into Zod settings. `server/settings.py` independently reads environment variables and `.env`, with some overlapping defaults and Python-only host/port/replay settings. `bun-entry.ts` forwards selected resolved values alongside the entire inherited environment. Python logging separately reads `LOG_FORMAT` and `LOG_LEVEL`.
+Before PR #142, Celery Insights had no structured application configuration file. `runtime/config.ts` maps 26 environment variables into Zod settings. `server/settings.py` independently reads environment variables and `.env`, with some overlapping defaults and Python-only host/port/replay settings. `bun-entry.ts` forwards selected resolved values alongside the entire inherited environment. Python logging separately reads `LOG_FORMAT` and `LOG_LEVEL`.
 
 There are other configuration mechanisms already:
 
@@ -49,7 +49,7 @@ This table covers all 26 current Bun environment mappings. Defaults listed here 
 | `SURREALDB_URL` | `ws://localhost:8557/rpc` | `database.observation.url` | `CELERY_INSIGHTS_DATABASE_URL`; unify with external URL |
 | `SURREALDB_EXTERNAL_URL` | unset | `database.observation.mode` + `.url` | External mode inferred from `CELERY_INSIGHTS_DATABASE_URL` if mode omitted |
 | `SURREALDB_INGESTER_PASS` | `changeme` | `database.observation.ingester_password` | `CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD`, `_FILE`; remove default with security migration |
-| `SURREALDB_FRONTEND_PASS` | unset | `migration.legacy_frontend_password` | Migration-only alias; removed with direct browser DB auth |
+| `SURREALDB_FRONTEND_PASS` | retired | `authentication.accounts` | Configure explicit accounts in TOML |
 | `SURREALDB_NAMESPACE` | `celery_insights` | `database.observation.namespace` | File |
 | `SURREALDB_DATABASE` | `main` | `database.observation.database` | File |
 | `SURREALDB_STORAGE` | `memory` | `database.observation.embedded.storage` | `CELERY_INSIGHTS_DATABASE_STORAGE` |
@@ -88,15 +88,15 @@ Additional settings and distinctions:
 
 Database topology becomes `mode = "embedded" | "external"`. If no mode is provided, an explicit URL selects external; otherwise embedded. Explicit embedded mode plus an external URL is invalid. Embedded connection URL derives from embedded bind/port, so callers no longer coordinate two URL fields. During migration, preserve the old URL/external-URL inference exactly when only old variables are present; emit a targeted warning for unusual combinations, and require explicit canonical configuration before ending compatibility. Replay rejects explicit external topology in the new schema rather than silently redirecting it; the old replay behavior remains only in the compatibility adapter with a warning.
 
-`migration.legacy_frontend_password` is a temporary import setting, not a permanent second login system. Document its removal in the auth release. Root/provisioning, reader/writer, and control-store credentials introduced by that release each receive separately scoped secret paths; never preserve `root/root` or `changeme` as new-schema production defaults. URL credentials count as secrets too.
+`SURREALDB_FRONTEND_PASS` is retired by #143 and rejected with account-configuration guidance. Application credentials are deployment-owned configured accounts, resolved only in Bun; no identity database is provisioned.
 
 ## Permanent environment surface
 
 Keep permanent overrides focused on container wiring: `CELERY_INSIGHTS_CONFIG_FILE`, `CELERY_INSIGHTS_PORT`, `CELERY_INSIGHTS_DATABASE_URL`, `CELERY_INSIGHTS_DATABASE_STORAGE`, `CELERY_INSIGHTS_INGESTION_ENABLED`, `CELERY_INSIGHTS_BROKER_URL`, `CELERY_INSIGHTS_RESULT_BACKEND`, `CELERY_INSIGHTS_REPLAY_BUNDLE_FILE`, `CELERY_INSIGHTS_LOG_FORMAT`, `CELERY_INSIGHTS_LOG_LEVEL`, and `CELERY_INSIGHTS_PUBLIC_URL` (`installation.public_url`). Advanced tuning, role/group maps, and OPA contracts are file-only.
 
-Additionally, allow registered secret value/file pairs: database credentials, `CELERY_INSIGHTS_BOOTSTRAP_PASSWORD` / `_FILE` (as already agreed), `CELERY_INSIGHTS_OIDC_CLIENT_SECRET` / `_FILE`, and control-store credentials. Secret pairs are explicit registry entries, not an automatically generated env name for every key. URLs containing credentials support `_FILE` too. New secrets must declare both TOML paths and allowed override names. Simple local env-only installs remain possible; complex SSO/OPA installations use TOML.
+Registered database and future OIDC client-secret value/file pairs have explicit override names. Configured account entries select exactly one inline password, relative/absolute password file, or environment-variable reference. Account references are Bun-only and never appear in diagnostics; no identity/control database or bootstrap secret is needed.
 
-Authentication paths retain the vocabulary in the auth plan: `authentication.mode`, `authentication.bootstrap.*`, `authentication.local.*`, `authentication.oidc.*`, `authorization.provider`, `authorization.opa.*`, and `installation.public_url`. Persistent identity connectivity uses `database.control.*`. Before implementation, register every field described in the auth plan, including session lifetimes, MFA/assurance rules, proxy trust, OPA transport/freshness/revision, and service-token controls. Publishing a new knob without a canonical path is prohibited. Accounts, sessions, grants and active policy rollout records themselves remain control-store data, not configuration secrets pasted into TOML.
+Authentication uses `authentication.mode`, `authentication.accounts` and `installation.public_url`. OIDC trust and restrictive OPA settings will be registered when those integrations land. There are no account/session lifecycle knobs or identity store. Configuration owns the account set and roles; changes require rollout to all replicas.
 
 ## Secret resolution
 
@@ -131,9 +131,9 @@ Accept file/environment dependencies rather than reading globals at module impor
 
 Bun resolves once before spawning databases/Python or binding public listeners. Feed each Python child a versioned, validated subset over a dedicated inherited pipe/file descriptor, not JSON in argv, a world-readable temp file, or dozens of secret environment variables. Python checks transport version/shape as a typed object, but does not implement configuration parsing, precedence, defaulting, secret-file reads, or policy validation. It never reloads TOML, `.env`, or inherited application overrides. Failed/mismatched handoff is fatal. Pass only needed settings and a minimal documented process environment; do not inherit all secrets into every subprocess.
 
-Define separate child projections: the API receives API bind settings, query/control-store credentials and the authentication/authorization settings it enforces; the ingestion worker receives Celery connectivity, ingestion/retention settings and observation-write credentials. In the current combined Python process, send their needed union until the planned split lands. Static serving and supervisor-only settings stay in Bun. No Python projection contains provisioning/root credentials, Bun-only embedded storage/supervisor settings, or unrelated credentials. Python may consume TLS file paths required by its transport libraries; that is runtime resource access, not a second secret/config resolver.
+Bun owns the public API, authentication, authorization, observation reads. Python child projections contain only private Celery bridge/ingestion connectivity, lifecycle settings and required observation-write credentials. Configured account passwords, future OIDC secrets and OPA configuration must remain in Bun. PR #143 keeps authentication initialization and its resolved secrets in Bun; Python rejects authentication fields in its process snapshot. Static serving and supervisor-only settings stay in Bun. No Python projection contains provisioning/root credentials, Bun-only embedded storage/supervisor settings, or unrelated credentials. Python may consume TLS file paths required by its transport libraries; that is runtime resource access, not a second secret/config resolver.
 
-Update `dev:server` to use the same resolver-backed launcher for Python-only development. Direct `python run.py` becomes an internal entrypoint requiring a snapshot; document the change. Logger construction, Celery initialization, diagnostics, and Settings consumers use the supplied immutable object. Remove module-import-time configuration singleton side effects and fallback `Settings()` calls that re-read environment state.
+Use `dev:bridge` for the resolver-backed Python-only launcher; `dev:server` runs the Bun application and supervises its private bridge. Direct `python run.py` becomes an internal entrypoint requiring a snapshot; document the change. Logger construction, Celery initialization, diagnostics, and Settings consumers use the supplied immutable object. Remove module-import-time configuration singleton side effects and fallback `Settings()` calls that re-read environment state.
 
 The CLI provides `config validate`, `config show` (always redacted with provenance), `config example`, and `config migrate-env`. These commands resolve/validate without starting Celery, connecting databases, or binding ports. There is no unsafe `show --include-secrets`. `migrate-env` uses the explicit alias allowlist, does not dump unrelated environment variables, redacts secrets by default and emits secret reference placeholders plus actionable warnings. It never executes/imports a legacy Python module to migrate it.
 
@@ -177,12 +177,12 @@ level = "info"
 
 # Available when the authentication prerequisite's follow-on work lands:
 [authentication]
-mode = "local"
+mode = "basic"
 
-[authentication.bootstrap]
-enabled = true
-admin_username = "admin"
+[[authentication.accounts]]
+username = "admin"
 password_file = "/run/secrets/insights/admin-password"
+roles = ["administrator"]
 ```
 
 In Kubernetes, mount nonsecret TOML from a ConfigMap and sensitive values from Secrets; set `CELERY_INSIGHTS_CONFIG_FILE` to the mounted TOML. Alternatively inject selected values using `secretKeyRef`. The ConfigMap must not contain literal passwords. Compose/VM deployments mount the same TOML and secret files; no Kubernetes dependency exists in the loader. Files/secrets must reach every replica; rollout restarts apply changes. Do not share a local embedded observation disk across replicas as an HA strategy.
@@ -193,7 +193,7 @@ Operator configuration owns deployment settings. The UI exposes effective settin
 
 Preserve today's retention UI adjustment temporarily, but explicitly label it a process-local, nonpersistent override that disappears at restart/leader change. It is not merged into the canonical startup snapshot or reported as deployment configuration. Apply authorization to it immediately in the auth work.
 
-Target behavior removes temporary retention editing and presents deployment-owned retention read-only, with guidance to edit TOML and roll out. If persistent UI editing is required later, add an explicit `retention.source = "deployment" | "managed"` ownership mode and a durable versioned policy in the control store. That requires shared leader coordination/audit and is not a hidden third source in this prerequisite. A UI must never claim a temporary edit is durable or cluster-wide.
+Target behavior removes temporary retention editing and presents deployment-owned retention read-only, with guidance to edit TOML and roll out. If persistent UI editing is required later, add an explicit `retention.source = "deployment" | "managed"` ownership mode and a durable versioned policy in a dedicated settings store. That requires shared leader coordination/audit and is not a hidden third source in this prerequisite. A UI must never claim a temporary edit is durable or cluster-wide.
 
 No hot reload initially. Distinguish startup config, derived state (leader, replay, policy loaded revision), transitional runtime overrides, and user preferences in diagnostics. A redacted config fingerprint includes nonsecret resolved settings/schema version, not secret content or low-entropy secret hashes. Cross-replica drift can be reported, but intentionally different ingestion roles or ports are allowed; compare only installation-wide fields.
 
