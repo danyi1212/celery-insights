@@ -111,7 +111,7 @@ export function useLiveQuery<T extends { id: unknown }>(options: UseLiveQueryOpt
 
   const runInitialQuery = useCallback(async () => {
     try {
-      const [result] = await db.query<[T[]]>(initialQuery, bindings)
+      const [result] = await db.query<[T[]]>(initialQuery, bindings).retry({ attempts: 4 })
       // SurrealDB JS SDK v2 returns a single object (not an array) for
       // record-specific SELECTs (e.g. SELECT * FROM $rid).
       // Normalize to always work with arrays.
@@ -141,7 +141,7 @@ export function useLiveQuery<T extends { id: unknown }>(options: UseLiveQueryOpt
       // The JS SDK v2's db.live() binds the table name as a query parameter
       // ($bind__N), but SurrealDB v2.x doesn't support parameterized table
       // names in LIVE SELECT, causing silent subscription failures.
-      const [liveId] = await db.query<[Uuid]>(`LIVE SELECT * FROM ${liveTable}`)
+      const [liveId] = await db.query<[Uuid]>(`LIVE SELECT * FROM ${liveTable}`).retry({ attempts: 4 })
       const subscription = await db.liveOf(liveId)
       subscriptionRef.current = subscription
 

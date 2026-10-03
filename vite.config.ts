@@ -73,34 +73,33 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    // Bun owns application routes; Python is only the private Celery bridge.
     proxy: {
+      "/mcp": {
+        target: "http://localhost:8555",
+        changeOrigin: true,
+        secure: false,
+      },
       "/metrics": {
-        target: "http://localhost:8556",
+        target: "http://localhost:8555",
         changeOrigin: true,
         secure: false,
       },
       "/api": {
-        target: "http://localhost:8556",
+        target: "http://localhost:8555",
         changeOrigin: true,
         secure: false,
-      },
-      "/ws": {
-        target: "ws://localhost:8556",
-        changeOrigin: true,
-        secure: false,
-        ws: true,
       },
       "/health": {
-        target: "http://localhost:8556",
+        target: "http://localhost:8555",
         changeOrigin: true,
         secure: false,
       },
       "/surreal": {
-        target: "ws://localhost:8557",
+        target: "ws://localhost:8555",
         changeOrigin: true,
         secure: false,
         ws: true,
-        rewrite: (path) => path.replace(/^\/surreal/, ""),
       },
     },
   },
