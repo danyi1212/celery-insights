@@ -5,7 +5,7 @@ from settings import configure_settings, read_settings_snapshot
 
 if __name__ == "__main__":
     settings = read_settings_snapshot()
-    if not settings.bridge_token or not settings.bridge_socket:
+    if not settings.bridge_socket:
         raise RuntimeError("Python requires a private Bun bridge channel")
     configure_settings(settings)
     from app import app

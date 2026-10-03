@@ -6,7 +6,6 @@ from fastapi import FastAPI, Request
 from fastapi.routing import APIRoute
 
 from lifespan import lifespan
-from bridge import BridgeCallerGate
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +25,6 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
-
-app.add_middleware(BridgeCallerGate)
 
 
 @app.get("/health")

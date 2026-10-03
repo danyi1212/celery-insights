@@ -81,6 +81,9 @@ try {
     false,
   )
   const backup = await backupResponse!.json()
+  for (const invalid of [null, [], { version: 2 }, { version: 1, credentials: { password: "unexpected" } }]) {
+    assert.equal((await (await api.importBackup(invalid)).json()).success, false)
+  }
   assert.equal(
     (
       await (

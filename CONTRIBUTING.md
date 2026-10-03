@@ -148,7 +148,7 @@ Or run them in separate terminals:
 
 ### Runtime ownership
 
-Bun serves application APIs, metrics, CSV exports, backups and retention/cleanup. Python handles Celery ingestion and polling through a private Unix socket created by Bun; it no longer listens on a public TCP port. `bun run dev:all` starts the Bun supervisor and Vite, and Vite proxies application traffic through Bun. Activate the Python virtual environment before starting the supervisor.
+Bun serves application APIs, metrics, CSV exports, backups and retention/cleanup. Python handles Celery ingestion and polling through a Unix socket in an owner-only temporary directory created by Bun; it no longer listens on a public TCP port. `bun run dev:all` starts the Bun supervisor and Vite, and Vite proxies application traffic through Bun. Activate the Python virtual environment before starting the supervisor.
 
 Use `bun run test:observation` for native API acceptance with SurrealDB 3.3.0. The existing frontend login and MCP credentials remain supported until the authentication PR in this stack.
 

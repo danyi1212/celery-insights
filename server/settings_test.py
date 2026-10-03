@@ -44,14 +44,9 @@ def test_surrealdb_settings_override():
 def test_bridge_snapshot_rejects_application_configuration():
     from pydantic import ValidationError
 
-    for field in ("host", "port", "authentication", "task_max_count", "cleanup_interval_seconds"):
+    for field in ("host", "port", "bridge_token", "authentication", "task_max_count", "cleanup_interval_seconds"):
         with pytest.raises(ValidationError):
             Settings.model_validate({field: "not-for-python"})
-
-
-def test_bridge_secret_is_not_in_representation():
-    settings = Settings(bridge_token="private-process-credential", bridge_socket="/private/bridge.sock")
-    assert "private-process-credential" not in repr(settings)
 
 
 def test_snapshot_mode_override():
