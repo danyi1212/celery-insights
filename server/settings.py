@@ -31,7 +31,6 @@ class Settings(BaseModel):
 
     # Ingestion performance (received from Bun)
     ingestion_batch_interval_ms: int = 100
-    bridge_token: str = Field(default="", repr=False)
     bridge_socket: str = ""
 
 

@@ -1,7 +1,7 @@
 import type { Config } from "./config"
 
 /** Only Celery bridge and ingestion settings cross the process seam. */
-export function pythonConfig(config: Config, replay: boolean, bridge?: { token: string; socket: string }) {
+export function pythonConfig(config: Config, replay: boolean, bridge?: { socket: string }) {
   return {
     version: 1,
     settings: {
@@ -20,7 +20,6 @@ export function pythonConfig(config: Config, replay: boolean, bridge?: { token: 
       ingestion_batch_interval_ms: config.ingestionBatchIntervalMs,
       log_format: config.logFormat,
       log_level: config.logLevel,
-      bridge_token: bridge?.token ?? "",
       bridge_socket: bridge?.socket ?? "",
     },
   }

@@ -177,7 +177,7 @@ function buildSnapshotRuntimeConfig(baseConfig: Config): Config {
 
 async function fetchJsonFromPython<T>(pathname: string): Promise<T | null> {
   try {
-    const options = { unix: celeryBridge.socket, headers: { "X-Celery-Bridge-Token": celeryBridge.token } }
+    const options: RequestInit & { unix: string } = { unix: celeryBridge.socket }
     const response = await fetch(`http://localhost${pathname}`, options)
     if (!response.ok) return null
     return (await response.json()) as T

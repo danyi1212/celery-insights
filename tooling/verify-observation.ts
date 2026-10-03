@@ -48,7 +48,7 @@ try {
   await root.use({ namespace: "test", database: "observation" })
   await root.query(CORE_SCHEMA)
   await root.query(
-    "CREATE task:sample SET type = 'sample', state = 'SUCCESS', workflow_id = 'sample', runtime = 0.2, last_updated = time::now(), result = 'private-result'; CREATE event:sample SET task_id = 'sample', event_type = 'task-succeeded', timestamp = time::now(); CREATE worker:sample SET status = 'online', last_updated = time::now(); CREATE workflow:sample SET root_task_id = 'sample', aggregate_state = 'SUCCESS', task_count = 1, last_updated = time::now(); RELATE workflow:sample->workflow_task:sample->task:sample;",
+    "CREATE task:sample SET type = 'sample', state = 'SUCCESS', workflow_id = 'sample', runtime = 0.2, last_updated = time::now(), result = 'private-result', kwargs = '{\"channel\":\"north team\"}'; CREATE event:sample SET task_id = 'sample', event_type = 'task-succeeded', timestamp = time::now(); CREATE worker:sample SET status = 'online', last_updated = time::now(); CREATE workflow:sample SET root_task_id = 'sample', aggregate_state = 'SUCCESS', task_count = 1, last_updated = time::now(); RELATE workflow:sample->workflow_task:sample->task:sample;",
   )
   const api = new ObservationApi(root, validateConfig({}), async () => ({
     python_version: "fixture",
@@ -75,12 +75,31 @@ try {
     sortField: "state; DELETE task;",
   })
   assert.match(await csv.text(), /private-result/)
+  // The Bun migration must preserve main's kwargs search in both export modes.
+  for (const mode of ["tasks", "workflows"] as const) {
+    for (const [query, matches] of [
+      ['channel="north team"', true],
+      ['channel="other"', false],
+    ] as const) {
+      const result = await api.exportCsv({
+        kind: "explorer",
+        mode,
+        query,
+        from: "2000-01-01T00:00:00Z",
+        to: "2100-01-01T00:00:00Z",
+      })
+      assert.equal((await result.text()).includes('"sample"'), matches, `${mode} export: ${query}`)
+    }
+  }
   const backupResponse = await api.handle(
     new Request("http://localhost/api/settings/export"),
     "/api/settings/export",
     false,
   )
   const backup = await backupResponse!.json()
+  for (const invalid of [null, [], { version: 2 }, { version: 1, credentials: { password: "unexpected" } }]) {
+    assert.equal((await (await api.importBackup(invalid)).json()).success, false)
+  }
   assert.equal(
     (
       await (

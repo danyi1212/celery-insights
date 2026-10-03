@@ -19,10 +19,10 @@ describe("scoped Python handoff", () => {
       surrealdbFrontendPass: "private-account",
       mcpToken: "private-mcp",
     })
-    const result = pythonConfig(config, false, { token: "process-channel", socket: "/private/bridge.sock" })
+    const result = pythonConfig(config, false, { socket: "/private/bridge.sock" })
     expect(result.settings).not.toHaveProperty("authentication")
     expect(JSON.stringify(result)).not.toMatch(/private-account|private-mcp/)
-    expect(result.settings.bridge_token).toBe("process-channel")
+    expect(result.settings.bridge_socket).toBe("/private/bridge.sock")
   })
 
   it("does not pass inherited application secrets to the child environment", () => {

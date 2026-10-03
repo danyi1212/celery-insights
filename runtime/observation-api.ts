@@ -9,31 +9,45 @@ import { metricQueries } from "./observation-queries"
 import { HttpError } from "./http-error"
 
 type Row = Record<string, unknown>
-const retentionSchema = z
-  .object({
-    cleanup_interval_seconds: z.number().int().min(1).max(86400),
-    task_max_count: z.number().int().nonnegative().nullable(),
-    task_retention_hours: z.number().nonnegative().nullable(),
-    dead_worker_retention_hours: z.number().nonnegative().nullable(),
-  })
-  .strict()
+const retentionSchema = z.compile(
+  z
+    .object({
+      cleanup_interval_seconds: z.number().int().min(1).max(86400),
+      task_max_count: z.number().int().nonnegative().nullable(),
+      task_retention_hours: z.number().nonnegative().nullable(),
+      dead_worker_retention_hours: z.number().nonnegative().nullable(),
+    })
+    .strict(),
+)
 const list = z.array(z.string().max(1024)).max(1000).default([])
-const exportSchema = z
-  .object({
-    kind: z.enum(["explorer", "raw-events"]),
-    mode: z.enum(["tasks", "workflows"]).optional(),
-    from: z.iso.datetime({ offset: true }),
-    to: z.iso.datetime({ offset: true }),
-    query: z.string().max(4096).default(""),
-    states: list,
-    types: list,
-    workers: list,
-    workflowStates: list,
-    rootTypes: list,
-    sortField: z.string().default("last_updated"),
-    sortDirection: z.enum(["ASC", "DESC"]).default("DESC"),
-  })
-  .strict()
+const exportSchema = z.compile(
+  z
+    .object({
+      kind: z.enum(["explorer", "raw-events"]),
+      mode: z.enum(["tasks", "workflows"]).optional(),
+      from: z.iso.datetime({ offset: true }),
+      to: z.iso.datetime({ offset: true }),
+      query: z.string().max(4096).default(""),
+      states: list,
+      types: list,
+      workers: list,
+      workflowStates: list,
+      rootTypes: list,
+      sortField: z.string().default("last_updated"),
+      sortDirection: z.enum(["ASC", "DESC"]).default("DESC"),
+    })
+    .strict(),
+)
+const backupSchema = z.compile(
+  z
+    .object({
+      version: z.literal(1),
+      tasks: z.array(z.record(z.string(), z.unknown())).default([]),
+      events: z.array(z.record(z.string(), z.unknown())).default([]),
+      workers: z.array(z.record(z.string(), z.unknown())).default([]),
+    })
+    .strict(),
+)
 const fields = {
   task: "id,type,state,worker,sent_at,received_at,started_at,succeeded_at,failed_at,retried_at,runtime,last_updated,retries,exchange,routing_key,root_id,workflow_id,parent_id,result,exception".split(
     ",",
@@ -198,15 +212,7 @@ export class ObservationApi {
     return null
   }
   async importBackup(value: unknown): Promise<Response> {
-    const schema = z
-      .object({
-        version: z.literal(1),
-        tasks: z.array(z.record(z.string(), z.unknown())).default([]),
-        events: z.array(z.record(z.string(), z.unknown())).default([]),
-        workers: z.array(z.record(z.string(), z.unknown())).default([]),
-      })
-      .strict()
-    const parsed = schema.safeParse(value)
+    const parsed = backupSchema.safeParse(value)
     if (!parsed.success) return Response.json({ success: false, error: "Invalid backup format" })
     const bindings: Record<string, unknown> = {}
     const statements = [
@@ -332,17 +338,13 @@ export class ObservationApi {
       }
     let prelude: string[] = []
     if (table !== "event" && trimQuery(body.query)) {
-      const search = table === "task" ? buildTaskSearch(body.query) : buildWorkflowSearch(body.query)
-      if ("prelude" in search) prelude = search.prelude
+      const search: { clause: string; bindings: Record<string, string>; prelude?: string[] } =
+        table === "task" ? buildTaskSearch(body.query) : buildWorkflowSearch(body.query)
+      prelude = search.prelude ?? []
       conditions.push(`(${search.clause})`)
       Object.assign(bindings, search.bindings)
     } else if (table === "event" && body.query.trim()) {
-      const searchable =
-        table === "task"
-          ? ["id", "type", "worker", "exception", "result"]
-          : table === "workflow"
-            ? ["root_task_id", "root_task_type", "latest_exception_preview"]
-            : ["event_type", "task_id", "hostname", "data"]
+      const searchable = ["event_type", "task_id", "hostname", "data"]
       conditions.push(
         "(" +
           searchable
