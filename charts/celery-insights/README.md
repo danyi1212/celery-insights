@@ -22,6 +22,7 @@ kubectl -n celery-insights create secret generic celery-insights-credentials \
 For development before publication:
 
 ```sh
+helm repo add surrealdb https://helm.surrealdb.com
 helm dependency build charts/celery-insights
 helm upgrade --install insights charts/celery-insights \
   --namespace celery-insights --set image.tag=YOUR-PR-IMAGE-TAG --wait
@@ -113,6 +114,7 @@ ClusterIP with port-forwarding is the default. Configure `service.type: LoadBala
 ## Verification and publication
 
 ```sh
+helm repo add surrealdb https://helm.surrealdb.com
 helm dependency build charts/celery-insights
 helm lint --strict charts/celery-insights
 uv run python tooling/helm/chart_test.py

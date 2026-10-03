@@ -266,6 +266,7 @@ jobs:
           bunx playwright install --with-deps chromium
       - name: Validate chart contracts and Kubernetes schemas
         run: |
+          helm repo add surrealdb https://helm.surrealdb.com
           helm dependency build charts/celery-insights
           helm lint --strict charts/celery-insights
           uv run python tooling/helm/chart_test.py

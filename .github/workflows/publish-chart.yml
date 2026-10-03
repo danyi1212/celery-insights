@@ -30,6 +30,7 @@ jobs:
         run: bash tooling/helm/install-tools.sh
       - name: Validate the chart and released application image
         run: |
+          helm repo add surrealdb https://helm.surrealdb.com
           helm dependency build charts/celery-insights
           helm lint --strict charts/celery-insights
           uv run python tooling/helm/chart_test.py
