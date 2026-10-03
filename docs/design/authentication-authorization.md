@@ -47,9 +47,9 @@ The current browser SurrealDB RPC transport exposes all task payload fields. It 
 
 Configure issuer, client ID, optional client secret (`client_secret_post`) and explicit top-level claim-to-role mappings. Mappings support a string or string array; no mapping means no access. Identify users by issuer-bound subject, never email. Password and OIDC modes are exclusive. The IdP owns all account lifecycle operations and MFA; app logout clears only its own session. See the configuration guide for Kubernetes-secret inputs and an OIDC example.
 
-## OPA follow-up (#140)
+## Restrictive OPA policies (#140)
 
-Bun asks OPA about an authenticated principal, action and resource after builtin permission checks. OPA can restrict builtin grants, never enlarge them. Strictly validate responses; deny on timeout, failure or malformed results. Policies and their deployment remain operator-owned. Enforce decisions for reads, field projection, exports and streams as well as writes. Do not build a policy-management UI or account platform.
+Bun asks OPA about an authenticated principal, required actions and normalized operation context after builtin permission checks. OPA can restrict builtin grants, never enlarge them. Strict boolean responses, bounded deadlines and response sizes fail closed. Policies and their deployment remain operator-owned. Queries cover APIs, broad RPC, exports, individual MCP tools and live messages/delivery. See [the implemented contract](../../AUTHORIZATION.md). No resource identifiers or field filtering are supported until typed observation reads/streams replace broad RPC.
 
 ## Delivery plan
 

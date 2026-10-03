@@ -107,3 +107,51 @@ export async function privateObservationQuery(sql: string): Promise<Response> {
   )
   return new Response(output, { status: 200 })
 }
+
+/** Only the test harness can change OPA data; no OPA ports are published. */
+export function updatePolicyFixture(data: Record<string, unknown> = {}): void {
+  execFileSync(
+    "docker",
+    [
+      "compose",
+      ...composeFiles,
+      "exec",
+      "-T",
+      "celery-insights",
+      "curl",
+      "--fail-with-body",
+      "-sS",
+      "-X",
+      "PUT",
+      "-H",
+      "Content-Type: application/json",
+      "--data-binary",
+      "@-",
+      "http://opa:8181/v1/data/fixture",
+    ],
+    { input: JSON.stringify(data), encoding: "utf8", timeout: 10000 },
+  )
+}
+
+export function policyService(command: "stop" | "start"): void {
+  execFileSync("docker", ["compose", ...composeFiles, command, "opa"], { stdio: "pipe", timeout: 30000 })
+}
+
+export function verifyPolicyExamples(): void {
+  for (const name of ["maintenance", "no-payload", "mcp-tools"])
+    execFileSync(
+      "docker",
+      [
+        "compose",
+        ...composeFiles,
+        "exec",
+        "-T",
+        "opa",
+        "/opa",
+        "test",
+        `/examples/${name}.rego`,
+        `/examples/${name}_test.rego`,
+      ],
+      { stdio: "inherit", timeout: 10000 },
+    )
+}

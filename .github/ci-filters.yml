@@ -30,6 +30,7 @@ frontend:
 
 # E2E also runs for frontend/backend changes, as combined in the CI workflow.
 integration:
+  - 'examples/opa/**'
   - 'Dockerfile'
   - '.dockerignore'
   - 'docker-bake.hcl'

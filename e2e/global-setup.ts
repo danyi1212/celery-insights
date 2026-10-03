@@ -9,7 +9,13 @@ import {
   fixtureTlsOptions,
   fixtureAuthenticationHeaders,
 } from "./helpers/authentication"
-import { composeLogs, composePs, composeUp, privateObservationQuery } from "./helpers/docker-compose"
+import {
+  composeLogs,
+  composePs,
+  composeUp,
+  privateObservationQuery,
+  verifyPolicyExamples,
+} from "./helpers/docker-compose"
 
 const E2E_HOST = process.env.E2E_HOST ?? "127.0.0.1"
 const HEALTH_TIMEOUT = 60_000
@@ -199,6 +205,7 @@ export default async function globalSetup() {
 
   try {
     composeUp()
+    verifyPolicyExamples()
     logInfo("Waiting for services to be healthy...")
     await Promise.all([
       pollHealth(appURL("/health"), "celery-insights"),

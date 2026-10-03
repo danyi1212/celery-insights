@@ -38,6 +38,9 @@ export function prepareAuthenticationFixture() {
     `schema_version = 1
 [installation]
 public_url = "${appOrigin}${appPath("/")}"
+[authorization.opa]
+decision_url = "http://opa:8181/v1/data/celery_insights/allow"
+timeout_ms = 1000
 [authentication]
 mode = "basic"
 [authentication.session]
@@ -45,6 +48,10 @@ secret = "${Buffer.alloc(32, 9).toString("base64url")}"
 [[authentication.accounts]]
 username = "${fixtureCredentials.username}"
 password = "${fixtureCredentials.password}"
+roles = ["administrator"]
+[[authentication.accounts]]
+username = "policy-admin"
+password = "synthetic-policy-secret"
 roles = ["administrator"]
 [[authentication.accounts]]
 username = "reader"

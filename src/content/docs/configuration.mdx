@@ -404,6 +404,9 @@ How often the cleanup job evaluates and applies retention policies.
 | `authentication.oidc.client_secret` / `_file` | string; sensitive | `CELERY_INSIGHTS_OIDC_CLIENT_SECRET` / `_FILE` | — |
 | `authentication.oidc.scopes` | string | — | — |
 | `authentication.oidc.role_mappings` | object | — | — |
+| `authorization.opa.decision_url` | string | — | — |
+| `authorization.opa.timeout_ms` | number | — | — |
+| `authorization.opa.bearer_token` / `_file` | string; sensitive | `CELERY_INSIGHTS_OPA_BEARER_TOKEN` / `_FILE` | — |
 | `authentication.mode` | string | — | — |
 | `authentication.accounts` | object; sensitive | — | — |
 
@@ -484,3 +487,19 @@ Current RPC browsing requires all payload grants and therefore administrator acc
 Memory databases receive random root and ingester credentials on each start. Root credentials stay in Bun.
 
 For persistent embedded storage, set `database.observation.root_password` or `root_password_file` to a stable deployment secret. For an external database, also configure `database.observation.ingester_password` or `ingester_password_file` consistently across replicas. Both support their catalogued environment overrides and `_FILE` sources. Existing stores must use their existing root credential during migration; rotate any previous `root` password through SurrealDB administration before using the new secret. Changing the launch configuration does not rotate an existing database user.
+
+## Custom authorization with OPA
+
+Optional OPA policies restrict permissions granted by account roles. Add a decision endpoint to TOML:
+
+```toml
+[authorization.opa]
+decision_url = "http://opa:8181/v1/data/celery_insights/allow"
+timeout_ms = 1000
+```
+
+OPA must return a literal boolean `result`. Denial blocks the operation; policy errors, missing/malformed results and timeouts fail closed. Keep OPA private, with operator-managed policies. Remote bearer credentials require HTTPS and can use `bearer_token_file` or `CELERY_INSIGHTS_OPA_BEARER_TOKEN` / `_FILE`.
+
+Policies cover application APIs, exports, metrics, MCP tools and live database connections. They cannot grant missing role permissions. Browser database RPC is still broad: denying a payload permission denies the entire connection/export rather than filtering individual tasks or fields. Live connections recheck on each message/delivery; idle connections recheck on their next activity. Identity reports role grants; contextual policies may deny individual requests even when UI controls remain visible.
+
+See [the full decision contract, enforcement table and tested Rego examples](https://github.com/danyi1212/celery-insights/blob/main/AUTHORIZATION.md).
