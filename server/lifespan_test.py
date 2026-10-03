@@ -11,7 +11,7 @@ class TestLifespan:
         self.mock_app = MagicMock()
 
         with (
-            patch("lifespan.Settings") as mock_settings_cls,
+            patch("lifespan.get_settings") as mock_settings_cls,
             patch("lifespan.init_surrealdb", new_callable=AsyncMock) as init_surreal,
             patch("lifespan.close_surrealdb", new_callable=AsyncMock) as close_surreal,
             patch("lifespan.get_celery_app", new_callable=AsyncMock) as get_app,

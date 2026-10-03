@@ -49,6 +49,7 @@ COPY /bun-entry.ts /index.html ./
 
 RUN bun run build
 RUN bun build bun-entry.ts --target=bun --outfile ./bun-server.js
+RUN bun build runtime/config-cli.ts --target=bun --outfile ./config-cli.js
 
 # Keep the runtime binary on the target architecture, even when front-build
 # runs on a different architecture.
@@ -81,6 +82,7 @@ COPY ./server ./server
 # Copy built frontend SPA and bundled Bun entry point
 COPY --from=front-build /app/dist ./dist
 COPY --from=front-build /app/bun-server.js ./bun-server.js
+COPY --from=front-build /app/config-cli.js ./config-cli.js
 
 # Set environment for production
 ENV NODE_ENV=production
@@ -94,7 +96,7 @@ USER myuser
 EXPOSE 8555/tcp
 VOLUME /data
 
-CMD ["bun", "/app/bun-server.js"]
+CMD ["bun", "--no-env-file", "/app/bun-server.js"]
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s \
     CMD curl --fail http://localhost:8555/health || exit 1

@@ -11,7 +11,9 @@ import readline from "node:readline"
 import { spawn, type ChildProcess } from "node:child_process"
 import { randomBytes } from "node:crypto"
 import { Surreal } from "surrealdb"
-import { config, type Config } from "./runtime/config"
+import type { Config } from "./runtime/config"
+import { resolveConfig } from "./runtime/config-loader"
+import { pythonConfig, pythonEnvironment } from "./runtime/python-config"
 import {
   createDebugBundleArchive,
   exportSurrealNative,
@@ -25,8 +27,13 @@ import {
   type DebugBundleClientInfo,
   type ParsedDebugSnapshot,
 } from "./runtime/debug-bundle"
-import { bunLogger, registerLogSink, surrealLogger } from "./runtime/logger"
+import { bunLogger, configureLogging, registerLogSink, surrealLogger } from "./runtime/logger"
 import { LeaderElection, generateInstanceId, type IngestionStatus } from "./runtime/leader-election"
+
+const resolvedConfig = resolveConfig()
+const config = resolvedConfig.config
+configureLogging(config.logFormat, config.logLevel)
+for (const warning of resolvedConfig.warnings) bunLogger.warn(warning)
 import { runSchemaMigration } from "./runtime/surreal-schema"
 import { createMcpHandler } from "./runtime/mcp"
 
@@ -56,7 +63,7 @@ function printBanner(runtimeConfig: Config, replaySnapshot: ParsedDebugSnapshot 
   const logo = `${c.green}${c.bold}${LOGO}${c.reset}\n`
 
   const surrealInfo = runtimeConfig.surrealdbExternalUrl
-    ? `external (${runtimeConfig.surrealdbExternalUrl})`
+    ? "external (endpoint redacted)"
     : `managed (${runtimeConfig.surrealdbStorage}) on port ${runtimeConfig.surrealdbPort}`
 
   const ingestionInfo = replaySnapshot
@@ -77,8 +84,8 @@ function printBanner(runtimeConfig: Config, replaySnapshot: ParsedDebugSnapshot 
 
   const lines = [
     `  ${c.dim}Server${c.reset}      http://localhost:${runtimeConfig.port}${runtimeConfig.urlPrefix}/`,
-    `  ${c.dim}Broker${c.reset}      ${runtimeConfig.brokerUrl}`,
-    `  ${c.dim}Backend${c.reset}     ${runtimeConfig.resultBackend}`,
+    `  ${c.dim}Broker${c.reset}      [redacted]`,
+    `  ${c.dim}Backend${c.reset}     [redacted]`,
     `  ${c.dim}SurrealDB${c.reset}   ${surrealInfo}`,
     `  ${c.dim}Ingestion${c.reset}   ${ingestionInfo}`,
     `  ${c.dim}Log level${c.reset}   ${runtimeConfig.logLevel}`,
@@ -100,7 +107,7 @@ function printBanner(runtimeConfig: Config, replaySnapshot: ParsedDebugSnapshot 
   process.stdout.write(logo + lines.join("\n") + "\n\n")
 }
 
-const PYTHON_PORT = 8556
+const PYTHON_PORT = config.apiPort ?? 8556
 const PYTHON_BACKEND = `http://localhost:${PYTHON_PORT}`
 const PYTHON_WS_BACKEND = `ws://localhost:${PYTHON_PORT}`
 
@@ -368,37 +375,13 @@ function spawnPython(): ChildProcess {
   bunLogger.info(replaySnapshot ? "Spawning Python control-plane subprocess" : "Spawning Python ingester subprocess")
   const proc = spawn("python", ["run.py"], {
     cwd: path.resolve(import.meta.dir, "server"),
-    env: {
-      ...process.env,
-      PORT: String(PYTHON_PORT),
-      SURREALDB_URL: runtimeConfig.surrealdbUrl,
-      ...(runtimeConfig.surrealdbExternalUrl ? { SURREALDB_EXTERNAL_URL: runtimeConfig.surrealdbExternalUrl } : {}),
-      SURREALDB_INGESTER_PASS: runtimeConfig.surrealdbIngesterPass,
-      SURREALDB_NAMESPACE: runtimeConfig.surrealdbNamespace,
-      SURREALDB_DATABASE: runtimeConfig.surrealdbDatabase,
-      SURREALDB_STORAGE: runtimeConfig.surrealdbStorage,
-      BROKER_URL: runtimeConfig.brokerUrl,
-      RESULT_BACKEND: runtimeConfig.resultBackend,
-      CONFIG_FILE: runtimeConfig.configFile,
-      TIMEZONE: runtimeConfig.timezone,
-      DEBUG: String(runtimeConfig.debug),
-      CLEANUP_INTERVAL_SECONDS: String(runtimeConfig.cleanupIntervalSeconds),
-      ...(runtimeConfig.taskMaxCount !== null && runtimeConfig.taskMaxCount !== undefined
-        ? { TASK_MAX_COUNT: String(runtimeConfig.taskMaxCount) }
-        : {}),
-      ...(runtimeConfig.taskRetentionHours !== null && runtimeConfig.taskRetentionHours !== undefined
-        ? { TASK_RETENTION_HOURS: String(runtimeConfig.taskRetentionHours) }
-        : {}),
-      ...(runtimeConfig.deadWorkerRetentionHours !== null && runtimeConfig.deadWorkerRetentionHours !== undefined
-        ? { DEAD_WORKER_RETENTION_HOURS: String(runtimeConfig.deadWorkerRetentionHours) }
-        : {}),
-      INGESTION_BATCH_INTERVAL_MS: String(runtimeConfig.ingestionBatchIntervalMs),
-      LOG_FORMAT: runtimeConfig.logFormat,
-      LOG_LEVEL: runtimeConfig.logLevel,
-      DEBUG_SNAPSHOT_MODE: replaySnapshot ? "true" : "false",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
+    env: pythonEnvironment(process.env),
+    stdio: ["ignore", "pipe", "pipe", "pipe"],
   })
+  const configPipe = proc.stdio[3]
+  if (!configPipe || !("end" in configPipe)) throw new Error("Cannot open Python configuration pipe")
+  configPipe.on("error", () => bunLogger.error("Python configuration handoff failed"))
+  configPipe.end(JSON.stringify(pythonConfig(runtimeConfig, Boolean(replaySnapshot))))
 
   if (proc.stdout) {
     const rl = readline.createInterface({ input: proc.stdout })
@@ -489,7 +472,7 @@ const managingSurrealDB = !runtimeConfig.surrealdbExternalUrl
 if (managingSurrealDB) {
   surrealProcess = spawnSurrealDB()
 } else {
-  bunLogger.info(`Using external SurrealDB at ${runtimeConfig.surrealdbExternalUrl}`)
+  bunLogger.info("Using external SurrealDB (endpoint redacted)")
 }
 
 // 2. Wait for SurrealDB to be ready
@@ -625,6 +608,12 @@ const server = Bun.serve({
         runtimeConfig.surrealdbFrontendPass !== null && runtimeConfig.surrealdbFrontendPass !== undefined
       return Response.json({
         authRequired,
+        ui: {
+          demoAvailable: runtimeConfig.demoAvailable ?? true,
+          theme: runtimeConfig.uiTheme,
+          hideWelcomeBanner: runtimeConfig.uiHideWelcomeBanner,
+          rawEventsLimit: runtimeConfig.uiRawEventsLimit,
+        },
         surrealPath: `${runtimeConfig.urlPrefix}/surreal/rpc`,
         ingestionStatus: leaderElection?.status ?? ingestionStatus,
         debugSnapshot: getSnapshotSummary(replaySnapshot),

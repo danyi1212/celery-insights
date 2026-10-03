@@ -8,7 +8,6 @@ from exports.router import exports_router
 from lifespan import lifespan
 from metrics.router import metrics_router
 from server_info.router import settings_router
-from settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 app = FastAPI(
     title="Celery Insights",
     description="Modern Real-Time Monitoring for Celery",
-    debug=Settings().debug,
+    debug=False,
     lifespan=lifespan,
     generate_unique_id_function=custom_generate_unique_id,
     version="v0.2.0",

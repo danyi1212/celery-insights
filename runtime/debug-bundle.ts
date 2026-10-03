@@ -1,7 +1,8 @@
 import path from "node:path"
 import os from "node:os"
-import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile, cp } from "node:fs/promises"
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile, cp } from "node:fs/promises"
 import type { Config } from "./config"
+import { SETTINGS } from "./config-registry"
 import type { Surreal } from "surrealdb"
 
 export interface DebugBundleClientInfo {
@@ -131,7 +132,10 @@ async function resolveQueryResult(result: unknown): Promise<unknown> {
 export function redactConfig(config: Config, includeSecrets: boolean): Record<string, unknown> {
   const data: Record<string, unknown> = { ...config }
   if (!includeSecrets) {
-    for (const key of ["surrealdbIngesterPass", "surrealdbFrontendPass", "mcpToken", "brokerUrl", "resultBackend"]) {
+    for (const key of [
+      ...SETTINGS.filter((setting) => setting.secret).map((setting) => setting.key),
+      "celeryOptions",
+    ]) {
       if (key in data && data[key] !== null && data[key] !== undefined) {
         data[key] = "***REDACTED***"
       }
@@ -169,18 +173,6 @@ async function writeJson(filePath: string, data: unknown): Promise<void> {
 async function writeText(filePath: string, data: string): Promise<void> {
   await ensureDir(path.dirname(filePath))
   await writeFile(filePath, data, "utf8")
-}
-
-async function maybeCopyFile(sourcePath: string, destinationPath: string): Promise<boolean> {
-  try {
-    const fileInfo = await stat(sourcePath)
-    if (!fileInfo.isFile()) return false
-    await ensureDir(path.dirname(destinationPath))
-    await cp(sourcePath, destinationPath)
-    return true
-  } catch {
-    return false
-  }
 }
 
 async function readJsonFromZip<T>(bundlePath: string, entry: string): Promise<T> {
@@ -588,7 +580,6 @@ export async function createDebugBundleArchive(options: {
         path.join(stagingDir, "source/config/effective-config.json"),
         redactConfig(options.config, options.includeSecrets),
       )
-      await maybeCopyFile(options.config.configFile, path.join(stagingDir, "source/config/config.py"))
       await writeJson(path.join(stagingDir, "source/runtime/server-info.json"), options.serverInfo ?? {})
       await writeJson(path.join(stagingDir, "source/runtime/retention.json"), options.retentionInfo ?? {})
       await writeJson(path.join(stagingDir, "source/runtime/health.json"), options.healthInfo ?? {})

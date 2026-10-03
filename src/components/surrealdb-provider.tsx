@@ -1,7 +1,7 @@
 import { appUrl } from "@lib/app-url"
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { Surreal, type ConnectionStatus } from "surrealdb"
-import useSettingsStore from "@stores/use-settings-store"
+import useSettingsStore, { applyDeploymentDefaults } from "@stores/use-settings-store"
 import { Progress } from "@components/ui/progress"
 import { Button } from "@components/ui/button"
 import { DEMO_SCHEMA } from "@lib/demo-schema"
@@ -10,6 +10,7 @@ import { DemoEventGenerator } from "@lib/demo-event-generator"
 export type IngestionStatus = "leader" | "standby" | "read-only" | "disabled"
 
 interface AppConfig {
+  ui?: Parameters<typeof applyDeploymentDefaults>[0]
   authRequired: boolean
   surrealPath: string
   ingestionStatus: IngestionStatus
@@ -125,6 +126,20 @@ interface SurrealDBProviderProps {
 
 const SurrealDBProvider = ({ children }: SurrealDBProviderProps) => {
   const isDemo = useSettingsStore((state) => state.demo)
+  useEffect(() => {
+    if (!isDemo) return
+    let active = true
+    fetchConfig()
+      .then((config) => {
+        if (active && config.ui) applyDeploymentDefaults(config.ui)
+      })
+      .catch(() => {
+        // Frontend-only demos have no deployment configuration endpoint.
+      })
+    return () => {
+      active = false
+    }
+  }, [isDemo])
 
   if (isDemo) {
     return <DemoSurrealDBProvider>{children}</DemoSurrealDBProvider>
@@ -173,6 +188,7 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
   useEffect(() => {
     fetchConfig()
       .then((config) => {
+        if (config.ui) applyDeploymentDefaults(config.ui)
         configRef.current = config
         setIngestionStatus(config.ingestionStatus)
         setAuthRequired(config.authRequired)

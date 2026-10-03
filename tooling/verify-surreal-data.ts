@@ -1,6 +1,8 @@
 import { Surreal } from "surrealdb"
 import { exportSurrealData, importSurrealData } from "../runtime/debug-bundle"
-import { config } from "../runtime/config"
+import { parseConfig } from "../runtime/config"
+
+const config = parseConfig()
 import { runSchemaMigration } from "../runtime/surreal-schema"
 const url = process.env.SURREAL_UPGRADE_URL ?? "ws://127.0.0.1:18558/rpc"
 await runSchemaMigration({ ...config, surrealdbUrl: url })

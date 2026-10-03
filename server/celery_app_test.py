@@ -26,7 +26,7 @@ async def test_config_from_settings(caplog: pytest.LogCaptureFixture):
 
     app = await get_celery_app(settings)
 
-    assert caplog.messages[-1] == "Loading celery app config from environment variables"
+    assert caplog.messages[-1] == "Loading Celery from resolved Bun configuration"
     assert app.conf.broker_url == settings.broker_url
     assert app.conf.result_backend == settings.result_backend
     assert app.conf.event_queue_exclusive is True

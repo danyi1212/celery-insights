@@ -153,7 +153,7 @@ async def test_init_uses_default_settings_when_none():
 
     with (
         patch("surrealdb_client.connect_surrealdb", new_callable=AsyncMock, return_value=mock_db),
-        patch("surrealdb_client.Settings") as mock_settings_cls,
+        patch("surrealdb_client.get_settings") as mock_settings_cls,
     ):
         mock_settings_cls.return_value = MagicMock()
         result = await surrealdb_client.init_surrealdb(None)

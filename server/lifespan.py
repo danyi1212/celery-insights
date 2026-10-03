@@ -12,7 +12,7 @@ from celery_app import get_celery_app
 from cleanup import CleanupJob
 from events.ingester import SurrealDBIngester
 from events.receiver import CeleryEventReceiver
-from settings import Settings
+from settings import get_settings
 from surrealdb_client import close_surrealdb, init_surrealdb
 from tasks.result_fetcher import ResultBackendPoller, ResultFetcher
 from workers.poller import WorkerPoller
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_):
     logger.info("Welcome to Celery Insights!")
-    settings = Settings()
+    settings = get_settings()
 
     # Update timezone
     os.environ["TZ"] = settings.timezone
