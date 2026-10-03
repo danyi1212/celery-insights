@@ -14,7 +14,9 @@ import { Surreal } from "surrealdb"
 import { createCeleryBridge } from "./runtime/celery-bridge"
 import { ObservationApi } from "./runtime/observation-api"
 import { initializeAuthentication, secureApplicationRequest } from "./runtime/security/http"
-import { authorize, payloadPermissions } from "./runtime/security/permissions"
+import { LiveAuthorizationQueue } from "./runtime/security/live"
+import { Authorization } from "./runtime/security/opa"
+import { payloadPermissions } from "./runtime/security/permissions"
 import type { Config } from "./runtime/config"
 import { resolveConfig } from "./runtime/config-loader"
 import { pythonConfig, pythonEnvironment } from "./runtime/python-config"
@@ -511,7 +513,9 @@ try {
 }
 
 try {
-  authentication = resolvedConfig.authentication ? initializeAuthentication(resolvedConfig.authentication) : null
+  authentication = resolvedConfig.authentication
+    ? initializeAuthentication(resolvedConfig.authentication, new Authorization(runtimeConfig))
+    : null
 } catch {
   bunLogger.error("Authentication initialization failed")
   await shutdown("startup failure", 1)
@@ -569,6 +573,15 @@ const mcpCursorCredential =
     ? runtimeConfig.surrealdbIngesterPass
     : randomBytes(32).toString("hex"))
 const handleMcp = createMcpHandler({
+  authorize: async (request, tool) => {
+    if (!authentication) throw new Error("Authentication required")
+    await authentication.authorization.check(
+      authentication.principal(request),
+      payloadPermissions,
+      { method: request.method, path: "/mcp", transport: "mcp", tool },
+      Boolean(replaySnapshot),
+    )
+  },
   publicOrigin: resolvedConfig.authentication?.public_origin,
   db: mcpDb,
   cursorSecret: `${mcpCursorCredential}:${runtimeConfig.surrealdbNamespace}:${runtimeConfig.surrealdbDatabase}`,
@@ -591,7 +604,12 @@ async function validateLiveAccount(ws: any): Promise<boolean> {
   try {
     const principal = await authentication?.accountPrincipal(ws.data.account ?? "")
     if (!principal) throw new Error("Account required")
-    authorize(principal, payloadPermissions, Boolean(replaySnapshot))
+    await authentication!.authorization.check(
+      principal,
+      payloadPermissions,
+      { method: "GET", path: "/surreal/rpc", transport: "websocket" },
+      Boolean(replaySnapshot),
+    )
     return true
   } catch {
     ws.close(1008, "Account unavailable")
@@ -779,45 +797,56 @@ const server = Bun.serve({
   },
   websocket: {
     async open(ws: any) {
-      if (!(await validateLiveAccount(ws))) return
+      const close = () => {
+        ws.close(1008, "Authorization unavailable")
+        ws._backendWs?.close()
+      }
+      ws._ready = new Promise<void>((resolve) => {
+        ws._resolveReady = resolve
+      })
+      ws._inbound = new LiveAuthorizationQueue(async () => {
+        await ws._ready
+        return !ws._closed && validateLiveAccount(ws)
+      }, close)
+      ws._outbound = new LiveAuthorizationQueue(() => validateLiveAccount(ws), close)
+      if (!(await validateLiveAccount(ws)) || ws._closed) return
       const data = ws.data as { targetPath: string; backend: string; protocols?: string }
-      ws._pendingMessages = [] as (string | Buffer)[]
-
       const baseUrl = getSurrealBases(runtimeConfig).wsBase
       const protocols = data.protocols ? data.protocols.split(",").map((p) => p.trim()) : undefined
       const backendWs = new WebSocket(`${baseUrl}${data.targetPath}`, protocols)
       backendWs.binaryType = "arraybuffer"
+      ws._backendWs = backendWs
 
       backendWs.onopen = () => {
-        ws._backendWs = backendWs
-        // Flush any messages that arrived before backend connected
-        const pending = ws._pendingMessages as (string | Buffer)[]
-        for (const msg of pending) backendWs.send(typeof msg === "string" ? msg : new Uint8Array(msg))
-        pending.length = 0
+        if (ws._closed) {
+          backendWs.close()
+          return
+        }
+        ws._resolveReady()
       }
 
       backendWs.onmessage = (event) => {
-        void validateLiveAccount(ws).then((valid) => {
-          if (valid) ws.send(event.data)
-        })
+        void ws._outbound.enqueue(() => ws.send(event.data))
       }
 
       backendWs.onclose = () => ws.close()
       backendWs.onerror = () => ws.close()
     },
     async message(ws: any, message: string | Buffer) {
-      if (!(await validateLiveAccount(ws))) return
-      const backendWs = ws._backendWs as WebSocket | undefined
-      if (backendWs && backendWs.readyState === WebSocket.OPEN) {
-        backendWs.send(typeof message === "string" ? message : new Uint8Array(message))
-      } else {
-        // Buffer messages until backend connects
-        ;(ws._pendingMessages as (string | Buffer)[] | undefined)?.push(message)
-      }
+      await ws._inbound?.enqueue(() => {
+        const backendWs = ws._backendWs as WebSocket | undefined
+        if (backendWs && backendWs.readyState === WebSocket.OPEN) {
+          backendWs.send(typeof message === "string" ? message : new Uint8Array(message))
+        }
+      })
     },
     close(ws: any) {
+      ws._closed = true
+      ws._resolveReady?.()
+      ws._inbound?.stop()
+      ws._outbound?.stop()
       const backendWs = ws._backendWs as WebSocket | undefined
-      if (backendWs && backendWs.readyState === WebSocket.OPEN) {
+      if (backendWs && backendWs.readyState !== WebSocket.CLOSED) {
         backendWs.close()
       }
     },

@@ -12,6 +12,10 @@ Origin and custom-header checks protect mutations; WebSocket upgrades require Or
 
 The previous frontend database password/login/token path has been retired. Legacy `SURREALDB_FRONTEND_PASS` fails with migration guidance. Database viewer transport remains temporarily behind Bun and requires all payload permissions. Public SQL/import/export routes are denied.
 
+## Restrictive OPA policies (stacked on #143)
+
+Bun queries an optional external OPA Data API after role checks. Decisions cover navigation/identity, registered APIs, broad RPC, exports, individual MCP tools and live messages/delivery. Strict boolean results, timeouts, bounded responses and no caching provide fail-closed behavior. Policies remain operator-owned. See [the contract and examples](../../AUTHORIZATION.md). Resource/field filtering still requires typed reads and streams.
+
 ## Verification
 
 Configuration tests cover all three password sources, missing/conflicting sources, invalid roles, duplicates, obsolete settings and secret exclusion from Python/diagnostics. Request tests cover Basic challenges, invalid credentials, roles, browser navigation, Origin/custom-header enforcement, unknown operations, WebSockets and prefixes. Native Bun acceptance covers independent configured replicas, credential rotation and real observation metrics/CSV/backup/restore/cleanup on disposable SurrealDB 3.3.0. TLS browser suites exercise root and shared-prefix deployments without an identity database or provisioning service.
@@ -25,7 +29,7 @@ bun run test:security
 
 - Typed task/event/worker reads and authorized streams, replacing browser database credentials and arbitrary RPC. Viewer/operator UI browsing and resource/field restrictions are incomplete.
 - Maintained OIDC integration with explicit role mapping. Selecting OIDC currently fails startup without fallback. IdP owns passwords, MFA, recovery and account management.
-- Restrictive OPA queries and equivalent read/export/stream scope enforcement (#140).
+- Resource/field policy enforcement after typed observation APIs replace broad RPC.
 - Shared durable retention configuration and ingestion-leader fencing. Retention UI edits remain process-local.
 
-Green checks verify implemented behavior; OIDC, OPA and restricted-role browsing are not advertised as completed capabilities.
+Green checks verify implemented behavior; OIDC and restricted-role browsing are not advertised as completed capabilities.

@@ -22,6 +22,11 @@ username = "admin"
 password_file = "/run/secrets/insights/admin-password"
 roles = ["administrator"]
 
+# Optional restrictive policy service (enable by setting decision_url):
+# [authorization.opa]
+# decision_url = "http://opa:8181/v1/data/celery_insights/allow"
+# timeout_ms = 1000
+
 [server]
 port = 8555
 

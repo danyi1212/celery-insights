@@ -145,6 +145,15 @@ export const SETTINGS: readonly Setting[] = [
   { path: "ui.defaults.theme", key: "uiTheme", type: "string" },
   { path: "ui.defaults.hide_welcome_banner", key: "uiHideWelcomeBanner", type: "boolean" },
   { path: "ui.defaults.raw_events_limit", key: "uiRawEventsLimit", type: "number" },
+  { path: "authorization.opa.decision_url", key: "opaDecisionUrl", type: "string" },
+  { path: "authorization.opa.timeout_ms", key: "opaTimeoutMs", type: "number" },
+  {
+    path: "authorization.opa.bearer_token",
+    key: "opaBearerToken",
+    type: "string",
+    secret: true,
+    env: "CELERY_INSIGHTS_OPA_BEARER_TOKEN",
+  },
   { path: "authentication.mode", key: "authMode", type: "string" },
   { path: "authentication.accounts", key: "authAccounts", type: "object", secret: true },
 ]

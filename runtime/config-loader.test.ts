@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { resolveConfig, describeConfig } from "./config-loader"
 import { SETTINGS } from "./config-registry"
+import { redactConfig } from "./debug-bundle"
+import { pythonConfig, pythonEnvironment } from "./python-config"
 import { ENV_KEY_MAP } from "./config"
 
 function fromToml(toml: string, env: Record<string, string> = {}, files: Record<string, string> = {}) {
@@ -16,6 +18,34 @@ function fromToml(toml: string, env: Record<string, string> = {}, files: Record<
 }
 
 describe("Bun configuration resolver", () => {
+  it("validates optional OPA configuration and redacts service credentials", () => {
+    expect(fromToml("").config.opaDecisionUrl).toBeUndefined()
+    const resolved = fromToml(
+      '[authorization.opa]\ndecision_url = "https://opa.example/v1/data/insights/allow"\nbearer_token_file = "opa-token"\ntimeout_ms = 500',
+      {},
+      { "/config/opa-token": "PRIVATE-OPA\n" },
+    )
+    expect(resolved.config.opaBearerToken).toBe("PRIVATE-OPA")
+    expect(JSON.stringify(redactConfig(resolved.config, true))).not.toContain("PRIVATE-OPA")
+    expect(JSON.stringify(pythonConfig(resolved.config, false))).not.toContain("opa")
+    expect(pythonEnvironment({ CELERY_INSIGHTS_OPA_BEARER_TOKEN: "PRIVATE-OPA" })).not.toHaveProperty(
+      "CELERY_INSIGHTS_OPA_BEARER_TOKEN",
+    )
+    expect(JSON.stringify(describeConfig(resolved))).not.toContain("PRIVATE-OPA")
+    for (const url of [
+      "ftp://opa/v1/data/allow",
+      "https://user:secret@opa/v1/data/allow",
+      "https://opa/v1/data/allow?secret=1",
+      "https://opa/v1/data/allow#fragment",
+      "https://opa/v1/policies/allow",
+    ])
+      expect(() => fromToml(`[authorization.opa]\ndecision_url = "${url}"`)).toThrow("opa")
+    expect(() => fromToml("[authorization.opa]\ntimeout_ms = 0")).toThrow("opa")
+    expect(() => fromToml('[authorization.opa]\nbearer_token = "secret"')).toThrow("requires decision_url")
+    expect(() =>
+      fromToml('[authorization.opa]\ndecision_url = "http://opa/v1/data/allow"\nbearer_token = "secret"'),
+    ).toThrow("requires HTTPS")
+  })
   it("preserves reverse-proxy and MCP settings through the structured resolver", () => {
     const resolved = fromToml(
       '[server]\nurl_prefix = "insights"\n[mcp]\ncursor_secret_file = "mcp-secret"\nallowed_hosts = "insights.example"',
