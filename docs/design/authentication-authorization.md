@@ -160,21 +160,21 @@ Send removal events only for IDs the subscriber previously saw; hidden rows neve
 
 Implement the [TOML configuration prerequisite](configuration.md) before adding authentication settings. Bun exclusively loads, resolves secrets, validates, and redacts configuration, then passes the necessary resolved subset to Python through a private process handoff. Every setting has a canonical TOML path; only registered deployment/secret inputs have environment overrides. There is no parallel YAML loader or independent Python configuration precedence. Proposed names below are new, not currently supported. Show nonsecret effective settings and their provenance to administrators.
 
-Support both `CI_BOOTSTRAP_PASSWORD` (secret value) and `CI_BOOTSTRAP_PASSWORD_FILE` (path to a mounted secret). The latter maps to `authentication.bootstrap.password_file` below. Require exactly one winning password source when password bootstrap is requested; reject direct-value and file sources in the same precedence layer, even when they contain the same value. A single environment source may override a lower-priority TOML source, as specified in the prerequisite. Reject empty credentials and unreadable winning files, without fallback. Never include secret values in configuration output, validation errors, debug bundles, or logs. Apply the prerequisite's single-terminal-newline file convention.
+Support both `CELERY_INSIGHTS_BOOTSTRAP_PASSWORD` (secret value) and `CELERY_INSIGHTS_BOOTSTRAP_PASSWORD_FILE` (path to a mounted secret). The latter maps to `authentication.bootstrap.password_file` below. Require exactly one winning password source when password bootstrap is requested; reject direct-value and file sources in the same precedence layer, even when they contain the same value. A single environment source may override a lower-priority TOML source, as specified in the prerequisite. Reject empty credentials and unreadable winning files, without fallback. Never include secret values in configuration output, validation errors, debug bundles, or logs. Apply the prerequisite's single-terminal-newline file convention.
 
 In Kubernetes, both methods consume an existing Secret. Recommended delivery mounts only the needed key as a read-only file accessible to the application user. Environment delivery uses `secretKeyRef`, for example:
 
 ```yaml
 # Fragment of the Celery Insights container configuration; proposed app setting.
 env:
-  - name: CI_BOOTSTRAP_PASSWORD
+  - name: CELERY_INSIGHTS_BOOTSTRAP_PASSWORD
     valueFrom:
       secretKeyRef:
         name: insights-bootstrap
         key: password
 ```
 
-For file delivery, mount the Secret at `/run/secrets/insights` and set `CI_BOOTSTRAP_PASSWORD_FILE=/run/secrets/insights/password`; do not also set `CI_BOOTSTRAP_PASSWORD`. Avoid literal secret values in manifests or checked-in configuration. Limit Secret access and enable encryption at rest. File mounts are the preferred default because environment variables are more prone to accidental diagnostic exposure; either method remains readable by the application that consumes it. [Kubernetes Secrets](https://kubernetes.io/docs/concepts/configuration/secret/), [security checklist](https://v1-33.docs.kubernetes.io/docs/concepts/security/security-checklist/)
+For file delivery, mount the Secret at `/run/secrets/insights` and set `CELERY_INSIGHTS_BOOTSTRAP_PASSWORD_FILE=/run/secrets/insights/password`; do not also set `CELERY_INSIGHTS_BOOTSTRAP_PASSWORD`. Avoid literal secret values in manifests or checked-in configuration. Limit Secret access and enable encryption at rest. File mounts are the preferred default because environment variables are more prone to accidental diagnostic exposure; either method remains readable by the application that consumes it. [Kubernetes Secrets](https://kubernetes.io/docs/concepts/configuration/secret/), [security checklist](https://v1-33.docs.kubernetes.io/docs/concepts/security/security-checklist/)
 
 Both methods retain one-time bootstrap semantics: after initialization, updates to the Secret or environment never reset the account. Remove the bootstrap credential from the deployment after successful initialization. Apply the same mutually exclusive value/file input convention to OIDC client secrets and database credentials.
 

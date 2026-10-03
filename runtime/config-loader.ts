@@ -113,12 +113,12 @@ export function resolveConfig(inputs: ConfigInputs = {}): ResolvedConfig {
   const exists = inputs.exists ?? existsSync
   if (
     inputs.configFile &&
-    env.CI_CONFIG_FILE &&
-    path.resolve(cwd, inputs.configFile) !== path.resolve(cwd, env.CI_CONFIG_FILE)
+    env.CELERY_INSIGHTS_CONFIG_FILE &&
+    path.resolve(cwd, inputs.configFile) !== path.resolve(cwd, env.CELERY_INSIGHTS_CONFIG_FILE)
   )
-    throw new Error("Conflicting --config and CI_CONFIG_FILE")
-  const selected = inputs.configFile ?? env.CI_CONFIG_FILE
-  if (selected === "") throw new Error("CI_CONFIG_FILE must not be empty")
+    throw new Error("Conflicting --config and CELERY_INSIGHTS_CONFIG_FILE")
+  const selected = inputs.configFile ?? env.CELERY_INSIGHTS_CONFIG_FILE
+  if (selected === "") throw new Error("CELERY_INSIGHTS_CONFIG_FILE must not be empty")
   const file = path.resolve(cwd, selected ?? "/etc/celery-insights/config.toml")
   let document: Record<string, unknown> = {}
   const hasFile = selected !== undefined || exists(file)
@@ -164,11 +164,11 @@ export function resolveConfig(inputs: ConfigInputs = {}): ResolvedConfig {
     if (!allowed.has(key) && !special.has(key) && !key.startsWith("celery.options."))
       throw new Error(`Unknown configuration key: ${key}`)
   const allowedEnv = new Set([
-    "CI_CONFIG_FILE",
+    "CELERY_INSIGHTS_CONFIG_FILE",
     ...SETTINGS.flatMap((s) => (s.env ? (s.secret ? [s.env, `${s.env}_FILE`] : [s.env]) : [])),
   ])
   for (const key of Object.keys(env))
-    if (key.startsWith("CI_") && !allowedEnv.has(key) && env[key] !== undefined)
+    if (key.startsWith("CELERY_INSIGHTS_") && !allowedEnv.has(key) && env[key] !== undefined)
       throw new Error(`Unknown application environment variable: ${key}`)
   const values: Record<string, unknown> = {}
   const provenance: Record<string, Source> = {}
@@ -227,7 +227,9 @@ export function resolveConfig(inputs: ConfigInputs = {}): ResolvedConfig {
   }
   const canonical =
     hasFile ||
-    Object.keys(env).some((key) => key.startsWith("CI_") && key !== "CI_CONFIG_FILE" && env[key] !== undefined)
+    Object.keys(env).some(
+      (key) => key.startsWith("CELERY_INSIGHTS_") && key !== "CELERY_INSIGHTS_CONFIG_FILE" && env[key] !== undefined,
+    )
   const mode = flat["database.observation.mode"]
   if (mode !== undefined && mode !== "embedded" && mode !== "external")
     throw new Error("database.observation.mode: Expected embedded or external")
@@ -251,7 +253,9 @@ export function resolveConfig(inputs: ConfigInputs = {}): ResolvedConfig {
       throw new Error("Replay cannot use an external observation database")
   } else if (env.SURREALDB_EXTERNAL_URL !== undefined) {
     values.surrealdbExternalUrl = env.SURREALDB_EXTERNAL_URL
-    warnings.push("SURREALDB_EXTERNAL_URL is deprecated; use CI_DATABASE_URL or database.observation.mode/url")
+    warnings.push(
+      "SURREALDB_EXTERNAL_URL is deprecated; use CELERY_INSIGHTS_DATABASE_URL or database.observation.mode/url",
+    )
   }
   for (const base of [
     "retention.tasks.max_count",

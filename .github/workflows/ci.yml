@@ -199,6 +199,36 @@ jobs:
         if: always()
         run: docker compose -f test_project/docker-compose.yml --profile interactive down -v --remove-orphans || true
 
+  e2e-results:
+    # Branch protection requires this stable name; deployment names may change.
+    name: E2E tests
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [changes, e2e]
+    steps:
+      - name: Verify applicable E2E deployments passed
+        env:
+          JOBS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          jobs = json.loads(os.environ['JOBS_JSON'])
+          if jobs['changes']['result'] != 'success':
+              sys.exit('Change detection did not succeed')
+          required = jobs['changes']['outputs'].get('e2e')
+          if required not in ('true', 'false'):
+              sys.exit('Missing or invalid E2E change detection output')
+          result = jobs['e2e']['result']
+          print(f'E2E deployments: {result} (required={required})')
+          if required == 'true' and result != 'success':
+              sys.exit('Required E2E deployments did not all succeed')
+          if required == 'false' and result not in ('success', 'skipped'):
+              sys.exit('E2E deployments failed or were cancelled')
+          PY
+
   database-upgrade:
     name: Database upgrade and restore
     runs-on: ubuntu-latest
@@ -237,7 +267,7 @@ jobs:
     name: Test Results
     runs-on: ubuntu-latest
     if: always()
-    needs: [changes, lint-backend, test-backend, lint-frontend, test-frontend, e2e, database-upgrade]
+    needs: [changes, lint-backend, test-backend, lint-frontend, test-frontend, e2e, e2e-results, database-upgrade]
     steps:
       - name: Verify all applicable checks passed
         env:
@@ -258,8 +288,10 @@ jobs:
               'lint-frontend': 'frontend',
               'test-frontend': 'frontend',
               'e2e': 'e2e',
+              'e2e-results': 'always',
               'database-upgrade': 'database',
           }
+          outputs['always'] = 'true'
           for job, component in checks.items():
               result = jobs[job]['result']
               required = outputs[component] == 'true'

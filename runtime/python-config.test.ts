@@ -17,7 +17,7 @@ describe("scoped Python handoff", () => {
       pythonEnvironment({
         PATH: "/bin",
         BROKER_URL: "secret",
-        CI_BOOTSTRAP_PASSWORD: "secret",
+        CELERY_INSIGHTS_BOOTSTRAP_PASSWORD: "secret",
         RANDOM_TOKEN: "secret",
       }),
     ).toEqual({ PATH: "/bin", PYTHONUNBUFFERED: "1" })

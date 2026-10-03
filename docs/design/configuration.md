@@ -20,7 +20,7 @@ This proposal covers every operator-configurable application setting, including 
 ## Decisions
 
 1. TOML is the sole new structured application format. Every deployment setting has a stable dotted path; only a documented subset has permanent environment overrides.
-2. `CI_CONFIG_FILE` selects the application TOML file. It is distinct from legacy `CONFIG_FILE`, which selects a Python Celery module.
+2. `CELERY_INSIGHTS_CONFIG_FILE` selects the application TOML file. It is distinct from legacy `CONFIG_FILE`, which selects a Python Celery module.
 3. Bun alone owns the configuration module: loading, source precedence, migration aliases, secret resolution, validation, provenance, and redaction. Python receives only the resolved immutable subset needed for its work. This ownership is an explicit user decision.
 4. Preserve existing env-only deployments through an announced compatibility period. Do not remove advanced settings by removing their env names: their TOML paths remain available.
 5. Configuration changes require a restart initially. No file watcher, include system, implicit secret substitution, or public config-edit endpoint.
@@ -29,12 +29,12 @@ TOML fits nested typed settings, comments, and explicit tables. Adopt the TOML 1
 
 ## Sources and precedence
 
-Lowest to highest: **schema defaults → selected TOML → legacy environment aliases → permanent `CI_*` overrides → derived safety restrictions**. Safety restrictions can only narrow behavior, such as disabling ingestion in replay. They are not a configurable override source.
+Lowest to highest: **schema defaults → selected TOML → legacy environment aliases → permanent `CELERY_INSIGHTS_*` overrides → derived safety restrictions**. Safety restrictions can only narrow behavior, such as disabling ingestion in replay. They are not a configurable override source.
 
-- File selection: explicit `--config PATH`, then `CI_CONFIG_FILE`, then `/etc/celery-insights/config.toml` if present. Reject differing explicit flag/env selections. An explicitly selected missing/unreadable file is fatal. An absent implicit file allows env-only startup; an existing malformed implicit file is fatal.
-- `schema_version = 1` is required in an authored TOML file. Env-only mode uses that schema internally. Reject unknown versions and unknown keys, including misspelled `CI_*` variables; ignore unrelated platform environment variables.
+- File selection: explicit `--config PATH`, then `CELERY_INSIGHTS_CONFIG_FILE`, then `/etc/celery-insights/config.toml` if present. Reject differing explicit flag/env selections. An explicitly selected missing/unreadable file is fatal. An absent implicit file allows env-only startup; an existing malformed implicit file is fatal.
+- `schema_version = 1` is required in an authored TOML file. Env-only mode uses that schema internally. Reject unknown versions and unknown keys, including misspelled `CELERY_INSIGHTS_*` variables; ignore unrelated platform environment variables.
 - Resolve relative file paths against the selected TOML directory; environment-supplied paths against the startup working directory. Recommend absolute paths in containers. No remote config URLs, automatic `.env` search, `${VAR}` interpolation, `~` expansion, or arbitrary executable values.
-- Merge scalar leaves by precedence; replace arrays atomically; maps such as OIDC group mappings are file-only. A group mapping is never implicitly extended by a second source. No generic `CI_SECTION__KEY` escape hatch.
+- Merge scalar leaves by precedence; replace arrays atomically; maps such as OIDC group mappings are file-only. A group mapping is never implicitly extended by a second source. No generic `CELERY_INSIGHTS_SECTION__KEY` escape hatch.
 - An explicit env override of a file leaf is normal and appears in provenance. Supplying old/new env aliases for the same leaf with unequal normalized values is an error, not a silently chosen winner; equal values are accepted with an alias warning.
 - New TOML/new env values require strict types. Booleans from env accept only documented `true`, `false`, `1`, `0`; reject empty and unrecognized values. Validate finite numbers, bounds, URLs, identifiers, timezones, and cross-field invariants after merging. Do not print offending secret values in validation errors.
 - Omission means default; explicit disable flags turn optional features off. Retention limit subtables use `enabled` plus numeric `value`, so default-on worker retention can be disabled without null or sentinel strings. Enabled limits require positive finite values. Keep unit suffixes in key names; no duration-string grammar initially.
@@ -45,16 +45,16 @@ This table covers all 26 current Bun environment mappings. Defaults listed here 
 
 | Current env | Current default | Canonical TOML path | Permanent override / disposition |
 | --- | --- | --- | --- |
-| `PORT` | 8555 | `server.port` | `CI_PORT` |
-| `SURREALDB_URL` | `ws://localhost:8557/rpc` | `database.observation.url` | `CI_DATABASE_URL`; unify with external URL |
-| `SURREALDB_EXTERNAL_URL` | unset | `database.observation.mode` + `.url` | External mode inferred from `CI_DATABASE_URL` if mode omitted |
-| `SURREALDB_INGESTER_PASS` | `changeme` | `database.observation.ingester_password` | `CI_DATABASE_INGESTER_PASSWORD`, `_FILE`; remove default with security migration |
+| `PORT` | 8555 | `server.port` | `CELERY_INSIGHTS_PORT` |
+| `SURREALDB_URL` | `ws://localhost:8557/rpc` | `database.observation.url` | `CELERY_INSIGHTS_DATABASE_URL`; unify with external URL |
+| `SURREALDB_EXTERNAL_URL` | unset | `database.observation.mode` + `.url` | External mode inferred from `CELERY_INSIGHTS_DATABASE_URL` if mode omitted |
+| `SURREALDB_INGESTER_PASS` | `changeme` | `database.observation.ingester_password` | `CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD`, `_FILE`; remove default with security migration |
 | `SURREALDB_FRONTEND_PASS` | unset | `migration.legacy_frontend_password` | Migration-only alias; removed with direct browser DB auth |
 | `SURREALDB_NAMESPACE` | `celery_insights` | `database.observation.namespace` | File |
 | `SURREALDB_DATABASE` | `main` | `database.observation.database` | File |
-| `SURREALDB_STORAGE` | `memory` | `database.observation.embedded.storage` | `CI_DATABASE_STORAGE` |
+| `SURREALDB_STORAGE` | `memory` | `database.observation.embedded.storage` | `CELERY_INSIGHTS_DATABASE_STORAGE` |
 | `SURREALDB_PORT` | 8557 | `database.observation.embedded.port` | File |
-| `INGESTION_ENABLED` | true | `ingestion.enabled` | `CI_INGESTION_ENABLED` |
+| `INGESTION_ENABLED` | true | `ingestion.enabled` | `CELERY_INSIGHTS_INGESTION_ENABLED` |
 | `INGESTION_LEADER_ELECTION` | true | `ingestion.leader_election.enabled` | File |
 | `INGESTION_LOCK_TTL_SECONDS` | 30 | `ingestion.leader_election.ttl_seconds` | File |
 | `INGESTION_LOCK_HEARTBEAT_SECONDS` | 10 | `ingestion.leader_election.heartbeat_seconds` | File |
@@ -63,14 +63,14 @@ This table covers all 26 current Bun environment mappings. Defaults listed here 
 | `TASK_RETENTION_HOURS` | unset | `retention.tasks.max_age_hours.value` + `.enabled` | File; legacy supplied value enables limit |
 | `DEAD_WORKER_RETENTION_HOURS` | 24 | `retention.workers.max_age_hours.value` + `.enabled` | File; default enabled with value 24 |
 | `INGESTION_BATCH_INTERVAL_MS` | 100 | `ingestion.batch_interval_ms` | File |
-| `BROKER_URL` | development AMQP URL | `celery.broker_url` | `CI_BROKER_URL`, `_FILE` |
-| `RESULT_BACKEND` | development Redis URL | `celery.result_backend` | `CI_RESULT_BACKEND`, `_FILE` |
+| `BROKER_URL` | development AMQP URL | `celery.broker_url` | `CELERY_INSIGHTS_BROKER_URL`, `_FILE` |
+| `RESULT_BACKEND` | development Redis URL | `celery.result_backend` | `CELERY_INSIGHTS_RESULT_BACKEND`, `_FILE` |
 | `CONFIG_FILE` | `/app/config.py` | `celery.legacy_python_config_file` | Legacy compatibility only; explicit trusted-code escape hatch |
-| `DEBUG_BUNDLE_PATH` | unset | `diagnostics.replay_bundle_file` | `CI_REPLAY_BUNDLE_FILE` |
+| `DEBUG_BUNDLE_PATH` | unset | `diagnostics.replay_bundle_file` | `CELERY_INSIGHTS_REPLAY_BUNDLE_FILE` |
 | `TIMEZONE` | UTC | `celery.timezone` | File |
 | `DEBUG` | false | `server.debug` | File; disallowed by production auth profile |
-| `LOG_FORMAT` | pretty | `logging.format` | `CI_LOG_FORMAT` |
-| `LOG_LEVEL` | info | `logging.level` | `CI_LOG_LEVEL` |
+| `LOG_FORMAT` | pretty | `logging.format` | `CELERY_INSIGHTS_LOG_FORMAT` |
+| `LOG_LEVEL` | info | `logging.level` | `CELERY_INSIGHTS_LOG_LEVEL` |
 
 Additional settings and distinctions:
 
@@ -92,9 +92,9 @@ Database topology becomes `mode = "embedded" | "external"`. If no mode is provid
 
 ## Permanent environment surface
 
-Keep permanent overrides focused on container wiring: `CI_CONFIG_FILE`, `CI_PORT`, `CI_DATABASE_URL`, `CI_DATABASE_STORAGE`, `CI_INGESTION_ENABLED`, `CI_BROKER_URL`, `CI_RESULT_BACKEND`, `CI_REPLAY_BUNDLE_FILE`, `CI_LOG_FORMAT`, `CI_LOG_LEVEL`, and `CI_PUBLIC_URL` (`installation.public_url`). Advanced tuning, role/group maps, and OPA contracts are file-only.
+Keep permanent overrides focused on container wiring: `CELERY_INSIGHTS_CONFIG_FILE`, `CELERY_INSIGHTS_PORT`, `CELERY_INSIGHTS_DATABASE_URL`, `CELERY_INSIGHTS_DATABASE_STORAGE`, `CELERY_INSIGHTS_INGESTION_ENABLED`, `CELERY_INSIGHTS_BROKER_URL`, `CELERY_INSIGHTS_RESULT_BACKEND`, `CELERY_INSIGHTS_REPLAY_BUNDLE_FILE`, `CELERY_INSIGHTS_LOG_FORMAT`, `CELERY_INSIGHTS_LOG_LEVEL`, and `CELERY_INSIGHTS_PUBLIC_URL` (`installation.public_url`). Advanced tuning, role/group maps, and OPA contracts are file-only.
 
-Additionally, allow registered secret value/file pairs: database credentials, `CI_BOOTSTRAP_PASSWORD` / `_FILE` (as already agreed), `CI_OIDC_CLIENT_SECRET` / `_FILE`, and control-store credentials. Secret pairs are explicit registry entries, not an automatically generated env name for every key. URLs containing credentials support `_FILE` too. New secrets must declare both TOML paths and allowed override names. Simple local env-only installs remain possible; complex SSO/OPA installations use TOML.
+Additionally, allow registered secret value/file pairs: database credentials, `CELERY_INSIGHTS_BOOTSTRAP_PASSWORD` / `_FILE` (as already agreed), `CELERY_INSIGHTS_OIDC_CLIENT_SECRET` / `_FILE`, and control-store credentials. Secret pairs are explicit registry entries, not an automatically generated env name for every key. URLs containing credentials support `_FILE` too. New secrets must declare both TOML paths and allowed override names. Simple local env-only installs remain possible; complex SSO/OPA installations use TOML.
 
 Authentication paths retain the vocabulary in the auth plan: `authentication.mode`, `authentication.bootstrap.*`, `authentication.local.*`, `authentication.oidc.*`, `authorization.provider`, `authorization.opa.*`, and `installation.public_url`. Persistent identity connectivity uses `database.control.*`. Before implementation, register every field described in the auth plan, including session lifetimes, MFA/assurance rules, proxy trust, OPA transport/freshness/revision, and service-token controls. Publishing a new knob without a canonical path is prohibited. Accounts, sessions, grants and active policy rollout records themselves remain control-store data, not configuration secrets pasted into TOML.
 
@@ -102,7 +102,7 @@ Authentication paths retain the vocabulary in the auth plan: `authentication.mod
 
 For every registered secret `x`, support `x` (direct value) or `x_file` (file path). Group them as one source-selection unit across precedence: an explicitly configured source at a higher layer replaces the lower-layer source, including a file-to-env override. If the resulting winning layer supplies both forms, reject. For environment aliases, differing old/new aliases are errors. This preserves useful overrides without silently accepting ambiguous credentials.
 
-At the environment layer, `CI_BOOTSTRAP_PASSWORD` and `CI_BOOTSTRAP_PASSWORD_FILE` are mutually exclusive. A TOML file reference overridden by a single environment password is allowed and recorded as an override; the lower file is not read. Empty winning values or unreadable winning files fail startup without fallback. Thus the earlier “both supplied” rule means two competing forms in the winning layer, not a lower-priority file reference plus a legitimate override.
+At the environment layer, `CELERY_INSIGHTS_BOOTSTRAP_PASSWORD` and `CELERY_INSIGHTS_BOOTSTRAP_PASSWORD_FILE` are mutually exclusive. A TOML file reference overridden by a single environment password is allowed and recorded as an override; the lower file is not read. Empty winning values or unreadable winning files fail startup without fallback. Thus the earlier “both supplied” rule means two competing forms in the winning layer, not a lower-priority file reference plus a legitimate override.
 
 Read bounded UTF-8 secret content once at startup; remove at most one terminal LF or CRLF, preserving all other whitespace. Document this convention and reject NUL/oversize/empty credentials. TLS certificate/key paths are file paths read by their owning transport library, not password contents to be copied into JSON. Never disclose secret values in CLI output, logs, exceptions, source diagnostics, URLs, or downloadable bundles. Custom Celery options are conservatively sensitive unless explicitly classified safe.
 
@@ -185,7 +185,7 @@ admin_username = "admin"
 password_file = "/run/secrets/insights/admin-password"
 ```
 
-In Kubernetes, mount nonsecret TOML from a ConfigMap and sensitive values from Secrets; set `CI_CONFIG_FILE` to the mounted TOML. Alternatively inject selected values using `secretKeyRef`. The ConfigMap must not contain literal passwords. Compose/VM deployments mount the same TOML and secret files; no Kubernetes dependency exists in the loader. Files/secrets must reach every replica; rollout restarts apply changes. Do not share a local embedded observation disk across replicas as an HA strategy.
+In Kubernetes, mount nonsecret TOML from a ConfigMap and sensitive values from Secrets; set `CELERY_INSIGHTS_CONFIG_FILE` to the mounted TOML. Alternatively inject selected values using `secretKeyRef`. The ConfigMap must not contain literal passwords. Compose/VM deployments mount the same TOML and secret files; no Kubernetes dependency exists in the loader. Files/secrets must reach every replica; rollout restarts apply changes. Do not share a local embedded observation disk across replicas as an HA strategy.
 
 ## Ownership and changing settings
 

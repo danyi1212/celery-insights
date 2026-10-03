@@ -1,6 +1,6 @@
 Celery Insights supports TOML application configuration and environment overrides. Bun loads and validates configuration once, then sends Python only its resolved settings through a private process pipe. Python does not independently load application configuration or `.env` files.
 
-Set `CI_CONFIG_FILE=/etc/celery-insights/config.toml` to select a mounted file. This differs from legacy `CONFIG_FILE`, which selects executable Celery Python configuration. Existing environment variables below remain supported as deprecated aliases during migration.
+Set `CELERY_INSIGHTS_CONFIG_FILE=/etc/celery-insights/config.toml` to select a mounted file. This differs from legacy `CONFIG_FILE`, which selects executable Celery Python configuration. Existing environment variables below remain supported as deprecated aliases during migration.
 
 ```toml
 schema_version = 1
@@ -21,13 +21,13 @@ format = "json"
 level = "info"
 ```
 
-For Kubernetes, mount nonsecret TOML using a ConfigMap and credentials using Secrets. Compose and VM deployments can mount the same files. Secret-backed environment overrides such as `CI_BROKER_URL` are also supported. A single higher-priority env source replaces the file source; supplying both `CI_BROKER_URL` and `CI_BROKER_URL_FILE` is an error. Files strip only one terminal newline. Empty/unreadable secrets fail startup without fallback.
+For Kubernetes, mount nonsecret TOML using a ConfigMap and credentials using Secrets. Compose and VM deployments can mount the same files. Secret-backed environment overrides such as `CELERY_INSIGHTS_BROKER_URL` are also supported. A single higher-priority env source replaces the file source; supplying both `CELERY_INSIGHTS_BROKER_URL` and `CELERY_INSIGHTS_BROKER_URL_FILE` is an error. Files strip only one terminal newline. Empty/unreadable secrets fail startup without fallback.
 
-Precedence is defaults, TOML, legacy env aliases, then registered `CI_*` overrides. Conflicting old/new environment aliases are errors. Unknown TOML keys and unknown `CI_*` variables are errors; unrelated system variables are ignored. Changes require restart. TOML strings do not interpolate environment variables. Relative paths in TOML resolve against its directory; paths from env resolve against the startup working directory.
+Precedence is defaults, TOML, legacy env aliases, then registered `CELERY_INSIGHTS_*` overrides. Conflicting old/new environment aliases are errors. Unknown TOML keys and unknown `CELERY_INSIGHTS_*` variables are errors; unrelated system variables are ignored. Changes require restart. TOML strings do not interpolate environment variables. Relative paths in TOML resolve against its directory; paths from env resolve against the startup working directory.
 
 Use `bun run config validate --config PATH` to validate without connecting to Celery or the database, `bun run config show --config PATH` for redacted values/provenance, `bun run config example` for a template, `bun run config schema` for an editor JSON Schema, `bun run config reference` for the generated setting catalog, and `bun run config migrate-env` for secret-safe migration output. In the container, use `bun --no-env-file /app/config-cli.js validate --config PATH` (or `show`, `example`, `migrate-env`).
 
-The permanent env overrides are `CI_CONFIG_FILE`, `CI_PORT`, `CI_DATABASE_URL`, `CI_DATABASE_STORAGE`, `CI_DATABASE_INGESTER_PASSWORD` (and `_FILE`), `CI_INGESTION_ENABLED`, `CI_BROKER_URL` (and `_FILE`), `CI_RESULT_BACKEND` (and `_FILE`), `CI_REPLAY_BUNDLE_FILE`, `CI_LOG_FORMAT`, `CI_LOG_LEVEL`, and `CI_PUBLIC_URL`. Advanced tuning has TOML paths; old env aliases remain available during migration. Authentication and OPA settings are follow-on features and are not accepted by this configuration release.
+The permanent env overrides are `CELERY_INSIGHTS_CONFIG_FILE`, `CELERY_INSIGHTS_PORT`, `CELERY_INSIGHTS_DATABASE_URL`, `CELERY_INSIGHTS_DATABASE_STORAGE`, `CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD` (and `_FILE`), `CELERY_INSIGHTS_INGESTION_ENABLED`, `CELERY_INSIGHTS_BROKER_URL` (and `_FILE`), `CELERY_INSIGHTS_RESULT_BACKEND` (and `_FILE`), `CELERY_INSIGHTS_REPLAY_BUNDLE_FILE`, `CELERY_INSIGHTS_LOG_FORMAT`, `CELERY_INSIGHTS_LOG_LEVEL`, and `CELERY_INSIGHTS_PUBLIC_URL`. Advanced tuning has TOML paths; old env aliases remain available during migration. Authentication and OPA settings are follow-on features and are not accepted by this configuration release.
 
 In canonical TOML mode, Celery Python modules require an explicit `celery.legacy_python_config_file` and cannot coexist with canonical connection/options settings. Legacy env-only mode retains the previous module precedence. Raw configuration modules are excluded from new diagnostic bundles. For Python-only development use `bun run dev:server`; an explicit development env file can be selected with `--env-file PATH`. Direct `python run.py` requires a Bun handoff. Debug mode does not start an independent Uvicorn reload child.
 
@@ -353,43 +353,43 @@ How often the cleanup job evaluates and applies retention policies.
 
 {/* BEGIN GENERATED CONFIG REFERENCE */}
 
-| TOML path                                          | Type              | Permanent env override                    | Legacy alias                       |
-| -------------------------------------------------- | ----------------- | ----------------------------------------- | ---------------------------------- |
-| `server.port`                                      | number            | `CI_PORT`                                 | `PORT`                             |
-| `server.url_prefix`                                | string            | `CI_URL_PREFIX`                           | `URL_PREFIX`                       |
-| `mcp.token` / `_file`                              | string; sensitive | `CI_MCP_TOKEN` / `_FILE`                  | `MCP_TOKEN`                        |
-| `mcp.allowed_hosts`                                | string            | —                                         | `MCP_ALLOWED_HOSTS`                |
-| `database.observation.url` / `_file`               | string; sensitive | `CI_DATABASE_URL` / `_FILE`               | `SURREALDB_URL`                    |
-| `database.observation.ingester_password` / `_file` | string; sensitive | `CI_DATABASE_INGESTER_PASSWORD` / `_FILE` | `SURREALDB_INGESTER_PASS`          |
-| `migration.legacy_frontend_password` / `_file`     | string; sensitive | —                                         | `SURREALDB_FRONTEND_PASS`          |
-| `database.observation.namespace`                   | string            | —                                         | `SURREALDB_NAMESPACE`              |
-| `database.observation.database`                    | string            | —                                         | `SURREALDB_DATABASE`               |
-| `database.observation.embedded.storage`            | string            | `CI_DATABASE_STORAGE`                     | `SURREALDB_STORAGE`                |
-| `database.observation.embedded.port`               | number            | —                                         | `SURREALDB_PORT`                   |
-| `ingestion.enabled`                                | boolean           | `CI_INGESTION_ENABLED`                    | `INGESTION_ENABLED`                |
-| `ingestion.leader_election.enabled`                | boolean           | —                                         | `INGESTION_LEADER_ELECTION`        |
-| `ingestion.leader_election.ttl_seconds`            | number            | —                                         | `INGESTION_LOCK_TTL_SECONDS`       |
-| `ingestion.leader_election.heartbeat_seconds`      | number            | —                                         | `INGESTION_LOCK_HEARTBEAT_SECONDS` |
-| `retention.cleanup_interval_seconds`               | number            | —                                         | `CLEANUP_INTERVAL_SECONDS`         |
-| `retention.tasks.max_count.value`                  | number            | —                                         | `TASK_MAX_COUNT`                   |
-| `retention.tasks.max_age_hours.value`              | number            | —                                         | `TASK_RETENTION_HOURS`             |
-| `retention.workers.max_age_hours.value`            | number            | —                                         | `DEAD_WORKER_RETENTION_HOURS`      |
-| `ingestion.batch_interval_ms`                      | number            | —                                         | `INGESTION_BATCH_INTERVAL_MS`      |
-| `celery.broker_url` / `_file`                      | string; sensitive | `CI_BROKER_URL` / `_FILE`                 | `BROKER_URL`                       |
-| `celery.result_backend` / `_file`                  | string; sensitive | `CI_RESULT_BACKEND` / `_FILE`             | `RESULT_BACKEND`                   |
-| `celery.legacy_python_config_file`                 | string            | —                                         | `CONFIG_FILE`                      |
-| `diagnostics.replay_bundle_file`                   | string            | `CI_REPLAY_BUNDLE_FILE`                   | `DEBUG_BUNDLE_PATH`                |
-| `celery.timezone`                                  | string            | —                                         | `TIMEZONE`                         |
-| `server.debug`                                     | boolean           | —                                         | `DEBUG`                            |
-| `logging.format`                                   | string            | `CI_LOG_FORMAT`                           | `LOG_FORMAT`                       |
-| `logging.level`                                    | string            | `CI_LOG_LEVEL`                            | `LOG_LEVEL`                        |
-| `server.api.host`                                  | string            | —                                         | `HOST`                             |
-| `server.api.port`                                  | number            | —                                         | —                                  |
-| `installation.public_url`                          | string            | `CI_PUBLIC_URL`                           | —                                  |
-| `ui.demo_available`                                | boolean           | —                                         | —                                  |
-| `ui.defaults.theme`                                | string            | —                                         | —                                  |
-| `ui.defaults.hide_welcome_banner`                  | boolean           | —                                         | —                                  |
-| `ui.defaults.raw_events_limit`                     | number            | —                                         | —                                  |
+| TOML path                                          | Type              | Permanent env override                                 | Legacy alias                       |
+| -------------------------------------------------- | ----------------- | ------------------------------------------------------ | ---------------------------------- |
+| `server.port`                                      | number            | `CELERY_INSIGHTS_PORT`                                 | `PORT`                             |
+| `server.url_prefix`                                | string            | `CELERY_INSIGHTS_URL_PREFIX`                           | `URL_PREFIX`                       |
+| `mcp.token` / `_file`                              | string; sensitive | `CELERY_INSIGHTS_MCP_TOKEN` / `_FILE`                  | `MCP_TOKEN`                        |
+| `mcp.allowed_hosts`                                | string            | —                                                      | `MCP_ALLOWED_HOSTS`                |
+| `database.observation.url` / `_file`               | string; sensitive | `CELERY_INSIGHTS_DATABASE_URL` / `_FILE`               | `SURREALDB_URL`                    |
+| `database.observation.ingester_password` / `_file` | string; sensitive | `CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD` / `_FILE` | `SURREALDB_INGESTER_PASS`          |
+| `migration.legacy_frontend_password` / `_file`     | string; sensitive | —                                                      | `SURREALDB_FRONTEND_PASS`          |
+| `database.observation.namespace`                   | string            | —                                                      | `SURREALDB_NAMESPACE`              |
+| `database.observation.database`                    | string            | —                                                      | `SURREALDB_DATABASE`               |
+| `database.observation.embedded.storage`            | string            | `CELERY_INSIGHTS_DATABASE_STORAGE`                     | `SURREALDB_STORAGE`                |
+| `database.observation.embedded.port`               | number            | —                                                      | `SURREALDB_PORT`                   |
+| `ingestion.enabled`                                | boolean           | `CELERY_INSIGHTS_INGESTION_ENABLED`                    | `INGESTION_ENABLED`                |
+| `ingestion.leader_election.enabled`                | boolean           | —                                                      | `INGESTION_LEADER_ELECTION`        |
+| `ingestion.leader_election.ttl_seconds`            | number            | —                                                      | `INGESTION_LOCK_TTL_SECONDS`       |
+| `ingestion.leader_election.heartbeat_seconds`      | number            | —                                                      | `INGESTION_LOCK_HEARTBEAT_SECONDS` |
+| `retention.cleanup_interval_seconds`               | number            | —                                                      | `CLEANUP_INTERVAL_SECONDS`         |
+| `retention.tasks.max_count.value`                  | number            | —                                                      | `TASK_MAX_COUNT`                   |
+| `retention.tasks.max_age_hours.value`              | number            | —                                                      | `TASK_RETENTION_HOURS`             |
+| `retention.workers.max_age_hours.value`            | number            | —                                                      | `DEAD_WORKER_RETENTION_HOURS`      |
+| `ingestion.batch_interval_ms`                      | number            | —                                                      | `INGESTION_BATCH_INTERVAL_MS`      |
+| `celery.broker_url` / `_file`                      | string; sensitive | `CELERY_INSIGHTS_BROKER_URL` / `_FILE`                 | `BROKER_URL`                       |
+| `celery.result_backend` / `_file`                  | string; sensitive | `CELERY_INSIGHTS_RESULT_BACKEND` / `_FILE`             | `RESULT_BACKEND`                   |
+| `celery.legacy_python_config_file`                 | string            | —                                                      | `CONFIG_FILE`                      |
+| `diagnostics.replay_bundle_file`                   | string            | `CELERY_INSIGHTS_REPLAY_BUNDLE_FILE`                   | `DEBUG_BUNDLE_PATH`                |
+| `celery.timezone`                                  | string            | —                                                      | `TIMEZONE`                         |
+| `server.debug`                                     | boolean           | —                                                      | `DEBUG`                            |
+| `logging.format`                                   | string            | `CELERY_INSIGHTS_LOG_FORMAT`                           | `LOG_FORMAT`                       |
+| `logging.level`                                    | string            | `CELERY_INSIGHTS_LOG_LEVEL`                            | `LOG_LEVEL`                        |
+| `server.api.host`                                  | string            | —                                                      | `HOST`                             |
+| `server.api.port`                                  | number            | —                                                      | —                                  |
+| `installation.public_url`                          | string            | `CELERY_INSIGHTS_PUBLIC_URL`                           | —                                  |
+| `ui.demo_available`                                | boolean           | —                                                      | —                                  |
+| `ui.defaults.theme`                                | string            | —                                                      | —                                  |
+| `ui.defaults.hide_welcome_banner`                  | boolean           | —                                                      | —                                  |
+| `ui.defaults.raw_events_limit`                     | number            | —                                                      | —                                  |
 
 Additional keys: `schema_version`, `database.observation.mode`, each retention limit's `enabled`, and `celery.options` (data-only connection options). `SURREALDB_EXTERNAL_URL` is a special topology compatibility alias.
 

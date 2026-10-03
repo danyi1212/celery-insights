@@ -43,18 +43,22 @@ describe("Bun configuration resolver", () => {
   })
 
   it("applies file, legacy and current precedence with provenance", () => {
-    const resolved = fromToml("[server]\nport = 9000", { CI_PORT: "9002" })
+    const resolved = fromToml("[server]\nport = 9000", { CELERY_INSIGHTS_PORT: "9002" })
     expect(resolved.config.port).toBe(9002)
-    expect(resolved.provenance["server.port"].source).toBe("env:CI_PORT")
-    expect(() => fromToml("", { PORT: "9000", CI_PORT: "9001" })).toThrow("Conflicting legacy")
-    expect(fromToml("", { PORT: "9001", CI_PORT: "9001" }).warnings).toHaveLength(1)
+    expect(resolved.provenance["server.port"].source).toBe("env:CELERY_INSIGHTS_PORT")
+    expect(() => fromToml("", { PORT: "9000", CELERY_INSIGHTS_PORT: "9001" })).toThrow("Conflicting legacy")
+    expect(fromToml("", { PORT: "9001", CELERY_INSIGHTS_PORT: "9001" }).warnings).toHaveLength(1)
   })
 
   it("validates TOML types and prevents unknown environment/key typos", () => {
     expect(() => fromToml('[server]\nport = "9000"')).toThrow("Expected number")
     expect(() => fromToml("[server]\nprot = 9000")).toThrow("Unknown configuration key")
-    expect(() => fromToml("", { CI_PROT: "9000" })).toThrow("Unknown application environment")
+    expect(() => fromToml("", { CELERY_INSIGHTS_PROT: "9000" })).toThrow("Unknown application environment")
     expect(() => fromToml("", { INGESTION_ENABLED: "flase" })).toThrow("Expected boolean")
+  })
+
+  it("ignores unrelated CI platform variables", () => {
+    expect(fromToml("", { CI: "true", CI_JOB_ID: "123", CI_PIPELINE_ID: "456" }).config.port).toBe(8555)
   })
 
   it("does not reveal invalid secret values or TOML contents", () => {
@@ -78,12 +82,14 @@ describe("Bun configuration resolver", () => {
   })
 
   it("allows higher priority secret source replacement without reading losing files", () => {
-    const result = fromToml('[celery]\nbroker_url_file = "missing"', { CI_BROKER_URL: "replacement" })
+    const result = fromToml('[celery]\nbroker_url_file = "missing"', { CELERY_INSIGHTS_BROKER_URL: "replacement" })
     expect(result.config.brokerUrl).toBe("replacement")
-    expect(() => fromToml("", { CI_BROKER_URL: "value", CI_BROKER_URL_FILE: "path" })).toThrow("not both")
+    expect(() =>
+      fromToml("", { CELERY_INSIGHTS_BROKER_URL: "value", CELERY_INSIGHTS_BROKER_URL_FILE: "path" }),
+    ).toThrow("not both")
     expect(() => fromToml('[celery]\nbroker_url = "value"\nbroker_url_file = "file"')).toThrow("not both")
     expect(() => fromToml('[celery]\nbroker_url_file = "missing"')).toThrow("Cannot read secret")
-    expect(() => fromToml("", { CI_BROKER_URL: "" })).toThrow("Invalid empty")
+    expect(() => fromToml("", { CELERY_INSIGHTS_BROKER_URL: "" })).toThrow("Invalid empty")
   })
 
   it("supports explicit disabling of default-on worker retention", () => {
@@ -116,7 +122,7 @@ describe("Bun configuration resolver", () => {
     expect(resolveConfig({ env: {}, exists: () => false }).config.port).toBe(8555)
     expect(() =>
       resolveConfig({
-        env: { CI_CONFIG_FILE: "/missing" },
+        env: { CELERY_INSIGHTS_CONFIG_FILE: "/missing" },
         readFile: () => {
           throw new Error()
         },
