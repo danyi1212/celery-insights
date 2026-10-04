@@ -10,7 +10,8 @@ test.describe("Authenticated API boundary", () => {
     })
     try {
       expect((await reader.get(appURL("/api/auth/identity"))).status()).toBe(200)
-      for (const path of ["/surreal/rpc", "/api/config", "/api/settings/export", "/metrics"])
+      expect((await reader.get(appURL("/api/config"))).status()).toBe(200)
+      for (const path of ["/surreal/rpc", "/api/settings/export", "/metrics"])
         expect((await reader.get(appURL(path))).status()).toBe(403)
     } finally {
       await reader.dispose()

@@ -355,15 +355,18 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
       };`)
       .collect()
 
-    // Always create a read-only viewer user for the frontend.
-    // SurrealDB requires authentication even for tables with FULL select permissions —
-    // anonymous (unauthenticated) connections cannot query anything.
-    await db.query(`DEFINE USER OVERWRITE viewer ON DATABASE PASSWORD 'viewer' ROLES VIEWER`).collect()
+    // Server-only read connection; no fixed browser credential remains.
+    await db
+      .query(
+        `DEFINE USER OVERWRITE observation_reader ON DATABASE PASSWORD ${toSurrealStrand(config.surrealdbIngesterPass)} ROLES VIEWER`,
+      )
+      .collect()
+    await db.query(`REMOVE USER IF EXISTS viewer ON DATABASE`).collect()
 
     // Retire the old database-level application login records.
     await db.query(`REMOVE ACCESS IF EXISTS frontend ON DATABASE`).collect()
     await db.query(`REMOVE TABLE IF EXISTS viewer`).collect()
-    log.info("Schema migration completed (Bun-authorized viewer transport)")
+    log.info("Schema migration completed (Bun-owned observation reads)")
   } finally {
     await db.close()
   }

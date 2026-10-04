@@ -1,3 +1,4 @@
+import { queryObservation } from "@lib/observation-query"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import type { SurrealTask, SurrealWorker } from "@/types/surreal-records"
@@ -19,7 +20,7 @@ export interface SearchResult {
 }
 
 /**
- * Search hook — queries SurrealDB directly for tasks and workers matching
+ * Search hook — reads tasks and workers matching
  * a search string. Input is debounced by 300ms to avoid excessive queries.
  *
  * Searches task metadata and inputs, including key=value keyword arguments; workers by id.
@@ -44,7 +45,9 @@ export const useSearch = (query: string, limit = 10) => {
 
       try {
         const search = buildIndexedTaskSearch(q)
-        const results = await db.query<[SearchTaskResult[], SurrealWorker[]]>(
+        const results = await queryObservation<[SearchTaskResult[], SurrealWorker[]]>(
+          db,
+          { operation: "search", query: q, limit },
           search.prelude.join("") +
             `SELECT *,
                         (SELECT root_task_type, aggregate_state, task_count FROM workflow WHERE id = type::record('workflow', workflow_id))[0] AS workflow
@@ -57,7 +60,7 @@ export const useSearch = (query: string, limit = 10) => {
           { ...search.bindings, limit },
         )
 
-        const [tasks, workers] = results.slice(search.prelude.length) as [SearchTaskResult[], SurrealWorker[]]
+        const [tasks, workers] = results.slice(-2) as [SearchTaskResult[], SurrealWorker[]]
 
         // Only update if this is still the active query
         if (activeQueryRef.current === q) {

@@ -1,3 +1,4 @@
+import { queryObservation } from "@lib/observation-query"
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import type { TimeRange } from "@danyi1212/time-range-picker"
@@ -91,9 +92,11 @@ export const useEventsBrowser = (state: EventsBrowserState): UseEventsBrowserRes
     queryFn: async () => {
       const timeBindings = resolveTimeRangeBindings(state.range, new Date())
       const { clause, bindings } = buildWhereClause(state)
-      const [rows, countRows, filterRows, bucketRows] = await db.query<
+      const [rows, countRows, filterRows, bucketRows] = await queryObservation<
         [SurrealEvent[], [{ count: number }], { event_type: string; count: number }[], EventHistogramPoint[]]
       >(
+        db,
+        { operation: "events", ...bindings, query: state.query, types: state.types, limit: rowLimit },
         `SELECT * FROM event${clause} ORDER BY timestamp DESC LIMIT $rowLimit;` +
           `SELECT count() AS count FROM event${clause} GROUP ALL;` +
           `SELECT event_type, count() AS count FROM event${clause} GROUP BY event_type;` +

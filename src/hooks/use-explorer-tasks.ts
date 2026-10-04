@@ -1,3 +1,5 @@
+import type { ReadRequest } from "../../runtime/observation/queries"
+import { queryObservation } from "@lib/observation-query"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Table, type ConnectionStatus, type LiveSubscription } from "surrealdb"
 import { useSurrealDB } from "@components/surrealdb-provider"
@@ -86,7 +88,7 @@ export const useExplorerTasks = (
       const allBindings = { ...filterBindings, pageSize, offset }
 
       // Run data query and filter queries in a single multi-statement query
-      const [dataResult, countResult, stateFilters, typeFilters, workerFilters] = await db.query<
+      const [dataResult, countResult, stateFilters, typeFilters, workerFilters] = await queryObservation<
         [
           SurrealTask[],
           [{ count: number }],
@@ -95,6 +97,15 @@ export const useExplorerTasks = (
           { worker: string; count: number }[],
         ]
       >(
+        db,
+        {
+          operation: "explorer",
+          ...filters,
+          sortField: sort.field as ReadRequest["sortField"],
+          sortDirection: sort.direction === "ASC" ? "ASC" : "DESC",
+          limit: pageSize,
+          offset,
+        },
         `SELECT * FROM task${clause} ORDER BY ${ALLOWED_SORT_FIELDS.has(sort.field) ? sort.field : "last_updated"} ${sort.direction === "ASC" ? "ASC" : "DESC"} LIMIT $pageSize START $offset;` +
           `SELECT count() AS count FROM task${clause} GROUP ALL;` +
           `SELECT state, count() AS count FROM task${clause} GROUP BY state;` +
@@ -124,7 +135,7 @@ export const useExplorerTasks = (
     } finally {
       setIsLoading(false)
     }
-  }, [db, clause, filterBindings, sort.field, sort.direction, pageSize, offset])
+  }, [db, clause, filterBindings, filters, sort.field, sort.direction, pageSize, offset])
 
   const debouncedRefresh = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)

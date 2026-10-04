@@ -60,7 +60,7 @@ describe("browser authentication sessions", () => {
     )
     expect(
       (
-        await run(replica, "/surreal/rpc", {
+        await run(replica, "/api/observation/rpc", {
           headers: { Cookie: cookie(response), Origin: origin, Upgrade: "websocket" },
         })
       ).response.status,

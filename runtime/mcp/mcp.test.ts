@@ -138,7 +138,12 @@ describe("MCP tools against SurrealDB", () => {
       await viewer.connect(databaseEndpoint, {
         namespace: "test",
         database: "mcp",
-        authentication: { username: "viewer", password: "viewer", namespace: "test", database: "mcp" },
+        authentication: {
+          username: "observation_reader",
+          password: config.surrealdbIngesterPass,
+          namespace: "test",
+          database: "mcp",
+        },
       })
       const readOnly = new McpTools({ db: viewer, cursorSecret: "secret", mode: () => "live", now: () => NOW })
       const result = await readOnly.call("search_workflows", { has_errors: true })

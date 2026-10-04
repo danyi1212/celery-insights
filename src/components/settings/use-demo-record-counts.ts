@@ -1,3 +1,4 @@
+import { queryObservation } from "@lib/observation-query"
 import { useQuery } from "@tanstack/react-query"
 import { useSurrealDB } from "@components/surrealdb-provider"
 
@@ -33,7 +34,9 @@ export const useDemoRecordCounts = ({ enabled = true }: { enabled?: boolean } = 
     enabled: enabled && status === "connected",
     staleTime: 1_000,
     queryFn: async (): Promise<DemoRecordCounts> => {
-      const [tasksResult, eventsResult, workersResult] = await db.query<[unknown, unknown, unknown]>(
+      const [tasksResult, eventsResult, workersResult] = await queryObservation<[unknown, unknown, unknown]>(
+        db,
+        { operation: "counts" },
         "SELECT count() AS count FROM task GROUP ALL;" +
           "SELECT count() AS count FROM event GROUP ALL;" +
           "SELECT count() AS count FROM worker GROUP ALL;",

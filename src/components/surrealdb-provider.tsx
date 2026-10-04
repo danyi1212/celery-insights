@@ -1,4 +1,5 @@
 import { authenticatedFetch } from "@lib/authenticated-fetch"
+import { markRemoteObservation } from "@lib/observation-query"
 import { appUrl } from "@lib/app-url"
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { Surreal, type ConnectionStatus } from "surrealdb"
@@ -12,7 +13,7 @@ export type IngestionStatus = "leader" | "standby" | "read-only" | "disabled"
 
 interface AppConfig {
   ui?: Parameters<typeof applyDeploymentDefaults>[0]
-  surrealPath: string
+  observationPath: string
   ingestionStatus: IngestionStatus
   debugSnapshot: {
     enabled: boolean
@@ -28,11 +29,6 @@ interface AppConfig {
       workers: number
     }
   } | null
-  /** Temporary read-only database transport behind the Bun application gate. */
-  viewerUser?: string
-  viewerPass?: string
-  viewerNs?: string
-  viewerDb?: string
 }
 
 interface SurrealDBContextValue {
@@ -60,37 +56,10 @@ async function fetchConfig(): Promise<AppConfig> {
   return res.json()
 }
 
-async function connectAsViewer(
-  db: Surreal,
-  surrealPath: string,
-  ns: string,
-  database: string,
-  viewerUser?: string,
-  viewerPass?: string,
-): Promise<void> {
+async function connectObservations(db: Surreal, observationPath: string): Promise<void> {
+  markRemoteObservation(db)
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-  const url = `${protocol}//${window.location.host}${surrealPath}`
-
-  if (!viewerUser || !viewerPass) {
-    console.warn("No viewer credentials provided — SurrealDB requires authentication for all queries")
-  }
-
-  await db.connect(url, {
-    namespace: ns,
-    database,
-    // SurrealDB requires authentication — anonymous connections cannot query anything.
-    // Authenticate as the read-only viewer DB user when credentials are provided.
-    ...(viewerUser && viewerPass
-      ? {
-          authentication: {
-            namespace: ns,
-            database,
-            username: viewerUser,
-            password: viewerPass,
-          },
-        }
-      : {}),
-  })
+  await db.connect(`${protocol}//${window.location.host}${observationPath}`)
 }
 
 interface SurrealDBProviderProps {
@@ -126,7 +95,6 @@ const SurrealDBProvider = ({ children }: SurrealDBProviderProps) => {
 const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) => {
   const dbRef = useRef<Surreal>(new Surreal())
   const [status, setStatus] = useState<ConnectionStatus>("disconnected")
-  const [hasConnectedOnce, setHasConnectedOnce] = useState(false)
   const [ingestionStatus, setIngestionStatus] = useState<IngestionStatus>("disabled")
   const [error, setError] = useState<Error | null>(null)
   const [configLoaded, setConfigLoaded] = useState(false)
@@ -139,7 +107,6 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
       db.subscribe("connecting", () => setStatus("connecting")),
       db.subscribe("connected", () => {
         setStatus("connected")
-        setHasConnectedOnce(true)
         setError(null)
       }),
       db.subscribe("reconnecting", () => setStatus("reconnecting")),
@@ -171,14 +138,9 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
   useEffect(() => {
     if (!configLoaded || !configRef.current) return
     const config = configRef.current
-    connectAsViewer(
-      dbRef.current,
-      config.surrealPath,
-      config.viewerNs ?? NAMESPACE,
-      config.viewerDb ?? DATABASE,
-      config.viewerUser,
-      config.viewerPass,
-    ).catch((err) => setError(err instanceof Error ? err : new Error(String(err))))
+    connectObservations(dbRef.current, config.observationPath).catch((err) =>
+      setError(err instanceof Error ? err : new Error(String(err))),
+    )
   }, [configLoaded])
 
   // Clean up on unmount
@@ -207,7 +169,7 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
 
   // Block initial app render until first successful database connection.
   // This avoids route-level flicker and gives users a single clear loading state.
-  if (!hasConnectedOnce) {
+  if (status !== "connected") {
     return <RemoteLoadingScreen status={status} error={error} />
   }
 
@@ -346,7 +308,7 @@ const RemoteLoadingScreen = ({ status, error }: { status?: ConnectionStatus; err
     >
       <div className="w-full max-w-md text-center space-y-4 px-6">
         <div className="text-lg font-medium">{status ? statusLabel[status] : "Starting..."}</div>
-        <div className="text-sm text-muted-foreground">Initializing SurrealDB connection ({elapsedSeconds}s)</div>
+        <div className="text-sm text-muted-foreground">Connecting to observations ({elapsedSeconds}s)</div>
         <Progress className="h-2" value={status === "reconnecting" ? 35 : 65} />
         {elapsedSeconds >= 8 && !error && (
           <div className="text-xs text-muted-foreground">

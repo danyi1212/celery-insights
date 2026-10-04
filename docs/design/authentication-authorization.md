@@ -39,7 +39,7 @@ Require an HTTPS public URL and deploy HTTPS ingress. Keep Bun and database list
 
 Use one authenticated principal containing account identifier and builtin roles. Unknown application operations deny access. Check grants before dispatch and validate account authority for live delivery. Keep replay mutations prohibited and protected responses uncached. Keep public `/health` independent of authentication.
 
-The current browser SurrealDB RPC transport exposes all task payload fields. It therefore requires all payload grants, which currently means administrator access. Viewer and operator UI browsing is incomplete; adding accounts does not imply field-level enforcement. Replace browser database credentials/arbitrary RPC with typed task, event and worker reads and authorized streams before claiming restricted-role browsing or OPA resource/field restrictions. Public SQL/import/export transports remain denied.
+The browser uses Bun-owned typed observation reads and refresh subscriptions, with no database credentials or arbitrary SQL. Role payload groups and OPA scopes are projected before searching/counting/exporting. Restricted task visibility omits cross-task workflow links and summaries; opaque events and worker inspection are omitted whenever they could leak other tasks.
 
 ## OIDC integration (PR #143)
 
@@ -49,13 +49,13 @@ Configure issuer, client ID, optional client secret (`client_secret_post`) and e
 
 ## Restrictive OPA policies (#140)
 
-Bun asks OPA about an authenticated principal, required actions and normalized operation context after builtin permission checks. OPA can restrict builtin grants, never enlarge them. Strict boolean responses, bounded deadlines and response sizes fail closed. Policies and their deployment remain operator-owned. Queries cover APIs, broad RPC, exports, individual MCP tools and live messages/delivery. See [the implemented contract](../../AUTHORIZATION.md). No resource identifiers or field filtering are supported until typed observation reads/streams replace broad RPC.
+Bun asks OPA about an authenticated principal, required actions and normalized operation context after builtin permission checks. OPA can restrict builtin grants, never enlarge them. Strict boolean or bounded read-scope responses, bounded deadlines and response sizes fail closed. Policies and their deployment remain operator-owned. Queries cover APIs, typed reads, exports, individual MCP tools and live messages/delivery. See [the implemented contract](../../AUTHORIZATION.md). Exact task ID/type/worker and worker hostname selectors plus denied payload groups apply to typed reads, exports, metrics and MCP. Policy inputs identify the operation, not customer payloads.
 
 ## Delivery plan
 
 1. Land the TOML resolver and strict Python handoff (#142, merged).
 2. Deliver #143 with configured password accounts or OIDC, a login page, bounded cookie sessions and shared request authorization. Verify browser cookies and WebSockets at root and a shared prefix over TLS. Runtime/Python prerequisites remain in merged #146.
 3. Introduce typed observation reads/streams and retire browser DB credentials; verify restricted-role reads cannot expose payloads through another transport.
-5. Add restrictive OPA decisions and equivalent resource/field enforcement across all transports.
+4. Add restrictive OPA decisions and equivalent resource/field enforcement across all transports.
 
 Do not ship unsupported modes, direct database access or anonymous fallbacks as compatibility bypasses. Existing frontend-password deployments must explicitly configure accounts before upgrading.

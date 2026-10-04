@@ -233,14 +233,15 @@ describe("runSchemaMigration", () => {
     expect(coreSchema).toContain("FOR create, update, delete NONE")
   })
 
-  it("creates viewer DB user with VIEWER role and fixed password", async () => {
+  it("creates a private read-only DB user and removes the fixed browser credential", async () => {
     await runSchemaMigration(createConfig())
 
     const queries = mockDb.query.mock.calls.map((c) => c[0] as string)
-    const viewerQuery = queries.find((q) => q.includes("DEFINE USER OVERWRITE viewer"))
+    const viewerQuery = queries.find((q) => q.includes("DEFINE USER OVERWRITE observation_reader"))
     expect(viewerQuery).toBeDefined()
     expect(viewerQuery).toContain("ROLES VIEWER")
-    expect(viewerQuery).toContain("PASSWORD 'viewer'")
+    expect(viewerQuery).not.toContain("PASSWORD 'viewer'")
+    expect(queries).toContain("REMOVE USER IF EXISTS viewer ON DATABASE")
   })
 
   describe("frontend auth disabled", () => {

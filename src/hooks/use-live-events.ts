@@ -11,6 +11,7 @@ const byTimestampAsc = (a: SurrealEvent, b: SurrealEvent) =>
 /** Raw events for the events page — ordered by timestamp descending with a limit. */
 export const useLiveEvents = (limit = 100, enabled = true) =>
   useLiveQuery<SurrealEvent>({
+    request: { operation: "list", table: "event", limit },
     initialQuery: "SELECT * FROM event ORDER BY timestamp DESC LIMIT $limit",
     liveTable: "event",
     bindings: useMemo(() => ({ limit }), [limit]),
@@ -23,6 +24,7 @@ export const useLiveEvents = (limit = 100, enabled = true) =>
 export const useTaskEvents = (taskId: string) => {
   const filter = useCallback((e: SurrealEvent) => e.task_id === taskId, [taskId])
   return useLiveQuery<SurrealEvent>({
+    request: { operation: "list", table: "event", taskId, sortDirection: "ASC", limit: 10000 },
     initialQuery: "SELECT * FROM event WHERE task_id = $taskId ORDER BY timestamp",
     liveTable: "event",
     bindings: useMemo(() => ({ taskId }), [taskId]),

@@ -4,8 +4,14 @@ import rego.v1
 
 default allow := false
 
+allow := true if {
+    input.version == 1
+    input.principal.account_id != "policy-admin"
+}
+
 allow := object.get(data.fixture, "result", true) if {
     input.version == 1
+    input.principal.account_id == "policy-admin"
     not blocked
 }
 

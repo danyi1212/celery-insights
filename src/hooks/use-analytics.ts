@@ -1,3 +1,4 @@
+import { queryObservation } from "@lib/observation-query"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Table, type ConnectionStatus, type LiveMessage, type LiveSubscription } from "surrealdb"
 import type { TimeRange } from "@danyi1212/time-range-picker"
@@ -78,9 +79,11 @@ export const useAnalytics = (timeRange: TimeRange = createDefaultTimeRange()) =>
 
   const runQueries = useCallback(async () => {
     try {
-      const [throughput, failureRate, durationByType, workerLoad] = await db.query<
+      const [throughput, failureRate, durationByType, workerLoad] = await queryObservation<
         [ThroughputPoint[], FailureRatePoint[], DurationByType[], WorkerLoadPoint[]]
       >(
+        db,
+        { operation: "analytics", ...bindings },
         // Task throughput: tasks per bucket over time
         `SELECT
                     time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket,

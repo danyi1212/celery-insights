@@ -78,6 +78,11 @@ export class ObservationApi {
       dead_worker_retention_hours: config.deadWorkerRetentionHours ?? null,
     }
   }
+  withDatabase(db: Pick<Surreal, "query">): ObservationApi {
+    const view = new ObservationApi(db, this.config, this.bridgeStatus)
+    view.retention = this.retention
+    return view
+  }
   async rows(sql: string, bindings: Record<string, unknown> = {}): Promise<Row[]> {
     const results = await this.db.query<[Row[]]>(sql, bindings).json().collect()
     const rows = results.at(-1)
