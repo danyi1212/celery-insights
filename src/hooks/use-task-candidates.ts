@@ -1,3 +1,4 @@
+import { queryObservation } from "@lib/observation-query"
 import { useCallback, useEffect, useState } from "react"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import { parseTask, type SurrealTask, type Task } from "@/types/surreal-records"
@@ -20,7 +21,12 @@ export const useTaskCandidates = (taskType?: string) => {
         query = "SELECT * FROM task ORDER BY last_updated DESC LIMIT 20"
         bindings = {}
       }
-      const [result] = await db.query<[SurrealTask[]]>(query, bindings)
+      const [result] = await queryObservation<[SurrealTask[]]>(
+        db,
+        { operation: "list", type: taskType, limit: 20 },
+        query,
+        bindings,
+      )
       const tasks = Array.isArray(result) ? result : []
       setCandidates(tasks.map(parseTask))
     } catch {

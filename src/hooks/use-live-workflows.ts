@@ -10,6 +10,7 @@ const byTaskLastUpdatedDesc = (a: SurrealTask, b: SurrealTask) =>
 
 export const useLiveWorkflows = (limit = 12) =>
   useLiveQuery<SurrealWorkflow>({
+    request: { operation: "list", table: "workflow", limit },
     initialQuery: "SELECT * FROM workflow ORDER BY last_updated DESC LIMIT $limit",
     liveTable: "workflow",
     bindings: useMemo(() => ({ limit }), [limit]),
@@ -22,6 +23,7 @@ export const useLiveWorkflowTasks = (workflowIds: string[]) => {
   const bindings = useMemo(() => ({ workflowIds: sortedIds }), [sortedIds])
 
   return useLiveQuery<SurrealTask>({
+    request: { operation: "list", table: "task", workflowIds: sortedIds, limit: 200 },
     initialQuery: "SELECT * FROM task WHERE workflow_id IN $workflowIds ORDER BY last_updated DESC LIMIT 200",
     liveTable: "task",
     bindings,

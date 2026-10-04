@@ -138,7 +138,7 @@ export function policyService(command: "stop" | "start"): void {
 }
 
 export function verifyPolicyExamples(): void {
-  for (const name of ["maintenance", "no-payload", "mcp-tools"])
+  for (const name of ["maintenance", "no-payload", "mcp-tools", "task-scope"])
     execFileSync(
       "docker",
       [

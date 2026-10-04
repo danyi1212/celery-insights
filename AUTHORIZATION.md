@@ -41,37 +41,75 @@ Insights POSTs the following JSON to the configured URL, using OPA's [Data API](
 }
 ```
 
-`actions` lists **every** built-in permission required for the operation. Return one boolean decision for the entire operation. `request.path` excludes the configured deployment prefix and query string. `transport` is `http`, `websocket`, or `mcp`; tool checks also include `request.tool`. No password, user headers, URL query, body, task payload, client IP, or resource identifier is sent. Account identifiers are case-sensitive configured usernames. There is one cluster per installation.
+`actions` lists **every** built-in permission required for the operation. Return a boolean veto or an allow decision with a read scope for the entire operation. `request.path` excludes the configured deployment prefix and query string. `transport` is `http`, `websocket`, or `mcp`; tool checks also include `request.tool`; typed reads include `request.operation`. No password, user headers, URL query, body, task payload, client IP, or resource identifier is sent. Account identifiers are case-sensitive configured usernames. There is one cluster per installation.
 
-Only a successful HTTP response containing `{"result":true}` allows access. `false` returns 403. Undefined rules, missing results, non-boolean values, malformed/oversized responses (over 16 KiB), HTTP/network/TLS errors and timeouts return 503 and prevent the operation. Error details and credentials are not exposed. An OPA outage blocks protected operations and browser navigation; `/health` and public assets remain available. There is no fail-open mode. MCP tool vetoes use its standard `isError` result with `access_denied` or `unavailable`, rather than dispatching the tool.
+A successful HTTP response containing `{"result":true}` allows role-permitted access. `{"result":{"allow":true,"scope":{...}}}` additionally restricts reads as described below. `false` returns 403. Undefined rules, missing results, invalid decision types/scopes, malformed/oversized responses (over 16 KiB), HTTP/network/TLS errors and timeouts return 503 and prevent the operation. Error details and credentials are not exposed. An OPA outage blocks protected operations and browser navigation; `/health` and public assets remain available. There is no fail-open mode. MCP tool vetoes use its standard `isError` result with `access_denied` or `unavailable`, rather than dispatching the tool.
 
 ## Enforcement coverage
 
 | Operation | Required permissions |
 | --- | --- |
 | Navigation and `GET /api/auth/identity` | Empty actions; policies can still deny the principal or path |
-| `GET /api/config` | All payload permissions |
+| `GET /api/config` | `task.metadata.read`; returns an application endpoint, no database credentials |
 | `GET /api/settings/info`, `/api/settings/debug-snapshot` | `diagnostics.export` |
 | `POST /api/settings/download-debug-bundle` | `diagnostics.export`, `backup.export`, all payload permissions |
 | `POST /api/settings/clear` | `history.clear` |
-| `GET /api/settings/export` | `backup.export`, all payload permissions |
+| `GET /api/settings/export` | `backup.export`, all payload permissions; scoped backup |
 | `POST /api/settings/import` | `backup.import` |
 | `GET /api/settings/retention` | `analytics.read` |
 | `PUT /api/settings/retention` | `retention.update`, `analytics.read` |
 | `POST /api/settings/cleanup` | `cleanup.run`, `analytics.read` |
-| `POST /api/exports/csv` | `task.export`, all payload permissions |
+| `POST /api/exports/csv` | `task.export`, all payload permissions; scoped CSV |
 | `GET /metrics`, `/metrics/system` | `metrics.read` |
 | `GET /metrics/verbose` | `metrics.read`, `task.metadata.read`, `worker.metadata.read`, `task.failure.read` |
-| Database RPC HTTP reads and WebSocket upgrade/messages/delivery | All payload permissions |
+| `/api/observation/rpc` upgrade/messages/refresh | `task.metadata.read`; each typed read checks its permissions separately |
 | `/mcp` and every tool call | All payload permissions; tool calls additionally identify their tool |
 
 All payload permissions means `task.metadata.read`, `task.input.read`, `task.result.read`, `task.failure.read`, `event.raw.read`, `worker.metadata.read`, and `worker.inspect.read`. Unknown application/API transports remain denied. `diagnostics.secrets.export` is always forbidden. Origin and mutation-header checks run before policy queries.
 
 Identity's `permissions` list describes role grants, not a prediction of contextual OPA decisions. The server checks each operation independently. UI controls may remain visible even when a policy denies their request. Periodic ingestion/polling and automatic retention cleanup are internal service work, unaffected by user policies; disable/configure them through deployment settings if needed.
 
-Live connections recheck on opening, each client message, and before each backend delivery. Denial or policy failure closes them with code 1008 and discards pending data. Checks preserve message order with at most 64 queued messages per direction; overload also closes the connection. An idle connection is checked on its next activity. Decisions already approved may finish; this is not transaction-time revocation. Large exports/HTTP responses receive one check before execution, not a per-chunk check.
+The production browser uses `/api/observation/rpc`, a Bun-owned typed read endpoint. HTTP POST accepts a validated operation descriptor; the WebSocket uses the existing SDK encoding for the same descriptors and refresh subscriptions. Arbitrary SQL, database sign-in, writes, transactions and all `/surreal/*` routes are denied. The embedded demo still queries its local WASM database.
 
-**Current scope:** browser RPC and MCP need all payload grants. Policies can deny browsing, payload access, individual MCP tools, exports or mutations, but cannot filter rows, redact fields, restrict individual task IDs, or rewrite queries. Denying any payload permission denies the entire broad transport/export. Typed reads and streams are required before resource-specific authorization can be offered. Viewer/operator UI browsing remains incomplete. Ingress must keep direct Bun/database/bridge listeners private; bypassing Bun bypasses policy enforcement.
+Typed operations are `list`, `explorer`, `events`, `search`, `home`, `analytics`, `exceptions`, `counts`, `task-workflow`, and `export`. Tables are `task`, `worker`, `event`, and `workflow`. Limits are 1–10000 rows; selectors/search strings are bounded, sort fields are enumerated, and values become SQL bindings. Task/workflow reads require `task.metadata.read`, worker reads require `worker.metadata.read`, events require `task.metadata.read` and `event.raw.read`, search requires task/worker metadata, analytics/counts/home require `analytics.read`, exceptions additionally require `task.failure.read`, and `export` additionally requires `task.export`. Read decisions also list role-permitted payload groups that the operation can return, so a boolean policy can veto payload access. A structured scope can instead redact those groups while allowing the read. These are application APIs, not a public query language.
+
+Live connections recheck each client message, before replies, and every five seconds, including idle connections. A changed scope, denial or unavailable policy closes the connection with code 1008 and discards queued work. Refresh signals contain no database records and follow a fixed cadence independent of hidden task activity. The browser repeats authorized reads; connection loss unmounts observation views and their query cache. At most 64 pending messages and 32 subscriptions are allowed per socket; replies are bounded to 16 MiB. HTTP exports are checked before execution, not per chunk. Previously delivered data cannot be recalled.
+
+## Task visibility and payload restrictions
+
+For example, OPA can return:
+
+```json
+{
+  "result": {
+    "allow": true,
+    "scope": {
+      "task_types": ["reports.render"],
+      "task_workers": ["celery@reports"],
+      "worker_hostnames": ["celery@reports"],
+      "deny_fields": ["task.input.read", "task.result.read", "task.failure.read", "event.raw.read", "worker.inspect.read"]
+    }
+  }
+}
+```
+
+The strict scope has these optional selectors:
+
+| Selector | Meaning |
+| --- | --- |
+| `task_ids` | Exact Celery task IDs (without the database table prefix) |
+| `task_types` | Exact Celery task type names |
+| `task_workers` | Exact worker names on task records |
+| `worker_hostnames` | Exact worker record IDs; independently limits worker reads |
+| `deny_fields` | Payload permission groups to remove |
+
+Each selector accepts up to 100 nonempty strings of at most 256 characters. Defined selectors intersect; an empty array allows no records, and an omitted selector places no restriction. `deny_fields` defaults to empty and accepts only the five payload groups shown above: input removes args/kwargs, result removes result/truncation status, failure removes exception/traceback, raw events remove opaque event payloads, and worker inspection removes opaque inspect snapshots. Built-in role restrictions are always added, so OPA cannot expose fields outside the role. Unknown scope keys, wildcards, expressions and arbitrary field paths are rejected. Multiple decisions for an operation are intersected; none can widen an earlier scope.
+
+Filtering and projection run inside server-owned database reads **before** client search, sorting, facets, counts, analytics and pagination. Hidden IDs behave like absent records. CSV, JSON backups, metrics and MCP use the same database view. MCP cursors are bound to the configured account and effective scope; changing either invalidates a cursor. Direct payload sections denied by policy return an access error; overview fields are unavailable rather than invented empty payloads.
+
+Task-constrained accounts receive no parent/root/workflow links or cross-task workflow summaries. Workflow MCP tools are denied for them. Opaque event data and worker inspection snapshots are omitted whenever a scope is restricted, since those JSON/text blobs can contain other task IDs and payloads. Worker task counters are omitted with row constraints. Global diagnostics, imports, history clearing, retention changes and manual cleanup require unrestricted policy access; scoped metrics omit hidden rows and `/metrics/system` is denied for row scopes. Scoped accounts still receive deployment retention settings with scoped record counts.
+
+These bounded selectors deliberately do not translate arbitrary Rego into SQL or implement nested JSON redaction. A worker selector alone restricts worker reads; combine it with `task_workers` when task visibility should also be restricted. Ingress must keep direct Bun/database/bridge listeners private; bypassing Bun bypasses policy enforcement.
 
 ## Rego examples
 
@@ -79,6 +117,7 @@ Each example is an independent policy defining `data.celery_insights.allow`; loa
 
 - [Block monitoring-account mutations](examples/opa/maintenance.rego): deny restore, clear, retention changes and manual cleanup for `monitor`.
 - [Block sensitive payload access](examples/opa/no-payload.rego): deny broad browsing/MCP/exports for `monitor`, while role-permitted metrics and metadata remain possible.
+- [Scope tasks and redact payloads](examples/opa/task-scope.rego): `monitor` sees only one task type on one worker, with payload fields removed.
 - [Limit an agent to one MCP tool](examples/opa/mcp-tools.rego): only `list_workers` is permitted for account `agent` through MCP. Other application transports remain role-permitted; combine with endpoint restrictions if the account must be MCP-only.
 
 Example local Docker smoke test using the version exercised by the E2E suite:
@@ -100,7 +139,7 @@ Do not use this unauthenticated published API beyond a local smoke test. Product
 
 ## Verification
 
-Unit tests cover role ceilings, replay and secret-export restrictions, every registered route, the credential-free input contract, normalized prefixes, strict responses, body limits, deadlines and live ordering/overload. Real OPA E2E scenarios deny each permission required at each registered API, broad HTTP RPC, navigation/identity, all five MCP tools, and WebSocket upgrades/active delivery; verify viewer grants cannot expand, denied writes leave retention/history intact, and policy outage/malformed decisions fail closed. Existing root and shared-proxy browser suites run with OPA enabled to exercise permitted operations too.
+Unit tests cover role ceilings, replay and secret-export restrictions, every registered route, the credential-free input contract, normalized prefixes, strict responses, body limits, deadlines and live ordering/overload. Real OPA E2E scenarios deny each permission required at each registered API, typed reads and forbidden raw RPC, navigation/identity, all five MCP tools, and WebSocket upgrades/refreshes, row scopes, payload projections, searches/counts/exports and cache clearing; verify viewer grants cannot expand, denied writes leave retention/history intact, and policy outage/malformed decisions fail closed. Existing root and shared-proxy browser suites run with OPA enabled to exercise permitted operations too.
 
 ```sh
 bunx vitest run runtime/security

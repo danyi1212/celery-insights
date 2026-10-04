@@ -114,8 +114,8 @@ describe("restrictive OPA decisions", () => {
       ...routePermissions,
       "GET /": [],
       "GET /api/auth/identity": [],
-      "GET /surreal/rpc": payloadPermissions,
-      "POST /surreal/rpc": payloadPermissions,
+      "GET /api/observation/rpc": ["task.metadata.read"],
+      "POST /api/observation/rpc": ["task.metadata.read"],
       "POST /mcp": payloadPermissions,
     }
     for (const [route, actions] of Object.entries(routes)) {
@@ -142,7 +142,7 @@ describe("restrictive OPA decisions", () => {
       new Authorization({ ...config, opaBearerToken: "PRIVATE-OPA" }, fetch),
     )
     const response = await secureApplicationRequest(
-      new Request(snapshot.public_origin + "/surreal/rpc", { headers: { ...headers, upgrade: "websocket" } }),
+      new Request(snapshot.public_origin + "/api/observation/rpc", { headers: { ...headers, upgrade: "websocket" } }),
       "",
       auth,
       false,

@@ -1,3 +1,4 @@
+import { taskScoped, restricted, type ReadScope } from "../security/read-scope"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
 import { HttpError } from "../http-error"
@@ -28,7 +29,11 @@ export interface McpOptions {
   cursorSecret: string
   mode: () => Mode
   allowedHosts?: string[]
-  authorize?: (request: Request, tool: ToolName) => Promise<void>
+  readScope?: ReadScope
+  authorize?: (
+    request: Request,
+    tool: ToolName,
+  ) => Promise<void | { db: Pick<Surreal, "query">; cursorSecret: string; readScope: ReadScope }>
   now?: () => number
 }
 export class McpTools {
@@ -46,6 +51,26 @@ export class McpTools {
         parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; "),
       )
     const { scope, position } = this.cursors.resolve(tool, parsed.data)
+    const read = this.options.readScope
+    if (read) {
+      if (taskScoped(read) && ["search_workflows", "inspect_workflow"].includes(tool))
+        throw new ToolError("access_denied", "Workflow inspection requires unrestricted task visibility.")
+      if (tool === "inspect_worker" && restricted(read) && scope.section && scope.section !== "overview")
+        throw new ToolError("access_denied", "Worker inspection details are unavailable for this scope.")
+      const fields = {
+        input: "task.input.read",
+        output: "task.result.read",
+        error: "task.failure.read",
+        history: "event.raw.read",
+      } as const
+      if (
+        tool === "inspect_task" &&
+        typeof scope.section === "string" &&
+        scope.section in fields &&
+        read.deny_fields.includes(fields[scope.section as keyof typeof fields])
+      )
+        throw new ToolError("access_denied", "Payload section is denied by policy.")
+    }
     const queries = new Queries(this.options.db)
     const results = new Results(tool, scope, this.cursors, this.options.mode(), this.now)
     const now = this.now()
@@ -87,8 +112,8 @@ export const createMcpHandler = (options: McpOptions): ((request: Request) => Pr
         },
         async (input: Row) => {
           try {
-            await options.authorize?.(request, tool)
-            const result = await tools.call(tool, input)
+            const access = await options.authorize?.(request, tool)
+            const result = await (access ? new McpTools({ ...options, ...access }) : tools).call(tool, input)
             return { content: [{ type: "text" as const, text: JSON.stringify(result) }], structuredContent: result }
           } catch (error) {
             const failure =

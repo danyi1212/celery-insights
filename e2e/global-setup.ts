@@ -121,7 +121,7 @@ async function waitForSurrealRpcReady() {
 
 async function probeWebSocketUpgrade(): Promise<UpgradeProbeResult> {
   return new Promise((resolve) => {
-    const destination = new URL(appURL("/surreal/rpc"))
+    const destination = new URL(appURL("/api/observation/rpc"))
     const req = (destination.protocol === "https:" ? https : http).request(destination, {
       ...fixtureTlsOptions(),
       headers: {
@@ -129,6 +129,7 @@ async function probeWebSocketUpgrade(): Promise<UpgradeProbeResult> {
         Connection: "Upgrade",
         Upgrade: "websocket",
         "Sec-WebSocket-Version": "13",
+        "Sec-WebSocket-Protocol": "cbor",
         "Sec-WebSocket-Key": randomBytes(16).toString("base64"),
       },
     })

@@ -44,7 +44,7 @@ describe("Bun configured-account gate", () => {
     expect((await response)?.status).toBe(503)
     expect(dispatch).not.toHaveBeenCalled()
   })
-  it.each(["/", "/settings", "/api/settings/info", "/metrics", "/surreal/rpc", "/mcp"])(
+  it.each(["/", "/settings", "/api/settings/info", "/metrics", "/api/observation/rpc", "/mcp"])(
     "protects navigation and API responses: %s",
     async (path) => {
       const { response } = run(request(path))
@@ -57,6 +57,7 @@ describe("Bun configured-account gate", () => {
   it("denies unregistered routes and arbitrary DB transports", async () => {
     for (const path of [
       "/api/unknown",
+      "/surreal/rpc",
       "/surreal/sql",
       "/surreal/import",
       "/surreal/export",
@@ -104,8 +105,10 @@ describe("Bun configured-account gate", () => {
       { "sec-fetch-site": "cross-site" },
       { upgrade: "websocket" },
     ])
-      expect((await run(request("/surreal/rpc", "GET", headers)).response)?.status).toBe(403)
-    expect((await run(request("/surreal/rpc", "GET", { upgrade: "websocket", origin })).response)?.status).toBe(200)
+      expect((await run(request("/api/observation/rpc", "GET", headers)).response)?.status).toBe(403)
+    expect((await run(request("/api/observation/rpc", "GET", { upgrade: "websocket", origin })).response)?.status).toBe(
+      200,
+    )
   })
   it("keeps public probes/assets available and honors the configured prefix", async () => {
     expect((await run(request("/health", "GET", { authorization: "" }), null).response)?.status).toBe(200)

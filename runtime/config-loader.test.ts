@@ -27,6 +27,7 @@ describe("Bun configuration resolver", () => {
         CELERY_INSIGHTS_SEARCH_INDEXING_ENABLED: "false",
       }).config.searchIndexingEnabled,
     ).toBe(false)
+  })
   it("validates optional OPA configuration and redacts service credentials", () => {
     expect(fromToml("").config.opaDecisionUrl).toBeUndefined()
     const resolved = fromToml(

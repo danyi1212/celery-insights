@@ -1,3 +1,4 @@
+import { emptyScope, principalScope, readScopeSchema, requireUnrestricted, type ReadScope } from "./read-scope"
 import type { Config } from "../config"
 import { AuthError, authorize, type Permission, type Principal } from "./permissions"
 
@@ -7,9 +8,10 @@ export interface PolicyContext {
   path: string
   transport: "http" | "websocket" | "mcp"
   tool?: string
+  operation?: string
 }
 
-/** Roles are the permission ceiling. OPA supplies one additional, uncached veto. */
+/** Roles are the permission ceiling. OPA adds an uncached veto or a narrower read scope. */
 export class Authorization {
   constructor(
     private readonly config: Pick<Config, "opaDecisionUrl" | "opaTimeoutMs" | "opaBearerToken"> = {
@@ -23,9 +25,9 @@ export class Authorization {
     actions: readonly Permission[],
     request: PolicyContext,
     replay = false,
-  ): Promise<void> {
+  ): Promise<ReadScope> {
     authorize(principal, actions, replay)
-    if (!this.config.opaDecisionUrl) return
+    if (!this.config.opaDecisionUrl) return principalScope(principal, emptyScope())
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), this.config.opaTimeoutMs)
     try {
@@ -57,9 +59,26 @@ export class Authorization {
         await reader.cancel()
       }
       const decision: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"))
-      if (!decision || typeof decision !== "object" || !("result" in decision) || typeof decision.result !== "boolean")
-        throw new Error("Invalid decision")
-      if (!decision.result) throw new AuthError(403, "Access denied by policy")
+      if (!decision || typeof decision !== "object" || !("result" in decision)) throw new Error("Invalid decision")
+      let scope = emptyScope()
+      if (typeof decision.result === "boolean") {
+        if (!decision.result) throw new AuthError(403, "Access denied by policy")
+      } else {
+        const result = decision.result
+        if (
+          !result ||
+          typeof result !== "object" ||
+          !("allow" in result) ||
+          typeof result.allow !== "boolean" ||
+          Object.keys(result).some((key) => !["allow", "scope"].includes(key))
+        )
+          throw new Error("Invalid decision")
+        if (!result.allow) throw new AuthError(403, "Access denied by policy")
+        if (!("scope" in result)) throw new Error("Missing read scope")
+        scope = readScopeSchema.parse(result.scope)
+      }
+      requireUnrestricted(scope, actions)
+      return principalScope(principal, scope)
     } catch (error) {
       if (error instanceof AuthError) throw error
       // Never return policy errors, response bodies, URLs or service credentials to a caller.

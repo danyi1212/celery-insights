@@ -70,12 +70,8 @@ describe("SurrealDBProvider — remote mode", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
-          surrealPath: "/surreal/rpc",
+          observationPath: "/api/observation/rpc",
           ingestionStatus: "leader",
-          viewerUser: "viewer",
-          viewerPass: "viewer",
-          viewerNs: "celery_insights",
-          viewerDb: "main",
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
@@ -148,7 +144,7 @@ describe("SurrealDBProvider — remote mode", () => {
     vi.useRealTimers()
   })
 
-  it("connects as viewer user when Bun has authenticated the application", async () => {
+  it("connects to typed observations after application authentication", async () => {
     render(
       <SurrealDBProvider>
         <ConsumerComponent />
@@ -156,19 +152,7 @@ describe("SurrealDBProvider — remote mode", () => {
     )
 
     await waitFor(() => {
-      expect(mockConnect).toHaveBeenCalledWith(
-        expect.stringContaining("/surreal/rpc"),
-        expect.objectContaining({
-          namespace: "celery_insights",
-          database: "main",
-          authentication: {
-            namespace: "celery_insights",
-            database: "main",
-            username: "viewer",
-            password: "viewer",
-          },
-        }),
-      )
+      expect(mockConnect).toHaveBeenCalledWith(expect.stringContaining("/api/observation/rpc"))
     })
   })
 
