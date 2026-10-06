@@ -17,8 +17,6 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, ...prop
   const { worker } = useWorker(workerId)
   const { stats, isLoading, error } = useWorkerStats(workerId)
 
-  const heartbeatExpires = worker?.heartbeat_expires ? new Date(worker.heartbeat_expires) : undefined
-
   return (
     <Panel title="Worker" loading={isLoading} error={error} actions={<CopyLinkButton />} {...props}>
       <div className="grid grid-cols-12 gap-2 p-2">
@@ -61,11 +59,11 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, ...prop
         <div className="col-span-12 md:col-span-6">
           <DetailItem
             label="Status"
-            description="Amount of time until the worker is considered offline"
-            color={heartbeatExpires && heartbeatExpires < new Date() ? "danger" : "primary"}
+            description="Latest worker status observed through events and inspection"
+            color={worker?.status === "offline" ? "danger" : "primary"}
             value={
               <div>
-                <WorkerStatus heartbeatExpires={heartbeatExpires || new Date()} />
+                <WorkerStatus status={worker?.status} />
               </div>
             }
           />

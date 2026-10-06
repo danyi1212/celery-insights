@@ -1,31 +1,20 @@
-import { useNow } from "@hooks/use-now"
 import { cn } from "@lib/utils"
-import React, { useMemo } from "react"
+import React from "react"
 
 interface WorkerStatusProps {
-  heartbeatExpires?: Date
+  status?: string
 }
 
-const WorkerStatus: React.FC<WorkerStatusProps> = ({ heartbeatExpires }) => {
-  const now = useNow(heartbeatExpires ? 1000 : undefined)
-  const { status, colorClass } = useMemo(() => {
-    if (!heartbeatExpires) return { status: "Unknown", colorClass: "text-status-warning" }
-    const secondsLeft = (heartbeatExpires.getTime() - now.getTime()) / 1000
-    if (secondsLeft < 0) {
-      return {
-        status: `Offline`,
-        colorClass: "text-destructive",
-      }
-    } else if (secondsLeft < 1) {
-      return {
-        status: `Unresponsive`,
-        colorClass: "text-status-warning",
-      }
-    } else {
-      return { status: "Online", colorClass: "text-foreground" }
-    }
-  }, [heartbeatExpires, now])
-  return <span className={cn("text-base", colorClass)}>{status}</span>
-}
+const WorkerStatus: React.FC<WorkerStatusProps> = ({ status }) => (
+  <span
+    className={cn("text-base", {
+      "text-foreground": status === "online",
+      "text-destructive": status === "offline",
+      "text-status-warning": status !== "online" && status !== "offline",
+    })}
+  >
+    {status === "online" ? "Online" : status === "offline" ? "Offline" : "Unknown"}
+  </span>
+)
 
 export default WorkerStatus
