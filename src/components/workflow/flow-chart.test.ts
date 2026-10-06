@@ -33,6 +33,36 @@ describe("getFlowGraph", () => {
       ["actual-parent", "child"],
     ])
   })
+  it("gives a parentless child one parent when several stored children lists claim it", () => {
+    const tasks = [
+      createTask({ id: "root", children: ["a", "b"] }),
+      createTask({ id: "a", parent_id: "root", children: ["shared"] }),
+      createTask({ id: "b", parent_id: "root", children: ["shared"] }),
+      createTask({ id: "shared" }),
+    ]
+
+    const { nodes, edges } = getFlowGraph(tasks, "root")
+
+    expect(nodes.map((node) => node.id)).toEqual(["root", "a", "shared", "b"])
+    expect(edges.map((edge) => [edge.source, edge.target])).toEqual([
+      ["root", "a"],
+      ["a", "shared"],
+      ["root", "b"],
+    ])
+  })
+
+  it("never re-adds the root as a child from a stale children list", () => {
+    const tasks = [
+      createTask({ id: "root", children: ["child"] }),
+      createTask({ id: "child", parent_id: "root", children: ["root"] }),
+    ]
+
+    const { nodes, edges } = getFlowGraph(tasks, "root")
+
+    expect(nodes.map((node) => node.id)).toEqual(["root", "child"])
+    expect(edges.map((edge) => [edge.source, edge.target])).toEqual([["root", "child"]])
+  })
+
   it("creates a single node for a root task with no children", () => {
     const root = createTask({ id: "root" })
     const { nodes, edges } = getFlowGraph([root], "root")

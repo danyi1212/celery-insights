@@ -40,7 +40,7 @@ function createEdge(sourceId: string, targetId: string): Edge {
   }
 }
 
-const getChildMap = (tasks: Task[]): Map<string, Task[]> => {
+const getChildMap = (tasks: Task[], rootTaskId: string): Map<string, Task[]> => {
   const map = new Map<string, Task[]>()
   const taskMap = new Map(tasks.map((task) => [task.id, task]))
   for (const task of tasks)
@@ -50,10 +50,13 @@ const getChildMap = (tasks: Task[]): Map<string, Task[]> => {
 
       map.get(id)?.push(task)
     }
+  // Stored children lists can be stale; a parentless child gets at most one fallback parent.
+  const claimed = new Set<string>([rootTaskId])
   for (const parent of tasks) {
-    for (const childId of new Set(parent.children)) {
+    for (const childId of parent.children) {
       const child = taskMap.get(childId)
-      if (!child || child.parent_id) continue
+      if (!child || child.parent_id || claimed.has(childId)) continue
+      claimed.add(childId)
       if (!map.has(parent.id)) map.set(parent.id, [])
       map.get(parent.id)?.push(child)
     }
@@ -72,7 +75,7 @@ export const getFlowGraph = (
   const nodes: Node[] = []
   const edges: Edge[] = []
   const taskMap = new Map<string, Task>(tasks.map((task) => [task.id, task]))
-  const childMap = getChildMap(tasks)
+  const childMap = getChildMap(tasks, rootTaskId)
   const visited = new Set<string>()
 
   function dfs(task: Task, x: number, y: number) {
