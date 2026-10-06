@@ -81,8 +81,10 @@ describe("getTaskEndTime", () => {
     expect(getTaskEndTime(task, now)).toEqual(new Date("2024-01-01T11:25:00Z"))
   })
 
-  it("falls back to now when no terminal timestamp exists", () => {
+  it("falls back to now for an unfinished task without a finish timestamp", () => {
     const task = createTask({
+      state: TaskState.RECEIVED,
+      started_at: undefined,
       succeeded_at: undefined,
       failed_at: undefined,
       retried_at: undefined,
@@ -90,6 +92,20 @@ describe("getTaskEndTime", () => {
       revoked_at: undefined,
     })
     expect(getTaskEndTime(task, now)).toEqual(now)
+  })
+
+  it("freezes an undated finished task at its last update instead of now", () => {
+    const task = createTask({
+      state: TaskState.SUCCESS,
+      succeeded_at: undefined,
+      failed_at: undefined,
+      retried_at: undefined,
+      rejected_at: undefined,
+      revoked_at: undefined,
+      last_updated: new Date("2024-01-01T11:05:00Z"),
+    })
+    expect(getTaskEndTime(task, now)).toEqual(new Date("2024-01-01T11:05:00Z"))
+    expect(getTaskEndTime(task, new Date(now.getTime() + 60_000))).toEqual(new Date("2024-01-01T11:05:00Z"))
   })
 })
 
@@ -107,6 +123,7 @@ describe("computeTaskPhases", () => {
       succeeded_at: undefined,
     })
     const phase = computeTaskPhases(task, now).at(-1)!
+    expect(phase.kind).toBe("running")
     expect(phase.label).toBe("Execution unconfirmed")
     expect(phase.endMs).toBe(task.execution_observed_at!.getTime())
     expect(computeTaskPhases(task, new Date(now.getTime() + 60_000)).at(-1)).toEqual(phase)

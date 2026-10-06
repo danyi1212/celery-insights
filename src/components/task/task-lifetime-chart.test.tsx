@@ -74,6 +74,18 @@ describe("TaskLifetimeChart", () => {
     expect(screen.getByText("Live")).toBeInTheDocument()
   })
 
+  it.each([TaskState.PENDING, TaskState.RECEIVED])("keeps the live indicator for an unfinished %s task", (state) => {
+    const task = createTask({
+      state,
+      sent_at: new Date(MOCK_NOW.getTime() - 5000),
+      received_at: state === TaskState.RECEIVED ? new Date(MOCK_NOW.getTime() - 4000) : undefined,
+      started_at: undefined,
+      succeeded_at: undefined,
+    })
+    render(<TaskLifetimeChart task={task} />)
+    expect(screen.getByText("Live")).toBeInTheDocument()
+  })
+
   it("does not show live indicator for terminal tasks", () => {
     const task = createTask({
       state: TaskState.SUCCESS,

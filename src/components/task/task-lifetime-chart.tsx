@@ -58,7 +58,9 @@ const TaskLifetimeChart: React.FC<TaskLifetimeChartProps> = ({
   minPhaseWidth = 2,
 }) => {
   const now = useNow(!isTerminalState(task.state) ? REALTIME_INTERVAL : undefined)
-  const isActive = task.state === TaskState.STARTED && getTaskExecution(task, now.getTime()) === "active"
+  const isActive =
+    !isTerminalState(task.state) &&
+    (task.state !== TaskState.STARTED || getTaskExecution(task, now.getTime()) === "active")
   const executionLabel = task.state === TaskState.STARTED && !isActive ? "Execution unconfirmed" : "Running"
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)

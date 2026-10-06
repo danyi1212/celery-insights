@@ -9,6 +9,7 @@ import { getTaskExecution, TASK_EXECUTION_LABELS, type TaskExecutionObservation 
 interface TaskStateBadgeProps {
   state: TaskState | string
   className?: string
+  /** Omit for aggregate states such as workflow rollups; the badge then shows the plain state. */
   execution?: TaskExecutionObservation
 }
 
@@ -57,10 +58,11 @@ const badgeMeta: Record<string, BadgeMeta> = {
 }
 
 export default function TaskStateBadge({ state, className, execution }: TaskStateBadgeProps) {
-  const now = useNow(state === TaskState.STARTED ? 10_000 : undefined)
+  const annotated = state === TaskState.STARTED && execution !== undefined
+  const now = useNow(annotated ? 10_000 : undefined)
   const observed = getTaskExecution(execution ?? {}, now.getTime())
   const meta =
-    state === TaskState.STARTED && observed !== "active"
+    annotated && observed !== "active"
       ? { icon: CircleHelp, className: "border-status-warning/30 bg-status-warning/10 text-status-warning" }
       : (badgeMeta[state] ?? badgeMeta[TaskState.PENDING])
   const Icon = meta.icon
@@ -69,7 +71,7 @@ export default function TaskStateBadge({ state, className, execution }: TaskStat
     <Badge variant="outline" className={cn("gap-1.5 border font-semibold", meta.className, className)}>
       <Icon className="size-3.5" />
       {state}
-      {state === TaskState.STARTED && ` · ${TASK_EXECUTION_LABELS[observed]}`}
+      {annotated && ` · ${TASK_EXECUTION_LABELS[observed]}`}
     </Badge>
   )
 }

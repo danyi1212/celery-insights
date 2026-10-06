@@ -1,7 +1,10 @@
 import { getTaskExecution } from "@utils/task-execution"
 import { TaskState, type Task } from "@/types/surreal-records"
 
+export type TaskPhaseKind = "queue" | "worker" | "running"
+
 export interface TaskPhase {
+  kind: TaskPhaseKind
   label: string
   color: string
   startMs: number
@@ -28,8 +31,7 @@ const getStartedAt = (task: Task): Date | undefined => task.started_at || task.r
 const getReceivedAt = (task: Task): Date | undefined => task.received_at || task.revoked_at
 
 export const getTaskEndTime = (task: Task, now: Date): Date => {
-  const finished = isTerminalState(task.state) ? getFinishedAt(task) : undefined
-  if (finished) return finished
+  if (isTerminalState(task.state)) return getFinishedAt(task) ?? task.last_updated
   if (task.state === TaskState.STARTED && getTaskExecution(task, now.getTime()) !== "active") {
     return new Date(
       Math.min(
@@ -63,6 +65,7 @@ export const computeTaskPhases = (task: Task, now: Date): TaskPhase[] => {
   // Queue phase: sentAt -> receivedAt
   if (receivedMs > sentMs) {
     phases.push({
+      kind: "queue",
       label: "Waiting in Queue",
       color: PHASE_COLORS.queue,
       startMs: sentMs,
@@ -74,6 +77,7 @@ export const computeTaskPhases = (task: Task, now: Date): TaskPhase[] => {
   // Worker phase: receivedAt -> startedAt
   if (getReceivedAt(task) && startedMs > receivedMs) {
     phases.push({
+      kind: "worker",
       label: "Waiting in Worker",
       color: PHASE_COLORS.worker,
       startMs: receivedMs,
@@ -85,6 +89,7 @@ export const computeTaskPhases = (task: Task, now: Date): TaskPhase[] => {
   // Running phase: startedAt -> finishedAt
   if (getStartedAt(task) && finishedMs > startedMs) {
     phases.push({
+      kind: "running",
       label: unconfirmed ? "Execution unconfirmed" : "Running",
       color: unconfirmed ? PHASE_COLORS.unconfirmed : PHASE_COLORS.running,
       startMs: startedMs,
@@ -98,6 +103,7 @@ export const computeTaskPhases = (task: Task, now: Date): TaskPhase[] => {
     const nowMs = now.getTime()
     if (nowMs > sentMs) {
       phases.push({
+        kind: "queue",
         label: "Waiting in Queue",
         color: PHASE_COLORS.queue,
         startMs: sentMs,

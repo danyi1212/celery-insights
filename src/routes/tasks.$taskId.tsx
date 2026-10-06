@@ -4,22 +4,15 @@ import JsonViewThemed from "@components/common/json-view-themed"
 import Panel from "@components/common/panel"
 import TaskAlerts from "@components/task/alerts/task-alerts"
 import TaskAvatar from "@components/task/task-avatar"
+import TaskExecutionPanel from "@components/task/task-execution-panel"
 import TaskLifetimeChart from "@components/task/task-lifetime-chart"
 import TaskPageHeader from "@components/task/task-page-header"
-import TaskStateBadge from "@components/task/task-state-badge"
 import { Skeleton } from "@components/ui/skeleton"
 import { useTaskWorkflow } from "@hooks/use-task-workflow"
-import { useNow } from "@hooks/use-now"
-import { getTaskExecution } from "@utils/task-execution"
-import { TaskState } from "@/types/surreal-records"
-import { formatDurationExact } from "@utils/format-duration-exact"
-import { computeTaskPhases } from "@utils/task-phases"
 import { parseTask, parseWorkflow, type Task } from "@/types/surreal-records"
 import { useTourChangeStepOnLoad } from "@stores/use-tour-store"
 import WorkflowGraph, { WorkflowChartType } from "@components/workflow/workflow-graph"
 import React, { useMemo } from "react"
-
-const formatDateTime = (date?: Date) => (date ? date.toLocaleString() : "---")
 
 const safeParseJson = (value?: string) => {
   if (!value) return undefined
@@ -35,54 +28,6 @@ const TaskLink = ({ task }: { task: Task }) => (
     {task.type || task.id}
   </Link>
 )
-
-const ExecutionPanel = ({ task }: { task: Task }) => {
-  const now = useNow(1000)
-  const phases = useMemo(() => computeTaskPhases(task, now), [now, task])
-  const queueWait = phases.find((phase) => phase.label === "Waiting in Queue")?.durationMs
-  const workerWait = phases.find((phase) => phase.label === "Waiting in Worker")?.durationMs
-  const runtime = phases.find((phase) => phase.label === "Running")?.durationMs
-
-  return (
-    <Panel title="Execution">
-      <div className="grid gap-2 p-3 md:grid-cols-2">
-        <DetailItem label="Reported state" value={<TaskStateBadge state={task.state} execution={task} />} />
-        <DetailItem label="Last worker inspection" value={formatDateTime(task.execution_observed_at)} />
-        <DetailItem label="Retries" value={task.retries ?? 0} />
-        <DetailItem label="Queue wait" value={queueWait ? formatDurationExact(queueWait) : "---"} />
-        <DetailItem label="Worker wait" value={workerWait ? formatDurationExact(workerWait) : "---"} />
-        <DetailItem
-          label={
-            task.state === TaskState.STARTED && getTaskExecution(task, now.getTime()) !== "active"
-              ? "Runtime unconfirmed"
-              : "Runtime"
-          }
-          value={runtime ? formatDurationExact(runtime) : "---"}
-        />
-        <DetailItem
-          label="Worker"
-          value={
-            task.worker ? (
-              <Link
-                to="/workers/$workerId"
-                params={{ workerId: task.worker }}
-                className="text-primary underline hover:opacity-80"
-              >
-                {task.worker}
-              </Link>
-            ) : (
-              "---"
-            )
-          }
-        />
-        <DetailItem label="Sent" value={formatDateTime(task.sent_at)} />
-        <DetailItem label="Received" value={formatDateTime(task.received_at)} />
-        <DetailItem label="Started" value={formatDateTime(task.started_at)} />
-        <DetailItem label="Finished" value={formatDateTime(task.succeeded_at || task.failed_at || task.retried_at)} />
-      </div>
-    </Panel>
-  )
-}
 
 const InputsPanel = ({ task }: { task: Task }) => (
   <Panel title="Inputs">
@@ -205,7 +150,7 @@ const TaskPage = () => {
         <div className="grid grid-cols-1 gap-3 px-3 py-2 lg:grid-cols-4" id="task-details">
           <div className="lg:col-span-3">
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-              <ExecutionPanel task={task} />
+              <TaskExecutionPanel task={task} />
               <InputsPanel task={task} />
               <OutcomePanel task={task} />
               <DeliveryPanel task={task} />

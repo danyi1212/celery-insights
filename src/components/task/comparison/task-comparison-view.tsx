@@ -6,7 +6,7 @@ import TaskStatusIcon from "@components/task/task-status-icon"
 import TaskLifetimeChart from "@components/task/task-lifetime-chart"
 import { Skeleton } from "@components/ui/skeleton"
 import { useTask } from "@hooks/use-live-tasks"
-import { parseTask, TaskState, type Task } from "@/types/surreal-records"
+import { parseTask, type Task } from "@/types/surreal-records"
 import { formatDuration } from "@utils/task-phases"
 import { cn } from "@lib/utils"
 import { ArrowLeftRight, ArrowRight } from "lucide-react"
@@ -181,7 +181,7 @@ const MetadataComparison: React.FC<{ left: Task; right: Task }> = ({ left, right
     format: (t: Task) => React.ReactNode
     key: keyof Task
   }[] = [
-    { label: "State", format: (t) => <StateValue state={t.state} />, key: "state" },
+    { label: "State", format: (t) => <StateValue task={t} />, key: "state" },
     { label: "Worker", format: (t) => t.worker || "---", key: "worker" },
     { label: "Runtime", format: (t) => formatRuntimeMs(t.runtime), key: "runtime" },
     { label: "Retries", format: (t) => String(t.retries ?? 0), key: "retries" },
@@ -221,10 +221,10 @@ const MetadataComparison: React.FC<{ left: Task; right: Task }> = ({ left, right
   )
 }
 
-const StateValue: React.FC<{ state: TaskState }> = ({ state }) => (
+const StateValue: React.FC<{ task: Task }> = ({ task }) => (
   <span className="inline-flex items-center gap-1.5">
-    <TaskStatusIcon status={state} />
-    <span>{state}</span>
+    <TaskStatusIcon status={task.state} execution={task} />
+    <span>{task.state}</span>
   </span>
 )
 
