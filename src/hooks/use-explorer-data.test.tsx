@@ -47,17 +47,6 @@ const createState = (): ExplorerQueryState => ({
 })
 
 describe("useExplorerData", () => {
-  it.each(["tasks", "workflows"] as const)("searches keyword arguments in %s", async (mode) => {
-    renderHook(() => useExplorerData({ ...createState(), mode, query: "organization_id=1" }), {
-      wrapper: createWrapper(),
-    })
-
-    await waitFor(() => expect(mockQuery).toHaveBeenCalledTimes(1))
-    const [query, bindings] = mockQuery.mock.calls[0]
-    expect(query).toContain("string::matches(kwargs ?? '', $kwargsPattern)")
-    expect(bindings.kwargsPattern).toContain("organization_id")
-    expect(query.includes("SELECT VALUE workflow_id FROM task")).toBe(mode === "workflows")
-  })
   beforeEach(() => {
     vi.clearAllMocks()
     mockQuery.mockResolvedValue([
@@ -68,6 +57,33 @@ describe("useExplorerData", () => {
       [],
       [{ bucket: "2026-04-06T10:00", state: "SUCCESS", count: 1 }],
     ])
+  })
+
+  it.each(["tasks", "workflows"] as const)("searches keyword arguments in %s", async (mode) => {
+    renderHook(() => useExplorerData({ ...createState(), mode, query: "organization_id=1" }), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(mockQuery).toHaveBeenCalledTimes(1))
+    const [query, bindings] = mockQuery.mock.calls[0]
+    expect(query).toContain("string::matches(kwargs ?? '', $kwargsPattern)")
+    expect(bindings.kwargsPattern).toContain("organization_id")
+    expect(query.startsWith("LET $searchWorkflows = (SELECT VALUE workflow_id FROM task WHERE")).toBe(
+      mode === "workflows",
+    )
+    expect(query.includes("root_task_id IN $searchWorkflows")).toBe(mode === "workflows")
+  })
+
+  it("skips the LET result slot when searching workflows", async () => {
+    const workflow = { id: "workflow:one", root_task_id: "one", aggregate_state: "SUCCESS" }
+    mockQuery.mockResolvedValue([null, [workflow], [{ count: 1 }], [], [], []])
+    const { result } = renderHook(
+      () => useExplorerData({ ...createState(), mode: "workflows", query: "organization_id=1" }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.total).toBe(1))
+    expect(result.current.workflows).toEqual([workflow])
   })
 
   it("builds filter queries without duplicate WHERE clauses", async () => {

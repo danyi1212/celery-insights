@@ -1,15 +1,32 @@
 const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
-const valuePattern = (value: unknown): string => {
-  if (value === null) return "(?:None|null)"
-  if (typeof value === "boolean") return `(?i:${value})`
-  if (typeof value === "number") return escapeRegex(String(value))
-  if (Array.isArray(value)) return `\\[\\s*${value.map(valuePattern).join("\\s*,\\s*")}\\s*\\]`
-  if (typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>)
-    return `\\{\\s*${entries.map(([key, item]) => `${valuePattern(key)}\\s*:\\s*${valuePattern(item)}`).join("\\s*,\\s*")}\\s*\\}`
-  }
-  const text = String(value)
+const PLAIN_TEXT_CLAUSE = [
+  "string::concat('', id)",
+  "type ?? ''",
+  "worker ?? ''",
+  "exception ?? ''",
+  "result ?? ''",
+  "args ?? ''",
+  "kwargs ?? ''",
+]
+  .map((field) => `string::contains(string::lowercase(${field}), $query)`)
+  .join(" OR ")
+
+const WORD_PATTERNS: Record<string, string> = {
+  true: "(?i:true)",
+  false: "(?i:false)",
+  none: "(?:None|null)",
+  null: "(?:None|null)",
+}
+
+const STRING_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f", "0": "\0" }
+
+interface Literal {
+  pattern: string
+  end: number
+}
+
+const stringPattern = (text: string): string => {
   const json = JSON.stringify(text).slice(1, -1)
   const python = text
     .replace(/\\/g, "\\\\")
@@ -20,39 +37,99 @@ const valuePattern = (value: unknown): string => {
   return `(?:"${escapeRegex(json)}"|'${escapeRegex(python)}')`
 }
 
-export const buildTaskSearch = (query: string): { clause: string; bindings: Record<string, string> } => {
-  const trimmed = query.trim()
-  const keyword = /^([A-Za-z_]\w*)\s*=\s*(.+)$/.exec(trimmed)
-  if (keyword) {
-    const [, key, input] = keyword
-    const value = input.trim()
-    let pattern: string
-    try {
-      pattern = valuePattern(JSON.parse(value))
-    } catch {
-      if (/^(true|false|none|null)$/i.test(value)) {
-        pattern = /^(true|false)$/i.test(value) ? `(?i:${value.toLowerCase()})` : "(?:None|null)"
-      } else {
-        pattern = valuePattern(value.startsWith("'") && value.endsWith("'") ? value.slice(1, -1) : value)
-      }
+const skipSpace = (text: string, index: number): number => text.length - text.slice(index).trimStart().length
+
+const parseQuoted = (text: string, start: number): Literal | undefined => {
+  const quote = text[start]
+  let decoded = ""
+  for (let index = start + 1; index < text.length; index++) {
+    const character = text[index]
+    if (character === quote) return { pattern: stringPattern(decoded), end: index + 1 }
+    if (character !== "\\") {
+      decoded += character
+      continue
     }
-    return {
-      clause: "string::matches(kwargs ?? '', $kwargsPattern)",
-      bindings: { kwargsPattern: `(?:^|[,{])\\s*['"]${escapeRegex(key)}['"]\\s*:\\s*${pattern}\\s*(?:[,}]|$)` },
+    const escaped = text[++index]
+    if (escaped === "u" || escaped === "x") {
+      const width = escaped === "u" ? 4 : 2
+      const hex = text.slice(index + 1, index + 1 + width)
+      if (hex.length !== width || !/^[0-9A-Fa-f]+$/.test(hex)) return undefined
+      decoded += String.fromCharCode(parseInt(hex, 16))
+      index += width
+    } else if (escaped === undefined) {
+      return undefined
+    } else {
+      decoded += STRING_ESCAPES[escaped] ?? escaped
     }
   }
+  return undefined
+}
+
+const parseContainer = (text: string, start: number): Literal | undefined => {
+  const isDictionary = text[start] === "{"
+  const close = isDictionary ? "}" : "]"
+  const items: string[] = []
+  let index = skipSpace(text, start + 1)
+  while (text[index] !== close) {
+    let item = parseLiteral(text, index)
+    if (!item) return undefined
+    if (isDictionary) {
+      index = skipSpace(text, item.end)
+      if (text[index] !== ":") return undefined
+      const value = parseLiteral(text, index + 1)
+      if (!value) return undefined
+      item = { pattern: `${item.pattern}\\s*:\\s*${value.pattern}`, end: value.end }
+    }
+    items.push(item.pattern)
+    index = skipSpace(text, item.end)
+    if (text[index] === ",") index = skipSpace(text, index + 1)
+    else if (text[index] !== close) return undefined
+  }
+  const [open, shut] = isDictionary ? ["\\{", "\\}"] : ["\\[", "\\]"]
+  return { pattern: `${open}\\s*${items.join("\\s*,\\s*")}\\s*${shut}`, end: index + 1 }
+}
+
+// Accepts JSON and Python repr literals. Numbers keep their source text, so 64-bit ids and float formatting survive.
+const parseLiteral = (text: string, start: number): Literal | undefined => {
+  const index = skipSpace(text, start)
+  const character = text[index]
+  if (character === "[" || character === "{") return parseContainer(text, index)
+  if (character === '"' || character === "'") return parseQuoted(text, index)
+  const number = /^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/.exec(text.slice(index))?.[0]
+  if (number) return { pattern: escapeRegex(number), end: index + number.length }
+  const word = /^[A-Za-z]+/.exec(text.slice(index))?.[0]
+  const pattern = word && WORD_PATTERNS[word.toLowerCase()]
+  return word && pattern ? { pattern, end: index + word.length } : undefined
+}
+
+export const buildTaskSearch = (query: string): { clause: string; bindings: Record<string, string> } => {
+  const trimmed = query.trim()
+  const bindings: Record<string, string> = { query: trimmed.toLowerCase() }
+  const keyword = /^([A-Za-z_]\w*)\s*=\s*(.+)$/.exec(trimmed)
+  if (!keyword) return { clause: PLAIN_TEXT_CLAUSE, bindings }
+  const [, key, value] = keyword
+  const literal = parseLiteral(value, 0)
+  const pattern =
+    literal && skipSpace(value, literal.end) === value.length ? literal.pattern : stringPattern(value.trim())
+  // The prefix consumes quoted strings whole, so the key only matches at a dictionary key position
+  // (top-level or nested), never inside a string value that happens to contain dictionary-like text.
+  const kwargsPattern = `^(?:[^'"]|'(?:[^'\\\\]|\\\\.)*'|"(?:[^"\\\\]|\\\\.)*")*?(?:^|[,{])\\s*['"]${escapeRegex(key)}['"]\\s*:\\s*${pattern}\\s*(?:[,}]|$)`
+  // Plain text stays included so queries like `status=failed` still search exception and result text.
   return {
-    clause: [
-      "string::concat('', id)",
-      "type ?? ''",
-      "worker ?? ''",
-      "exception ?? ''",
-      "result ?? ''",
-      "args ?? ''",
-      "kwargs ?? ''",
-    ]
-      .map((field) => `string::contains(string::lowercase(${field}), $query)`)
-      .join(" OR "),
-    bindings: { query: trimmed.toLowerCase() },
+    clause: `string::matches(kwargs ?? '', $kwargsPattern) OR ${PLAIN_TEXT_CLAUSE}`,
+    bindings: { ...bindings, kwargsPattern },
+  }
+}
+
+export const buildWorkflowSearch = (
+  query: string,
+): { prelude: string; clause: string; bindings: Record<string, string> } => {
+  const search = buildTaskSearch(query)
+  return {
+    // SurrealDB evaluates an inline subquery once per workflow row; LET runs the task scan once per batch.
+    prelude: `LET $searchWorkflows = (SELECT VALUE workflow_id FROM task WHERE (${search.clause}));`,
+    clause:
+      "string::contains(string::lowercase(root_task_id), $query) OR string::contains(string::lowercase(root_task_type ?? ''), $query) OR string::contains(string::lowercase(latest_exception_preview ?? ''), $query) OR root_task_id IN $searchWorkflows",
+    bindings: search.bindings,
   }
 }

@@ -4,7 +4,7 @@ import type { TimeRange } from "@danyi1212/time-range-picker"
 import { isLiveTimeRange } from "@danyi1212/time-range-picker/time-range"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import { resolveTimeRangeBindings } from "@lib/time-range-utils"
-import { buildTaskSearch } from "@lib/task-search"
+import { buildTaskSearch, buildWorkflowSearch } from "@lib/task-search"
 import type { SurrealTask, SurrealWorkflow } from "@/types/surreal-records"
 
 export type ExplorerMode = "tasks" | "workflows"
@@ -118,17 +118,20 @@ function buildTaskWhereClause(state: ExplorerQueryState): { clause: string; bind
   return { clause: ` WHERE ${conditions.join(" AND ")}`, bindings }
 }
 
-function buildWorkflowWhereClause(state: ExplorerQueryState): { clause: string; bindings: Record<string, unknown> } {
+function buildWorkflowWhereClause(state: ExplorerQueryState): {
+  prelude: string
+  clause: string
+  bindings: Record<string, unknown>
+} {
   const conditions = ["last_updated >= <datetime>$from", "last_updated <= <datetime>$to"]
   const bindings: Record<string, unknown> = {}
   const trimmedQuery = state.query.trim()
+  let prelude = ""
 
   if (trimmedQuery) {
-    const search = buildTaskSearch(trimmedQuery)
-    conditions.push(
-      `(string::contains(string::lowercase(root_task_id), $query) OR string::contains(string::lowercase(root_task_type ?? ''), $query) OR string::contains(string::lowercase(latest_exception_preview ?? ''), $query) OR root_task_id IN (SELECT VALUE workflow_id FROM task WHERE (${search.clause})))`,
-    )
-    bindings.query = trimmedQuery.toLowerCase()
+    const search = buildWorkflowSearch(trimmedQuery)
+    prelude = search.prelude
+    conditions.push(`(${search.clause})`)
     Object.assign(bindings, search.bindings)
   }
   if (state.workflowStates.length > 0) {
@@ -140,7 +143,7 @@ function buildWorkflowWhereClause(state: ExplorerQueryState): { clause: string; 
     bindings.rootTypes = state.rootTypes
   }
 
-  return { clause: ` WHERE ${conditions.join(" AND ")}`, bindings }
+  return { prelude, clause: ` WHERE ${conditions.join(" AND ")}`, bindings }
 }
 
 function normalizeStateForKey(state: ExplorerQueryState) {
@@ -222,9 +225,9 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
         }
       }
 
-      const { clause, bindings: whereBindings } = buildWorkflowWhereClause(state)
+      const { prelude, clause, bindings: whereBindings } = buildWorkflowWhereClause(state)
       const sortField = WORKFLOW_SORT_FIELDS.has(state.sortField) ? state.sortField : "last_updated"
-      const [workflowRows, countRows, workflowStateFilters, rootTypeFilters, buckets] = await db.query<
+      const results = await db.query<
         [
           SurrealWorkflow[],
           [{ count: number }],
@@ -233,13 +236,18 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
           { bucket: string; aggregate_state: string; count: number }[],
         ]
       >(
-        `SELECT * FROM workflow${clause} ORDER BY ${sortField} ${state.sortDirection} LIMIT $rowLimit;` +
+        prelude +
+          `SELECT * FROM workflow${clause} ORDER BY ${sortField} ${state.sortDirection} LIMIT $rowLimit;` +
           `SELECT count() AS count FROM workflow${clause} GROUP ALL;` +
           `SELECT aggregate_state, count() AS count FROM workflow${clause} GROUP BY aggregate_state;` +
           `SELECT root_task_type, count() AS count FROM workflow${appendCondition(clause, "root_task_type != NONE")} GROUP BY root_task_type;` +
           `SELECT time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket, aggregate_state, count() AS count FROM workflow${clause} GROUP BY bucket, aggregate_state ORDER BY bucket ASC;`,
         { ...bindings, ...whereBindings, rowLimit },
       )
+      // The LET statement occupies the first result slot.
+      const [workflowRows, countRows, workflowStateFilters, rootTypeFilters, buckets] = (
+        prelude ? results.slice(1) : results
+      ) as typeof results
 
       return {
         tasks: [],

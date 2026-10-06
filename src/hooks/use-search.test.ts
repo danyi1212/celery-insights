@@ -17,14 +17,6 @@ vi.mock("@components/surrealdb-provider", () => ({
 }))
 
 describe("useSearch", () => {
-  it("searches exact keyword arguments in quick search", async () => {
-    renderHook(() => useSearch("organization_id=1"))
-    await act(async () => vi.advanceTimersByTime(300))
-
-    const [query, bindings] = mockQuery.mock.calls[0]
-    expect(query).toContain("string::matches(kwargs ?? '', $kwargsPattern)")
-    expect(bindings.kwargsPattern).toContain("organization_id")
-  })
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.clearAllMocks()
@@ -34,6 +26,16 @@ describe("useSearch", () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it("searches exact keyword arguments in quick search", async () => {
+    renderHook(() => useSearch("organization_id=1"))
+    await act(async () => vi.advanceTimersByTime(300))
+
+    const [query, bindings] = mockQuery.mock.calls[0]
+    expect(query).toContain("string::matches(kwargs ?? '', $kwargsPattern)")
+    expect(bindings.kwargsPattern).toContain("organization_id")
+    expect(bindings.query).toBe("organization_id=1")
   })
 
   it("returns empty results for empty query without querying DB", async () => {
