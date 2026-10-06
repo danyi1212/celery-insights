@@ -60,7 +60,9 @@ describe("task search against SurrealDB", () => {
       CREATE workflow:two CONTENT {root_task_id: 'two', root_task_type: 'sync'};
       CREATE workflow:three CONTENT {root_task_id: 'three', root_task_type: 'sync', latest_exception_preview: 'Timeout'};
     `,
-      { control: String.raw`{'label': '\x01', 'tags': ['\u200b'], 'nested': {'key': '\x7f'}, 'plain': 'café'}` },
+      {
+        control: String.raw`{'label': '\x01', 'tags': ['\u200b'], 'nested': {'key': '\x7f'}, 'plain': 'café', 'flag': '\U000e0001', 'quoted': "it's\x01", 'quotes': ["it's\x01"]}`,
+      },
     )
   })
 
@@ -109,6 +111,10 @@ describe("task search against SurrealDB", () => {
     [String.raw`nested={'key': '\x7f'}`, ["control"]],
     [String.raw`plain='caf\xe9'`, ["control"]],
     ["plain=café", ["control"]],
+    [String.raw`flag='\U000e0001'`, ["control"]],
+    [String.raw`flag='\U00110000'`, []],
+    [String.raw`quoted="it's\x01"`, ["control"]],
+    [String.raw`quotes=["it's\x01"]`, ["control"]],
   ])("finds %s", async (query, expected) => {
     const { clause, bindings } = buildTaskSearch(query)
     const [rows] = await db.query<[{ id: unknown }[]]>(`SELECT id FROM task WHERE (${clause})`, bindings)

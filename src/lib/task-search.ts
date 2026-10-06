@@ -19,6 +19,12 @@ const WORD_PATTERNS = new Map([
   ["null", "(?:None|null)"],
 ])
 
+const HEX_ESCAPE_WIDTHS = new Map([
+  ["x", 2],
+  ["u", 4],
+  ["U", 8],
+])
+
 const STRING_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f", "0": "\0" }
 
 interface Literal {
@@ -34,17 +40,21 @@ const pythonEscape = (character: string): string => {
   return prefix + code.toString(16).padStart(width, "0")
 }
 
-const stringPattern = (text: string): string => {
-  const json = JSON.stringify(text).slice(1, -1)
-  const python = text
+// Mirrors Python repr: double quotes only when the text has a single quote and no double quote.
+const pythonRepr = (text: string): string => {
+  const quote = text.includes("'") && !text.includes('"') ? '"' : "'"
+  const body = text
     .replace(/\\/g, "\\\\")
-    .replace(/'/g, "\\'")
+    .replaceAll(quote, `\\${quote}`)
     .replace(/\n/g, "\\n")
     .replace(/\r/g, "\\r")
     .replace(/\t/g, "\\t")
     .replace(/(?! )[\p{C}\p{Z}]/gu, pythonEscape)
-  return `(?:"${escapeRegex(json)}"|'${escapeRegex(python)}')`
+  return quote + body + quote
 }
+
+const stringPattern = (text: string): string =>
+  `(?:"${escapeRegex(JSON.stringify(text).slice(1, -1))}"|${escapeRegex(pythonRepr(text))})`
 
 const skipSpace = (text: string, index: number): number => text.length - text.slice(index).trimStart().length
 
@@ -59,11 +69,13 @@ const parseQuoted = (text: string, start: number): Literal | undefined => {
       continue
     }
     const escaped = text[++index]
-    if (escaped === "u" || escaped === "x") {
-      const width = escaped === "u" ? 4 : 2
+    const width = HEX_ESCAPE_WIDTHS.get(escaped)
+    if (width) {
       const hex = text.slice(index + 1, index + 1 + width)
       if (hex.length !== width || !/^[0-9A-Fa-f]+$/.test(hex)) return undefined
-      decoded += String.fromCharCode(parseInt(hex, 16))
+      const code = parseInt(hex, 16)
+      if (code > 0x10ffff) return undefined
+      decoded += String.fromCodePoint(code)
       index += width
     } else if (escaped === undefined) {
       return undefined
