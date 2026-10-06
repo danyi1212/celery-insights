@@ -1,14 +1,5 @@
 # Celery Insights
 
-Keyword-argument search is available in quick search and the Tasks Explorer.
-Search `organization_id=1`, `resource_id=123`, or `run_id=some-id` to match a
-keyword's value. Quote string values with spaces, for example
-`label="North team"`. Numeric values match exactly, so `organization_id=1`
-does not match 10 or the string `"1"`. Plain text search also includes task
-arguments. In workflow mode, a matching member task finds its workflow.
-Boolean and null values are supported, as are JSON lists and dictionaries, for
-example `families=["ad", "query"]` or `options={"enabled":true}`.
-
 Celery Insights is a real-time dashboard for Celery clusters. It shows workers, tasks, task graphs, and cluster activity in a web UI backed by Celery events and live updates.
 Its read-only MCP interface lets agents find workflows, inspect task inputs/results/errors, and see stored worker activity.
 
