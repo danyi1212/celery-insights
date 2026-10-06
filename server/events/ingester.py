@@ -10,6 +10,8 @@ from surrealdb_client import get_db
 logger = logging.getLogger(__name__)
 
 TERMINAL_EVENT_TYPES = frozenset({"task-succeeded", "task-failed", "task-revoked", "task-rejected"})
+TERMINAL_TASK_STATES = ("SUCCESS", "FAILURE", "REVOKED", "REJECTED", "IGNORED")
+TERMINAL_TASK_STATES_SQL = "[" + ", ".join(f"'{state}'" for state in TERMINAL_TASK_STATES) + "]"
 
 EVENT_STATE_MAP: dict[str, str] = {
     "task-sent": "PENDING",
@@ -284,14 +286,18 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
         f"{p}_workflow_id": workflow_id,
     }
 
+    apply_state = f"${p}_previous.last_updated IS NONE OR <datetime>${p}_ts > ${p}_previous.last_updated"
+    if event_type in TERMINAL_EVENT_TYPES:
+        # An observed last_updated is monitor time, not task evidence: terminal events replace it even when older.
+        apply_state += (
+            f" OR (${p}_previous.last_updated_observed = true"
+            f" AND ${p}_previous.state NOT IN {TERMINAL_TASK_STATES_SQL})"
+        )
+
     set_clauses = [
-        f"state = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts > ${p}_previous.last_updated"
-        f" THEN ${p}_state ELSE ${p}_previous.state END",
-        f"last_updated = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts > ${p}_previous.last_updated"
-        f" THEN <datetime>${p}_ts ELSE ${p}_previous.last_updated END",
-        f"last_updated_observed = IF ${p}_previous.last_updated IS NONE"
-        f" OR <datetime>${p}_ts > ${p}_previous.last_updated"
-        f" THEN false ELSE ${p}_previous.last_updated_observed ?? false END",
+        f"state = IF ${p}_apply THEN ${p}_state ELSE ${p}_previous.state END",
+        f"last_updated = IF ${p}_apply THEN <datetime>${p}_ts ELSE ${p}_previous.last_updated END",
+        f"last_updated_observed = IF ${p}_apply THEN false ELSE ${p}_previous.last_updated_observed ?? false END",
         f"{ts_field} = IF ${p}_previous.{ts_field} IS NONE OR <datetime>${p}_ts < ${p}_previous.{ts_field}"
         f" THEN <datetime>${p}_ts ELSE ${p}_previous.{ts_field} END",
         f"first_observed_at = IF ${p}_previous.first_observed_at IS NONE"
@@ -328,7 +334,11 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
     assignments = ", ".join(set_clauses)
     # Read persisted values explicitly: UPSERT can evaluate against a creation
     # candidate, including multiple updates to the same task in one transaction.
-    query = f"LET ${p}_previous = (SELECT * FROM {target})[0] ?? {{}}; UPSERT {target} SET {assignments}"
+    query = (
+        f"LET ${p}_previous = (SELECT * FROM {target})[0] ?? {{}}; "
+        f"LET ${p}_apply = {apply_state}; "
+        f"UPSERT {target} SET {assignments}"
+    )
     return query, params
 
 

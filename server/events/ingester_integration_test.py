@@ -4,7 +4,7 @@ import asyncio
 import shutil
 import socket
 import subprocess
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 import httpx
@@ -129,3 +129,30 @@ async def test_worker_offline_event_clears_earlier_execution_observations(
     assert tasks["task:observed"]["state"] == "STARTED"
     assert tasks["task:later"]["execution_active"] is True
     assert tasks["task:other"]["execution_active"] is True
+
+
+@pytest.mark.asyncio
+async def test_older_terminal_event_replaces_an_undated_observation(surreal_db: AsyncWsSurrealConnection) -> None:
+    query, parameters = _build_task_meta_upsert("undated", {"status": "STARTED"})
+    await surreal_db.query(query, parameters)
+    observed_at = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]["last_updated"]
+    event_at = observed_at - timedelta(seconds=2)
+
+    query, parameters = build_task_upsert(
+        {"type": "task-received", "uuid": "undated", "timestamp": event_at.timestamp()}, 0
+    )
+    await surreal_db.query(query, parameters)
+    task = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]
+    assert task["state"] == "STARTED"
+    assert task["last_updated"] == observed_at
+    assert task["last_updated_observed"] is True
+
+    query, parameters = build_task_upsert(
+        {"type": "task-succeeded", "uuid": "undated", "timestamp": event_at.timestamp(), "result": "42"}, 0
+    )
+    await surreal_db.query(query, parameters)
+    task = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]
+    assert task["state"] == "SUCCESS"
+    assert task["last_updated"] == event_at
+    assert task["succeeded_at"] == event_at
+    assert task["last_updated_observed"] is False

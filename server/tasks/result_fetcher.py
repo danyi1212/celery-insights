@@ -9,7 +9,7 @@ from celery.result import AsyncResult
 from celery.backends.redis import RedisBackend
 from surrealdb.types import Value
 
-from events.ingester import build_workflow_summary_recompute
+from events.ingester import TERMINAL_TASK_STATES_SQL, build_workflow_summary_recompute
 from surrealdb_client import get_db
 
 logger = logging.getLogger(__name__)
@@ -57,9 +57,6 @@ def _query_errors(result: object) -> list[str]:
         if typed_entry and typed_entry.get("status") == "ERR":
             errors.append(str(typed_entry.get("result") or typed_entry.get("detail") or typed_entry))
     return errors
-
-
-_TERMINAL_STATES = "['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED']"
 
 
 def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
@@ -148,8 +145,8 @@ def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
         "LET $meta_apply_state = $meta_previous.state = NONE OR "
         "IF $last_updated != NONE THEN $meta_previous.last_updated = NONE "
         "OR $meta_timestamp >= $meta_previous.last_updated "
-        f"OR ($meta_previous.last_updated_observed = true AND $meta_previous.state NOT IN {_TERMINAL_STATES}) "
-        f"ELSE $meta_previous.state NOT IN {_TERMINAL_STATES} END; "
+        f"OR ($meta_previous.last_updated_observed = true AND $meta_previous.state NOT IN {TERMINAL_TASK_STATES_SQL}) "
+        f"ELSE $meta_previous.state NOT IN {TERMINAL_TASK_STATES_SQL} END; "
         f"UPSERT {target} SET {assignments}"
     )
     return query, params
