@@ -45,6 +45,28 @@ describe("useNow", () => {
     expect(result.current.getTime()).toBeGreaterThan(afterFirst)
   })
 
+  it("shares one timer between subscribers with the same interval", () => {
+    vi.setSystemTime(new Date("2025-01-01T00:00:00Z"))
+    const setIntervalSpy = vi.spyOn(globalThis, "setInterval")
+    const first = renderHook(() => useNow(1000))
+    const second = renderHook(() => useNow(1000))
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(first.result.current).toBe(second.result.current)
+    expect(first.result.current.getTime()).toBe(Date.parse("2025-01-01T00:00:01Z"))
+
+    const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval")
+    first.unmount()
+    expect(clearIntervalSpy).not.toHaveBeenCalled()
+    second.unmount()
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(1)
+    setIntervalSpy.mockRestore()
+    clearIntervalSpy.mockRestore()
+  })
+
   it("clears interval on unmount", () => {
     const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval")
     const { unmount } = renderHook(() => useNow(1000))
