@@ -515,6 +515,12 @@ def build_worker_upsert(event: dict, idx: int) -> tuple[str, dict]:
             )
 
     query = f"UPSERT type::record('worker', ${p}_id) SET " + ", ".join(set_clauses)
+    if status == "offline":
+        # Polls skip offline workers, so observations made before the worker left would otherwise outlive it.
+        query += (
+            f"; UPDATE task SET execution_active = NONE WHERE worker = ${p}_id AND state = 'STARTED'"
+            f" AND execution_observed_at <= <datetime>${p}_ts"
+        )
     return query, params
 
 
