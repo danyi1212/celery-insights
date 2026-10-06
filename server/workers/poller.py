@@ -100,11 +100,12 @@ class WorkerPoller:
         # Upsert responding workers
         for hostname, data in inspect_data.items():
             try:
+                serialized_data = json.dumps(data, default=str)
                 params: dict = {
                     "id": hostname,
                     "ts": now,
-                    "data": json.dumps(data),
-                    "inspect_data": data,
+                    "data": serialized_data,
+                    "inspect_data": json.loads(serialized_data),
                 }
                 query = (
                     "UPSERT type::record('worker', $id) SET "
