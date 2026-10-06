@@ -101,6 +101,21 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors(*, poll
             assert refreshed["had_error"] is True
             assert refreshed["first_observed_at"] == child["first_observed_at"]
             assert refreshed["sent_at"] == child["sent_at"]
+
+            stale = {
+                "type": "task-sent",
+                "uuid": "child",
+                "root_id": "stale-root",
+                "parent_id": "stale-parent",
+                "timestamp": 1700000000.5,
+            }
+            query, bindings = build_task_upsert(stale, 0)
+            await db.query(query, bindings)
+            after_stale = (await rows("SELECT * FROM task:child"))[0]
+            assert after_stale["root_id"] == "root"
+            assert after_stale["parent_id"] == "root"
+            assert after_stale["state"] == "SUCCESS"
+            assert after_stale["last_updated"] == refreshed["last_updated"]
     finally:
         process.terminate()
         await asyncio.to_thread(process.wait, timeout=10)
