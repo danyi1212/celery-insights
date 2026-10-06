@@ -1,12 +1,15 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { cn } from "@lib/utils"
 import { TaskState } from "@/types/surreal-records"
+import { useNow } from "@hooks/use-now"
+import { getTaskExecution, TASK_EXECUTION_LABELS, type TaskExecutionObservation } from "@utils/task-execution"
 import {
   Ban,
   CheckCircle2,
   CircleAlert,
   CircleMinus,
   CirclePlay,
+  CircleHelp,
   Clock,
   LucideIcon,
   RotateCw,
@@ -17,6 +20,7 @@ import React from "react"
 interface TaskStatusIconProps extends React.ComponentProps<"span"> {
   status: TaskState
   iconClassName?: string
+  execution?: TaskExecutionObservation
 }
 
 interface StateIconMeta {
@@ -37,13 +41,22 @@ const stateMeta: Record<TaskState, StateIconMeta> = {
   [TaskState.RETRY]: { icon: RotateCw, className: "text-status-warning", tooltip: "Retry" },
 }
 
-const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status, className, iconClassName, ...props }) => {
-  const meta = stateMeta[status]
+const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status, execution, className, iconClassName, ...props }) => {
+  const now = useNow(status === TaskState.STARTED ? 10_000 : undefined)
+  const observed = getTaskExecution(execution ?? {}, now.getTime())
+  const meta =
+    status === TaskState.STARTED
+      ? {
+          icon: observed === "active" ? CirclePlay : CircleHelp,
+          className: observed === "active" ? "text-status-info" : "text-status-warning",
+          tooltip: `Started; ${TASK_EXECUTION_LABELS[observed]}`,
+        }
+      : stateMeta[status]
   const Icon = meta.icon
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className={cn("inline-flex", className)} {...props}>
+        <span className={cn("inline-flex", className)} aria-label={meta.tooltip} {...props}>
           <Icon className={cn("size-4", meta.className, iconClassName)} />
         </span>
       </TooltipTrigger>

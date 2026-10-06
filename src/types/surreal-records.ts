@@ -21,6 +21,8 @@ export interface SurrealTask {
   sent_at?: string | null
   received_at?: string | null
   started_at?: string | null
+  execution_active?: boolean | null
+  execution_observed_at?: string | null
   succeeded_at?: string | null
   failed_at?: string | null
   retried_at?: string | null
@@ -170,6 +172,7 @@ export interface ScheduledTask {
 
 /** Parsed worker inspect data from the worker poller */
 export interface WorkerInspectData {
+  _observed_at?: Partial<Record<"stats" | "active" | "registered" | "scheduled" | "reserved" | "active_queues", string>>
   stats?: Record<string, unknown>
   active?: TaskRequest[]
   registered?: string[]
@@ -200,6 +203,8 @@ export interface Task {
   sent_at: Date
   received_at?: Date
   started_at?: Date
+  execution_active?: boolean
+  execution_observed_at?: Date
   succeeded_at?: Date
   failed_at?: Date
   retried_at?: Date
@@ -249,6 +254,8 @@ export const parseTask = (raw: SurrealTask): Task => ({
   sent_at: isoToDate(raw.sent_at) || isoToDate(raw.last_updated) || new Date(0),
   received_at: isoToDate(raw.received_at),
   started_at: isoToDate(raw.started_at),
+  execution_active: raw.execution_active ?? undefined,
+  execution_observed_at: isoToDate(raw.execution_observed_at),
   succeeded_at: isoToDate(raw.succeeded_at),
   failed_at: isoToDate(raw.failed_at),
   retried_at: isoToDate(raw.retried_at),

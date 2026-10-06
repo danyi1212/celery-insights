@@ -8,11 +8,13 @@ import { getBrightness } from "@utils/color-utils"
 import React, { useMemo } from "react"
 import { Link } from "@tanstack/react-router"
 import stc from "string-to-color"
+import type { TaskExecutionObservation } from "@utils/task-execution"
 
 interface TaskAvatarProps extends React.ComponentProps<typeof Avatar> {
   taskId: string
   type: string | undefined | null
   status?: TaskState
+  execution?: TaskExecutionObservation
   disableLink?: true
   tooltipSide?: "top" | "bottom"
   statusReveal?: "always" | "hover"
@@ -21,6 +23,7 @@ interface TaskAvatarProps extends React.ComponentProps<typeof Avatar> {
 const TaskAvatar: React.FC<TaskAvatarProps> = ({
   taskId,
   status,
+  execution,
   type,
   disableLink,
   className,
@@ -53,7 +56,7 @@ const TaskAvatar: React.FC<TaskAvatarProps> = ({
                     : "opacity-100",
                 )}
               >
-                <TaskStatusIcon status={status} iconClassName="size-4" />
+                <TaskStatusIcon status={status} execution={execution} iconClassName="size-4" />
               </span>
             )}
           </div>

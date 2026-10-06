@@ -6,9 +6,12 @@ import TaskAlerts from "@components/task/alerts/task-alerts"
 import TaskAvatar from "@components/task/task-avatar"
 import TaskLifetimeChart from "@components/task/task-lifetime-chart"
 import TaskPageHeader from "@components/task/task-page-header"
+import TaskStateBadge from "@components/task/task-state-badge"
 import { Skeleton } from "@components/ui/skeleton"
 import { useTaskWorkflow } from "@hooks/use-task-workflow"
 import { useNow } from "@hooks/use-now"
+import { getTaskExecution } from "@utils/task-execution"
+import { TaskState } from "@/types/surreal-records"
 import { formatDurationExact } from "@utils/format-duration-exact"
 import { computeTaskPhases } from "@utils/task-phases"
 import { parseTask, parseWorkflow, type Task } from "@/types/surreal-records"
@@ -43,11 +46,19 @@ const ExecutionPanel = ({ task }: { task: Task }) => {
   return (
     <Panel title="Execution">
       <div className="grid gap-2 p-3 md:grid-cols-2">
-        <DetailItem label="State" value={task.state} />
+        <DetailItem label="Reported state" value={<TaskStateBadge state={task.state} execution={task} />} />
+        <DetailItem label="Last worker inspection" value={formatDateTime(task.execution_observed_at)} />
         <DetailItem label="Retries" value={task.retries ?? 0} />
         <DetailItem label="Queue wait" value={queueWait ? formatDurationExact(queueWait) : "---"} />
         <DetailItem label="Worker wait" value={workerWait ? formatDurationExact(workerWait) : "---"} />
-        <DetailItem label="Runtime" value={runtime ? formatDurationExact(runtime) : "---"} />
+        <DetailItem
+          label={
+            task.state === TaskState.STARTED && getTaskExecution(task, now.getTime()) !== "active"
+              ? "Runtime unconfirmed"
+              : "Runtime"
+          }
+          value={runtime ? formatDurationExact(runtime) : "---"}
+        />
         <DetailItem
           label="Worker"
           value={

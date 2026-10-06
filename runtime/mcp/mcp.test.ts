@@ -148,6 +148,32 @@ describe("MCP tools against SurrealDB", () => {
       await viewer.close()
     }
   })
+
+  it("reports execution observations and limits running tasks to fresh positive evidence", async () => {
+    const observations = [
+      ["active", true, NOW - 10_000, "active"],
+      ["missing", false, NOW - 10_000, "not_active"],
+      ["expired", true, NOW - 180_000, "unknown"],
+      ["unconfirmed", undefined, undefined, "unknown"],
+    ] as const
+    for (const [id, execution_active, observedAt] of observations) {
+      await task(id, {
+        state: "STARTED",
+        started_at: new Date(NOW - 300_000),
+        last_updated: new Date(NOW - 300_000),
+        execution_active,
+        execution_observed_at: observedAt ? new Date(observedAt) : undefined,
+      })
+    }
+    const overview = await call("inspect_workflow", { workflow_id: "root" })
+    expect(asRows(overview.running_tasks).map((row) => row.task_id)).toEqual(["active"])
+    expect(overview.omitted_running_task_count).toBe(0)
+    for (const [task_id, , , execution_status] of observations) {
+      const result = await call("inspect_task", { task_id })
+      expect(result.task).toMatchObject({ state: "STARTED", execution_status })
+    }
+  })
+
   it("requires task name and worker to match the same member", async () => {
     await task("render", { worker: "celery@A" })
     await task("publish", { type: "reports.publish", worker: "celery@B" })

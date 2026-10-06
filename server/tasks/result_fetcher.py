@@ -45,12 +45,6 @@ def _fetch_result_sync(task_id: str, celery_app: Celery) -> dict:
     return data
 
 
-def _iso_datetime(value: str | None) -> str:
-    if value:
-        return value
-    return datetime.now(tz=UTC).isoformat()
-
-
 def _query_errors(result: object) -> list[str]:
     if not isinstance(result, list):
         return []
@@ -67,41 +61,53 @@ def _query_errors(result: object) -> list[str]:
 
 def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
     state = str(meta.get("status") or "PENDING")
-    last_updated = _iso_datetime(meta.get("date_done"))
+    last_updated = meta.get("date_done")
+    observed_at = datetime.now(tz=UTC).isoformat()
     params: dict = {
         "task_id": task_id,
         "state": state,
         "last_updated": last_updated,
+        "observed_at": observed_at,
         "workflow_id": task_id,
         "type": meta.get("name"),
-        "args": repr(meta.get("args", [])),
-        "kwargs": repr(meta.get("kwargs", {})),
+        "args": repr(meta["args"]) if "args" in meta else None,
+        "kwargs": repr(meta["kwargs"]) if "kwargs" in meta else None,
         "worker": meta.get("worker"),
-        "retries": int(meta.get("retries") or 0),
+        "retries": int(meta["retries"] or 0) if "retries" in meta else None,
         "routing_key": meta.get("queue"),
     }
 
     set_clauses = [
-        "state = $state",
-        "type = $type",
-        "args = $args",
-        "kwargs = $kwargs",
-        "worker = $worker",
-        "retries = $retries",
-        "routing_key = $routing_key",
+        "state = IF $meta_apply_state THEN $state ELSE $meta_previous.state END",
+        "type = IF $meta_apply_state THEN $type ?? $meta_previous.type ELSE $meta_previous.type END",
+        "args = IF $meta_apply_state THEN $args ?? $meta_previous.args ELSE $meta_previous.args END",
+        "kwargs = IF $meta_apply_state THEN $kwargs ?? $meta_previous.kwargs ELSE $meta_previous.kwargs END",
+        "worker = IF $meta_apply_state THEN $worker ?? $meta_previous.worker ELSE $meta_previous.worker END",
+        "retries = IF $meta_apply_state THEN $retries ?? $meta_previous.retries ELSE $meta_previous.retries END",
+        "routing_key = IF $meta_apply_state THEN $routing_key ?? $meta_previous.routing_key "
+        "ELSE $meta_previous.routing_key END",
         "workflow_id = $meta_previous.workflow_id ?? $workflow_id",
-        "last_updated = <datetime>$last_updated",
-        "first_observed_at = $meta_previous.first_observed_at ?? <datetime>$last_updated",
-        "sent_at = $meta_previous.sent_at ?? <datetime>$last_updated",
+        "last_updated = IF $meta_apply_state THEN $meta_timestamp ELSE $meta_previous.last_updated END",
+        "first_observed_at = $meta_previous.first_observed_at ?? $meta_timestamp",
+        "sent_at = $meta_previous.sent_at ?? $meta_timestamp",
         "children = $meta_previous.children ?? []",
     ]
 
-    if state == "SUCCESS":
-        set_clauses.append("succeeded_at = $meta_previous.succeeded_at ?? <datetime>$last_updated")
-    elif state == "FAILURE":
-        set_clauses.append("failed_at = $meta_previous.failed_at ?? <datetime>$last_updated")
-    elif state == "RETRY":
-        set_clauses.append("retried_at = $meta_previous.retried_at ?? <datetime>$last_updated")
+    if state == "SUCCESS" and last_updated:
+        set_clauses.append(
+            "succeeded_at = IF $meta_apply_state THEN $meta_previous.succeeded_at ?? $meta_timestamp "
+            "ELSE $meta_previous.succeeded_at END"
+        )
+    elif state == "FAILURE" and last_updated:
+        set_clauses.append(
+            "failed_at = IF $meta_apply_state THEN $meta_previous.failed_at ?? $meta_timestamp "
+            "ELSE $meta_previous.failed_at END"
+        )
+    elif state == "RETRY" and last_updated:
+        set_clauses.append(
+            "retried_at = IF $meta_apply_state THEN $meta_previous.retried_at ?? $meta_timestamp "
+            "ELSE $meta_previous.retried_at END"
+        )
 
     result_value = meta.get("result")
     if result_value is not None:
@@ -109,23 +115,34 @@ def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
         truncated_result, was_truncated = _truncate_result(result_str)
         params["result"] = truncated_result
         params["result_truncated"] = was_truncated
-        set_clauses.append("result = $result")
-        set_clauses.append("result_truncated = $result_truncated")
+        set_clauses.append("result = IF $meta_apply_state THEN $result ELSE $meta_previous.result END")
+        set_clauses.append(
+            "result_truncated = IF $meta_apply_state THEN $result_truncated ELSE $meta_previous.result_truncated END"
+        )
 
     if meta.get("traceback") is not None:
         params["traceback"] = str(meta["traceback"])
-        set_clauses.append("traceback = $traceback")
+        set_clauses.append("traceback = IF $meta_apply_state THEN $traceback ELSE $meta_previous.traceback END")
 
     if state == "FAILURE" and result_value is not None:
         params["exception"] = repr(result_value)
-        set_clauses.append("exception = $exception")
+        set_clauses.append("exception = IF $meta_apply_state THEN $exception ELSE $meta_previous.exception END")
 
     if state == "FAILURE" or meta.get("traceback"):
         set_clauses.append("had_error = true")
 
     target = "type::record('task', $task_id)"
     assignments = ", ".join(set_clauses)
-    query = f"LET $meta_previous = (SELECT * FROM {target})[0] ?? {{}}; UPSERT {target} SET {assignments}"
+    query = (
+        f"LET $meta_previous = (SELECT * FROM {target})[0] ?? {{}}; "
+        "LET $meta_timestamp = IF $last_updated != NONE THEN <datetime>$last_updated "
+        "ELSE $meta_previous.last_updated ?? <datetime>$observed_at END; "
+        "LET $meta_apply_state = $meta_previous.state = NONE OR "
+        "IF $last_updated != NONE THEN $meta_previous.last_updated = NONE "
+        "OR $meta_timestamp >= $meta_previous.last_updated "
+        "ELSE $meta_previous.state NOT IN ['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED'] END; "
+        f"UPSERT {target} SET {assignments}"
+    )
     return query, params
 
 

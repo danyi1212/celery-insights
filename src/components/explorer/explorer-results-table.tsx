@@ -1,3 +1,4 @@
+import TaskStateBadge from "@components/task/task-state-badge"
 import TaskAvatar from "@components/task/task-avatar"
 import { Button } from "@components/ui/button"
 import {
@@ -62,7 +63,13 @@ const taskColumns: ColumnDef<SurrealTask>[] = [
     key: "task",
     label: "Task",
     render: (task) => (
-      <TaskAvatar taskId={extractId(task.id)} type={task.type} status={task.state as TaskState} className="size-9" />
+      <TaskAvatar
+        taskId={extractId(task.id)}
+        type={task.type}
+        status={task.state as TaskState}
+        execution={task}
+        className="size-9"
+      />
     ),
   },
   {
@@ -80,7 +87,12 @@ const taskColumns: ColumnDef<SurrealTask>[] = [
     sortable: true,
     render: (task) => new Date(task.last_updated).toLocaleString(),
   },
-  { key: "state", label: "State", sortable: true, render: (task) => task.state },
+  {
+    key: "state",
+    label: "State",
+    sortable: true,
+    render: (task) => <TaskStateBadge state={task.state} execution={task} />,
+  },
   { key: "type", label: "Type", sortable: true, render: (task) => task.type || "Unknown" },
   { key: "worker", label: "Worker", sortable: true, render: (task) => task.worker || "Unassigned" },
   { key: "runtime", label: "Runtime", sortable: true, render: (task) => formatSecondsDuration(task.runtime || 0) },
@@ -142,7 +154,7 @@ const workflowColumns: ColumnDef<SurrealWorkflow>[] = [
   },
   {
     key: "active_count",
-    label: "Active",
+    label: "Unfinished",
     sortable: true,
     render: (workflow) => renderText(workflow.active_count, "0"),
   },

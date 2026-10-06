@@ -130,11 +130,11 @@ const TaskHeader: React.FC<{ left: Task; right: Task }> = ({ left, right }) => (
 const TaskHeaderCard: React.FC<{ task: Task; label: string }> = ({ task, label }) => (
   <Card className="py-4">
     <CardContent className="flex items-center gap-3 px-4">
-      <TaskAvatar taskId={task.id} type={task.type} status={task.state} disableLink />
+      <TaskAvatar taskId={task.id} type={task.type} status={task.state} execution={task} disableLink />
       <div className="flex min-w-0 flex-col gap-0.5">
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">{label}</span>
-          <TaskStatusIcon status={task.state} />
+          <TaskStatusIcon status={task.state} execution={task} />
         </div>
         <Link
           to="/tasks/$taskId"

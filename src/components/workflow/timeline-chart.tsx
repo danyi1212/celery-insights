@@ -199,7 +199,14 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ tasks, currentTaskId }) =
                   style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH }}
                   className="flex shrink-0 items-center justify-center"
                 >
-                  <TaskAvatar taskId={task.id} type={task.type} status={task.state} disableLink className="size-9" />
+                  <TaskAvatar
+                    taskId={task.id}
+                    type={task.type}
+                    status={task.state}
+                    execution={task}
+                    disableLink
+                    className="size-9"
+                  />
                 </div>
 
                 {/* Bar area */}

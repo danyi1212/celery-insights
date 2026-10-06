@@ -35,6 +35,8 @@ const task = z
     name: nullableText,
     state: z.string(),
     worker: nullableText,
+    execution_status: z.enum(["active", "not_active", "unknown"]).nullable().optional(),
+    execution_observed_at: nullableText.optional(),
     workflow_id: nullableText,
   })
   .passthrough()

@@ -1,3 +1,4 @@
+import { getTaskExecution } from "@utils/task-execution"
 import { TaskState, type Task } from "@/types/surreal-records"
 
 export interface TaskPhase {
@@ -26,16 +27,34 @@ const getStartedAt = (task: Task): Date | undefined => task.started_at || task.r
 
 const getReceivedAt = (task: Task): Date | undefined => task.received_at || task.revoked_at
 
-export const getTaskEndTime = (task: Task, now: Date): Date => getFinishedAt(task) || now
+export const getTaskEndTime = (task: Task, now: Date): Date => {
+  const finished = isTerminalState(task.state) ? getFinishedAt(task) : undefined
+  if (finished) return finished
+  if (task.state === TaskState.STARTED && getTaskExecution(task, now.getTime()) !== "active") {
+    return new Date(
+      Math.min(
+        now.getTime(),
+        Math.max(
+          task.started_at?.getTime() ?? 0,
+          task.last_updated.getTime(),
+          task.execution_observed_at?.getTime() ?? 0,
+        ),
+      ),
+    )
+  }
+  return now
+}
 
 export const PHASE_COLORS = {
   queue: "var(--color-status-neutral)",
   worker: "var(--color-status-info)",
   running: "var(--color-status-success)",
+  unconfirmed: "var(--color-status-warning)",
 } as const
 
 export const computeTaskPhases = (task: Task, now: Date): TaskPhase[] => {
   const phases: TaskPhase[] = []
+  const unconfirmed = task.state === TaskState.STARTED && getTaskExecution(task, now.getTime()) !== "active"
   const sentMs = task.sent_at.getTime()
   const receivedMs = (getReceivedAt(task) || now).getTime()
   const startedMs = (getStartedAt(task) || now).getTime()
@@ -66,8 +85,8 @@ export const computeTaskPhases = (task: Task, now: Date): TaskPhase[] => {
   // Running phase: startedAt -> finishedAt
   if (getStartedAt(task) && finishedMs > startedMs) {
     phases.push({
-      label: "Running",
-      color: PHASE_COLORS.running,
+      label: unconfirmed ? "Execution unconfirmed" : "Running",
+      color: unconfirmed ? PHASE_COLORS.unconfirmed : PHASE_COLORS.running,
       startMs: startedMs,
       endMs: finishedMs,
       durationMs: finishedMs - startedMs,

@@ -7,6 +7,9 @@ import { Button } from "@components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { cn } from "@lib/utils"
 import { TaskState } from "@/types/surreal-records"
+import { useNow } from "@hooks/use-now"
+import { getTaskExecution, isExecutionObservationCurrent } from "@utils/task-execution"
+import { parseWorkerInspect } from "@/types/surreal-records"
 import { useWorker } from "@hooks/use-live-workers"
 import { useWorkerTasks } from "@hooks/use-live-tasks"
 import { extractId } from "@/types/surreal-records"
@@ -21,14 +24,23 @@ interface WorkerSummaryProps {
 const WorkerSummary: React.FC<WorkerSummaryProps> = ({ workerId }) => {
   const { worker } = useWorker(workerId)
   const { data: tasks } = useWorkerTasks(workerId)
+  const now = useNow(10_000)
   const startedTasks = useMemo(() => tasks.filter((task) => task.state === TaskState.STARTED), [tasks])
+  const inspect = useMemo(() => parseWorkerInspect(worker), [worker])
+  const observedRunningCount =
+    worker?.status === "online" && isExecutionObservationCurrent(inspect?._observed_at?.active, now.getTime())
+      ? inspect?.active?.length
+      : undefined
   const receivedTasks = useMemo(() => tasks.filter((task) => task.state === TaskState.RECEIVED), [tasks])
   const taskStrip = useMemo(
     () => [
       ...receivedTasks.map((task) => ({ task, tone: "muted" as const })),
-      ...startedTasks.map((task) => ({ task, tone: "live" as const })),
+      ...startedTasks.map((task) => ({
+        task,
+        tone: getTaskExecution(task, now.getTime()) === "active" ? ("live" as const) : ("muted" as const),
+      })),
     ],
-    [receivedTasks, startedTasks],
+    [receivedTasks, startedTasks, now],
   )
 
   if (worker === null) return <></>
@@ -52,7 +64,9 @@ const WorkerSummary: React.FC<WorkerSummaryProps> = ({ workerId }) => {
               {receivedTasks.length} received
             </Badge>
             <Badge variant="outline" className="px-2 py-0 text-[11px]">
-              {startedTasks.length} started
+              {observedRunningCount === undefined
+                ? "Running count unconfirmed"
+                : `${observedRunningCount} observed running`}
             </Badge>
           </div>
         </div>
@@ -75,7 +89,7 @@ const WorkerSummary: React.FC<WorkerSummaryProps> = ({ workerId }) => {
         </span>
         <span className="inline-flex items-center gap-1">
           <Play className="size-3.5 text-status-info" />
-          Started live
+          Reported started
         </span>
       </div>
       <AvatarGroup className="mt-2 min-h-8 items-center">
@@ -87,6 +101,7 @@ const WorkerSummary: React.FC<WorkerSummaryProps> = ({ workerId }) => {
               taskId={taskId}
               type={task.type}
               status={task.state as TaskState}
+              execution={task}
               className={cn("size-7", tone === "muted" && "opacity-45 saturate-50")}
             />
           )

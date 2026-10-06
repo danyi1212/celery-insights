@@ -22,15 +22,17 @@ def _inspect_sync(celery_app: Celery) -> dict[str, dict]:
 
     calls = {
         "stats": inspect.stats,
-        "active": inspect.active,
         "registered": inspect.registered,
         "scheduled": inspect.scheduled,
         "reserved": inspect.reserved,
         "active_queues": inspect.active_queues,
+        "active": inspect.active,
     }
 
     results: dict[str, dict] = {}
     for key, fn in calls.items():
+        # A task may start while replies are collected; absence only proves anything before the request.
+        observed_at = datetime.now(UTC).isoformat()
         try:
             response = fn() or {}
         except Exception:
@@ -38,7 +40,7 @@ def _inspect_sync(celery_app: Celery) -> dict[str, dict]:
             response = {}
         for hostname, data in response.items():
             results.setdefault(hostname, {})[key] = data
-            results[hostname].setdefault("_observed_at", {})[key] = datetime.now(UTC).isoformat()
+            results[hostname].setdefault("_observed_at", {})[key] = observed_at
 
     return results
 
@@ -115,6 +117,25 @@ class WorkerPoller:
                     "inspect_data = $inspect_data"
                 )
                 await db.query(query, params)
+                active = data.get("active")
+                observed_at = data.get("_observed_at", {}).get("active")
+                if isinstance(active, list) and observed_at:
+                    await db.query(
+                        "UPDATE task SET execution_active = record::id(id) IN $active_ids, "
+                        "execution_observed_at = <datetime>$observed_at "
+                        "WHERE worker = $hostname AND state = 'STARTED' "
+                        "AND last_updated <= <datetime>$observed_at",
+                        {
+                            "hostname": hostname,
+                            "active_ids": [task["id"] for task in active if isinstance(task, dict) and task.get("id")],
+                            "observed_at": observed_at,
+                        },
+                    )
+                else:
+                    await db.query(
+                        "UPDATE task SET execution_active = NONE WHERE worker = $hostname AND state = 'STARTED'",
+                        {"hostname": hostname},
+                    )
             except Exception:
                 logger.exception("Failed to upsert worker %s", hostname)
 
@@ -123,7 +144,7 @@ class WorkerPoller:
             existing: list = await db.query(  # ty: ignore[invalid-assignment]
                 "SELECT id, missed_polls FROM worker WHERE status = 'online'"
             )
-            known_workers: list[dict] = existing[0] if existing and isinstance(existing[0], list) else []
+            known_workers: list[dict] = existing[0] if existing and isinstance(existing[0], list) else existing
         except Exception:
             logger.exception("Failed to query existing workers for offline detection")
             return
@@ -148,6 +169,10 @@ class WorkerPoller:
                         {"id": hostname, "missed": missed, "ts": now},
                     )
                     logger.info("Worker %s marked offline after %d missed polls", hostname, missed)
+                    await db.query(
+                        "UPDATE task SET execution_active = NONE WHERE worker = $hostname AND state = 'STARTED'",
+                        {"hostname": hostname},
+                    )
                 else:
                     await db.query(
                         "UPDATE type::record('worker', $id) SET missed_polls = $missed",

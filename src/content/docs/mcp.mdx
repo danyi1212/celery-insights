@@ -284,3 +284,5 @@ should not interpret them as evidence that a task succeeded or a worker is idle.
 
 See [the full tool contract](https://github.com/danyi1212/celery-insights/blob/main/MCP_DESIGN.md)
 for every argument, default, page limit, and response field.
+
+Task inspection separates reported Celery state from worker execution evidence. `execution_status` is `active`, `not_active`, or `unknown` for `STARTED` tasks, with `execution_observed_at` identifying the inspection time. Observations expire after two minutes. Workflow overview `running_tasks` contains fresh positive observations; workflow `status="running"` still means unfinished observed tasks.

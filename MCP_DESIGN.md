@@ -281,7 +281,9 @@ type WorkflowTask = {
 
 Do not include every child ID in a row. Count distinct observed children consistently from available parent/child references; `parent_task_id` may refer outside the returned page. `parent_record_available=false` means the record is missing, not that the task is a root. Conflicting lineage produces a warning rather than an invented graph edge.
 
-For a running task, elapsed time is time since `started_at`; for a finished task, use recorded runtime or timestamps when available. It is not automatically a duration for an entire workflow.
+Task rows include `execution_status` (`active`, `not_active`, or `unknown` for a reported `STARTED` task; otherwise `null`) and `execution_observed_at`. Execution observations come from successful worker active-list inspections and expire after two minutes. `running_tasks` includes only fresh positive observations. Workflow `status="running"` continues to mean unfinished observed membership, as defined above.
+
+For an unfinished task, elapsed time is time since `started_at`; for a finished task, use recorded runtime or timestamps when available. It is not automatically a duration for an entire workflow.
 
 ### Example calls
 
