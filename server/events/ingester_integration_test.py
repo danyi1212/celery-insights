@@ -17,7 +17,7 @@ from tasks.result_fetcher import _build_task_meta_upsert
 @pytest.mark.skipif(shutil.which("surreal") is None, reason="SurrealDB 3.3+ CLI required")
 @pytest.mark.asyncio
 @pytest.mark.parametrize("poll_before_events", [False, True])
-async def test_batched_recovery_preserves_workflow_invocation_and_errors(poll_before_events):
+async def test_batched_recovery_preserves_workflow_invocation_and_errors(*, poll_before_events: bool) -> None:
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
