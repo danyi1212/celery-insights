@@ -79,13 +79,12 @@ def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
 
     set_clauses = [
         "state = IF $meta_apply_state THEN $state ELSE $meta_previous.state END",
-        "type = IF $meta_apply_state THEN $type ?? $meta_previous.type ELSE $meta_previous.type END",
-        "args = IF $meta_apply_state THEN $args ?? $meta_previous.args ELSE $meta_previous.args END",
-        "kwargs = IF $meta_apply_state THEN $kwargs ?? $meta_previous.kwargs ELSE $meta_previous.kwargs END",
-        "worker = IF $meta_apply_state THEN $worker ?? $meta_previous.worker ELSE $meta_previous.worker END",
-        "retries = IF $meta_apply_state THEN $retries ?? $meta_previous.retries ELSE $meta_previous.retries END",
-        "routing_key = IF $meta_apply_state THEN $routing_key ?? $meta_previous.routing_key "
-        "ELSE $meta_previous.routing_key END",
+        # Invocation metadata is not state: older backend metadata still fills gaps left by terminal-only events.
+        *(
+            f"{field} = IF $meta_apply_state THEN ${field} ?? $meta_previous.{field} "
+            f"ELSE $meta_previous.{field} ?? ${field} END"
+            for field in ("type", "args", "kwargs", "worker", "retries", "routing_key")
+        ),
         "workflow_id = $meta_previous.workflow_id ?? $workflow_id",
         "last_updated = IF $meta_apply_state THEN $meta_timestamp ELSE $meta_previous.last_updated END",
         "first_observed_at = $meta_previous.first_observed_at ?? $meta_timestamp",

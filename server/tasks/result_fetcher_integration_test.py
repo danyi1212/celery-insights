@@ -62,3 +62,39 @@ async def test_undated_completion_does_not_invent_a_finish_time(surreal_db: Asyn
     assert task["result"] == "42"
     assert task.get("succeeded_at") is None
     assert task["last_updated"] == datetime(2026, 10, 6, 12, tzinfo=UTC)
+
+
+@pytest.mark.asyncio
+async def test_older_extended_metadata_fills_invocation_gaps_after_a_terminal_event(
+    surreal_db: AsyncWsSurrealConnection,
+) -> None:
+    await surreal_db.query(
+        "CREATE task:finished SET state = 'SUCCESS', workflow_id = 'root', result = '42', worker = 'event@host', "
+        "last_updated = <datetime>'2026-10-06T12:00:00Z', succeeded_at = <datetime>'2026-10-06T12:00:00Z'"
+    )
+    query, parameters = _build_task_meta_upsert(
+        "finished",
+        {
+            "status": "SUCCESS",
+            "date_done": "2026-10-06T11:59:59Z",
+            "result": 41,
+            "name": "tasks.finished",
+            "args": [1],
+            "kwargs": {"key": 2},
+            "worker": "backend@host",
+            "retries": 3,
+            "queue": "reports",
+        },
+    )
+    await surreal_db.query(query, parameters)
+    task = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:finished"))[0]
+    assert task["state"] == "SUCCESS"
+    assert task["result"] == "42"
+    assert task["last_updated"] == datetime(2026, 10, 6, 12, tzinfo=UTC)
+    assert task["succeeded_at"] == datetime(2026, 10, 6, 12, tzinfo=UTC)
+    assert task["worker"] == "event@host"
+    assert task["type"] == "tasks.finished"
+    assert task["args"] == "[1]"
+    assert task["kwargs"] == "{'key': 2}"
+    assert task["retries"] == 3
+    assert task["routing_key"] == "reports"
