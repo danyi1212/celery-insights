@@ -289,6 +289,9 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
         f" THEN ${p}_state ELSE ${p}_previous.state END",
         f"last_updated = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts > ${p}_previous.last_updated"
         f" THEN <datetime>${p}_ts ELSE ${p}_previous.last_updated END",
+        f"last_updated_observed = IF ${p}_previous.last_updated IS NONE"
+        f" OR <datetime>${p}_ts > ${p}_previous.last_updated"
+        f" THEN false ELSE ${p}_previous.last_updated_observed ?? false END",
         f"{ts_field} = IF ${p}_previous.{ts_field} IS NONE OR <datetime>${p}_ts < ${p}_previous.{ts_field}"
         f" THEN <datetime>${p}_ts ELSE ${p}_previous.{ts_field} END",
         f"first_observed_at = IF ${p}_previous.first_observed_at IS NONE"

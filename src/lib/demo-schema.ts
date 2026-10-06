@@ -20,6 +20,7 @@ DEFINE FIELD OVERWRITE revoked_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE rejected_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE runtime ON task TYPE option<float>;
 DEFINE FIELD OVERWRITE last_updated ON task TYPE datetime;
+DEFINE FIELD OVERWRITE last_updated_observed ON task TYPE bool DEFAULT false;
 DEFINE FIELD OVERWRITE args ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE kwargs ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE eta ON task TYPE option<string>;

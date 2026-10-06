@@ -59,6 +59,9 @@ def _query_errors(result: object) -> list[str]:
     return errors
 
 
+_TERMINAL_STATES = "['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED']"
+
+
 def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
     state = str(meta.get("status") or "PENDING")
     last_updated = meta.get("date_done")
@@ -87,6 +90,8 @@ def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
         ),
         "workflow_id = $meta_previous.workflow_id ?? $workflow_id",
         "last_updated = IF $meta_apply_state THEN $meta_timestamp ELSE $meta_previous.last_updated END",
+        "last_updated_observed = IF $meta_apply_state THEN $meta_observed "
+        "ELSE $meta_previous.last_updated_observed ?? false END",
         "first_observed_at = $meta_previous.first_observed_at ?? $meta_timestamp",
         "sent_at = $meta_previous.sent_at ?? $meta_timestamp",
         "children = $meta_previous.children ?? []",
@@ -132,14 +137,19 @@ def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
 
     target = "type::record('task', $task_id)"
     assignments = ", ".join(set_clauses)
+    # An undated import stores the monitor's observation time as last_updated. That time is not task
+    # evidence, so dated terminal metadata may replace it; event-derived timestamps keep the freshness guard.
     query = (
         f"LET $meta_previous = (SELECT * FROM {target})[0] ?? {{}}; "
         "LET $meta_timestamp = IF $last_updated != NONE THEN <datetime>$last_updated "
         "ELSE $meta_previous.last_updated ?? <datetime>$observed_at END; "
+        "LET $meta_observed = IF $last_updated != NONE THEN false "
+        "ELSE ($meta_previous.last_updated_observed ?? ($meta_previous.last_updated = NONE)) END; "
         "LET $meta_apply_state = $meta_previous.state = NONE OR "
         "IF $last_updated != NONE THEN $meta_previous.last_updated = NONE "
         "OR $meta_timestamp >= $meta_previous.last_updated "
-        "ELSE $meta_previous.state NOT IN ['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED'] END; "
+        f"OR ($meta_previous.last_updated_observed = true AND $meta_previous.state NOT IN {_TERMINAL_STATES}) "
+        f"ELSE $meta_previous.state NOT IN {_TERMINAL_STATES} END; "
         f"UPSERT {target} SET {assignments}"
     )
     return query, params

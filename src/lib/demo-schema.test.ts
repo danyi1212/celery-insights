@@ -43,6 +43,7 @@ describe("DEMO_SCHEMA", () => {
       "rejected_at",
       "runtime",
       "last_updated",
+      "last_updated_observed",
       "args",
       "kwargs",
       "eta",
