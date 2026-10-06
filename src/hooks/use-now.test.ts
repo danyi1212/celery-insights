@@ -67,6 +67,23 @@ describe("useNow", () => {
     clearIntervalSpy.mockRestore()
   })
 
+  it("never returns a time before a late subscriber mounted", () => {
+    vi.setSystemTime(new Date("2025-01-01T00:00:00Z"))
+    const first = renderHook(() => useNow(10_000))
+    vi.setSystemTime(new Date("2025-01-01T00:00:07Z"))
+    const second = renderHook(() => useNow(10_000))
+
+    expect(first.result.current.getTime()).toBe(Date.parse("2025-01-01T00:00:00Z"))
+    expect(second.result.current.getTime()).toBe(Date.parse("2025-01-01T00:00:07Z"))
+
+    act(() => {
+      vi.advanceTimersByTime(10_000)
+    })
+    expect(first.result.current).toBe(second.result.current)
+    first.unmount()
+    second.unmount()
+  })
+
   it("clears interval on unmount", () => {
     const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval")
     const { unmount } = renderHook(() => useNow(1000))

@@ -38,6 +38,10 @@ export const useNow = (interval?: number): Date => {
     (listener: () => void) => (interval ? subscribeTicker(interval, listener) : () => {}),
     [interval],
   )
-  const getSnapshot = useCallback(() => (interval ? getTicker(interval).now : mountedAt), [interval, mountedAt])
+  // The shared tick can predate this mount; never report a time before the caller mounted.
+  const getSnapshot = useCallback(() => {
+    const shared = interval ? getTicker(interval).now : mountedAt
+    return shared > mountedAt ? shared : mountedAt
+  }, [interval, mountedAt])
   return useSyncExternalStore(subscribe, getSnapshot)
 }
