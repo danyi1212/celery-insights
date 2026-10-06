@@ -42,6 +42,7 @@ function createEdge(sourceId: string, targetId: string): Edge {
 
 const getChildMap = (tasks: Task[]): Map<string, Task[]> => {
   const map = new Map<string, Task[]>()
+  const taskMap = new Map(tasks.map((task) => [task.id, task]))
   for (const task of tasks)
     if (task.parent_id) {
       const id = task.parent_id
@@ -49,6 +50,14 @@ const getChildMap = (tasks: Task[]): Map<string, Task[]> => {
 
       map.get(id)?.push(task)
     }
+  for (const parent of tasks) {
+    for (const childId of new Set(parent.children)) {
+      const child = taskMap.get(childId)
+      if (!child || child.parent_id) continue
+      if (!map.has(parent.id)) map.set(parent.id, [])
+      map.get(parent.id)?.push(child)
+    }
+  }
   return map
 }
 

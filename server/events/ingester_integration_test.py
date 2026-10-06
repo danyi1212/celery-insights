@@ -16,7 +16,8 @@ from tasks.result_fetcher import _build_task_meta_upsert
 
 @pytest.mark.skipif(shutil.which("surreal") is None, reason="SurrealDB 3.3+ CLI required")
 @pytest.mark.asyncio
-async def test_batched_recovery_preserves_workflow_invocation_and_errors():
+@pytest.mark.parametrize("poll_before_events", [False, True])
+async def test_batched_recovery_preserves_workflow_invocation_and_errors(poll_before_events):
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
@@ -53,12 +54,18 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors():
                 "DEFINE TABLE task SCHEMALESS; DEFINE TABLE workflow SCHEMALESS; "
                 "DEFINE TABLE workflow_task TYPE RELATION IN workflow OUT task"
             )
+            if poll_before_events:
+                query, bindings = _build_task_meta_upsert(
+                    "child", {"status": "STARTED", "date_done": "2023-11-14T22:13:22.500Z"}
+                )
+                await db.query(query, bindings)
             events = [
                 {"type": "task-sent", "uuid": "root", "timestamp": 1700000000.0, "name": "reports.generate"},
                 {
                     "type": "task-sent",
                     "uuid": "child",
                     "root_id": "root",
+                    "parent_id": "root",
                     "timestamp": 1700000001.0,
                     "name": "reports.render",
                 },
@@ -77,6 +84,8 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors():
             child = (await rows("SELECT * FROM task:child"))[0]
             assert child["state"] == "SUCCESS"
             assert child["workflow_id"] == "root"
+            assert child["root_id"] == "root"
+            assert child["parent_id"] == "root"
             assert child["type"] == "reports.render"
             assert child["had_error"] is True
             assert child["first_observed_at"] == datetime.fromtimestamp(1700000001, tz=UTC)
