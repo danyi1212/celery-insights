@@ -68,9 +68,11 @@ describe("useExplorerData", () => {
     const [query, bindings] = mockQuery.mock.calls[0]
     expect(query).toContain("string::matches(kwargs ?? '', $kwargsPattern)")
     expect(bindings.kwargsPattern).toContain("organization_id")
-    expect(query.startsWith("LET $searchWorkflows = (SELECT VALUE workflow_id FROM task WHERE")).toBe(
-      mode === "workflows",
-    )
+    expect(
+      query.startsWith(
+        "LET $searchWorkflows = array::distinct(SELECT VALUE workflow_id FROM task WHERE workflow_id != NONE AND",
+      ),
+    ).toBe(mode === "workflows")
     expect(query.includes("root_task_id IN $searchWorkflows")).toBe(mode === "workflows")
   })
 

@@ -12,18 +12,26 @@ const PLAIN_TEXT_CLAUSE = [
   .map((field) => `string::contains(string::lowercase(${field}), $query)`)
   .join(" OR ")
 
-const WORD_PATTERNS: Record<string, string> = {
-  true: "(?i:true)",
-  false: "(?i:false)",
-  none: "(?:None|null)",
-  null: "(?:None|null)",
-}
+const WORD_PATTERNS = new Map([
+  ["true", "(?i:true)"],
+  ["false", "(?i:false)"],
+  ["none", "(?:None|null)"],
+  ["null", "(?:None|null)"],
+])
 
 const STRING_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f", "0": "\0" }
 
 interface Literal {
   pattern: string
   end: number
+}
+
+// Python repr writes nonprintable characters as \xNN below U+0100, \uXXXX below U+10000, and \UXXXXXXXX above.
+const pythonEscape = (character: string): string => {
+  const code = character.codePointAt(0) ?? 0
+  const width = code < 0x100 ? 2 : code < 0x10000 ? 4 : 8
+  const prefix = width === 2 ? "\\x" : width === 4 ? "\\u" : "\\U"
+  return prefix + code.toString(16).padStart(width, "0")
 }
 
 const stringPattern = (text: string): string => {
@@ -34,6 +42,7 @@ const stringPattern = (text: string): string => {
     .replace(/\n/g, "\\n")
     .replace(/\r/g, "\\r")
     .replace(/\t/g, "\\t")
+    .replace(/(?! )[\p{C}\p{Z}]/gu, pythonEscape)
   return `(?:"${escapeRegex(json)}"|'${escapeRegex(python)}')`
 }
 
@@ -98,7 +107,7 @@ const parseLiteral = (text: string, start: number): Literal | undefined => {
   const number = /^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/.exec(text.slice(index))?.[0]
   if (number) return { pattern: escapeRegex(number), end: index + number.length }
   const word = /^[A-Za-z]+/.exec(text.slice(index))?.[0]
-  const pattern = word && WORD_PATTERNS[word.toLowerCase()]
+  const pattern = word && WORD_PATTERNS.get(word.toLowerCase())
   return word && pattern ? { pattern, end: index + word.length } : undefined
 }
 
@@ -127,7 +136,7 @@ export const buildWorkflowSearch = (
   const search = buildTaskSearch(query)
   return {
     // SurrealDB evaluates an inline subquery once per workflow row; LET runs the task scan once per batch.
-    prelude: `LET $searchWorkflows = (SELECT VALUE workflow_id FROM task WHERE (${search.clause}));`,
+    prelude: `LET $searchWorkflows = array::distinct(SELECT VALUE workflow_id FROM task WHERE workflow_id != NONE AND (${search.clause}));`,
     clause:
       "string::contains(string::lowercase(root_task_id), $query) OR string::contains(string::lowercase(root_task_type ?? ''), $query) OR string::contains(string::lowercase(latest_exception_preview ?? ''), $query) OR root_task_id IN $searchWorkflows",
     bindings: search.bindings,

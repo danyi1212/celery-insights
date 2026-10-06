@@ -41,7 +41,8 @@ describe("task search against SurrealDB", () => {
     await db.connect(`ws://127.0.0.1:${port}/rpc`)
     await db.signin({ username: "root", password: "root" })
     await db.use({ namespace: "test", database: "search" })
-    await db.query(`
+    await db.query(
+      `
       CREATE task:one CONTENT {workflow_id: 'one', kwargs: "{'organization_id': 1, 'run_id': 'Run.A', 'enabled': True, 'label': 'North team'}"};
       CREATE task:ten CONTENT {workflow_id: 'two', kwargs: '{"organization_id": 10}'};
       CREATE task:json CONTENT {workflow_id: 'two', kwargs: '{"organization_id": 1, "enabled": true}'};
@@ -53,10 +54,14 @@ describe("task search against SurrealDB", () => {
       CREATE task:apostrophe CONTENT {kwargs: "{'note': \\"it's {\\", 'organization_id': 3}"};
       CREATE task:ordered CONTENT {kwargs: "{'options': {'2': 'b', '1': 'a'}}"};
       CREATE task:failed CONTENT {kwargs: "{'retries': 3}", exception: "MaxRetriesExceededError: status=failed, retries=3 exceeded"};
+      CREATE task:keyword CONTENT {kwargs: "{'kind': 'constructor', 'tags': ['constructor']}"};
+      CREATE task:control CONTENT {kwargs: $control};
       CREATE workflow:one CONTENT {root_task_id: 'one', root_task_type: 'reports.render'};
       CREATE workflow:two CONTENT {root_task_id: 'two', root_task_type: 'sync'};
       CREATE workflow:three CONTENT {root_task_id: 'three', root_task_type: 'sync', latest_exception_preview: 'Timeout'};
-    `)
+    `,
+      { control: String.raw`{'label': '\x01', 'tags': ['\u200b'], 'nested': {'key': '\x7f'}, 'plain': 'café'}` },
+    )
   })
 
   afterAll(async () => {
@@ -96,6 +101,14 @@ describe("task search against SurrealDB", () => {
     ["status=failed", ["failed"]],
     ["retries=3 exceeded", ["failed"]],
     ["retries=3", ["failed"]],
+    ["kind=constructor", ["keyword"]],
+    ["tags=['constructor']", ["keyword"]],
+    ["tags=[constructor]", []],
+    [String.raw`label='\x01'`, ["control"]],
+    [String.raw`tags=['\u200b']`, ["control"]],
+    [String.raw`nested={'key': '\x7f'}`, ["control"]],
+    [String.raw`plain='caf\xe9'`, ["control"]],
+    ["plain=café", ["control"]],
   ])("finds %s", async (query, expected) => {
     const { clause, bindings } = buildTaskSearch(query)
     const [rows] = await db.query<[{ id: unknown }[]]>(`SELECT id FROM task WHERE (${clause})`, bindings)
