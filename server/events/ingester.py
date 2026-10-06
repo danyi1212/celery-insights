@@ -311,24 +311,20 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
     if event_type == "task-failed" or event.get("exception") or event.get("traceback"):
         set_clauses.append("had_error = true")
 
+    # Fields follow an applied state even when it is older than an observed last_updated; `>=` lets
+    # an event with the same timestamp still fill them.
+    apply_fields = f"${p}_apply OR <datetime>${p}_ts >= ${p}_previous.last_updated"
     for event_field, db_field in TASK_FIELD_MAP.items():
         value = event.get(event_field)
         if value is not None:
             pname = f"{p}_{db_field}"
             params[pname] = value if isinstance(value, int | float) else str(value)
-            set_clauses.append(
-                f"{db_field} = IF ${p}_previous.last_updated IS NONE"
-                f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
-                f" THEN ${pname} ELSE ${p}_previous.{db_field} END"
-            )
+            set_clauses.append(f"{db_field} = IF {apply_fields} THEN ${pname} ELSE ${p}_previous.{db_field} END")
 
     hostname = event.get("hostname")
     if hostname:
         params[f"{p}_worker"] = hostname
-        set_clauses.append(
-            f"worker = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts >= ${p}_previous.last_updated"
-            f" THEN ${p}_worker ELSE ${p}_previous.worker END"
-        )
+        set_clauses.append(f"worker = IF {apply_fields} THEN ${p}_worker ELSE ${p}_previous.worker END")
 
     target = f"type::record('task', ${p}_id)"
     assignments = ", ".join(set_clauses)

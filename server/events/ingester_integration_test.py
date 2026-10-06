@@ -132,8 +132,25 @@ async def test_worker_offline_event_clears_earlier_execution_observations(
 
 
 @pytest.mark.asyncio
-async def test_older_terminal_event_replaces_an_undated_observation(surreal_db: AsyncWsSurrealConnection) -> None:
-    query, parameters = _build_task_meta_upsert("undated", {"status": "STARTED"})
+@pytest.mark.parametrize(
+    ("terminal_event", "expected_fields"),
+    [
+        (
+            {"type": "task-succeeded", "result": "42", "runtime": 1.5},
+            {"state": "SUCCESS", "result": "42", "runtime": 1.5},
+        ),
+        (
+            {"type": "task-failed", "exception": "ValueError('boom')", "traceback": "Traceback ..."},
+            {"state": "FAILURE", "exception": "ValueError('boom')", "traceback": "Traceback ..."},
+        ),
+    ],
+)
+async def test_older_terminal_event_replaces_an_undated_observation(
+    surreal_db: AsyncWsSurrealConnection, terminal_event: dict[str, Any], expected_fields: dict[str, Any]
+) -> None:
+    query, parameters = _build_task_meta_upsert(
+        "undated", {"status": "STARTED", "result": {"pid": 7, "hostname": "stale@host"}}
+    )
     await surreal_db.query(query, parameters)
     observed_at = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]["last_updated"]
     event_at = observed_at - timedelta(seconds=2)
@@ -148,11 +165,11 @@ async def test_older_terminal_event_replaces_an_undated_observation(surreal_db: 
     assert task["last_updated_observed"] is True
 
     query, parameters = build_task_upsert(
-        {"type": "task-succeeded", "uuid": "undated", "timestamp": event_at.timestamp(), "result": "42"}, 0
+        {**terminal_event, "uuid": "undated", "timestamp": event_at.timestamp(), "hostname": "worker@host"}, 0
     )
     await surreal_db.query(query, parameters)
     task = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]
-    assert task["state"] == "SUCCESS"
+    assert {field: task.get(field) for field in expected_fields} == expected_fields
+    assert task["worker"] == "worker@host"
     assert task["last_updated"] == event_at
-    assert task["succeeded_at"] == event_at
     assert task["last_updated_observed"] is False
