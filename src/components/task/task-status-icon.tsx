@@ -20,6 +20,7 @@ import React from "react"
 interface TaskStatusIconProps extends React.ComponentProps<"span"> {
   status: TaskState
   iconClassName?: string
+  /** Omit for aggregate states such as workflow rollups; the icon then shows the plain state. */
   execution?: TaskExecutionObservation
 }
 
@@ -42,16 +43,16 @@ const stateMeta: Record<TaskState, StateIconMeta> = {
 }
 
 const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status, execution, className, iconClassName, ...props }) => {
-  const now = useNow(status === TaskState.STARTED ? 10_000 : undefined)
+  const annotated = status === TaskState.STARTED && execution !== undefined
+  const now = useNow(annotated ? 10_000 : undefined)
   const observed = getTaskExecution(execution ?? {}, now.getTime())
-  const meta =
-    status === TaskState.STARTED
-      ? {
-          icon: observed === "active" ? CirclePlay : CircleHelp,
-          className: observed === "active" ? "text-status-info" : "text-status-warning",
-          tooltip: `Started; ${TASK_EXECUTION_LABELS[observed]}`,
-        }
-      : stateMeta[status]
+  const meta = annotated
+    ? {
+        icon: observed === "active" ? CirclePlay : CircleHelp,
+        className: observed === "active" ? "text-status-info" : "text-status-warning",
+        tooltip: `Started; ${TASK_EXECUTION_LABELS[observed]}`,
+      }
+    : stateMeta[status]
   const Icon = meta.icon
   return (
     <Tooltip>

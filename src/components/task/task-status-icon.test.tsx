@@ -27,10 +27,16 @@ describe("TaskStatusIcon", () => {
     }
   })
 
+  it("annotates a started task without a fresh observation as unconfirmed", () => {
+    const { container } = render(<TaskStatusIcon status={TaskState.STARTED} execution={{}} />)
+    expect(screen.getByLabelText("Started; Execution unconfirmed")).toBeInTheDocument()
+    expect(container.querySelector("svg")?.getAttribute("class")).toContain("text-status-warning")
+  })
+
   const stateExpectations: [TaskState, string, string][] = [
     [TaskState.PENDING, "text-muted-foreground", "Pending"],
     [TaskState.RECEIVED, "text-status-info", "Received"],
-    [TaskState.STARTED, "text-status-warning", "Started; Execution unconfirmed"],
+    [TaskState.STARTED, "text-status-info", "Started"],
     [TaskState.SUCCESS, "text-status-success", "Success"],
     [TaskState.FAILURE, "text-status-danger", "Failure"],
     [TaskState.IGNORED, "text-status-danger", "Ignored"],
