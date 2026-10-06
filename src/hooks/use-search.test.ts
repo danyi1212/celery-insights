@@ -17,6 +17,14 @@ vi.mock("@components/surrealdb-provider", () => ({
 }))
 
 describe("useSearch", () => {
+  it("searches exact keyword arguments in quick search", async () => {
+    renderHook(() => useSearch("organization_id=1"))
+    await act(async () => vi.advanceTimersByTime(300))
+
+    const [query, bindings] = mockQuery.mock.calls[0]
+    expect(query).toContain("string::matches(kwargs ?? '', $kwargsPattern)")
+    expect(bindings.kwargsPattern).toContain("organization_id")
+  })
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.clearAllMocks()
@@ -71,7 +79,7 @@ describe("useSearch", () => {
     expect(queryStr).toContain("FROM workflow WHERE id = type::record('workflow', workflow_id)")
     expect(queryStr).toContain("string::contains")
     expect(queryStr).toContain("SELECT * FROM worker WHERE")
-    expect(bindings).toEqual({ q: "myquery", limit: 5 })
+    expect(bindings).toEqual({ q: "myquery", query: "myquery", limit: 5 })
   })
 
   it("returns task and worker results from the query", async () => {

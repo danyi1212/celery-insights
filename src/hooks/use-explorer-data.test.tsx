@@ -47,6 +47,17 @@ const createState = (): ExplorerQueryState => ({
 })
 
 describe("useExplorerData", () => {
+  it.each(["tasks", "workflows"] as const)("searches keyword arguments in %s", async (mode) => {
+    renderHook(() => useExplorerData({ ...createState(), mode, query: "organization_id=1" }), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(mockQuery).toHaveBeenCalledTimes(1))
+    const [query, bindings] = mockQuery.mock.calls[0]
+    expect(query).toContain("string::matches(kwargs ?? '', $kwargsPattern)")
+    expect(bindings.kwargsPattern).toContain("organization_id")
+    expect(query.includes("SELECT VALUE workflow_id FROM task")).toBe(mode === "workflows")
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     mockQuery.mockResolvedValue([

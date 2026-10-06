@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import type { SurrealTask, SurrealWorker } from "@/types/surreal-records"
+import { buildTaskSearch } from "@lib/task-search"
 
 export interface SearchTaskResult extends SurrealTask {
   workflow?: {
@@ -21,8 +22,7 @@ export interface SearchResult {
  * Search hook — queries SurrealDB directly for tasks and workers matching
  * a search string. Input is debounced by 300ms to avoid excessive queries.
  *
- * Searches tasks by id, type, and exception; workers by id.
- * Uses string::contains with string::lowercase for case-insensitive matching.
+ * Searches task metadata and inputs, including key=value keyword arguments; workers by id.
  */
 export const useSearch = (query: string, limit = 10) => {
   const { db, status } = useSurrealDB()
@@ -43,18 +43,17 @@ export const useSearch = (query: string, limit = 10) => {
       }
 
       try {
+        const search = buildTaskSearch(q)
         const [tasks, workers] = await db.query<[SearchTaskResult[], SurrealWorker[]]>(
           `SELECT *,
                         (SELECT root_task_type, aggregate_state, task_count FROM workflow WHERE id = type::record('workflow', workflow_id))[0] AS workflow
                     FROM task WHERE
-                        string::contains(string::lowercase(string::concat("", id)), $q)
-                        OR string::contains(string::lowercase(type ?? ''), $q)
-                        OR string::contains(string::lowercase(exception ?? ''), $q)
+                        (${search.clause})
                     ORDER BY last_updated DESC LIMIT $limit;
                     SELECT * FROM worker WHERE
                         string::contains(string::lowercase(string::concat("", id)), $q)
                     ORDER BY last_updated DESC LIMIT $limit;`,
-          { q: q.toLowerCase(), limit },
+          { ...search.bindings, q: q.toLowerCase(), limit },
         )
 
         // Only update if this is still the active query

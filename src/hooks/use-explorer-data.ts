@@ -4,6 +4,7 @@ import type { TimeRange } from "@danyi1212/time-range-picker"
 import { isLiveTimeRange } from "@danyi1212/time-range-picker/time-range"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import { resolveTimeRangeBindings } from "@lib/time-range-utils"
+import { buildTaskSearch } from "@lib/task-search"
 import type { SurrealTask, SurrealWorkflow } from "@/types/surreal-records"
 
 export type ExplorerMode = "tasks" | "workflows"
@@ -97,10 +98,9 @@ function buildTaskWhereClause(state: ExplorerQueryState): { clause: string; bind
   const trimmedQuery = state.query.trim()
 
   if (trimmedQuery) {
-    conditions.push(
-      "(string::contains(string::lowercase(string::concat('', id)), $query) OR string::contains(string::lowercase(type ?? ''), $query) OR string::contains(string::lowercase(worker ?? ''), $query) OR string::contains(string::lowercase(exception ?? ''), $query) OR string::contains(string::lowercase(result ?? ''), $query))",
-    )
-    bindings.query = trimmedQuery.toLowerCase()
+    const search = buildTaskSearch(trimmedQuery)
+    conditions.push(`(${search.clause})`)
+    Object.assign(bindings, search.bindings)
   }
   if (state.states.length > 0) {
     conditions.push("state IN $states")
@@ -124,10 +124,12 @@ function buildWorkflowWhereClause(state: ExplorerQueryState): { clause: string; 
   const trimmedQuery = state.query.trim()
 
   if (trimmedQuery) {
+    const search = buildTaskSearch(trimmedQuery)
     conditions.push(
-      "(string::contains(string::lowercase(root_task_id), $query) OR string::contains(string::lowercase(root_task_type ?? ''), $query) OR string::contains(string::lowercase(latest_exception_preview ?? ''), $query))",
+      `(string::contains(string::lowercase(root_task_id), $query) OR string::contains(string::lowercase(root_task_type ?? ''), $query) OR string::contains(string::lowercase(latest_exception_preview ?? ''), $query) OR root_task_id IN (SELECT VALUE workflow_id FROM task WHERE (${search.clause})))`,
     )
     bindings.query = trimmedQuery.toLowerCase()
+    Object.assign(bindings, search.bindings)
   }
   if (state.workflowStates.length > 0) {
     conditions.push("aggregate_state IN $workflowStates")
