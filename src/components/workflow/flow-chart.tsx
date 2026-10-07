@@ -21,10 +21,13 @@ import {
   type XYPosition,
 } from "@xyflow/react"
 
+const COLUMN_WIDTH = 180
+const ROW_HEIGHT = 100
+
 const createNode = (task: Task, x: number, y: number, nodeId?: string): Node => ({
   id: nodeId || task.id,
   type: "taskNode",
-  position: { x: x * 180, y: y * 100 },
+  position: { x: x * COLUMN_WIDTH, y: y * ROW_HEIGHT },
   data: task as Task & Record<string, unknown>,
   connectable: false,
   deletable: false,
@@ -87,14 +90,14 @@ export const getFlowGraph = (
         return visitTask(child, column + 1)
       })
     const row = childRows.length ? (childRows[0] + childRows[childRows.length - 1]) / 2 : nextLeafRow++
-    node.position.y = row * 100
+    node.position.y = row * ROW_HEIGHT
     return row
   }
 
   const rootTask = taskMap.get(rootTaskId)
   if (rootTask) {
     const rootRow = visitTask(rootTask, initialPosition?.x ?? 0)
-    const offset = ((initialPosition?.y ?? 0) - rootRow) * 100
+    const offset = ((initialPosition?.y ?? 0) - rootRow) * ROW_HEIGHT
     for (const node of nodes) node.position.y += offset
   }
 
