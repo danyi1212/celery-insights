@@ -69,6 +69,9 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors(*, poll
                     "timestamp": 1700000001.0,
                     "name": "reports.render",
                     "routing_key": "reports",
+                    "args": "('2023-11',)",
+                    "kwargs": "{'fmt': 'pdf'}",
+                    "retries": 1,
                 },
                 {"type": "task-retried", "uuid": "child", "timestamp": 1700000002.0, "exception": "TimeoutError()"},
                 {"type": "task-succeeded", "uuid": "child", "timestamp": 1700000003.0},
@@ -88,7 +91,14 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors(*, poll
             assert child["root_id"] == "root"
             assert child["parent_id"] == "root"
             assert child["routing_key"] == "reports"
-            assert child["type"] == "reports.render"
+            invocation = {
+                "type": "reports.render",
+                "args": "('2023-11',)",
+                "kwargs": "{'fmt': 'pdf'}",
+                "retries": 1,
+                "routing_key": "reports",
+            }
+            assert {field: child.get(field) for field in invocation} == invocation
             assert child["had_error"] is True
             assert child["first_observed_at"] == datetime.fromtimestamp(1700000001, tz=UTC)
             assert len(await rows("SELECT * FROM workflow_task")) == 2
@@ -103,6 +113,7 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors(*, poll
             assert refreshed["had_error"] is True
             assert refreshed["first_observed_at"] == child["first_observed_at"]
             assert refreshed["sent_at"] == child["sent_at"]
+            assert {field: refreshed.get(field) for field in invocation} == invocation
 
             stale = {
                 "type": "task-sent",
