@@ -33,6 +33,7 @@ TASKS: list[dict[str, Any]] = [
     # json.dumps escapes non-ASCII by default (ensure_ascii), so café is stored as caf\u00e9.
     {"id": "json_ascii", "kwargs": {"channel": "café", "emoji": "😀"}, "format": "json"},
     {"id": "json_ascii_compact", "kwargs": {"channel": "café"}, "format": "json_compact"},
+    {"id": "json_ascii_del", "kwargs": {"label": "a\x7fb"}, "format": "json"},
     {"id": "string", "kwargs": {"organization_id": "1"}},
     {"id": "missing", "type": "reports.render"},
     {
@@ -108,6 +109,7 @@ QUERIES: list[tuple[str, list[str]]] = [
     ("channel=café", ["json_ascii", "json_ascii_compact"]),
     ('channel="caf\\u00e9"', ["json_ascii", "json_ascii_compact"]),
     ("emoji=😀", ["json_ascii"]),
+    ('label="a\\x7fb"', ["json_ascii_del"]),
     ("organization_id=1", ["json", "one"]),
     ("organization_id = 10", ["ten"]),
     ('organization_id="1"', ["string"]),

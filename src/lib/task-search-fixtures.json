@@ -29,6 +29,11 @@
       "format": "json_compact"
     },
     {
+      "id": "json_ascii_del",
+      "kwargs": "{\"label\": \"a\\u007fb\"}",
+      "format": "json"
+    },
+    {
       "id": "string",
       "kwargs": "{'organization_id': '1'}",
       "format": "saferepr"
@@ -214,6 +219,10 @@
     {
       "query": "emoji=😀",
       "expected": ["json_ascii"]
+    },
+    {
+      "query": "label=\"a\\x7fb\"",
+      "expected": ["json_ascii_del"]
     },
     {
       "query": "organization_id=1",
