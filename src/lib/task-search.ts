@@ -42,8 +42,8 @@ const STRING_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "
 const TOKEN = `(?:[^'"\\\\]|'(?:[^'\\\\]|\\\\.|\\\\)*'|"(?:[^"\\\\]|\\\\.)*")`
 const TOKENIZES_PATTERN = `^${TOKEN}*$`
 // Bytes literals and custom __repr__ output are written without escaping; two stray quotes can pair up and
-// tokenize, so rows containing either shape always get the lenient match.
-const MALFORMED_REPR_PATTERN = `(?:^|\\W)b['"]|<`
+// tokenize, so rows with either shape in a value position (after a structural delimiter) get the lenient match.
+const MALFORMED_REPR_PATTERN = `[:,\\[({]\\s*(?:b['"]|<)`
 
 interface Literal {
   pattern: string

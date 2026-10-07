@@ -152,6 +152,16 @@
       "id": "two_reprs",
       "kwargs": "{'a': <Opaque it's>, 'organization_id': 28, 'b': <Opaque it's>}",
       "format": "saferepr"
+    },
+    {
+      "id": "angle_inside",
+      "kwargs": "{'note': 'a < b, \"organization_id\": 1, c'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "bytes_text_inside",
+      "kwargs": "{'note': 'see b\\'x, \"organization_id\": 1, c'}",
+      "format": "saferepr"
     }
   ],
   "workflows": [

@@ -88,6 +88,9 @@ TASKS: list[dict[str, Any]] = [
     # Two stray quotes pair up, so these rows tokenize with the key inside a misread string.
     {"id": "two_bytes", "kwargs": {"a": b"it's", "organization_id": 27, "b": b"it's"}},
     {"id": "two_reprs", "kwargs": {"a": Opaque(), "organization_id": 28, "b": Opaque()}},
+    # A "<" or "b'" inside an ordinary string is not a malformed value and keeps the strict match.
+    {"id": "angle_inside", "kwargs": {"note": 'a < b, "organization_id": 1, c'}},
+    {"id": "bytes_text_inside", "kwargs": {"note": 'see b\'x, "organization_id": 1, c'}},
 ]
 
 WORKFLOWS: list[dict[str, Any]] = [
