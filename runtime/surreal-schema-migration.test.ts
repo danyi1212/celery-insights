@@ -55,4 +55,33 @@ describe("runSchemaMigration against SurrealDB", () => {
       { id: "old_import", last_updated_observed: true },
     ])
   }, 30_000)
+
+  it("backfills the last positive observation from a current positive observation", async () => {
+    await db
+      .query(
+        "CREATE task:observed_running, task:observed_idle SET state = 'STARTED', workflow_id = 'root', " +
+          "last_updated = d'2026-10-06T12:00:00Z', execution_observed_at = d'2026-10-06T12:10:00Z'; " +
+          "UPDATE task:observed_running SET execution_active = true; " +
+          "UPDATE task:observed_idle SET execution_active = false",
+      )
+      .collect()
+    await runSchemaMigration(
+      parseConfig({
+        SURREALDB_EXTERNAL_URL: server.endpoint,
+        SURREALDB_NAMESPACE: "migration",
+        SURREALDB_DATABASE: "upgrade",
+      }),
+      silent,
+    )
+
+    const [rows] = await db
+      .query<[{ id: string; execution_active_at?: Date }[]]>(
+        "SELECT record::id(id) AS id, execution_active_at FROM [task:observed_idle, task:observed_running]",
+      )
+      .collect()
+    expect(rows.map((row) => [row.id, row.execution_active_at?.toISOString()])).toEqual([
+      ["observed_idle", undefined],
+      ["observed_running", "2026-10-06T12:10:00.000Z"],
+    ])
+  }, 30_000)
 })

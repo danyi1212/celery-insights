@@ -6,6 +6,7 @@ import pytest
 from pytest_mock import MockerFixture
 from surrealdb.connections.async_ws import AsyncWsSurrealConnection
 
+from events.ingester import build_worker_upsert
 from workers.poller import MISSED_POLLS_THRESHOLD, OBSERVATION_REFRESH_SECONDS, WorkerPoller
 
 
@@ -149,3 +150,49 @@ async def test_missed_poll_drops_the_stored_active_list(
         assert stored["stats"] == {"pid": 10}
         assert stored["_observed_at"] == {"stats": "2026-10-06T12:01:00Z"}
     assert task.get("execution_active") is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("clearing", ["missed_poll", "worker_offline", "absent_from_inspection"])
+async def test_last_positive_observation_survives_clearing(
+    surreal_db: AsyncWsSurrealConnection, mocker: MockerFixture, clearing: str
+) -> None:
+    mocker.patch("workers.poller.get_db", return_value=surreal_db)
+    await surreal_db.query(
+        "CREATE task:running SET state = 'STARTED', worker = 'worker@host', workflow_id = 'root', "
+        "started_at = <datetime>'2026-10-06T12:00:00Z', last_updated = <datetime>'2026-10-06T12:00:00Z'"
+    )
+    inspect = {"worker@host": {"active": [{"id": "running"}], "_observed_at": {"active": "2026-10-06T12:08:59Z"}}}
+    to_thread = mocker.patch("workers.poller.asyncio.to_thread", return_value=inspect)
+
+    async def active_at() -> datetime:
+        return cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:running"))[0][
+            "execution_active_at"
+        ]
+
+    await WorkerPoller(mocker.MagicMock())._poll()
+    assert await active_at() == datetime(2026, 10, 6, 12, 8, 59, tzinfo=UTC)
+    # Unchanged positive observations lag with execution_observed_at inside the refresh window.
+    inspect["worker@host"]["_observed_at"]["active"] = "2026-10-06T12:09:30Z"
+    await WorkerPoller(mocker.MagicMock())._poll()
+    assert await active_at() == datetime(2026, 10, 6, 12, 8, 59, tzinfo=UTC)
+    inspect["worker@host"]["_observed_at"]["active"] = "2026-10-06T12:10:00Z"
+    await WorkerPoller(mocker.MagicMock())._poll()
+    assert await active_at() == datetime(2026, 10, 6, 12, 10, tzinfo=UTC)
+
+    if clearing == "missed_poll":
+        to_thread.return_value = {}
+        await WorkerPoller(mocker.MagicMock())._poll()
+    elif clearing == "worker_offline":
+        offline_at = datetime(2026, 10, 6, 12, 11, tzinfo=UTC).timestamp()
+        query, parameters = build_worker_upsert(
+            {"type": "worker-offline", "hostname": "worker@host", "timestamp": offline_at}, 0
+        )
+        await surreal_db.query(query, parameters)
+    else:
+        inspect["worker@host"] = {"active": [], "_observed_at": {"active": "2026-10-06T12:11:00Z"}}
+        await WorkerPoller(mocker.MagicMock())._poll()
+
+    task = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:running"))[0]
+    assert task.get("execution_active") is not True
+    assert task["execution_active_at"] == datetime(2026, 10, 6, 12, 10, tzinfo=UTC)

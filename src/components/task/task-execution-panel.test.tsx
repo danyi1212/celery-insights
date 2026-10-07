@@ -36,6 +36,7 @@ describe("TaskExecutionPanel", () => {
           last_updated: new Date(now.getTime() - 200_000),
           execution_active: true,
           execution_observed_at: new Date(now.getTime() - 150_000),
+          execution_active_at: new Date(now.getTime() - 150_000),
         })}
       />,
     )

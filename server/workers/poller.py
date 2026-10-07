@@ -145,7 +145,10 @@ class WorkerPoller:
                 if isinstance(active, list) and observed_at:
                     await db.query(
                         "UPDATE task SET execution_active = record::id(id) IN $active_ids, "
-                        "execution_observed_at = <datetime>$observed_at "
+                        "execution_observed_at = <datetime>$observed_at, "
+                        # The last positive time bounds a frozen runtime; clears and negative inspections keep it.
+                        "execution_active_at = IF record::id(id) IN $active_ids THEN <datetime>$observed_at "
+                        "ELSE execution_active_at END "
                         "WHERE worker = $hostname AND state = 'STARTED' "
                         "AND last_updated <= <datetime>$observed_at "
                         "AND (execution_active != (record::id(id) IN $active_ids) OR execution_observed_at = NONE "

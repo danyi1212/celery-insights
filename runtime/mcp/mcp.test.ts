@@ -139,6 +139,17 @@ describe("MCP tools against SurrealDB", () => {
       const result = await call("inspect_task", { task_id })
       expect(result.task).toMatchObject({ state: "STARTED", execution_status })
     }
+    await task("cleared", {
+      state: "STARTED",
+      started_at: new Date(NOW - 300_000),
+      last_updated: new Date(NOW - 300_000),
+      execution_observed_at: new Date(NOW - 10_000),
+      execution_active_at: new Date(NOW - 60_000),
+    })
+    expect((await call("inspect_task", { task_id: "cleared" })).task).toMatchObject({
+      execution_status: "unknown",
+      execution_active_at: new Date(NOW - 60_000).toISOString(),
+    })
   })
 
   it("requires task name and worker to match the same member", async () => {

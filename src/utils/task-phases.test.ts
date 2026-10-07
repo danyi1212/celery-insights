@@ -120,14 +120,40 @@ describe("computeTaskPhases", () => {
       last_updated: new Date(now.getTime() - 198_000),
       execution_active: true,
       execution_observed_at: new Date(now.getTime() - 150_000),
+      execution_active_at: new Date(now.getTime() - 150_000),
       succeeded_at: undefined,
     })
     const phase = computeTaskPhases(task, now).at(-1)!
     expect(phase.kind).toBe("running")
     expect(phase.label).toBe("Execution unconfirmed")
-    expect(phase.endMs).toBe(task.execution_observed_at!.getTime())
+    expect(phase.endMs).toBe(task.execution_active_at!.getTime())
     expect(computeTaskPhases(task, new Date(now.getTime() + 60_000)).at(-1)).toEqual(phase)
     expect(task.state).toBe(TaskState.STARTED)
+  })
+
+  // Each clearing path keeps the 12:10 positive observation in execution_active_at.
+  it.each([
+    ["a missed poll", undefined, "2024-01-01T12:10:00Z"],
+    ["a worker-offline event", undefined, "2024-01-01T12:10:00Z"],
+    ["an inspection without the task", false, "2024-01-01T12:11:00Z"],
+  ])("keeps the runtime at the last positive inspection after %s", (_, executionActive, observedAt) => {
+    const task = createTask({
+      state: TaskState.STARTED,
+      sent_at: new Date("2024-01-01T12:00:00Z"),
+      received_at: new Date("2024-01-01T12:00:00Z"),
+      started_at: new Date("2024-01-01T12:00:00Z"),
+      last_updated: new Date("2024-01-01T12:00:00Z"),
+      execution_active: executionActive,
+      execution_observed_at: new Date(observedAt),
+      execution_active_at: new Date("2024-01-01T12:10:00Z"),
+      succeeded_at: undefined,
+    })
+    const later = new Date("2024-01-01T12:30:00Z")
+    expect(getTaskEndTime(task, new Date("2024-01-01T12:12:00Z"))).toEqual(new Date("2024-01-01T12:10:00Z"))
+    expect(getTaskEndTime(task, later)).toEqual(new Date("2024-01-01T12:10:00Z"))
+    const phase = computeTaskPhases(task, later).at(-1)!
+    expect(phase.label).toBe("Execution unconfirmed")
+    expect(phase.durationMs).toBe(600_000)
   })
 
   it("does not advance unconfirmed execution when a negative inspection is refreshed", () => {

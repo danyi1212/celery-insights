@@ -13,6 +13,7 @@ DEFINE FIELD OVERWRITE received_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE started_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE execution_active ON task TYPE option<bool>;
 DEFINE FIELD OVERWRITE execution_observed_at ON task TYPE option<datetime>;
+DEFINE FIELD OVERWRITE execution_active_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE succeeded_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE failed_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE retried_at ON task TYPE option<datetime>;

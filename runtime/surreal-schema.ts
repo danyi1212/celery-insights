@@ -37,6 +37,7 @@ DEFINE FIELD OVERWRITE received_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE started_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE execution_active ON task TYPE option<bool>;
 DEFINE FIELD OVERWRITE execution_observed_at ON task TYPE option<datetime>;
+DEFINE FIELD OVERWRITE execution_active_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE succeeded_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE failed_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE retried_at ON task TYPE option<datetime>;
@@ -377,6 +378,7 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
     await db
       .query(`UPDATE task SET
       first_observed_at = first_observed_at ?? sent_at ?? received_at ?? started_at ?? last_updated,
+      execution_active_at = execution_active_at ?? (IF execution_active = true THEN execution_observed_at ELSE NONE END),
       last_updated_observed = last_updated_observed ?? (state NOT IN ['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED']
         AND started_at = NONE AND received_at = NONE AND retried_at = NONE),
       had_error = had_error OR state = 'FAILURE' OR failed_at != NONE

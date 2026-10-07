@@ -39,8 +39,8 @@ export const getTaskEndTime = (task: Task, now: Date): Date => {
         Math.max(
           task.started_at?.getTime() ?? 0,
           task.last_updated.getTime(),
-          // Negative observations are refreshed every minute; only a positive one is evidence of runtime.
-          (task.execution_active === true && task.execution_observed_at?.getTime()) || 0,
+          // The last positive inspection, which outlives cleared and refreshed negative observations.
+          task.execution_active_at?.getTime() ?? 0,
         ),
       ),
     )

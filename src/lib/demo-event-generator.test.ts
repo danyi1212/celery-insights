@@ -149,7 +149,10 @@ describe("DemoEventGenerator", () => {
     expect(new Set(observed.map(([, params]) => params.state))).toEqual(new Set(["STARTED"]))
     expect(cleared.map(([, params]) => params.state)).not.toContain("STARTED")
     expect(new Set(untouched.map(([, params]) => params.state))).toEqual(new Set(["PENDING", "RECEIVED"]))
-    for (const [q] of observed) expect(q).toContain("execution_observed_at = <datetime>$ts")
+    for (const [q] of observed) {
+      expect(q).toContain("execution_observed_at = <datetime>$ts")
+      expect(q).toContain("execution_active_at = <datetime>$ts")
+    }
   })
 
   it("refreshes active-list inspections and execution observations on heartbeat", async () => {
@@ -183,6 +186,7 @@ describe("DemoEventGenerator", () => {
         q.startsWith("UPDATE task SET execution_active = true, execution_observed_at = <datetime>$ts"),
     )
     expect(refreshes).toHaveLength(3)
+    for (const [q] of refreshes) expect(q).toContain("execution_active_at = <datetime>$ts")
   })
 
   it("generates continuous tasks over time", async () => {

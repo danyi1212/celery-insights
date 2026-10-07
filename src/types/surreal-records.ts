@@ -23,6 +23,7 @@ export interface SurrealTask {
   started_at?: string | null
   execution_active?: boolean | null
   execution_observed_at?: string | null
+  execution_active_at?: string | null
   succeeded_at?: string | null
   failed_at?: string | null
   retried_at?: string | null
@@ -205,6 +206,7 @@ export interface Task {
   started_at?: Date
   execution_active?: boolean
   execution_observed_at?: Date
+  execution_active_at?: Date
   succeeded_at?: Date
   failed_at?: Date
   retried_at?: Date
@@ -256,6 +258,7 @@ export const parseTask = (raw: SurrealTask): Task => ({
   started_at: isoToDate(raw.started_at),
   execution_active: raw.execution_active ?? undefined,
   execution_observed_at: isoToDate(raw.execution_observed_at),
+  execution_active_at: isoToDate(raw.execution_active_at),
   succeeded_at: isoToDate(raw.succeeded_at),
   failed_at: isoToDate(raw.failed_at),
   retried_at: isoToDate(raw.retried_at),

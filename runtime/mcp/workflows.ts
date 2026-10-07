@@ -18,7 +18,7 @@ import {
 
 export const TASK_FIELDS = `id, record::id(id) AS task_id, type AS name, state, worker,
   workflow_id, parent_id AS parent_task_id, sent_at, first_observed_at, last_updated,
-  started_at, execution_active, execution_observed_at, succeeded_at, failed_at, revoked_at, rejected_at, runtime, retries,
+  started_at, execution_active, execution_observed_at, execution_active_at, succeeded_at, failed_at, revoked_at, rejected_at, runtime, retries,
   string::slice(exception ?? '', 0, 512) AS exception_preview,
   (SELECT count() AS total FROM task WHERE parent_id = $parent.task_id OR id IN
     array::map($parent.children ?? [], |$child| type::record('task', $child)) GROUP ALL)[0].total ?? 0 AS observed_child_count,
@@ -55,6 +55,7 @@ export const taskRow = (raw: Row, now: number): Row => {
           )
         : null,
     execution_observed_at: iso(raw.execution_observed_at),
+    execution_active_at: iso(raw.execution_active_at),
     finished_at: terminal ? finished : null,
     elapsed_seconds:
       terminal && typeof raw.runtime === "number"

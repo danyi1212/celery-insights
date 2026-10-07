@@ -289,7 +289,7 @@ async function insertWorkerHeartbeat(db: Surreal, hostname: string, ts: Date): P
     { id: hostname, ts: iso, inspect: JSON.stringify(buildWorkerInspect(active, iso)) },
   )
   await db.query(
-    "UPDATE task SET execution_active = true, execution_observed_at = <datetime>$ts WHERE worker = $hostname AND state = 'STARTED'",
+    "UPDATE task SET execution_active = true, execution_observed_at = <datetime>$ts, execution_active_at = <datetime>$ts WHERE worker = $hostname AND state = 'STARTED'",
     { hostname, ts: iso },
   )
 }
@@ -421,7 +421,11 @@ async function insertTaskEvent(
   }
 
   if (eventType === "task-started") {
-    setClauses.push("execution_active = true", "execution_observed_at = <datetime>$ts")
+    setClauses.push(
+      "execution_active = true",
+      "execution_observed_at = <datetime>$ts",
+      "execution_active_at = <datetime>$ts",
+    )
   } else if (state !== "PENDING" && state !== "RECEIVED") {
     setClauses.push("execution_active = NONE", "execution_observed_at = NONE")
   }
