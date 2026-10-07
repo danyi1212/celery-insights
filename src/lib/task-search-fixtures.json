@@ -167,6 +167,11 @@
       "id": "delimited_angle_inside",
       "kwargs": "{'note': 'a: < b, \"organization_id\": 1, c'}",
       "format": "saferepr"
+    },
+    {
+      "id": "escaped_angle_inside",
+      "kwargs": "{'note': 'it\\': < b, \"organization_id\": 1, c'}",
+      "format": "saferepr"
     }
   ],
   "workflows": [

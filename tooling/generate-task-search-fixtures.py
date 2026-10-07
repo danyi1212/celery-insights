@@ -92,6 +92,7 @@ TASKS: list[dict[str, Any]] = [
     {"id": "angle_inside", "kwargs": {"note": 'a < b, "organization_id": 1, c'}},
     {"id": "bytes_text_inside", "kwargs": {"note": 'see b\'x, "organization_id": 1, c'}},
     {"id": "delimited_angle_inside", "kwargs": {"note": 'a: < b, "organization_id": 1, c'}},
+    {"id": "escaped_angle_inside", "kwargs": {"note": 'it\': < b, "organization_id": 1, c'}},
 ]
 
 WORKFLOWS: list[dict[str, Any]] = [

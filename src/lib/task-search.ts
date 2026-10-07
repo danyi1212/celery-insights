@@ -39,12 +39,13 @@ const STRING_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "
 
 // One unit of serialized kwargs text: a plain character, a single-quoted string, or a double-quoted string.
 // saferepr only writes a backslash inside a string, so a plain backslash marks a misread quote.
-const TOKEN = `(?:[^'"\\\\]|'(?:[^'\\\\]|\\\\.|\\\\)*'|"(?:[^"\\\\]|\\\\.)*")`
+const QUOTED = `(?:'(?:[^'\\\\]|\\\\.|\\\\)*'|"(?:[^"\\\\]|\\\\.)*")`
+const TOKEN = `(?:[^'"\\\\]|${QUOTED})`
 const TOKENIZES_PATTERN = `^${TOKEN}*$`
 // Bytes literals and custom __repr__ output are written without escaping; two stray quotes can pair up and
-// tokenize, so rows with either shape in a value position get the lenient match. The prefix tokenizes, so a
-// delimiter and marker inside a quoted string don't count.
-const MALFORMED_REPR_PATTERN = `^${TOKEN}*?[:,\\[({]\\s*(?:b['"]|<)`
+// tokenize, so rows with either shape in a value position get the lenient match. The whole text must tokenize
+// around the marker, so a delimiter and marker inside a quoted string don't count.
+const MALFORMED_REPR_PATTERN = `^${TOKEN}*?[:,\\[({]\\s*(?:b${QUOTED}|<)${TOKEN}*$`
 
 interface Literal {
   pattern: string

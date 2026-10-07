@@ -46,12 +46,13 @@ STRING_ESCAPES = {"n": "\n", "r": "\r", "t": "\t", "b": "\b", "f": "\f"}
 
 # One unit of serialized kwargs text: a plain character, a single-quoted string, or a double-quoted string.
 # saferepr only writes a backslash inside a string, so a plain backslash marks a misread quote.
-TOKEN = r"""(?:[^'"\\]|'(?:[^'\\]|\\.|\\)*'|"(?:[^"\\]|\\.)*")"""
+QUOTED = r"""(?:'(?:[^'\\]|\\.|\\)*'|"(?:[^"\\]|\\.)*")"""
+TOKEN = r"""(?:[^'"\\]|""" + QUOTED + ")"
 TOKENIZES_PATTERN = "^" + TOKEN + "*$"
 # Bytes literals and custom __repr__ output are written without escaping; two stray quotes can pair up and
-# tokenize, so rows with either shape in a value position get the lenient match. The prefix tokenizes, so a
-# delimiter and marker inside a quoted string don't count.
-MALFORMED_REPR_PATTERN = "^" + TOKEN + r"""*?[:,\[({]\s*(?:b['"]|<)"""
+# tokenize, so rows with either shape in a value position get the lenient match. The whole text must tokenize
+# around the marker, so a delimiter and marker inside a quoted string don't count.
+MALFORMED_REPR_PATTERN = "^" + TOKEN + r"*?[:,\[({]\s*(?:b" + QUOTED + "|<)" + TOKEN + "*$"
 
 NUMBER_PATTERN = re.compile(r"^-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
 WORD_PATTERN = re.compile(r"^[A-Za-z]+")
