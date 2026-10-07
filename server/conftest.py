@@ -1,4 +1,5 @@
 import asyncio
+import os
 import shutil
 import socket
 import subprocess
@@ -14,6 +15,9 @@ from surrealdb.connections.async_ws import AsyncWsSurrealConnection
 @pytest_asyncio.fixture
 async def surreal_db() -> AsyncIterator[AsyncWsSurrealConnection]:
     if shutil.which("surreal") is None:
+        # CI installs the CLI; a skip there would let every native integration test pass silently.
+        if os.environ.get("CI"):
+            pytest.fail("Native SurrealDB tests require the SurrealDB 3.3+ CLI on PATH")
         pytest.skip("SurrealDB 3.3+ CLI required")
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
