@@ -16,6 +16,20 @@ OBSERVATION_REFRESH_SECONDS = 60
 DEFAULT_POLL_INTERVAL = 5
 
 
+def _without_active_inspection(worker: dict) -> dict:
+    data = worker.get("inspect_data")
+    if not isinstance(data, dict):
+        try:
+            data = json.loads(worker.get("inspect") or "{}")
+        except TypeError, ValueError:
+            data = {}
+    data = {key: value for key, value in data.items() if key != "active"}
+    observed = data.get("_observed_at")
+    if isinstance(observed, dict):
+        data["_observed_at"] = {key: value for key, value in observed.items() if key != "active"}
+    return data
+
+
 _CLEAR_EXECUTION = (
     "UPDATE task SET execution_active = NONE "
     "WHERE worker = $hostname AND state = 'STARTED' AND execution_active != NONE"
@@ -152,7 +166,7 @@ class WorkerPoller:
         # Handle offline detection for known workers
         try:
             existing: list = await db.query(  # ty: ignore[invalid-assignment]
-                "SELECT id, missed_polls FROM worker WHERE status = 'online'"
+                "SELECT id, missed_polls, inspect, inspect_data FROM worker WHERE status = 'online'"
             )
             known_workers: list[dict] = existing[0] if existing and isinstance(existing[0], list) else existing
         except Exception:
@@ -171,20 +185,30 @@ class WorkerPoller:
                 continue
 
             missed = (worker.get("missed_polls") or 0) + 1
+            # A missing reply is no observation: tasks and the stored active list are cleared at once;
+            # only the worker's status keeps the missed-poll grace.
+            inspection = _without_active_inspection(worker)
+            params = {
+                "id": hostname,
+                "missed": missed,
+                "ts": now,
+                "data": json.dumps(inspection),
+                "inspect_data": inspection,
+            }
             try:
-                # A missing reply is no observation; only the worker's status keeps the missed-poll grace.
                 await db.query(_CLEAR_EXECUTION, {"hostname": hostname})
                 if missed >= MISSED_POLLS_THRESHOLD:
                     await db.query(
-                        "UPDATE type::record('worker', $id) SET "
-                        "status = 'offline', missed_polls = $missed, last_updated = <datetime>$ts",
-                        {"id": hostname, "missed": missed, "ts": now},
+                        "UPDATE type::record('worker', $id) SET status = 'offline', missed_polls = $missed, "
+                        "last_updated = <datetime>$ts, inspect = $data, inspect_data = $inspect_data",
+                        params,
                     )
                     logger.info("Worker %s marked offline after %d missed polls", hostname, missed)
                 else:
                     await db.query(
-                        "UPDATE type::record('worker', $id) SET missed_polls = $missed",
-                        {"id": hostname, "missed": missed},
+                        "UPDATE type::record('worker', $id) SET missed_polls = $missed, "
+                        "inspect = $data, inspect_data = $inspect_data",
+                        params,
                     )
             except Exception:
                 logger.exception("Failed to update missed polls for worker %s", hostname)

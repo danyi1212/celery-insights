@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
@@ -116,3 +117,35 @@ async def test_unchanged_observations_are_rewritten_only_after_the_refresh_windo
     await WorkerPoller(mocker.MagicMock())._poll()
     tasks = {str(task["id"]): task for task in cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task"))}
     assert tasks["task:idle"]["execution_observed_at"] == refreshed_at
+
+
+@pytest.mark.asyncio
+async def test_missed_poll_drops_the_stored_active_list(
+    surreal_db: AsyncWsSurrealConnection, mocker: MockerFixture
+) -> None:
+    mocker.patch("workers.poller.get_db", return_value=surreal_db)
+    await surreal_db.query(
+        "CREATE task:running SET state = 'STARTED', worker = 'worker@host', workflow_id = 'root', "
+        "last_updated = <datetime>'2026-10-06T12:00:00Z'"
+    )
+    inspect = {
+        "worker@host": {
+            "stats": {"pid": 10},
+            "active": [{"id": "running"}],
+            "_observed_at": {"stats": "2026-10-06T12:01:00Z", "active": "2026-10-06T12:01:00Z"},
+        }
+    }
+    to_thread = mocker.patch("workers.poller.asyncio.to_thread", return_value=inspect)
+    await WorkerPoller(mocker.MagicMock())._poll()
+    to_thread.return_value = {}
+    await WorkerPoller(mocker.MagicMock())._poll()
+
+    worker = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM worker:`worker@host`"))[0]
+    task = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:running"))[0]
+    assert worker["status"] == "online"
+    assert worker["missed_polls"] == 1
+    for stored in [worker["inspect_data"], json.loads(worker["inspect"])]:
+        assert "active" not in stored
+        assert stored["stats"] == {"pid": 10}
+        assert stored["_observed_at"] == {"stats": "2026-10-06T12:01:00Z"}
+    assert task.get("execution_active") is None
