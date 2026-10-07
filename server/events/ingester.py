@@ -294,7 +294,10 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
         f"first_observed_at = IF ${p}_previous.first_observed_at IS NONE"
         f" OR <datetime>${p}_ts < ${p}_previous.first_observed_at"
         f" THEN <datetime>${p}_ts ELSE ${p}_previous.first_observed_at END",
-        f"workflow_id = ${p}_workflow_id"
+        # The workflow follows root_id, so an older event can't regroup a task whose root is already known.
+        f"workflow_id = IF ${p}_previous.root_id IS NONE OR ${p}_previous.last_updated IS NONE"
+        f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
+        f" THEN ${p}_workflow_id ELSE ${p}_previous.workflow_id ?? ${p}_workflow_id END"
         if event.get("root_id")
         else f"workflow_id = ${p}_previous.workflow_id ?? ${p}_workflow_id",
     ]

@@ -99,6 +99,14 @@ class TestBuildTaskUpsert:
             in query
         )
 
+    def test_workflow_follows_root_id_freshness(self):
+        query, _ = build_task_upsert({"type": "task-sent", "uuid": "x", "timestamp": 1700000000.0, "root_id": "r"}, 0)
+        assert (
+            "workflow_id = IF $t0_previous.root_id IS NONE OR $t0_previous.last_updated IS NONE"
+            " OR <datetime>$t0_ts >= $t0_previous.last_updated"
+            " THEN $t0_workflow_id ELSE $t0_previous.workflow_id ?? $t0_workflow_id END"
+        ) in query
+
     def test_metadata_fills_missing_fields_from_older_events_only(self):
         event = {
             "type": "task-sent",

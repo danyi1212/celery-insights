@@ -115,6 +115,7 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors(*, poll
             await db.query(query, bindings)
             after_stale = (await rows("SELECT * FROM task:child"))[0]
             assert after_stale["root_id"] == "root"
+            assert after_stale["workflow_id"] == "root"
             assert after_stale["parent_id"] == "root"
             assert after_stale["state"] == "SUCCESS"
             assert after_stale["last_updated"] == refreshed["last_updated"]
