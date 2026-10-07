@@ -285,12 +285,12 @@ export class WorkflowTools {
       )
       const runningWhere =
         "workflow_id = $workflowId AND state = 'STARTED' AND execution_active = true " +
-        "AND execution_observed_at >= <datetime>$executionCutoff AND execution_observed_at <= <datetime>$executionNow " +
+        "AND execution_observed_at >= <datetime>$executionCutoff AND execution_observed_at <= <datetime>$executionCeiling " +
         "AND execution_observed_at >= last_updated"
       const runningBindings = {
         ...bindings,
         executionCutoff: new Date(this.now - EXECUTION_OBSERVATION_MAX_AGE_MS).toISOString(),
-        executionNow: new Date(this.now).toISOString(),
+        executionCeiling: new Date(this.now + EXECUTION_OBSERVATION_MAX_AGE_MS).toISOString(),
       }
       const running = await this.q.rows(
         `SELECT ${taskFields} FROM task WHERE ${runningWhere} ORDER BY started_at, id LIMIT 3`,

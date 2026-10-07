@@ -8,9 +8,11 @@ export type TaskExecution = "active" | "not_active" | "unknown"
 
 export const EXECUTION_OBSERVATION_MAX_AGE_MS = 120_000
 
+// The expiry window is the only tolerance, applied in both directions: a reader's clock, or a shared
+// tick that is up to 10 s stale, may trail the monitor that stamped the observation.
 export const isExecutionObservationCurrent = (timestamp: Date | string | null | undefined, now: number): boolean => {
   const observedAt = timestamp ? new Date(timestamp).getTime() : NaN
-  return Number.isFinite(observedAt) && observedAt <= now && now - observedAt <= EXECUTION_OBSERVATION_MAX_AGE_MS
+  return Number.isFinite(observedAt) && Math.abs(now - observedAt) <= EXECUTION_OBSERVATION_MAX_AGE_MS
 }
 
 export const getTaskExecution = (task: TaskExecutionObservation, now: number): TaskExecution => {

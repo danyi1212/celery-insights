@@ -152,6 +152,7 @@ describe("MCP tools against SurrealDB", () => {
   it("reports execution observations and limits running tasks to fresh positive evidence", async () => {
     const observations = [
       ["active", true, NOW - 10_000, "active"],
+      ["ahead", true, NOW + 30_000, "active"],
       ["missing", false, NOW - 10_000, "not_active"],
       ["expired", true, NOW - 180_000, "unknown"],
       ["unconfirmed", undefined, undefined, "unknown"],
@@ -166,7 +167,7 @@ describe("MCP tools against SurrealDB", () => {
       })
     }
     const overview = await call("inspect_workflow", { workflow_id: "root" })
-    expect(asRows(overview.running_tasks).map((row) => row.task_id)).toEqual(["active"])
+    expect(asRows(overview.running_tasks).map((row) => row.task_id)).toEqual(["active", "ahead"])
     expect(overview.omitted_running_task_count).toBe(0)
     for (const [task_id, , , execution_status] of observations) {
       const result = await call("inspect_task", { task_id })
