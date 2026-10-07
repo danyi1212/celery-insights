@@ -51,9 +51,9 @@ export const useSearch = (query: string, limit = 10) => {
                         (${search.clause})
                     ORDER BY last_updated DESC LIMIT $limit;
                     SELECT * FROM worker WHERE
-                        string::contains(string::lowercase(string::concat("", id)), $q)
+                        string::contains(string::lowercase(string::concat("", id)), $query)
                     ORDER BY last_updated DESC LIMIT $limit;`,
-          { ...search.bindings, q: q.toLowerCase(), limit },
+          { ...search.bindings, limit },
         )
 
         // Only update if this is still the active query

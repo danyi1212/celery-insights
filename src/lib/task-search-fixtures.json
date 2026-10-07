@@ -1,0 +1,355 @@
+{
+  "tasks": [
+    {
+      "id": "one",
+      "workflow_id": "one",
+      "kwargs": "{'organization_id': 1, 'run_id': 'Run.A', 'enabled': True, 'label': 'North team'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "ten",
+      "workflow_id": "two",
+      "kwargs": "{\"organization_id\": 10}",
+      "format": "json"
+    },
+    {
+      "id": "json",
+      "workflow_id": "two",
+      "kwargs": "{\"organization_id\": 1, \"enabled\": true}",
+      "format": "json"
+    },
+    {
+      "id": "string",
+      "kwargs": "{'organization_id': '1'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "missing",
+      "type": "reports.render"
+    },
+    {
+      "id": "containers",
+      "kwargs": "{'families': ['ad', 'query'], 'options': {'enabled': True, 'end': None}, 'empty': [], 'channel': 'FacebookAds'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "big",
+      "kwargs": "{'organization_id': 9007199254740993, 'ratio': 1.0, 'count': 1000}",
+      "format": "saferepr"
+    },
+    {
+      "id": "inside",
+      "kwargs": "{'message': '{\\'organization_id\\': 1}', 'organization_id': 2}",
+      "format": "saferepr"
+    },
+    {
+      "id": "apostrophe",
+      "kwargs": "{'note': 'it\\'s {', 'organization_id': 3}",
+      "format": "saferepr"
+    },
+    {
+      "id": "apostrophe_repr",
+      "kwargs": "{'note': \"it's {\", 'organization_id': 4}",
+      "format": "repr"
+    },
+    {
+      "id": "ordered",
+      "kwargs": "{'options': {'2': 'b', '1': 'a'}}",
+      "format": "saferepr"
+    },
+    {
+      "id": "failed",
+      "exception": "MaxRetriesExceededError: status=failed, retries=3 exceeded",
+      "kwargs": "{'retries': 3}",
+      "format": "saferepr"
+    },
+    {
+      "id": "keyword",
+      "kwargs": "{'kind': 'constructor', 'tags': ['constructor']}",
+      "format": "saferepr"
+    },
+    {
+      "id": "control",
+      "kwargs": "{'label': '\u0001', 'tags': ['​'], 'nested': {'key': ''}, 'plain': 'café', 'flag': '󠀁', 'quoted': 'it\\'s\u0001', 'quotes': ['it\\'s\u0001']}",
+      "format": "saferepr"
+    },
+    {
+      "id": "control_repr",
+      "kwargs": "{'label': '\\x01', 'tags': ['\\u200b'], 'quoted': \"it's\\x01\", 'quotes': [\"it's\\x01\"]}",
+      "format": "repr"
+    },
+    {
+      "id": "escapes",
+      "kwargs": "{'path': 'a\\b', 'text': 'line1\nline2', 'quote': 'say \"hi\"'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "escapes_repr",
+      "kwargs": "{'path': 'a\\\\b', 'text': 'line1\\nline2'}",
+      "format": "repr"
+    },
+    {
+      "id": "unicode_key",
+      "kwargs": "{'café': 1, 'user-id': 7, 'options': {'user-id': 8}}",
+      "format": "saferepr"
+    }
+  ],
+  "workflows": [
+    {
+      "id": "one",
+      "root_task_id": "one",
+      "root_task_type": "reports.render"
+    },
+    {
+      "id": "two",
+      "root_task_id": "two",
+      "root_task_type": "sync"
+    },
+    {
+      "id": "three",
+      "root_task_id": "three",
+      "root_task_type": "sync",
+      "latest_exception_preview": "Timeout"
+    }
+  ],
+  "queries": [
+    {
+      "query": "organization_id=1",
+      "expected": ["json", "one"]
+    },
+    {
+      "query": "organization_id = 10",
+      "expected": ["ten"]
+    },
+    {
+      "query": "organization_id=\"1\"",
+      "expected": ["string"]
+    },
+    {
+      "query": "enabled=true",
+      "expected": ["containers", "json", "one"]
+    },
+    {
+      "query": "run_id=Run.A",
+      "expected": ["one"]
+    },
+    {
+      "query": "run_id=RunXA",
+      "expected": []
+    },
+    {
+      "query": "label=\"North team\"",
+      "expected": ["one"]
+    },
+    {
+      "query": "north TEAM",
+      "expected": ["one"]
+    },
+    {
+      "query": "reports.render",
+      "expected": ["missing"]
+    },
+    {
+      "query": "families=[\"ad\", \"query\"]",
+      "expected": ["containers"]
+    },
+    {
+      "query": "options={\"enabled\":true,\"end\":null}",
+      "expected": ["containers"]
+    },
+    {
+      "query": "families=[\"query\", \"ad\"]",
+      "expected": []
+    },
+    {
+      "query": "empty=[]",
+      "expected": ["containers"]
+    },
+    {
+      "query": "channel=FacebookAds",
+      "expected": ["containers"]
+    },
+    {
+      "query": "families=['ad', 'query']",
+      "expected": ["containers"]
+    },
+    {
+      "query": "options={'enabled': True, 'end': None}",
+      "expected": ["containers"]
+    },
+    {
+      "query": "label='North team'",
+      "expected": ["one"]
+    },
+    {
+      "query": "organization_id=9007199254740993",
+      "expected": ["big"]
+    },
+    {
+      "query": "organization_id=9007199254740992",
+      "expected": []
+    },
+    {
+      "query": "ratio=1.0",
+      "expected": ["big"]
+    },
+    {
+      "query": "ratio=1",
+      "expected": []
+    },
+    {
+      "query": "count=1e3",
+      "expected": []
+    },
+    {
+      "query": "organization_id=2",
+      "expected": ["inside"]
+    },
+    {
+      "query": "organization_id=3",
+      "expected": ["apostrophe"]
+    },
+    {
+      "query": "organization_id=4",
+      "expected": ["apostrophe_repr"]
+    },
+    {
+      "query": "note=it's {",
+      "expected": ["apostrophe", "apostrophe_repr"]
+    },
+    {
+      "query": "note=\"it's {\"",
+      "expected": ["apostrophe", "apostrophe_repr"]
+    },
+    {
+      "query": "options={\"2\":\"b\",\"1\":\"a\"}",
+      "expected": ["ordered"]
+    },
+    {
+      "query": "options={\"1\":\"a\",\"2\":\"b\"}",
+      "expected": []
+    },
+    {
+      "query": "label='",
+      "expected": []
+    },
+    {
+      "query": "status=failed",
+      "expected": ["failed"]
+    },
+    {
+      "query": "retries=3 exceeded",
+      "expected": ["failed"]
+    },
+    {
+      "query": "retries=3",
+      "expected": ["failed"]
+    },
+    {
+      "query": "kind=constructor",
+      "expected": ["keyword"]
+    },
+    {
+      "query": "tags=['constructor']",
+      "expected": ["keyword"]
+    },
+    {
+      "query": "tags=[constructor]",
+      "expected": []
+    },
+    {
+      "query": "label='\\x01'",
+      "expected": ["control", "control_repr"]
+    },
+    {
+      "query": "tags=['\\u200b']",
+      "expected": ["control", "control_repr"]
+    },
+    {
+      "query": "nested={'key': '\\x7f'}",
+      "expected": ["control"]
+    },
+    {
+      "query": "plain='caf\\xe9'",
+      "expected": ["control"]
+    },
+    {
+      "query": "plain=café",
+      "expected": ["control"]
+    },
+    {
+      "query": "flag='\\U000e0001'",
+      "expected": ["control"]
+    },
+    {
+      "query": "flag='\\U00110000'",
+      "expected": []
+    },
+    {
+      "query": "quoted=\"it's\\x01\"",
+      "expected": ["control", "control_repr"]
+    },
+    {
+      "query": "quotes=[\"it's\\x01\"]",
+      "expected": ["control", "control_repr"]
+    },
+    {
+      "query": "path='a\\\\b'",
+      "expected": ["escapes", "escapes_repr"]
+    },
+    {
+      "query": "text='line1\\nline2'",
+      "expected": ["escapes", "escapes_repr"]
+    },
+    {
+      "query": "text='line1\\012line2'",
+      "expected": ["escapes", "escapes_repr"]
+    },
+    {
+      "query": "quote='say \"hi\"'",
+      "expected": ["escapes"]
+    },
+    {
+      "query": "café=1",
+      "expected": ["unicode_key"]
+    },
+    {
+      "query": "user-id=7",
+      "expected": ["unicode_key"]
+    },
+    {
+      "query": "user-id=8",
+      "expected": ["unicode_key"]
+    },
+    {
+      "query": "user-id=9",
+      "expected": []
+    }
+  ],
+  "workflowQueries": [
+    {
+      "query": "organization_id=1",
+      "expected": ["one", "two"]
+    },
+    {
+      "query": "organization_id=10",
+      "expected": ["two"]
+    },
+    {
+      "query": "north team",
+      "expected": ["one"]
+    },
+    {
+      "query": "sync",
+      "expected": ["three", "two"]
+    },
+    {
+      "query": "timeout",
+      "expected": ["three"]
+    },
+    {
+      "query": "organization_id=2",
+      "expected": []
+    }
+  ]
+}

@@ -1,4 +1,10 @@
+// Ported to server/exports/task_search.py for the CSV export. Keep both in sync; each test suite
+// checks the shared vectors in task-search-fixtures.json.
+
 const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+// SurrealDB 3.3 rejects regexes above roughly 110 KB; larger literals fall back to plain text.
+const MAX_KWARGS_PATTERN_LENGTH = 65_536
 
 const PLAIN_TEXT_CLAUSE = [
   "string::concat('', id)",
@@ -25,7 +31,7 @@ const HEX_ESCAPE_WIDTHS = new Map([
   ["U", 8],
 ])
 
-const STRING_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f", "0": "\0" }
+const STRING_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f" }
 
 interface Literal {
   pattern: string
@@ -53,8 +59,13 @@ const pythonRepr = (text: string): string => {
   return quote + body + quote
 }
 
-const stringPattern = (text: string): string =>
-  `(?:"${escapeRegex(JSON.stringify(text).slice(1, -1))}"|${escapeRegex(pythonRepr(text))})`
+// Celery events carry kwargs from celery.utils.saferepr: always single quotes, only ' escaped, everything else raw.
+const celerySafeRepr = (text: string): string => `'${text.replaceAll("'", "\\'")}'`
+
+const stringPattern = (text: string): string => {
+  const alternatives = new Set([`"${JSON.stringify(text).slice(1, -1)}"`, pythonRepr(text), celerySafeRepr(text)])
+  return `(?:${[...alternatives].map(escapeRegex).join("|")})`
+}
 
 const skipSpace = (text: string, index: number): number => text.length - text.slice(index).trimStart().length
 
@@ -70,6 +81,7 @@ const parseQuoted = (text: string, start: number): Literal | undefined => {
     }
     const escaped = text[++index]
     const width = HEX_ESCAPE_WIDTHS.get(escaped)
+    const octal = /^[0-7]{1,3}/.exec(text.slice(index))?.[0]
     if (width) {
       const hex = text.slice(index + 1, index + 1 + width)
       if (hex.length !== width || !/^[0-9A-Fa-f]+$/.test(hex)) return undefined
@@ -77,6 +89,9 @@ const parseQuoted = (text: string, start: number): Literal | undefined => {
       if (code > 0x10ffff) return undefined
       decoded += String.fromCodePoint(code)
       index += width
+    } else if (octal) {
+      decoded += String.fromCharCode(parseInt(octal, 8))
+      index += octal.length - 1
     } else if (escaped === undefined) {
       return undefined
     } else {
@@ -116,7 +131,7 @@ const parseLiteral = (text: string, start: number): Literal | undefined => {
   const character = text[index]
   if (character === "[" || character === "{") return parseContainer(text, index)
   if (character === '"' || character === "'") return parseQuoted(text, index)
-  const number = /^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/.exec(text.slice(index))?.[0]
+  const number = /^-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/.exec(text.slice(index))?.[0]
   if (number) return { pattern: escapeRegex(number), end: index + number.length }
   const word = /^[A-Za-z]+/.exec(text.slice(index))?.[0]
   const pattern = word && WORD_PATTERNS.get(word.toLowerCase())
@@ -126,7 +141,7 @@ const parseLiteral = (text: string, start: number): Literal | undefined => {
 export const buildTaskSearch = (query: string): { clause: string; bindings: Record<string, string> } => {
   const trimmed = query.trim()
   const bindings: Record<string, string> = { query: trimmed.toLowerCase() }
-  const keyword = /^([A-Za-z_]\w*)\s*=\s*(.+)$/.exec(trimmed)
+  const keyword = /^([^\s=]+)\s*=\s*(.+)$/.exec(trimmed)
   if (!keyword) return { clause: PLAIN_TEXT_CLAUSE, bindings }
   const [, key, value] = keyword
   const literal = parseLiteral(value, 0)
@@ -134,7 +149,8 @@ export const buildTaskSearch = (query: string): { clause: string; bindings: Reco
     literal && skipSpace(value, literal.end) === value.length ? literal.pattern : stringPattern(value.trim())
   // The prefix consumes quoted strings whole, so the key only matches at a dictionary key position
   // (top-level or nested), never inside a string value that happens to contain dictionary-like text.
-  const kwargsPattern = `^(?:[^'"]|'(?:[^'\\\\]|\\\\.)*'|"(?:[^"\\\\]|\\\\.)*")*?(?:^|[,{])\\s*['"]${escapeRegex(key)}['"]\\s*:\\s*${pattern}\\s*(?:[,}]|$)`
+  const kwargsPattern = `^(?:[^'"]|'(?:[^'\\\\]|\\\\.)*'|"(?:[^"\\\\]|\\\\.)*")*?(?:^|[,{])\\s*${stringPattern(key)}\\s*:\\s*${pattern}\\s*(?:[,}]|$)`
+  if (kwargsPattern.length > MAX_KWARGS_PATTERN_LENGTH) return { clause: PLAIN_TEXT_CLAUSE, bindings }
   // Plain text stays included so queries like `status=failed` still search exception and result text.
   return {
     clause: `string::matches(kwargs ?? '', $kwargsPattern) OR ${PLAIN_TEXT_CLAUSE}`,
@@ -142,13 +158,20 @@ export const buildTaskSearch = (query: string): { clause: string; bindings: Reco
   }
 }
 
+export const RANGE_WORKFLOWS_QUERY =
+  "SELECT VALUE root_task_id FROM workflow WHERE last_updated >= <datetime>$from AND last_updated <= <datetime>$to"
+
+// Callers bind $from and $to. Member tasks are scanned once per batch (an inline subquery would run per
+// workflow row) and only for workflows in the selected range, which lets SurrealDB use idx_task_workflow_id.
 export const buildWorkflowSearch = (
   query: string,
-): { prelude: string; clause: string; bindings: Record<string, string> } => {
+): { prelude: string[]; clause: string; bindings: Record<string, string> } => {
   const search = buildTaskSearch(query)
   return {
-    // SurrealDB evaluates an inline subquery once per workflow row; LET runs the task scan once per batch.
-    prelude: `LET $searchWorkflows = array::distinct(SELECT VALUE workflow_id FROM task WHERE workflow_id != NONE AND (${search.clause}));`,
+    prelude: [
+      `LET $rangeWorkflows = (${RANGE_WORKFLOWS_QUERY});`,
+      `LET $searchWorkflows = array::distinct(SELECT VALUE workflow_id FROM task WHERE workflow_id IN $rangeWorkflows AND (${search.clause}));`,
+    ],
     clause:
       "string::contains(string::lowercase(root_task_id), $query) OR string::contains(string::lowercase(root_task_type ?? ''), $query) OR string::contains(string::lowercase(latest_exception_preview ?? ''), $query) OR root_task_id IN $searchWorkflows",
     bindings: search.bindings,

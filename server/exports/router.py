@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.responses import Response
 
+from exports.task_search import RANGE_WORKFLOWS_QUERY, build_task_search, build_workflow_search
 from surrealdb_client import get_db
 
 exports_router = APIRouter(prefix="/api/exports", tags=["exports"])
@@ -151,14 +152,9 @@ def _build_task_query(payload: ExplorerCsvExportRequest) -> tuple[str, dict[str,
     bindings: dict[str, Any] = {"from": payload.from_, "to": payload.to}
 
     if payload.query.strip():
-        conditions.append(
-            "(string::contains(string::lowercase(string::concat('', id)), $query) "
-            "OR string::contains(string::lowercase(type ?? ''), $query) "
-            "OR string::contains(string::lowercase(worker ?? ''), $query) "
-            "OR string::contains(string::lowercase(exception ?? ''), $query) "
-            "OR string::contains(string::lowercase(result ?? ''), $query))"
-        )
-        bindings["query"] = payload.query.strip().lower()
+        search = build_task_search(payload.query)
+        conditions.append(f"({search.clause})")
+        bindings.update(search.bindings)
     if payload.states:
         conditions.append("state IN $states")
         bindings["states"] = payload.states
@@ -174,17 +170,23 @@ def _build_task_query(payload: ExplorerCsvExportRequest) -> tuple[str, dict[str,
     return f"SELECT * FROM task{clause} ORDER BY {sort_field} {payload.sort_direction}", bindings
 
 
-def _build_workflow_query(payload: ExplorerCsvExportRequest) -> tuple[str, dict[str, Any]]:
+def _extract_values(result: object) -> list[str]:
+    return [value for value in result if isinstance(value, str)] if isinstance(result, list) else []
+
+
+async def _build_workflow_query(db: Any, payload: ExplorerCsvExportRequest) -> tuple[str, dict[str, Any]]:
     conditions = ["last_updated >= <datetime>$from", "last_updated <= <datetime>$to"]
     bindings: dict[str, Any] = {"from": payload.from_, "to": payload.to}
 
     if payload.query.strip():
-        conditions.append(
-            "(string::contains(string::lowercase(root_task_id), $query) "
-            "OR string::contains(string::lowercase(root_task_type ?? ''), $query) "
-            "OR string::contains(string::lowercase(latest_exception_preview ?? ''), $query))"
+        search = build_workflow_search(payload.query)
+        range_workflows = _extract_values(await db.query(RANGE_WORKFLOWS_QUERY, bindings))
+        member_workflows = _extract_values(
+            await db.query(search.member_query, {**search.bindings, "rangeWorkflows": range_workflows})
         )
-        bindings["query"] = payload.query.strip().lower()
+        conditions.append(f"({search.clause})")
+        bindings.update(search.bindings)
+        bindings["searchWorkflows"] = sorted(set(member_workflows))
     if payload.workflow_states:
         conditions.append("aggregate_state IN $workflowStates")
         bindings["workflowStates"] = payload.workflow_states
@@ -222,7 +224,9 @@ async def export_csv(payload: ExplorerCsvExportRequest | RawEventsCsvExportReque
     db = get_db()
 
     if isinstance(payload, ExplorerCsvExportRequest):
-        query, bindings = _build_task_query(payload) if payload.mode == "tasks" else _build_workflow_query(payload)
+        query, bindings = (
+            _build_task_query(payload) if payload.mode == "tasks" else await _build_workflow_query(db, payload)
+        )
         result = await db.query(query, bindings)
         rows = _extract_rows(result)
         csv_content = _task_rows_to_csv(rows) if payload.mode == "tasks" else _workflow_rows_to_csv(rows)

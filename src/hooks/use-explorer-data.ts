@@ -119,14 +119,14 @@ function buildTaskWhereClause(state: ExplorerQueryState): { clause: string; bind
 }
 
 function buildWorkflowWhereClause(state: ExplorerQueryState): {
-  prelude: string
+  prelude: string[]
   clause: string
   bindings: Record<string, unknown>
 } {
   const conditions = ["last_updated >= <datetime>$from", "last_updated <= <datetime>$to"]
   const bindings: Record<string, unknown> = {}
   const trimmedQuery = state.query.trim()
-  let prelude = ""
+  let prelude: string[] = []
 
   if (trimmedQuery) {
     const search = buildWorkflowSearch(trimmedQuery)
@@ -236,7 +236,7 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
           { bucket: string; aggregate_state: string; count: number }[],
         ]
       >(
-        prelude +
+        prelude.join("") +
           `SELECT * FROM workflow${clause} ORDER BY ${sortField} ${state.sortDirection} LIMIT $rowLimit;` +
           `SELECT count() AS count FROM workflow${clause} GROUP ALL;` +
           `SELECT aggregate_state, count() AS count FROM workflow${clause} GROUP BY aggregate_state;` +
@@ -244,9 +244,9 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
           `SELECT time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket, aggregate_state, count() AS count FROM workflow${clause} GROUP BY bucket, aggregate_state ORDER BY bucket ASC;`,
         { ...bindings, ...whereBindings, rowLimit },
       )
-      // The LET statement occupies the first result slot.
-      const [workflowRows, countRows, workflowStateFilters, rootTypeFilters, buckets] = (
-        prelude ? results.slice(1) : results
+      // Each LET statement occupies a result slot.
+      const [workflowRows, countRows, workflowStateFilters, rootTypeFilters, buckets] = results.slice(
+        prelude.length,
       ) as typeof results
 
       return {

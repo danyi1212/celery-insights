@@ -70,15 +70,15 @@ describe("useExplorerData", () => {
     expect(bindings.kwargsPattern).toContain("organization_id")
     expect(
       query.startsWith(
-        "LET $searchWorkflows = array::distinct(SELECT VALUE workflow_id FROM task WHERE workflow_id != NONE AND",
+        "LET $rangeWorkflows = (SELECT VALUE root_task_id FROM workflow WHERE last_updated >= <datetime>$from AND last_updated <= <datetime>$to);LET $searchWorkflows = array::distinct(SELECT VALUE workflow_id FROM task WHERE workflow_id IN $rangeWorkflows AND",
       ),
     ).toBe(mode === "workflows")
     expect(query.includes("root_task_id IN $searchWorkflows")).toBe(mode === "workflows")
   })
 
-  it("skips the LET result slot when searching workflows", async () => {
+  it("skips the LET result slots when searching workflows", async () => {
     const workflow = { id: "workflow:one", root_task_id: "one", aggregate_state: "SUCCESS" }
-    mockQuery.mockResolvedValue([null, [workflow], [{ count: 1 }], [], [], []])
+    mockQuery.mockResolvedValue([null, null, [workflow], [{ count: 1 }], [], [], []])
     const { result } = renderHook(
       () => useExplorerData({ ...createState(), mode: "workflows", query: "organization_id=1" }),
       { wrapper: createWrapper() },
