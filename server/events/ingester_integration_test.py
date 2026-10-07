@@ -173,3 +173,25 @@ async def test_older_terminal_event_replaces_an_undated_observation(
     assert task["worker"] == "worker@host"
     assert task["last_updated"] == event_at
     assert task["last_updated_observed"] is False
+
+
+@pytest.mark.asyncio
+async def test_same_state_event_fills_missing_outcome_fields(surreal_db: AsyncWsSurrealConnection) -> None:
+    query, parameters = _build_task_meta_upsert("done", {"status": "SUCCESS", "date_done": "2026-10-06T12:00:00Z"})
+    await surreal_db.query(query, parameters)
+    query, parameters = build_task_upsert(
+        {
+            "type": "task-succeeded",
+            "uuid": "done",
+            "timestamp": datetime(2026, 10, 6, 11, 59, 59, tzinfo=UTC).timestamp(),
+            "result": "42",
+            "runtime": 1.5,
+        },
+        0,
+    )
+    await surreal_db.query(query, parameters)
+    task = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:done"))[0]
+    assert task["state"] == "SUCCESS"
+    assert task["result"] == "42"
+    assert task["runtime"] == 1.5
+    assert task["last_updated"] == datetime(2026, 10, 6, 12, tzinfo=UTC)

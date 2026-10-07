@@ -59,6 +59,11 @@ def _query_errors(result: object) -> list[str]:
     return errors
 
 
+def _outcome_fill(field: str) -> str:
+    # Metadata for the stored state fills outcome fields that a failed or skipped result fetch left empty.
+    return f"$meta_apply_state OR ($meta_previous.state = $state AND $meta_previous.{field} = NONE)"
+
+
 def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
     state = str(meta.get("status") or "PENDING")
     last_updated = meta.get("date_done")
@@ -116,18 +121,23 @@ def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
         truncated_result, was_truncated = _truncate_result(result_str)
         params["result"] = truncated_result
         params["result_truncated"] = was_truncated
-        set_clauses.append("result = IF $meta_apply_state THEN $result ELSE $meta_previous.result END")
+        set_clauses.append(f"result = IF {_outcome_fill('result')} THEN $result ELSE $meta_previous.result END")
         set_clauses.append(
-            "result_truncated = IF $meta_apply_state THEN $result_truncated ELSE $meta_previous.result_truncated END"
+            f"result_truncated = IF {_outcome_fill('result')} THEN $result_truncated "
+            "ELSE $meta_previous.result_truncated END"
         )
 
     if meta.get("traceback") is not None:
         params["traceback"] = str(meta["traceback"])
-        set_clauses.append("traceback = IF $meta_apply_state THEN $traceback ELSE $meta_previous.traceback END")
+        set_clauses.append(
+            f"traceback = IF {_outcome_fill('traceback')} THEN $traceback ELSE $meta_previous.traceback END"
+        )
 
     if state == "FAILURE" and result_value is not None:
         params["exception"] = repr(result_value)
-        set_clauses.append("exception = IF $meta_apply_state THEN $exception ELSE $meta_previous.exception END")
+        set_clauses.append(
+            f"exception = IF {_outcome_fill('exception')} THEN $exception ELSE $meta_previous.exception END"
+        )
 
     if state == "FAILURE" or meta.get("traceback"):
         set_clauses.append("had_error = true")

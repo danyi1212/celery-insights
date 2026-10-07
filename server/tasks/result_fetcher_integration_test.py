@@ -143,3 +143,31 @@ async def test_older_dated_metadata_does_not_regress_newer_event_evidence(
     assert task["state"] == "STARTED"
     assert task["last_updated_observed"] is False
     assert task.get("succeeded_at") is None
+
+
+@pytest.mark.asyncio
+async def test_metadata_for_the_stored_state_fills_missing_outcome_fields(surreal_db: AsyncWsSurrealConnection) -> None:
+    # A terminal event was stored but its result fetch failed; backend metadata is older than the event.
+    await surreal_db.query(
+        "CREATE task:succeeded SET state = 'SUCCESS', workflow_id = 'root', "
+        "last_updated = <datetime>'2026-10-06T12:00:00Z', succeeded_at = <datetime>'2026-10-06T12:00:00Z'; "
+        "CREATE task:failed SET state = 'FAILURE', workflow_id = 'root', exception = 'ValueError(1)', "
+        "last_updated = <datetime>'2026-10-06T12:00:00Z', failed_at = <datetime>'2026-10-06T12:00:00Z'"
+    )
+    query, parameters = _build_task_meta_upsert(
+        "succeeded", {"status": "SUCCESS", "date_done": "2026-10-06T11:59:59Z", "result": 42}
+    )
+    await surreal_db.query(query, parameters)
+    query, parameters = _build_task_meta_upsert(
+        "failed",
+        {"status": "FAILURE", "date_done": "2026-10-06T11:59:59Z", "result": "ValueError(2)", "traceback": "tb"},
+    )
+    await surreal_db.query(query, parameters)
+    tasks = {str(task["id"]): task for task in cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task"))}
+    assert tasks["task:succeeded"]["result"] == "42"
+    assert tasks["task:succeeded"]["result_truncated"] is False
+    assert tasks["task:succeeded"]["last_updated"] == datetime(2026, 10, 6, 12, tzinfo=UTC)
+    assert tasks["task:failed"]["traceback"] == "tb"
+    assert tasks["task:failed"]["result"] == "'ValueError(2)'"
+    assert tasks["task:failed"]["exception"] == "ValueError(1)"
+    assert tasks["task:failed"]["state"] == "FAILURE"

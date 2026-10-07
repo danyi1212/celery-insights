@@ -52,6 +52,7 @@ TASK_FIELD_MAP: dict[str, str] = {
     "traceback": "traceback",
     "runtime": "runtime",
 }
+OUTCOME_FIELDS = frozenset({"result", "exception", "traceback", "runtime"})
 
 BACKPRESSURE_THRESHOLD = 10_000
 BUFFER_SIZE_THRESHOLD = 500
@@ -319,7 +320,11 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
         if value is not None:
             pname = f"{p}_{db_field}"
             params[pname] = value if isinstance(value, int | float) else str(value)
-            set_clauses.append(f"{db_field} = IF {apply_fields} THEN ${pname} ELSE ${p}_previous.{db_field} END")
+            condition = apply_fields
+            if db_field in OUTCOME_FIELDS:
+                # Same-state payloads fill outcome fields an earlier capture left empty.
+                condition += f" OR (${p}_previous.state = ${p}_state AND ${p}_previous.{db_field} = NONE)"
+            set_clauses.append(f"{db_field} = IF {condition} THEN ${pname} ELSE ${p}_previous.{db_field} END")
 
     hostname = event.get("hostname")
     if hostname:
@@ -525,7 +530,7 @@ def build_worker_upsert(event: dict, idx: int) -> tuple[str, dict]:
         # Polls skip offline workers, so observations made before the worker left would otherwise outlive it.
         query += (
             f"; UPDATE task SET execution_active = NONE WHERE worker = ${p}_id AND state = 'STARTED'"
-            f" AND execution_observed_at <= <datetime>${p}_ts"
+            f" AND execution_active != NONE AND execution_observed_at <= <datetime>${p}_ts"
         )
     return query, params
 
