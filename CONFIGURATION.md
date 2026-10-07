@@ -449,6 +449,8 @@ Higher-cardinality metrics for deeper task and worker breakdowns. Includes every
 | `celery_worker_active_tasks` | Gauge | `worker` |
 | `celery_worker_processed_tasks` | Gauge | `worker` |
 
+`celery_worker_active_tasks` counts the tasks that a worker's active-list inspection observed running in the last two minutes, unless a later task event superseded the observation. Earlier releases counted every task in the `STARTED` state, including tasks whose worker died without sending a terminal event. A worker that has no fresh inspection, or no observed running tasks, has no series.
+
 #### `GET /metrics/system` - Celery Insights internal metrics
 
 Operational metrics for the Celery Insights process itself.
