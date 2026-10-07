@@ -330,6 +330,14 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
     # Read persisted values explicitly: UPSERT can evaluate against a creation
     # candidate, including multiple updates to the same task in one transaction.
     query = f"LET ${p}_previous = (SELECT * FROM {target})[0] ?? {{}}; UPSERT {target} SET {assignments}"
+    if event.get("root_id"):
+        # Polling stores a task under its own id before ancestry arrives. Moving it to the real root
+        # leaves that workflow empty, so drop it rather than list a phantom single-task workflow.
+        query += (
+            f"; DELETE type::record('workflow', ${p}_previous.workflow_id ?? ${p}_workflow_id)"
+            f" WHERE ${p}_previous.workflow_id != NONE AND ${p}_previous.workflow_id != ${p}_workflow_id"
+            f" AND (SELECT VALUE id FROM task WHERE workflow_id = ${p}_previous.workflow_id LIMIT 1) = []"
+        )
     return query, params
 
 

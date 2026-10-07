@@ -107,6 +107,15 @@ class TestBuildTaskUpsert:
             " THEN $t0_workflow_id ELSE $t0_previous.workflow_id ?? $t0_workflow_id END"
         ) in query
 
+    def test_moving_workflow_drops_emptied_previous_workflow(self):
+        query, _ = build_task_upsert({"type": "task-sent", "uuid": "x", "timestamp": 1700000000.0, "root_id": "r"}, 0)
+        assert (
+            "DELETE type::record('workflow', $t0_previous.workflow_id ?? $t0_workflow_id)"
+            " WHERE $t0_previous.workflow_id != NONE AND $t0_previous.workflow_id != $t0_workflow_id"
+        ) in query
+        query, _ = build_task_upsert({"type": "task-started", "uuid": "x", "timestamp": 1700000000.0}, 0)
+        assert "DELETE" not in query
+
     def test_metadata_fills_missing_fields_from_older_events_only(self):
         event = {
             "type": "task-sent",

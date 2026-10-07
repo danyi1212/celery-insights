@@ -58,7 +58,11 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors(*, poll
                 query, bindings = _build_task_meta_upsert(
                     "child", {"status": "STARTED", "date_done": "2023-11-14T22:13:22.500Z"}
                 )
-                await db.query(query, bindings)
+                summary_query, summary_bindings = build_workflow_summary_recompute(
+                    {"uuid": "child", "timestamp": 1700000002.5}, 0
+                )
+                await db.query(f"{query};{summary_query}", bindings | summary_bindings)
+                assert (await rows("SELECT * FROM workflow:child"))[0]["task_count"] == 1
             events = [
                 {"type": "task-sent", "uuid": "root", "timestamp": 1700000000.0, "name": "reports.generate"},
                 {
@@ -103,6 +107,7 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors(*, poll
             assert child["first_observed_at"] == datetime.fromtimestamp(1700000001, tz=UTC)
             assert len(await rows("SELECT * FROM workflow_task")) == 2
             assert (await rows("SELECT * FROM workflow:root"))[0]["task_count"] == 2
+            assert await rows("SELECT * FROM workflow:child") == []
 
             query, bindings = _build_task_meta_upsert(
                 "child", {"status": "SUCCESS", "date_done": "2023-11-14T22:13:24Z"}
@@ -130,6 +135,7 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors(*, poll
             assert after_stale["parent_id"] == "root"
             assert after_stale["state"] == "SUCCESS"
             assert after_stale["last_updated"] == refreshed["last_updated"]
+            assert len(await rows("SELECT * FROM workflow:root")) == 1
     finally:
         process.terminate()
         await asyncio.to_thread(process.wait, timeout=10)
