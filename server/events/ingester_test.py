@@ -100,9 +100,16 @@ class TestBuildTaskUpsert:
         )
 
     def test_metadata_fills_missing_fields_from_older_events_only(self):
-        event = {"type": "task-sent", "uuid": "x", "timestamp": 1700000000.0, "root_id": "r", "parent_id": "p"}
+        event = {
+            "type": "task-sent",
+            "uuid": "x",
+            "timestamp": 1700000000.0,
+            "root_id": "r",
+            "parent_id": "p",
+            "routing_key": "reports",
+        }
         query, params = build_task_upsert(event, 0)
-        for field in ("root_id", "parent_id"):
+        for field in ("root_id", "parent_id", "routing_key"):
             assert (
                 f"{field} = IF $t0_previous.{field} IS NONE OR $t0_previous.last_updated IS NONE"
                 f" OR <datetime>$t0_ts >= $t0_previous.last_updated"
@@ -110,6 +117,7 @@ class TestBuildTaskUpsert:
             ) in query
         assert params["t0_root_id"] == "r"
         assert params["t0_parent_id"] == "p"
+        assert params["t0_routing_key"] == "reports"
 
     def test_timestamp_field_keeps_earliest(self):
         query, _ = build_task_upsert({"type": "task-started", "uuid": "x", "timestamp": 1700000000.0}, 0)

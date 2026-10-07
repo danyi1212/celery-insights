@@ -68,6 +68,7 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors(*, poll
                     "parent_id": "root",
                     "timestamp": 1700000001.0,
                     "name": "reports.render",
+                    "routing_key": "reports",
                 },
                 {"type": "task-retried", "uuid": "child", "timestamp": 1700000002.0, "exception": "TimeoutError()"},
                 {"type": "task-succeeded", "uuid": "child", "timestamp": 1700000003.0},
@@ -86,6 +87,7 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors(*, poll
             assert child["workflow_id"] == "root"
             assert child["root_id"] == "root"
             assert child["parent_id"] == "root"
+            assert child["routing_key"] == "reports"
             assert child["type"] == "reports.render"
             assert child["had_error"] is True
             assert child["first_observed_at"] == datetime.fromtimestamp(1700000001, tz=UTC)
