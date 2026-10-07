@@ -16,6 +16,12 @@ from celery.utils.saferepr import saferepr
 
 KWARGSREPR_MAXSIZE = 1024  # celery.app.amqp.AMQP.kwargsrepr_maxsize
 
+
+class Opaque:
+    def __repr__(self) -> str:
+        return "<Opaque it's>"
+
+
 TASKS: list[dict[str, Any]] = [
     {
         "id": "one",
@@ -79,6 +85,9 @@ TASKS: list[dict[str, Any]] = [
     {"id": "bytes_apostrophe", "kwargs": {"blob": b"it's", "organization_id": 14, "note": "it's"}},
     # The 1024-character budget cuts the text inside UUID('…, leaving an unterminated quote.
     {"id": "truncated", "kwargs": {"organization_id": 13, "pad": "x" * 960, "ref": uuid.UUID(int=1)}},
+    # Two stray quotes pair up, so these rows tokenize with the key inside a misread string.
+    {"id": "two_bytes", "kwargs": {"a": b"it's", "organization_id": 27, "b": b"it's"}},
+    {"id": "two_reprs", "kwargs": {"a": Opaque(), "organization_id": 28, "b": Opaque()}},
 ]
 
 WORKFLOWS: list[dict[str, Any]] = [
@@ -160,6 +169,8 @@ QUERIES: list[tuple[str, list[str]]] = [
     ("organization_id=12", ["bytes_after"]),
     ("organization_id=13", ["truncated"]),
     ("organization_id=14", ["bytes_apostrophe"]),
+    ("organization_id=27", ["two_bytes"]),
+    ("organization_id=28", ["two_reprs"]),
 ]
 
 WORKFLOW_QUERIES: list[tuple[str, list[str]]] = [

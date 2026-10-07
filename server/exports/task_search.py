@@ -48,6 +48,9 @@ STRING_ESCAPES = {"n": "\n", "r": "\r", "t": "\t", "b": "\b", "f": "\f"}
 # saferepr only writes a backslash inside a string, so a plain backslash marks a misread quote.
 TOKEN = r"""(?:[^'"\\]|'(?:[^'\\]|\\.|\\)*'|"(?:[^"\\]|\\.)*")"""
 TOKENIZES_PATTERN = "^" + TOKEN + "*$"
+# Bytes literals and custom __repr__ output are written without escaping; two stray quotes can pair up and
+# tokenize, so rows containing either shape always get the lenient match.
+MALFORMED_REPR_PATTERN = r"""(?:^|\W)b['"]|<"""
 
 NUMBER_PATTERN = re.compile(r"^-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
 WORD_PATTERN = re.compile(r"^[A-Za-z]+")
@@ -233,9 +236,9 @@ def build_task_search(query: str) -> TaskSearch:
     # backslash in a single-quoted string reads as either an escape pair or a plain character; a false early
     # close leaves a stray quote that cannot tokenize to the end, which rejects that reading.
     kwargs_pattern = "^" + TOKEN + "*?(?:^|[,{])" + key_value_pattern + "(?:[,}]" + TOKEN + "*)?$"
-    # saferepr also stores text that does not tokenize: bytes with an unescaped quote (b'it's'), a budget cut
-    # inside UUID('…, or a custom __repr__ with a quote. Those rows match the key after any delimiter, which
-    # over-matches keys inside their strings rather than hiding the real ones.
+    # saferepr also stores malformed text: bytes with an unescaped quote (b'it's'), a budget cut inside UUID('…,
+    # or a custom __repr__ with a quote. Rows that don't tokenize, or that contain a bytes or custom-repr shape,
+    # match the key after any delimiter. That can over-match keys inside their strings instead of hiding them.
     lenient_kwargs_pattern = "(?:^|[,{])" + key_value_pattern + "(?:[,}]|$)"
     # The lenient pattern is shorter than the strict one, so this bounds both.
     if len(kwargs_pattern) > MAX_KWARGS_PATTERN_LENGTH:
@@ -243,12 +246,14 @@ def build_task_search(query: str) -> TaskSearch:
     # Every strict match is also a lenient match, so the cheap lenient check runs first and skips most rows.
     return TaskSearch(
         "(string::matches(kwargs ?? '', $lenientKwargsPattern) AND (string::matches(kwargs ?? '', $kwargsPattern)"
-        f" OR !string::matches(kwargs ?? '', $tokenizesPattern))) OR {PLAIN_TEXT_CLAUSE}",
+        " OR !string::matches(kwargs ?? '', $tokenizesPattern)"
+        f" OR string::matches(kwargs ?? '', $malformedReprPattern))) OR {PLAIN_TEXT_CLAUSE}",
         {
             **bindings,
             "kwargsPattern": kwargs_pattern,
             "lenientKwargsPattern": lenient_kwargs_pattern,
             "tokenizesPattern": TOKENIZES_PATTERN,
+            "malformedReprPattern": MALFORMED_REPR_PATTERN,
         },
     )
 

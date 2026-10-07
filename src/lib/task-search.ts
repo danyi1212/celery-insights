@@ -41,6 +41,9 @@ const STRING_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "
 // saferepr only writes a backslash inside a string, so a plain backslash marks a misread quote.
 const TOKEN = `(?:[^'"\\\\]|'(?:[^'\\\\]|\\\\.|\\\\)*'|"(?:[^"\\\\]|\\\\.)*")`
 const TOKENIZES_PATTERN = `^${TOKEN}*$`
+// Bytes literals and custom __repr__ output are written without escaping; two stray quotes can pair up and
+// tokenize, so rows containing either shape always get the lenient match.
+const MALFORMED_REPR_PATTERN = `(?:^|\\W)b['"]|<`
 
 interface Literal {
   pattern: string
@@ -176,17 +179,23 @@ export const buildTaskSearch = (query: string): { clause: string; bindings: Reco
   // backslash in a single-quoted string reads as either an escape pair or a plain character; a false early
   // close leaves a stray quote that cannot tokenize to the end, which rejects that reading.
   const kwargsPattern = `^${TOKEN}*?(?:^|[,{])${keyValuePattern}(?:[,}]${TOKEN}*)?$`
-  // saferepr also stores text that does not tokenize: bytes with an unescaped quote (b'it's'), a budget cut
-  // inside UUID('…, or a custom __repr__ with a quote. Those rows match the key after any delimiter, which
-  // over-matches keys inside their strings rather than hiding the real ones.
+  // saferepr also stores malformed text: bytes with an unescaped quote (b'it's'), a budget cut inside UUID('…,
+  // or a custom __repr__ with a quote. Rows that don't tokenize, or that contain a bytes or custom-repr shape,
+  // match the key after any delimiter. That can over-match keys inside their strings instead of hiding them.
   const lenientKwargsPattern = `(?:^|[,{])${keyValuePattern}(?:[,}]|$)`
   // The lenient pattern is shorter than the strict one, so this bounds both.
   if (kwargsPattern.length > MAX_KWARGS_PATTERN_LENGTH) return { clause: PLAIN_TEXT_CLAUSE, bindings }
   // Every strict match is also a lenient match, so the cheap lenient check runs first and skips most rows.
   // Plain text stays included so queries like `status=failed` still search exception and result text.
   return {
-    clause: `(string::matches(kwargs ?? '', $lenientKwargsPattern) AND (string::matches(kwargs ?? '', $kwargsPattern) OR !string::matches(kwargs ?? '', $tokenizesPattern))) OR ${PLAIN_TEXT_CLAUSE}`,
-    bindings: { ...bindings, kwargsPattern, lenientKwargsPattern, tokenizesPattern: TOKENIZES_PATTERN },
+    clause: `(string::matches(kwargs ?? '', $lenientKwargsPattern) AND (string::matches(kwargs ?? '', $kwargsPattern) OR !string::matches(kwargs ?? '', $tokenizesPattern) OR string::matches(kwargs ?? '', $malformedReprPattern))) OR ${PLAIN_TEXT_CLAUSE}`,
+    bindings: {
+      ...bindings,
+      kwargsPattern,
+      lenientKwargsPattern,
+      tokenizesPattern: TOKENIZES_PATTERN,
+      malformedReprPattern: MALFORMED_REPR_PATTERN,
+    },
   }
 }
 
