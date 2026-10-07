@@ -2,7 +2,7 @@ import TaskAvatar from "@components/task/task-avatar"
 import { useNow } from "@hooks/use-now"
 import { cn } from "@lib/utils"
 import { TaskState, type Task } from "@/types/surreal-records"
-import { formatDuration, formatTime, isTerminalState } from "@utils/task-phases"
+import { formatDuration, formatTime, getTaskEndTime, isTerminalState } from "@utils/task-phases"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { useTourChangeStepOnLoad } from "@stores/use-tour-store"
 import { useNavigate } from "@tanstack/react-router"
@@ -31,9 +31,6 @@ interface TimelineChartProps {
   tasks: Task[]
   currentTaskId?: string
 }
-
-const getTaskEnd = (task: Task, now: Date): Date =>
-  task.succeeded_at || task.failed_at || task.retried_at || task.rejected_at || task.revoked_at || now
 
 const TaskBarTooltip: React.FC<{ task: Task; durationMs: number }> = ({ task, durationMs }) => (
   <div className="flex flex-col gap-1.5 py-0.5">
@@ -94,7 +91,7 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ tasks, currentTaskId }) =
   const { timelineStart, timelineEnd, timeRange } = useMemo(() => {
     if (sortedTasks.length === 0) return { timelineStart: 0, timelineEnd: 0, timeRange: 0 }
     const start = sortedTasks[0].sent_at.getTime()
-    const end = Math.max(...sortedTasks.map((t) => getTaskEnd(t, now).getTime()))
+    const end = Math.max(...sortedTasks.map((t) => getTaskEndTime(t, now).getTime()))
     // Add 2% padding on each side for visual breathing room
     const range = end - start
     const padding = range * 0.02
@@ -172,7 +169,7 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ tasks, currentTaskId }) =
         <div className="flex flex-col" style={{ gap: ROW_GAP }}>
           {sortedTasks.map((task) => {
             const startMs = task.sent_at.getTime()
-            const endMs = getTaskEnd(task, now).getTime()
+            const endMs = getTaskEndTime(task, now).getTime()
             const durationMs = endMs - startMs
             const leftPct = timeRange > 0 ? ((startMs - timelineStart) / timeRange) * 100 : 0
             const widthPct = timeRange > 0 ? ((endMs - startMs) / timeRange) * 100 : 100

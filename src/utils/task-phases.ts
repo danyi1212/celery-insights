@@ -59,9 +59,10 @@ export const computeTaskPhases = (task: Task, now: Date): TaskPhase[] => {
   const phases: TaskPhase[] = []
   const unconfirmed = task.state === TaskState.STARTED && getTaskExecution(task, now.getTime()) !== "active"
   const sentMs = task.sent_at.getTime()
-  const receivedMs = (getReceivedAt(task) || now).getTime()
-  const startedMs = (getStartedAt(task) || now).getTime()
+  // Missing lifecycle timestamps fall back to the task's end, which is frozen once it finished or went unconfirmed.
   const finishedMs = getTaskEndTime(task, now).getTime()
+  const receivedMs = getReceivedAt(task)?.getTime() ?? finishedMs
+  const startedMs = getStartedAt(task)?.getTime() ?? finishedMs
 
   // Queue phase: sentAt -> receivedAt
   if (receivedMs > sentMs) {
@@ -99,19 +100,16 @@ export const computeTaskPhases = (task: Task, now: Date): TaskPhase[] => {
     })
   }
 
-  // If no phases (e.g. only sentAt exists with no further progress), show queue phase to now
-  if (phases.length === 0) {
-    const nowMs = now.getTime()
-    if (nowMs > sentMs) {
-      phases.push({
-        kind: "queue",
-        label: "Waiting in Queue",
-        color: PHASE_COLORS.queue,
-        startMs: sentMs,
-        endMs: nowMs,
-        durationMs: nowMs - sentMs,
-      })
-    }
+  // If no phases (e.g. only sentAt exists with no further progress), show queue phase to the end
+  if (phases.length === 0 && finishedMs > sentMs) {
+    phases.push({
+      kind: "queue",
+      label: "Waiting in Queue",
+      color: PHASE_COLORS.queue,
+      startMs: sentMs,
+      endMs: finishedMs,
+      durationMs: finishedMs - sentMs,
+    })
   }
 
   return phases

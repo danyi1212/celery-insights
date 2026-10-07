@@ -151,6 +151,20 @@ describe("computeTaskPhases", () => {
     )
   })
 
+  it("bounds phases with missing lifecycle timestamps by the frozen end", () => {
+    const task = createTask({
+      state: TaskState.STARTED,
+      sent_at: new Date(now.getTime() - 10_000),
+      received_at: undefined,
+      started_at: new Date(now.getTime() - 8_000),
+      last_updated: new Date(now.getTime() - 5_000),
+      succeeded_at: undefined,
+    })
+    const phases = computeTaskPhases(task, now)
+    expect(phases.map((phase) => phase.endMs)).toEqual([now.getTime() - 5_000, now.getTime() - 5_000])
+    expect(computeTaskPhases(task, new Date(now.getTime() + 60_000))).toEqual(phases)
+  })
+
   it("computes 3 phases for a full lifecycle task", () => {
     const sent_at = new Date("2024-01-01T11:00:00Z")
     const received_at = new Date("2024-01-01T11:00:01Z")
