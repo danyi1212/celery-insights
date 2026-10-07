@@ -162,6 +162,11 @@
       "id": "bytes_text_inside",
       "kwargs": "{'note': 'see b\\'x, \"organization_id\": 1, c'}",
       "format": "saferepr"
+    },
+    {
+      "id": "delimited_angle_inside",
+      "kwargs": "{'note': 'a: < b, \"organization_id\": 1, c'}",
+      "format": "saferepr"
     }
   ],
   "workflows": [
