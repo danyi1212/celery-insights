@@ -126,9 +126,11 @@ class TestWorkerPoller:
         poller = WorkerPoller(celery_app)
         await poller._poll()
 
-        # First call: query existing, second call: update missed_polls
-        assert mock_db.query.call_count == 2
-        update_call = mock_db.query.call_args_list[1]
+        # Calls: query existing, clear execution observations, update missed_polls
+        assert mock_db.query.call_count == 3
+        clear_query = mock_db.query.call_args_list[1][0][0]
+        assert "execution_active = NONE" in clear_query
+        update_call = mock_db.query.call_args_list[2]
         query_str = update_call[0][0]
         params = update_call[0][1]
         assert "missed_polls = $missed" in query_str
@@ -145,7 +147,7 @@ class TestWorkerPoller:
         poller = WorkerPoller(celery_app)
         await poller._poll()
 
-        update_call = mock_db.query.call_args_list[1]
+        update_call = mock_db.query.call_args_list[2]
         query_str = update_call[0][0]
         params = update_call[0][1]
         assert "status = 'offline'" in query_str

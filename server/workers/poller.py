@@ -10,7 +10,16 @@ from surrealdb_client import get_db
 logger = logging.getLogger(__name__)
 
 MISSED_POLLS_THRESHOLD = 3
+# Half the reader-side expiry (EXECUTION_OBSERVATION_MAX_AGE_MS in src/utils/task-execution.ts): an unchanged
+# observation is rewritten only this often, so steady-state polls stop firing a live-query event per task.
+OBSERVATION_REFRESH_SECONDS = 60
 DEFAULT_POLL_INTERVAL = 5
+
+
+_CLEAR_EXECUTION = (
+    "UPDATE task SET execution_active = NONE "
+    "WHERE worker = $hostname AND state = 'STARTED' AND execution_active != NONE"
+)
 
 
 def _inspect_sync(celery_app: Celery) -> dict[str, dict]:
@@ -124,18 +133,19 @@ class WorkerPoller:
                         "UPDATE task SET execution_active = record::id(id) IN $active_ids, "
                         "execution_observed_at = <datetime>$observed_at "
                         "WHERE worker = $hostname AND state = 'STARTED' "
-                        "AND last_updated <= <datetime>$observed_at",
+                        "AND last_updated <= <datetime>$observed_at "
+                        "AND (execution_active != (record::id(id) IN $active_ids) OR execution_observed_at = NONE "
+                        "OR execution_observed_at < last_updated "
+                        "OR execution_observed_at < <datetime>$observed_at - <duration>$refresh)",
                         {
                             "hostname": hostname,
                             "active_ids": [task["id"] for task in active if isinstance(task, dict) and task.get("id")],
                             "observed_at": observed_at,
+                            "refresh": f"{OBSERVATION_REFRESH_SECONDS}s",
                         },
                     )
                 else:
-                    await db.query(
-                        "UPDATE task SET execution_active = NONE WHERE worker = $hostname AND state = 'STARTED'",
-                        {"hostname": hostname},
-                    )
+                    await db.query(_CLEAR_EXECUTION, {"hostname": hostname})
             except Exception:
                 logger.exception("Failed to upsert worker %s", hostname)
 
@@ -162,6 +172,8 @@ class WorkerPoller:
 
             missed = (worker.get("missed_polls") or 0) + 1
             try:
+                # A missing reply is no observation; only the worker's status keeps the missed-poll grace.
+                await db.query(_CLEAR_EXECUTION, {"hostname": hostname})
                 if missed >= MISSED_POLLS_THRESHOLD:
                     await db.query(
                         "UPDATE type::record('worker', $id) SET "
@@ -169,10 +181,6 @@ class WorkerPoller:
                         {"id": hostname, "missed": missed, "ts": now},
                     )
                     logger.info("Worker %s marked offline after %d missed polls", hostname, missed)
-                    await db.query(
-                        "UPDATE task SET execution_active = NONE WHERE worker = $hostname AND state = 'STARTED'",
-                        {"hostname": hostname},
-                    )
                 else:
                     await db.query(
                         "UPDATE type::record('worker', $id) SET missed_polls = $missed",
