@@ -65,6 +65,7 @@ TASKS: list[dict[str, Any]] = [
     {"id": "escapes", "kwargs": {"path": "a\\b", "text": "line1\nline2", "quote": 'say "hi"'}},
     {"id": "escapes_repr", "kwargs": {"path": "a\\b", "text": "line1\nline2"}, "format": "repr"},
     {"id": "unicode_key", "kwargs": {"café": 1, "user-id": 7, "options": {"user-id": 8}}},
+    {"id": "trailing_backslash", "kwargs": {"path": "C:\\", "organization_id": 5}},
 ]
 
 WORKFLOWS: list[dict[str, Any]] = [
@@ -127,6 +128,11 @@ QUERIES: list[tuple[str, list[str]]] = [
     ("user-id=7", ["unicode_key"]),
     ("user-id=8", ["unicode_key"]),
     ("user-id=9", []),
+    ("organization_id=5", ["trailing_backslash"]),
+    ("path='C:\\\\'", ["trailing_backslash"]),
+    ("items=" + "[" * 600 + "0" + "]" * 600, []),
+    ("label='\\ud800'", []),
+    ("label='\\U0000dfff'", []),
 ]
 
 WORKFLOW_QUERIES: list[tuple[str, list[str]]] = [

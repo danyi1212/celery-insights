@@ -122,3 +122,14 @@ def test_oversized_literal_falls_back_to_plain_text() -> None:
     search = build_task_search("items=[" + ",".join(['"item"'] * 20_000) + "]")
     assert "kwargsPattern" not in search.bindings
     assert "string::matches" not in search.clause
+
+
+def test_deeply_nested_literal_falls_back_to_plain_text() -> None:
+    search = build_task_search("items=" + "[" * 600 + "0" + "]" * 600)
+    assert "kwargsPattern" not in search.bindings
+    assert "string::matches" not in search.clause
+
+
+def test_surrogate_escape_keeps_pattern_encodable() -> None:
+    search = build_task_search("label='\\ud800'")
+    search.bindings["kwargsPattern"].encode("utf-8")

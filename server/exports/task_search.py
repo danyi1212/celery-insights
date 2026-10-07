@@ -12,6 +12,13 @@ REGEX_SPECIAL = set(".*+?^${}()|[]\\")
 
 # SurrealDB 3.3 rejects regexes above roughly 110 KB; larger literals fall back to plain text.
 MAX_KWARGS_PATTERN_LENGTH = 65_536
+# Deeper literals fall back to plain text instead of exhausting the parser stack.
+MAX_NESTING_DEPTH = 64
+
+
+class NestingLimitError(ValueError):
+    pass
+
 
 PLAIN_TEXT_CLAUSE = " OR ".join(
     f"string::contains(string::lowercase({field}), $query)"
@@ -134,7 +141,7 @@ def parse_quoted(text: str, start: int) -> Literal | None:
             if len(hex_digits) != width or not HEX_PATTERN.match(hex_digits):
                 return None
             code = int(hex_digits, 16)
-            if code > 0x10FFFF:
+            if code > 0x10FFFF or 0xD800 <= code <= 0xDFFF:
                 return None
             decoded += chr(code)
             index += width
@@ -149,20 +156,22 @@ def parse_quoted(text: str, start: int) -> Literal | None:
     return None
 
 
-def parse_container(text: str, start: int) -> Literal | None:
+def parse_container(text: str, start: int, depth: int) -> Literal | None:
+    if depth > MAX_NESTING_DEPTH:
+        raise NestingLimitError
     is_dictionary = text[start] == "{"
     close = "}" if is_dictionary else "]"
     items: list[str] = []
     index = skip_space(text, start + 1)
     while character_at(text, index) != close:
-        item = parse_literal(text, index)
+        item = parse_literal(text, index, depth)
         if item is None:
             return None
         if is_dictionary:
             index = skip_space(text, item.end)
             if character_at(text, index) != ":":
                 return None
-            value = parse_literal(text, index + 1)
+            value = parse_literal(text, index + 1, depth)
             if value is None:
                 return None
             item = Literal(f"{item.pattern}\\s*:\\s*{value.pattern}", value.end)
@@ -176,11 +185,11 @@ def parse_container(text: str, start: int) -> Literal | None:
     return Literal(open_pattern + "\\s*" + "\\s*,\\s*".join(items) + "\\s*" + close_pattern, index + 1)
 
 
-def parse_literal(text: str, start: int) -> Literal | None:
+def parse_literal(text: str, start: int, depth: int = 0) -> Literal | None:
     index = skip_space(text, start)
     character = character_at(text, index)
     if character in {"[", "{"}:
-        return parse_container(text, index)
+        return parse_container(text, index, depth + 1)
     if character in {'"', "'"}:
         return parse_quoted(text, index)
     number = NUMBER_PATTERN.match(text[index:])
@@ -198,12 +207,17 @@ def build_task_search(query: str) -> TaskSearch:
     if not keyword:
         return TaskSearch(PLAIN_TEXT_CLAUSE, bindings)
     key, value = keyword.group(1), keyword.group(2)
-    literal = parse_literal(value, 0)
+    try:
+        literal = parse_literal(value, 0)
+    except NestingLimitError:
+        return TaskSearch(PLAIN_TEXT_CLAUSE, bindings)
     pattern = (
         literal.pattern if literal and skip_space(value, literal.end) == len(value) else string_pattern(value.strip())
     )
+    # Single-quoted strings come from saferepr, which leaves backslashes raw, so a backslash there may be
+    # either an escape or a plain character; the regex accepts both readings.
     kwargs_pattern = (
-        r"""^(?:[^'"]|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")*?(?:^|[,{])\s*"""
+        r"""^(?:[^'"]|'(?:[^']|\\.)*'|"(?:[^"\\]|\\.)*")*?(?:^|[,{])\s*"""
         + string_pattern(key)
         + r"\s*:\s*"
         + pattern

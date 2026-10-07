@@ -103,4 +103,10 @@ describe("buildTaskSearch", () => {
     expect(bindings.kwargsPattern).toBeUndefined()
     expect(clause).not.toContain("string::matches")
   })
+
+  it("falls back to plain text when the literal nests too deeply", () => {
+    const { clause, bindings } = buildTaskSearch(`items=${"[".repeat(600)}0${"]".repeat(600)}`)
+    expect(bindings.kwargsPattern).toBeUndefined()
+    expect(clause).not.toContain("string::matches")
+  })
 })

@@ -5,6 +5,10 @@ const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]
 
 // SurrealDB 3.3 rejects regexes above roughly 110 KB; larger literals fall back to plain text.
 const MAX_KWARGS_PATTERN_LENGTH = 65_536
+// Deeper literals fall back to plain text instead of exhausting the parser stack.
+const MAX_NESTING_DEPTH = 64
+
+class NestingLimitError extends Error {}
 
 const PLAIN_TEXT_CLAUSE = [
   "string::concat('', id)",
@@ -86,7 +90,7 @@ const parseQuoted = (text: string, start: number): Literal | undefined => {
       const hex = text.slice(index + 1, index + 1 + width)
       if (hex.length !== width || !/^[0-9A-Fa-f]+$/.test(hex)) return undefined
       const code = parseInt(hex, 16)
-      if (code > 0x10ffff) return undefined
+      if (code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) return undefined
       decoded += String.fromCodePoint(code)
       index += width
     } else if (octal) {
@@ -101,18 +105,19 @@ const parseQuoted = (text: string, start: number): Literal | undefined => {
   return undefined
 }
 
-const parseContainer = (text: string, start: number): Literal | undefined => {
+const parseContainer = (text: string, start: number, depth: number): Literal | undefined => {
+  if (depth > MAX_NESTING_DEPTH) throw new NestingLimitError()
   const isDictionary = text[start] === "{"
   const close = isDictionary ? "}" : "]"
   const items: string[] = []
   let index = skipSpace(text, start + 1)
   while (text[index] !== close) {
-    let item = parseLiteral(text, index)
+    let item = parseLiteral(text, index, depth)
     if (!item) return undefined
     if (isDictionary) {
       index = skipSpace(text, item.end)
       if (text[index] !== ":") return undefined
-      const value = parseLiteral(text, index + 1)
+      const value = parseLiteral(text, index + 1, depth)
       if (!value) return undefined
       item = { pattern: `${item.pattern}\\s*:\\s*${value.pattern}`, end: value.end }
     }
@@ -126,10 +131,10 @@ const parseContainer = (text: string, start: number): Literal | undefined => {
 }
 
 // Accepts JSON and Python repr literals. Numbers keep their source text, so 64-bit ids and float formatting survive.
-const parseLiteral = (text: string, start: number): Literal | undefined => {
+const parseLiteral = (text: string, start: number, depth = 0): Literal | undefined => {
   const index = skipSpace(text, start)
   const character = text[index]
-  if (character === "[" || character === "{") return parseContainer(text, index)
+  if (character === "[" || character === "{") return parseContainer(text, index, depth + 1)
   if (character === '"' || character === "'") return parseQuoted(text, index)
   const number = /^-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/.exec(text.slice(index))?.[0]
   if (number) return { pattern: escapeRegex(number), end: index + number.length }
@@ -144,12 +149,20 @@ export const buildTaskSearch = (query: string): { clause: string; bindings: Reco
   const keyword = /^([^\s=]+)\s*=\s*(.+)$/.exec(trimmed)
   if (!keyword) return { clause: PLAIN_TEXT_CLAUSE, bindings }
   const [, key, value] = keyword
-  const literal = parseLiteral(value, 0)
+  let literal: Literal | undefined
+  try {
+    literal = parseLiteral(value, 0)
+  } catch (error) {
+    if (error instanceof NestingLimitError) return { clause: PLAIN_TEXT_CLAUSE, bindings }
+    throw error
+  }
   const pattern =
     literal && skipSpace(value, literal.end) === value.length ? literal.pattern : stringPattern(value.trim())
   // The prefix consumes quoted strings whole, so the key only matches at a dictionary key position
   // (top-level or nested), never inside a string value that happens to contain dictionary-like text.
-  const kwargsPattern = `^(?:[^'"]|'(?:[^'\\\\]|\\\\.)*'|"(?:[^"\\\\]|\\\\.)*")*?(?:^|[,{])\\s*${stringPattern(key)}\\s*:\\s*${pattern}\\s*(?:[,}]|$)`
+  // Single-quoted strings come from saferepr, which leaves backslashes raw, so a backslash there may be
+  // either an escape or a plain character; the regex accepts both readings.
+  const kwargsPattern = `^(?:[^'"]|'(?:[^']|\\\\.)*'|"(?:[^"\\\\]|\\\\.)*")*?(?:^|[,{])\\s*${stringPattern(key)}\\s*:\\s*${pattern}\\s*(?:[,}]|$)`
   if (kwargsPattern.length > MAX_KWARGS_PATTERN_LENGTH) return { clause: PLAIN_TEXT_CLAUSE, bindings }
   // Plain text stays included so queries like `status=failed` still search exception and result text.
   return {
