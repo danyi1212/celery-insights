@@ -142,7 +142,10 @@ async def collect_tier2() -> bytes:
 
     # celery_worker_active_tasks
     worker_active = Gauge(
-        "celery_worker_active_tasks", "Currently active tasks per worker", ["worker"], registry=registry
+        "celery_worker_active_tasks",
+        "Tasks observed running per worker in a fresh worker inspection",
+        ["worker"],
+        registry=registry,
     )
     for row in active_rows:
         worker_active.labels(worker=str(row.get("worker", "unknown"))).set(row.get("count", 0))

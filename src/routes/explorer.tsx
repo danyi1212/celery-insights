@@ -85,7 +85,7 @@ const ExplorerPage = () => {
   const chartSeries = useMemo(
     () => [
       { key: "pending", label: "Pending", color: "var(--status-neutral)", states: ["PENDING", "RECEIVED"] },
-      { key: "running", label: "Running", color: "var(--status-info)", states: ["STARTED"] },
+      { key: "running", label: "Started", color: "var(--status-info)", states: ["STARTED"] },
       { key: "retry", label: "Retry", color: "var(--status-warning)", states: ["RETRY"] },
       { key: "success", label: "Success", color: "var(--status-success)", states: ["SUCCESS"] },
       {
