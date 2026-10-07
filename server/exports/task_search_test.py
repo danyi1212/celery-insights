@@ -1,11 +1,13 @@
 import asyncio
 import json
+import os
 import shutil
 import socket
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -17,15 +19,19 @@ from exports.router import (
     _build_workflow_query,
     _extract_id,
     _extract_rows,
+    _query_last,
 )
-from exports.task_search import build_task_search
+from exports.task_search import build_task_search, build_workflow_search
 
 FIXTURES = json.loads(
     (Path(__file__).resolve().parents[2] / "src" / "lib" / "task-search-fixtures.json").read_text(encoding="utf-8")
 )
 WIDE_RANGE = {"from": "2000-01-01T00:00:00Z", "to": "2100-01-01T00:00:00Z"}
 
-pytestmark = pytest.mark.skipif(shutil.which("surreal") is None, reason="SurrealDB 3.3+ CLI required")
+# CI must run the native SurrealDB vectors; a local run without the CLI skips them, and -rs lists the reason.
+requires_surreal = pytest.mark.skipif(
+    shutil.which("surreal") is None and not os.environ.get("CI"), reason="SurrealDB 3.3+ CLI not on PATH"
+)
 
 
 async def _seed(url: str) -> None:
@@ -91,9 +97,10 @@ async def _connect(url: str) -> Any:
 
 
 async def _ids(db: Any, sql: str, bindings: dict[str, Any]) -> list[str]:
-    return sorted(_extract_id(row.get("id")) for row in _extract_rows(await db.query(sql, bindings)))
+    return sorted(_extract_id(row.get("id")) for row in _extract_rows(await _query_last(db, sql, bindings)))
 
 
+@requires_surreal
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("query", "expected"), [(case["query"], case["expected"]) for case in FIXTURES["queries"]])
 async def test_task_export_matches_explorer_vectors(database_url: str, query: str, expected: list[str]) -> None:
@@ -105,6 +112,7 @@ async def test_task_export_matches_explorer_vectors(database_url: str, query: st
         await db.close()
 
 
+@requires_surreal
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("query", "expected"), [(case["query"], case["expected"]) for case in FIXTURES["workflowQueries"]]
@@ -112,10 +120,24 @@ async def test_task_export_matches_explorer_vectors(database_url: str, query: st
 async def test_workflow_export_matches_explorer_vectors(database_url: str, query: str, expected: list[str]) -> None:
     db = await _connect(database_url)
     try:
-        sql, bindings = await _build_workflow_query(db, _payload("workflows", query))
+        sql, bindings = _build_workflow_query(_payload("workflows", query))
         assert await _ids(db, sql, bindings) == expected
     finally:
         await db.close()
+
+
+def test_plain_text_workflow_search_skips_member_tasks() -> None:
+    search = build_workflow_search("north team")
+    assert search.prelude == []
+    assert "$searchWorkflows" not in search.clause
+
+
+@pytest.mark.asyncio
+async def test_query_last_raises_on_a_failed_statement() -> None:
+    db = AsyncMock()
+    db.query_raw.return_value = {"result": [{"status": "ERR", "result": "boom"}, {"status": "OK", "result": []}]}
+    with pytest.raises(RuntimeError, match="boom"):
+        await _query_last(db, "LET $a = 1; SELECT * FROM workflow", {})
 
 
 def test_oversized_literal_falls_back_to_plain_text() -> None:

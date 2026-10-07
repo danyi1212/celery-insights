@@ -42,7 +42,25 @@ WORD_PATTERNS = {
 
 HEX_ESCAPE_WIDTHS = {"x": 2, "u": 4, "U": 8}
 
-STRING_ESCAPES = {"n": "\n", "r": "\r", "t": "\t", "b": "\b", "f": "\f"}
+# Python and JSON escapes (`\/` is JSON's). Python keeps the backslash of an unrecognized escape, so `\q` stays
+# two characters.
+STRING_ESCAPES = {
+    "\\": "\\",
+    "'": "'",
+    '"': '"',
+    "/": "/",
+    "a": "\a",
+    "b": "\b",
+    "f": "\f",
+    "n": "\n",
+    "r": "\r",
+    "t": "\t",
+    "v": "\v",
+}
+
+# The separators saferepr, repr and JSON write between tokens. JS and Python disagree on what `\s`, trim and strip
+# cover (\x1c-\x1f, \x85, \ufeff), so both ports spell the set out to parse a query the same way.
+SPACE_CHARACTERS = " \t\n\r\f\v"
 
 # One unit of serialized kwargs text: a plain character, a single-quoted string, or a double-quoted string.
 # saferepr only writes a backslash inside a string, so a plain backslash marks a misread quote.
@@ -59,7 +77,7 @@ WORD_PATTERN = re.compile(r"^[A-Za-z]+")
 OCTAL_PATTERN = re.compile(r"^[0-7]{1,3}")
 HEX_PATTERN = re.compile(r"^[0-9A-Fa-f]+$")
 LOW_SURROGATE_PATTERN = re.compile(r"^\\u([Dd][C-Fc-f][0-9A-Fa-f]{2})")
-KEYWORD_PATTERN = re.compile(r"^([^\s=]+)\s*=\s*(.+)$")
+KEYWORD_PATTERN = re.compile(r"^([^ \t\n\r\f\v=]+)[ \t\n\r\f\v]*=[ \t\n\r\f\v]*(.+)$", re.DOTALL)
 
 RANGE_WORKFLOWS_QUERY = (
     "SELECT VALUE root_task_id FROM workflow WHERE last_updated >= <datetime>$from AND last_updated <= <datetime>$to"
@@ -80,7 +98,7 @@ class TaskSearch:
 
 @dataclass(frozen=True)
 class WorkflowSearch:
-    member_query: str
+    prelude: list[str]
     clause: str
     bindings: dict[str, str]
 
@@ -127,8 +145,12 @@ def character_at(text: str, index: int) -> str:
     return text[index] if 0 <= index < len(text) else ""
 
 
+def trim_query(query: str) -> str:
+    return query.strip(SPACE_CHARACTERS)
+
+
 def skip_space(text: str, index: int) -> int:
-    return len(text) - len(text[index:].lstrip())
+    return len(text) - len(text[index:].lstrip(SPACE_CHARACTERS))
 
 
 def parse_quoted(text: str, start: int) -> Literal | None:
@@ -169,7 +191,7 @@ def parse_quoted(text: str, start: int) -> Literal | None:
         elif not escaped:
             return None
         else:
-            decoded += STRING_ESCAPES.get(escaped, escaped)
+            decoded += STRING_ESCAPES.get(escaped, "\\" + escaped)
         index += 1
     return None
 
@@ -219,7 +241,7 @@ def parse_literal(text: str, start: int, depth: int = 0) -> Literal | None:
 
 
 def build_task_search(query: str) -> TaskSearch:
-    trimmed = query.strip()
+    trimmed = trim_query(query)
     bindings = {"query": trimmed.lower()}
     keyword = KEYWORD_PATTERN.match(trimmed)
     if not keyword:
@@ -229,9 +251,7 @@ def build_task_search(query: str) -> TaskSearch:
         literal = parse_literal(value, 0)
     except NestingLimitError:
         return TaskSearch(PLAIN_TEXT_CLAUSE, bindings)
-    pattern = (
-        literal.pattern if literal and skip_space(value, literal.end) == len(value) else string_pattern(value.strip())
-    )
+    pattern = literal.pattern if literal and skip_space(value, literal.end) == len(value) else string_pattern(value)
     key_value_pattern = r"\s*" + string_pattern(key) + r"\s*:\s*" + pattern + r"\s*"
     # The whole kwargs text must tokenize into plain characters and quoted strings around the key, so the key
     # only matches at a dictionary key position (top-level or nested). saferepr leaves backslashes raw, so a
@@ -260,16 +280,25 @@ def build_task_search(query: str) -> TaskSearch:
     )
 
 
+WORKFLOW_TEXT_CLAUSE = (
+    "string::contains(string::lowercase(root_task_id), $query) "
+    "OR string::contains(string::lowercase(root_task_type ?? ''), $query) "
+    "OR string::contains(string::lowercase(latest_exception_preview ?? ''), $query)"
+)
+
+
 def build_workflow_search(query: str) -> WorkflowSearch:
-    """Callers run RANGE_WORKFLOWS_QUERY, then member_query with $rangeWorkflows, and bind the distinct
-    result as $searchWorkflows; the Python SDK returns only the first statement of a batch, so the
-    frontend's LET prelude is not available here."""
+    """Only a key=value search looks at member tasks; plain text keeps the workflow-only clause and skips the
+    member scan. Callers bind $from and $to and run the prelude in the same request as the workflow query."""
     search = build_task_search(query)
+    if "kwargsPattern" not in search.bindings:
+        return WorkflowSearch([], WORKFLOW_TEXT_CLAUSE, search.bindings)
     return WorkflowSearch(
-        f"SELECT VALUE workflow_id FROM task WHERE workflow_id IN $rangeWorkflows AND ({search.clause})",
-        "string::contains(string::lowercase(root_task_id), $query) "
-        "OR string::contains(string::lowercase(root_task_type ?? ''), $query) "
-        "OR string::contains(string::lowercase(latest_exception_preview ?? ''), $query) "
-        "OR root_task_id IN $searchWorkflows",
+        [
+            f"LET $rangeWorkflows = ({RANGE_WORKFLOWS_QUERY});",
+            "LET $searchWorkflows = array::distinct(SELECT VALUE workflow_id FROM task"
+            f" WHERE workflow_id IN $rangeWorkflows AND ({search.clause}));",
+        ],
+        f"{WORKFLOW_TEXT_CLAUSE} OR root_task_id IN $searchWorkflows",
         search.bindings,
     )

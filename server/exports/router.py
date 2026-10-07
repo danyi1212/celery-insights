@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.responses import Response
 
-from exports.task_search import RANGE_WORKFLOWS_QUERY, build_task_search, build_workflow_search
+from exports.task_search import build_task_search, build_workflow_search, trim_query
 from surrealdb_client import get_db
 
 exports_router = APIRouter(prefix="/api/exports", tags=["exports"])
@@ -151,7 +151,7 @@ def _build_task_query(payload: ExplorerCsvExportRequest) -> tuple[str, dict[str,
     conditions = ["last_updated >= <datetime>$from", "last_updated <= <datetime>$to"]
     bindings: dict[str, Any] = {"from": payload.from_, "to": payload.to}
 
-    if payload.query.strip():
+    if trim_query(payload.query):
         search = build_task_search(payload.query)
         conditions.append(f"({search.clause})")
         bindings.update(search.bindings)
@@ -170,23 +170,16 @@ def _build_task_query(payload: ExplorerCsvExportRequest) -> tuple[str, dict[str,
     return f"SELECT * FROM task{clause} ORDER BY {sort_field} {payload.sort_direction}", bindings
 
 
-def _extract_values(result: object) -> list[str]:
-    return [value for value in result if isinstance(value, str)] if isinstance(result, list) else []
-
-
-async def _build_workflow_query(db: Any, payload: ExplorerCsvExportRequest) -> tuple[str, dict[str, Any]]:
+def _build_workflow_query(payload: ExplorerCsvExportRequest) -> tuple[str, dict[str, Any]]:
     conditions = ["last_updated >= <datetime>$from", "last_updated <= <datetime>$to"]
     bindings: dict[str, Any] = {"from": payload.from_, "to": payload.to}
+    prelude: list[str] = []
 
-    if payload.query.strip():
+    if trim_query(payload.query):
         search = build_workflow_search(payload.query)
-        range_workflows = _extract_values(await db.query(RANGE_WORKFLOWS_QUERY, bindings))
-        member_workflows = _extract_values(
-            await db.query(search.member_query, {**search.bindings, "rangeWorkflows": range_workflows})
-        )
+        prelude = search.prelude
         conditions.append(f"({search.clause})")
         bindings.update(search.bindings)
-        bindings["searchWorkflows"] = sorted(set(member_workflows))
     if payload.workflow_states:
         conditions.append("aggregate_state IN $workflowStates")
         bindings["workflowStates"] = payload.workflow_states
@@ -196,7 +189,20 @@ async def _build_workflow_query(db: Any, payload: ExplorerCsvExportRequest) -> t
 
     sort_field = payload.sort_field if payload.sort_field in WORKFLOW_SORT_FIELDS else "last_updated"
     clause = f" WHERE {' AND '.join(conditions)}"
-    return f"SELECT * FROM workflow{clause} ORDER BY {sort_field} {payload.sort_direction}", bindings
+    return f"{''.join(prelude)}SELECT * FROM workflow{clause} ORDER BY {sort_field} {payload.sort_direction}", bindings
+
+
+async def _query_last(db: Any, query: str, bindings: dict[str, Any]) -> object:
+    """Return the last statement's result; db.query only returns the first, and the workflow search
+    prefixes LET statements."""
+    response = await db.query_raw(query, bindings)
+    if "error" in response:
+        raise RuntimeError(f"SurrealDB query failed: {response['error']}")
+    results = response.get("result", [])
+    errors = [result.get("result") for result in results if result.get("status") == "ERR"]
+    if errors:
+        raise RuntimeError(f"SurrealDB query failed: {errors}")
+    return results[-1]["result"] if results else []
 
 
 def _build_raw_events_query(payload: RawEventsCsvExportRequest) -> tuple[str, dict[str, Any]]:
@@ -224,10 +230,8 @@ async def export_csv(payload: ExplorerCsvExportRequest | RawEventsCsvExportReque
     db = get_db()
 
     if isinstance(payload, ExplorerCsvExportRequest):
-        query, bindings = (
-            _build_task_query(payload) if payload.mode == "tasks" else await _build_workflow_query(db, payload)
-        )
-        result = await db.query(query, bindings)
+        query, bindings = _build_task_query(payload) if payload.mode == "tasks" else _build_workflow_query(payload)
+        result = await _query_last(db, query, bindings)
         rows = _extract_rows(result)
         csv_content = _task_rows_to_csv(rows) if payload.mode == "tasks" else _workflow_rows_to_csv(rows)
         filename = f"{payload.mode}.csv"

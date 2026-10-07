@@ -97,6 +97,12 @@ TASKS: list[dict[str, Any]] = [
     {"id": "bytes_text_inside", "kwargs": {"note": 'see b\'x, "organization_id": 1, c'}},
     {"id": "delimited_angle_inside", "kwargs": {"note": 'a: < b, "organization_id": 1, c'}},
     {"id": "escaped_angle_inside", "kwargs": {"note": 'it\': < b, "organization_id": 1, c'}},
+    # \a and \v decode to control characters, and an unknown escape keeps its backslash, so neither matches a letter.
+    {"id": "bell", "kwargs": {"bell": "\a", "vtab": "\v", "path": "\\q"}},
+    {"id": "bell_repr", "kwargs": {"bell": "\a", "vtab": "\v", "path": "\\q"}, "format": "repr"},
+    {"id": "letters", "kwargs": {"bell": "a", "vtab": "v", "path": "q"}},
+    # Python strip and JS trim disagree on these, so both parsers keep them as key and value text.
+    {"id": "odd_space", "kwargs": {"a\x1cb": 1, "label": "\ufeffx", "next": "y\x85"}},
 ]
 
 WORKFLOWS: list[dict[str, Any]] = [
@@ -184,12 +190,22 @@ QUERIES: list[tuple[str, list[str]]] = [
     ("organization_id=14", ["bytes_apostrophe"]),
     ("organization_id=27", ["two_bytes"]),
     ("organization_id=28", ["two_reprs"]),
+    ("bell='\\a'", ["bell", "bell_repr"]),
+    ("vtab='\\v'", ["bell", "bell_repr"]),
+    ("path='\\q'", ["bell", "bell_repr"]),
+    ("bell=a", ["letters"]),
+    ("vtab=v", ["letters"]),
+    ("path=q", ["letters"]),
+    ("a\x1cb=1", ["odd_space"]),
+    ("label=\ufeffx", ["odd_space"]),
+    ("next=y\x85", ["odd_space"]),
 ]
 
 WORKFLOW_QUERIES: list[tuple[str, list[str]]] = [
     ("organization_id=1", ["one", "two"]),
     ("organization_id=10", ["two"]),
-    ("north team", ["one"]),
+    # Plain text searches workflow fields only; member task "one" has label "North team".
+    ("north team", []),
     ("sync", ["three", "two"]),
     ("timeout", ["three"]),
     ("organization_id=2", []),

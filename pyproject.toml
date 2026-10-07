@@ -49,6 +49,7 @@ packages = ["server"]
 
 [tool.pytest.ini_options]
 pythonpath = "server"
+addopts = "-rfEs"
 log_cli_level = "INFO"
 
 [tool.ruff]

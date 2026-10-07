@@ -35,7 +35,31 @@ const HEX_ESCAPE_WIDTHS = new Map([
   ["U", 8],
 ])
 
-const STRING_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f" }
+// Python and JSON escapes (`\/` is JSON's). Python keeps the backslash of an unrecognized escape, so `\q` stays
+// two characters.
+const STRING_ESCAPES: Record<string, string> = {
+  "\\": "\\",
+  "'": "'",
+  '"': '"',
+  "/": "/",
+  a: "\x07",
+  b: "\b",
+  f: "\f",
+  n: "\n",
+  r: "\r",
+  t: "\t",
+  v: "\v",
+}
+
+// The separators saferepr, repr and JSON write between tokens. JS and Python disagree on what `\s`, trim and strip
+// cover (\x1c-\x1f, \x85, \ufeff), so both ports spell the set out to parse a query the same way.
+const SPACE_CHARACTERS = " \\t\\n\\r\\f\\v"
+const SPACE = `[${SPACE_CHARACTERS}]`
+const LEADING_SPACE = new RegExp(`^${SPACE}+`)
+const SURROUNDING_SPACE = new RegExp(`^${SPACE}+|${SPACE}+$`, "g")
+const KEYWORD = new RegExp(`^([^${SPACE_CHARACTERS}=]+)${SPACE}*=${SPACE}*(.+)$`, "s")
+
+export const trimQuery = (query: string): string => query.replace(SURROUNDING_SPACE, "")
 
 // One unit of serialized kwargs text: a plain character, a single-quoted string, or a double-quoted string.
 // saferepr only writes a backslash inside a string, so a plain backslash marks a misread quote.
@@ -87,7 +111,8 @@ const stringPattern = (text: string): string => {
   return `(?:${[...alternatives].map(escapeRegex).join("|")})`
 }
 
-const skipSpace = (text: string, index: number): number => text.length - text.slice(index).trimStart().length
+const skipSpace = (text: string, index: number): number =>
+  text.length - text.slice(index).replace(LEADING_SPACE, "").length
 
 const parseQuoted = (text: string, start: number): Literal | undefined => {
   const quote = text[start]
@@ -122,7 +147,7 @@ const parseQuoted = (text: string, start: number): Literal | undefined => {
     } else if (escaped === undefined) {
       return undefined
     } else {
-      decoded += STRING_ESCAPES[escaped] ?? escaped
+      decoded += STRING_ESCAPES[escaped] ?? `\\${escaped}`
     }
   }
   return undefined
@@ -167,9 +192,9 @@ const parseLiteral = (text: string, start: number, depth = 0): Literal | undefin
 }
 
 export const buildTaskSearch = (query: string): { clause: string; bindings: Record<string, string> } => {
-  const trimmed = query.trim()
+  const trimmed = trimQuery(query)
   const bindings: Record<string, string> = { query: trimmed.toLowerCase() }
-  const keyword = /^([^\s=]+)\s*=\s*(.+)$/.exec(trimmed)
+  const keyword = KEYWORD.exec(trimmed)
   if (!keyword) return { clause: PLAIN_TEXT_CLAUSE, bindings }
   const [, key, value] = keyword
   let literal: Literal | undefined
@@ -179,8 +204,7 @@ export const buildTaskSearch = (query: string): { clause: string; bindings: Reco
     if (error instanceof NestingLimitError) return { clause: PLAIN_TEXT_CLAUSE, bindings }
     throw error
   }
-  const pattern =
-    literal && skipSpace(value, literal.end) === value.length ? literal.pattern : stringPattern(value.trim())
+  const pattern = literal && skipSpace(value, literal.end) === value.length ? literal.pattern : stringPattern(value)
   const keyValuePattern = `\\s*${stringPattern(key)}\\s*:\\s*${pattern}\\s*`
   // The whole kwargs text must tokenize into plain characters and quoted strings around the key, so the key
   // only matches at a dictionary key position (top-level or nested). saferepr leaves backslashes raw, so a
@@ -210,19 +234,23 @@ export const buildTaskSearch = (query: string): { clause: string; bindings: Reco
 export const RANGE_WORKFLOWS_QUERY =
   "SELECT VALUE root_task_id FROM workflow WHERE last_updated >= <datetime>$from AND last_updated <= <datetime>$to"
 
-// Callers bind $from and $to. Member tasks are scanned once per batch (an inline subquery would run per
+const WORKFLOW_TEXT_CLAUSE =
+  "string::contains(string::lowercase(root_task_id), $query) OR string::contains(string::lowercase(root_task_type ?? ''), $query) OR string::contains(string::lowercase(latest_exception_preview ?? ''), $query)"
+
+// Only a key=value search looks at member tasks; plain text keeps the workflow-only clause and skips the member
+// scan. Callers bind $from and $to. Member tasks are scanned once per batch (an inline subquery would run per
 // workflow row) and only for workflows in the selected range, which lets SurrealDB use idx_task_workflow_id.
 export const buildWorkflowSearch = (
   query: string,
 ): { prelude: string[]; clause: string; bindings: Record<string, string> } => {
   const search = buildTaskSearch(query)
+  if (!search.bindings.kwargsPattern) return { prelude: [], clause: WORKFLOW_TEXT_CLAUSE, bindings: search.bindings }
   return {
     prelude: [
       `LET $rangeWorkflows = (${RANGE_WORKFLOWS_QUERY});`,
       `LET $searchWorkflows = array::distinct(SELECT VALUE workflow_id FROM task WHERE workflow_id IN $rangeWorkflows AND (${search.clause}));`,
     ],
-    clause:
-      "string::contains(string::lowercase(root_task_id), $query) OR string::contains(string::lowercase(root_task_type ?? ''), $query) OR string::contains(string::lowercase(latest_exception_preview ?? ''), $query) OR root_task_id IN $searchWorkflows",
+    clause: `${WORKFLOW_TEXT_CLAUSE} OR root_task_id IN $searchWorkflows`,
     bindings: search.bindings,
   }
 }

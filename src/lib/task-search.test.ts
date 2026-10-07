@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { spawn, type ChildProcess } from "node:child_process"
+import { spawn, spawnSync, type ChildProcess } from "node:child_process"
 import { createServer } from "node:net"
 import { Surreal } from "surrealdb"
 import { extractId } from "@/types/surreal-records"
@@ -7,13 +7,16 @@ import fixtures from "./task-search-fixtures.json"
 import { buildTaskSearch, buildWorkflowSearch } from "./task-search"
 
 const WIDE_RANGE = { from: "2000-01-01T00:00:00Z", to: "2100-01-01T00:00:00Z" }
+// CI must run the native SurrealDB vectors; a local run without the CLI skips them with a visible reason.
+const surrealMissing = spawnSync("surreal", ["version"]).error !== undefined && !process.env.CI
+if (surrealMissing) process.stderr.write("Skipping task search against SurrealDB: SurrealDB 3.3+ CLI not on PATH\n")
 
 interface FixtureRecord {
   id: string
   [field: string]: unknown
 }
 
-describe("task search against SurrealDB", () => {
+describe.skipIf(surrealMissing)("task search against SurrealDB", () => {
   let db: Surreal
   let databaseProcess: ChildProcess
 
@@ -79,11 +82,11 @@ describe("task search against SurrealDB", () => {
     "finds workflows for %s",
     async (query, expected) => {
       const { prelude, clause, bindings } = buildWorkflowSearch(query)
-      const [, , rows] = await db.query<[null, null, { id: unknown }[]]>(
+      const results = await db.query<{ id: unknown }[][]>(
         `${prelude.join("")}SELECT id FROM workflow WHERE (${clause})`,
         { ...bindings, ...WIDE_RANGE },
       )
-      expect(rows.map((row) => extractId(row.id)).sort()).toEqual(expected)
+      expect(results[prelude.length].map((row) => extractId(row.id)).sort()).toEqual(expected)
     },
   )
 
@@ -94,6 +97,14 @@ describe("task search against SurrealDB", () => {
       { ...bindings, from: "2000-01-01T00:00:00Z", to: "2000-01-02T00:00:00Z" },
     )
     expect(rows).toEqual([])
+  })
+})
+
+describe("buildWorkflowSearch", () => {
+  it("keeps plain text to workflow fields without scanning member tasks", () => {
+    const { prelude, clause } = buildWorkflowSearch("north team")
+    expect(prelude).toEqual([])
+    expect(clause).not.toContain("$searchWorkflows")
   })
 })
 

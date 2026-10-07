@@ -4,7 +4,7 @@ import type { TimeRange } from "@danyi1212/time-range-picker"
 import { isLiveTimeRange } from "@danyi1212/time-range-picker/time-range"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import { resolveTimeRangeBindings } from "@lib/time-range-utils"
-import { buildTaskSearch, buildWorkflowSearch } from "@lib/task-search"
+import { buildTaskSearch, buildWorkflowSearch, trimQuery } from "@lib/task-search"
 import type { SurrealTask, SurrealWorkflow } from "@/types/surreal-records"
 
 export type ExplorerMode = "tasks" | "workflows"
@@ -95,7 +95,7 @@ function appendCondition(clause: string, condition: string): string {
 function buildTaskWhereClause(state: ExplorerQueryState): { clause: string; bindings: Record<string, unknown> } {
   const conditions = ["last_updated >= <datetime>$from", "last_updated <= <datetime>$to"]
   const bindings: Record<string, unknown> = {}
-  const trimmedQuery = state.query.trim()
+  const trimmedQuery = trimQuery(state.query)
 
   if (trimmedQuery) {
     const search = buildTaskSearch(trimmedQuery)
@@ -125,7 +125,7 @@ function buildWorkflowWhereClause(state: ExplorerQueryState): {
 } {
   const conditions = ["last_updated >= <datetime>$from", "last_updated <= <datetime>$to"]
   const bindings: Record<string, unknown> = {}
-  const trimmedQuery = state.query.trim()
+  const trimmedQuery = trimQuery(state.query)
   let prelude: string[] = []
 
   if (trimmedQuery) {

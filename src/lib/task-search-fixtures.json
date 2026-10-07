@@ -187,6 +187,26 @@
       "id": "escaped_angle_inside",
       "kwargs": "{'note': 'it\\': < b, \"organization_id\": 1, c'}",
       "format": "saferepr"
+    },
+    {
+      "id": "bell",
+      "kwargs": "{'bell': '\u0007', 'vtab': '\u000b', 'path': '\\q'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "bell_repr",
+      "kwargs": "{'bell': '\\x07', 'vtab': '\\x0b', 'path': '\\\\q'}",
+      "format": "repr"
+    },
+    {
+      "id": "letters",
+      "kwargs": "{'bell': 'a', 'vtab': 'v', 'path': 'q'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "odd_space",
+      "kwargs": "{'a\u001cb': 1, 'label': '﻿x', 'next': 'y'}",
+      "format": "saferepr"
     }
   ],
   "workflows": [
@@ -519,6 +539,42 @@
     {
       "query": "organization_id=28",
       "expected": ["two_reprs"]
+    },
+    {
+      "query": "bell='\\a'",
+      "expected": ["bell", "bell_repr"]
+    },
+    {
+      "query": "vtab='\\v'",
+      "expected": ["bell", "bell_repr"]
+    },
+    {
+      "query": "path='\\q'",
+      "expected": ["bell", "bell_repr"]
+    },
+    {
+      "query": "bell=a",
+      "expected": ["letters"]
+    },
+    {
+      "query": "vtab=v",
+      "expected": ["letters"]
+    },
+    {
+      "query": "path=q",
+      "expected": ["letters"]
+    },
+    {
+      "query": "a\u001cb=1",
+      "expected": ["odd_space"]
+    },
+    {
+      "query": "label=﻿x",
+      "expected": ["odd_space"]
+    },
+    {
+      "query": "next=y",
+      "expected": ["odd_space"]
     }
   ],
   "workflowQueries": [
@@ -532,7 +588,7 @@
     },
     {
       "query": "north team",
-      "expected": ["one"]
+      "expected": []
     },
     {
       "query": "sync",
