@@ -1,6 +1,7 @@
 import asyncio
 import json
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from unittest.mock import AsyncMock
 
 import pytest
@@ -233,10 +234,14 @@ class TestWorkerPoller:
     @pytest.mark.parametrize("section", ["active", "reserved", "scheduled"])
     @pytest.mark.parametrize(
         ("value", "expected"),
-        [(date(2026, 10, 6), "2026-10-06"), (datetime(2026, 10, 6, 12, 34, tzinfo=UTC), "2026-10-06 12:34:00+00:00")],
+        [
+            (date(2026, 10, 6), "2026-10-06"),
+            (datetime(2026, 10, 6, 12, 34, tzinfo=UTC), "2026-10-06T12:34:00+00:00"),
+            (Decimal("1.50"), "1.50"),
+        ],
     )
     async def test_poll_serializes_dates_in_task_kwargs(
-        self, mock_db: AsyncMock, celery_app: Celery, mocker: MockerFixture, section: str, value: date, expected: str
+        self, mock_db: AsyncMock, celery_app: Celery, mocker: MockerFixture, section: str, value: object, expected: str
     ) -> None:
         task = {"kwargs": {"start": value, "resource_id": 2, "enabled": True, "end": None}}
         observed_task = {"request": task} if section == "scheduled" else task
