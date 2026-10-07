@@ -124,9 +124,10 @@ class TestBuildTaskUpsert:
             "root_id": "r",
             "parent_id": "p",
             "routing_key": "reports",
+            "hostname": "worker-1",
         }
         query, params = build_task_upsert(event, 0)
-        for field in ("root_id", "parent_id", "routing_key"):
+        for field in ("root_id", "parent_id", "routing_key", "worker"):
             assert (
                 f"{field} = IF $t0_previous.{field} IS NONE OR $t0_previous.last_updated IS NONE"
                 f" OR <datetime>$t0_ts >= $t0_previous.last_updated"
@@ -135,6 +136,7 @@ class TestBuildTaskUpsert:
         assert params["t0_root_id"] == "r"
         assert params["t0_parent_id"] == "p"
         assert params["t0_routing_key"] == "reports"
+        assert params["t0_worker"] == "worker-1"
 
     def test_timestamp_field_keeps_earliest(self):
         query, _ = build_task_upsert({"type": "task-started", "uuid": "x", "timestamp": 1700000000.0}, 0)

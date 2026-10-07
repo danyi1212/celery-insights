@@ -79,7 +79,7 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors(*, poll
                 },
                 {"type": "task-retried", "uuid": "child", "timestamp": 1700000002.0, "exception": "TimeoutError()"},
                 {"type": "task-succeeded", "uuid": "child", "timestamp": 1700000003.0},
-                {"type": "task-received", "uuid": "child", "timestamp": 1700000001.5},
+                {"type": "task-received", "uuid": "child", "timestamp": 1700000001.5, "hostname": "worker-1"},
             ]
             queries = []
             params = {}
@@ -101,6 +101,7 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors(*, poll
                 "kwargs": "{'fmt': 'pdf'}",
                 "retries": 1,
                 "routing_key": "reports",
+                "worker": "worker-1",
             }
             assert {field: child.get(field) for field in invocation} == invocation
             assert child["had_error"] is True

@@ -321,7 +321,8 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
     if hostname:
         params[f"{p}_worker"] = hostname
         set_clauses.append(
-            f"worker = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts >= ${p}_previous.last_updated"
+            f"worker = IF ${p}_previous.worker IS NONE OR ${p}_previous.last_updated IS NONE"
+            f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
             f" THEN ${p}_worker ELSE ${p}_previous.worker END"
         )
 
