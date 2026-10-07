@@ -1,24 +1,18 @@
-import { useCallback, useState, useSyncExternalStore } from "react"
+import { useCallback, useRef, useState, useSyncExternalStore } from "react"
 
 interface Ticker {
-  now: Date
+  now?: Date
   listeners: Set<() => void>
   timer?: ReturnType<typeof setInterval>
 }
 
 // One timer per interval, shared by every subscriber, so hundreds of badges tick (and re-render) together.
+// Entries exist only while subscribed; `now` stays unset until the first tick so render has no side effects.
 const tickers = new Map<number, Ticker>()
 
-const getTicker = (interval: number): Ticker => {
-  const existing = tickers.get(interval)
-  if (existing) return existing
-  const ticker: Ticker = { now: new Date(), listeners: new Set() }
-  tickers.set(interval, ticker)
-  return ticker
-}
-
 const subscribeTicker = (interval: number, listener: () => void): (() => void) => {
-  const ticker = getTicker(interval)
+  const ticker = tickers.get(interval) ?? { listeners: new Set<() => void>() }
+  tickers.set(interval, ticker)
   ticker.listeners.add(listener)
   ticker.timer ??= setInterval(() => {
     ticker.now = new Date()
@@ -34,14 +28,16 @@ const subscribeTicker = (interval: number, listener: () => void): (() => void) =
 
 export const useNow = (interval?: number): Date => {
   const [mountedAt] = useState(() => new Date())
+  // Monotonic per caller: never before its mount, and never backwards when ticking stops.
+  const lastReported = useRef(mountedAt)
   const subscribe = useCallback(
     (listener: () => void) => (interval ? subscribeTicker(interval, listener) : () => {}),
     [interval],
   )
-  // The shared tick can predate this mount; never report a time before the caller mounted.
   const getSnapshot = useCallback(() => {
-    const shared = interval ? getTicker(interval).now : mountedAt
-    return shared > mountedAt ? shared : mountedAt
-  }, [interval, mountedAt])
+    const shared = interval ? tickers.get(interval)?.now : undefined
+    if (shared && shared > lastReported.current) lastReported.current = shared
+    return lastReported.current
+  }, [interval])
   return useSyncExternalStore(subscribe, getSnapshot)
 }

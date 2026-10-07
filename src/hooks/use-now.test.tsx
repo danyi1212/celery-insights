@@ -1,4 +1,5 @@
-import { renderHook, act } from "@testing-library/react"
+import { render, renderHook, act } from "@testing-library/react"
+import React from "react"
 import { useNow } from "./use-now"
 
 describe("useNow", () => {
@@ -82,6 +83,53 @@ describe("useNow", () => {
     expect(first.result.current).toBe(second.result.current)
     first.unmount()
     second.unmount()
+  })
+
+  it("keeps the last tick instead of the mount time when ticking is disabled", () => {
+    vi.setSystemTime(new Date("2025-01-01T00:00:00Z"))
+    const { result, rerender } = renderHook(({ interval }: { interval?: number }) => useNow(interval), {
+      initialProps: { interval: 1000 } as { interval?: number },
+    })
+    act(() => {
+      vi.advanceTimersByTime(2000)
+    })
+    const lastTick = result.current
+    expect(lastTick.getTime()).toBe(Date.parse("2025-01-01T00:00:02Z"))
+
+    rerender({ interval: undefined })
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
+    expect(result.current).toBe(lastTick)
+  })
+
+  it("starts no timer and leaves no ticker behind for a render that never subscribes", () => {
+    const setIntervalSpy = vi.spyOn(globalThis, "setInterval")
+    const Throwing = () => {
+      useNow(1000)
+      throw new Error("aborted render")
+    }
+    class Boundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
+      state = { failed: false }
+      static getDerivedStateFromError = () => ({ failed: true })
+      render = () => (this.state.failed ? null : this.props.children)
+    }
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+    render(
+      <Boundary>
+        <Throwing />
+      </Boundary>,
+    )
+    consoleError.mockRestore()
+    expect(setIntervalSpy).not.toHaveBeenCalled()
+
+    vi.setSystemTime(new Date("2025-01-01T00:00:00Z"))
+    const { result } = renderHook(() => useNow(1000))
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(result.current.getTime()).toBe(Date.parse("2025-01-01T00:00:01Z"))
+    setIntervalSpy.mockRestore()
   })
 
   it("clears interval on unmount", () => {
