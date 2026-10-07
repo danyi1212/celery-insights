@@ -51,6 +51,28 @@ describe("getFlowGraph", () => {
     ])
   })
 
+  it("lets only a reachable parent claim a parentless child, whatever the row order", () => {
+    const tasks = [
+      createTask({ id: "orphan", children: ["child"] }),
+      createTask({ id: "root", children: ["child"] }),
+      createTask({ id: "child" }),
+    ]
+
+    const { nodes, edges } = getFlowGraph(tasks, "root")
+
+    expect(nodes.map((node) => node.id)).toEqual(["root", "child"])
+    expect(edges.map((edge) => [edge.source, edge.target])).toEqual([["root", "child"]])
+  })
+
+  it("ignores a parentless child that lists itself", () => {
+    const tasks = [createTask({ id: "child", children: ["child"] }), createTask({ id: "root", children: ["child"] })]
+
+    const { nodes, edges } = getFlowGraph(tasks, "root")
+
+    expect(nodes.map((node) => node.id)).toEqual(["root", "child"])
+    expect(edges.map((edge) => [edge.source, edge.target])).toEqual([["root", "child"]])
+  })
+
   it("never re-adds the root as a child from a stale children list", () => {
     const tasks = [
       createTask({ id: "root", children: ["child"] }),

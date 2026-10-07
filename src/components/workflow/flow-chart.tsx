@@ -40,9 +40,8 @@ function createEdge(sourceId: string, targetId: string): Edge {
   }
 }
 
-const getChildMap = (tasks: Task[], rootTaskId: string): Map<string, Task[]> => {
+const getChildMap = (tasks: Task[]): Map<string, Task[]> => {
   const map = new Map<string, Task[]>()
-  const taskMap = new Map(tasks.map((task) => [task.id, task]))
   for (const task of tasks)
     if (task.parent_id) {
       const id = task.parent_id
@@ -50,17 +49,6 @@ const getChildMap = (tasks: Task[], rootTaskId: string): Map<string, Task[]> => 
 
       map.get(id)?.push(task)
     }
-  // Stored children lists can be stale; a parentless child gets at most one fallback parent.
-  const claimed = new Set<string>([rootTaskId])
-  for (const parent of tasks) {
-    for (const childId of parent.children) {
-      const child = taskMap.get(childId)
-      if (!child || child.parent_id || claimed.has(childId)) continue
-      claimed.add(childId)
-      if (!map.has(parent.id)) map.set(parent.id, [])
-      map.get(parent.id)?.push(child)
-    }
-  }
   return map
 }
 
@@ -75,14 +63,22 @@ export const getFlowGraph = (
   const nodes: Node[] = []
   const edges: Edge[] = []
   const taskMap = new Map<string, Task>(tasks.map((task) => [task.id, task]))
-  const childMap = getChildMap(tasks, rootTaskId)
+  const childMap = getChildMap(tasks)
   const visited = new Set<string>()
+  // Stored children lists can be stale; only a reachable parent may adopt a parentless child, once.
+  const claimed = new Set<string>([rootTaskId])
 
   function dfs(task: Task, x: number, y: number) {
     visited.add(task.id)
     nodes.push(createNode(task, x, y))
 
-    const children = childMap.get(task.id) || []
+    const children = [...(childMap.get(task.id) || [])]
+    for (const childId of task.children) {
+      const child = taskMap.get(childId)
+      if (!child || child.parent_id || claimed.has(childId)) continue
+      claimed.add(childId)
+      children.push(child)
+    }
 
     const startY = y - (children.length - 1) / 2
     const childX = x + 1
