@@ -101,12 +101,12 @@ class TestBuildTaskUpsert:
             in query
         )
 
-    def test_terminal_event_replaces_observed_non_terminal_state(self):
+    def test_terminal_event_replaces_observed_non_terminal_or_same_state(self):
         query, _ = build_task_upsert({"type": "task-succeeded", "uuid": "x", "timestamp": 1700000000.0}, 0)
         assert (
             "LET $t0_apply = $t0_previous.last_updated IS NONE OR <datetime>$t0_ts > $t0_previous.last_updated"
-            " OR ($t0_previous.last_updated_observed = true AND $t0_previous.state NOT IN"
-            " ['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED']); "
+            " OR ($t0_previous.last_updated_observed = true AND ($t0_previous.state NOT IN"
+            " ['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED'] OR $t0_previous.state = $t0_state)); "
         ) in query
 
     def test_timestamp_field_keeps_earliest(self):

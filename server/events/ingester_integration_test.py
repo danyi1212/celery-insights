@@ -195,3 +195,24 @@ async def test_same_state_event_fills_missing_outcome_fields(surreal_db: AsyncWs
     assert task["result"] == "42"
     assert task["runtime"] == 1.5
     assert task["last_updated"] == datetime(2026, 10, 6, 12, tzinfo=UTC)
+
+
+@pytest.mark.asyncio
+async def test_same_terminal_event_replaces_an_undated_terminal_observation(
+    surreal_db: AsyncWsSurrealConnection,
+) -> None:
+    query, parameters = _build_task_meta_upsert("undated", {"status": "SUCCESS", "result": 42})
+    await surreal_db.query(query, parameters)
+    observed_at = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]["last_updated"]
+    event_at = observed_at - timedelta(seconds=2)
+
+    query, parameters = build_task_upsert(
+        {"type": "task-succeeded", "uuid": "undated", "timestamp": event_at.timestamp(), "runtime": 1.5}, 0
+    )
+    await surreal_db.query(query, parameters)
+    task = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]
+    assert task["state"] == "SUCCESS"
+    assert task["succeeded_at"] == event_at
+    assert task["runtime"] == 1.5
+    assert task["last_updated"] == event_at
+    assert task["last_updated_observed"] is False

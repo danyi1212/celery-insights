@@ -289,10 +289,11 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
 
     apply_state = f"${p}_previous.last_updated IS NONE OR <datetime>${p}_ts > ${p}_previous.last_updated"
     if event_type in TERMINAL_EVENT_TYPES:
-        # An observed last_updated is monitor time, not task evidence: terminal events replace it even when older.
+        # An observed last_updated is monitor time, not task evidence: terminal events replace it even when older,
+        # unless it already holds a different terminal state.
         apply_state += (
             f" OR (${p}_previous.last_updated_observed = true"
-            f" AND ${p}_previous.state NOT IN {TERMINAL_TASK_STATES_SQL})"
+            f" AND (${p}_previous.state NOT IN {TERMINAL_TASK_STATES_SQL} OR ${p}_previous.state = ${p}_state))"
         )
 
     set_clauses = [

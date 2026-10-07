@@ -171,3 +171,23 @@ async def test_metadata_for_the_stored_state_fills_missing_outcome_fields(surrea
     assert tasks["task:failed"]["result"] == "'ValueError(2)'"
     assert tasks["task:failed"]["exception"] == "ValueError(1)"
     assert tasks["task:failed"]["state"] == "FAILURE"
+
+
+@pytest.mark.asyncio
+async def test_dated_completion_fills_an_undated_completion(surreal_db: AsyncWsSurrealConnection) -> None:
+    query, parameters = _build_task_meta_upsert("undated", {"status": "SUCCESS", "result": 42})
+    await surreal_db.query(query, parameters)
+    observed = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]
+    assert observed["last_updated_observed"] is True
+    assert observed.get("succeeded_at") is None
+
+    date_done = observed["last_updated"] - timedelta(seconds=1)
+    query, parameters = _build_task_meta_upsert(
+        "undated", {"status": "SUCCESS", "date_done": date_done.isoformat(), "result": 42}
+    )
+    await surreal_db.query(query, parameters)
+    task = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]
+    assert task["state"] == "SUCCESS"
+    assert task["succeeded_at"] == date_done
+    assert task["last_updated"] == date_done
+    assert task["last_updated_observed"] is False
