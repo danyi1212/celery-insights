@@ -119,7 +119,7 @@ def celery_safe_repr(text: str) -> str:
 
 def string_pattern(text: str) -> str:
     json_text = '"' + json.dumps(text, ensure_ascii=False)[1:-1] + '"'
-    alternatives = dict.fromkeys([json_text, python_repr(text), celery_safe_repr(text)])
+    alternatives = dict.fromkeys([json_text, json.dumps(text), python_repr(text), celery_safe_repr(text)])
     return "(?:" + "|".join(escape_regex(alternative) for alternative in alternatives) + ")"
 
 

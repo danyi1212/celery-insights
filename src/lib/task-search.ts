@@ -76,8 +76,13 @@ const pythonRepr = (text: string): string => {
 // Celery events carry kwargs from celery.utils.saferepr: always single quotes, only ' escaped, everything else raw.
 const celerySafeRepr = (text: string): string => `'${text.replaceAll("'", "\\'")}'`
 
+// json.dumps defaults to ensure_ascii, writing every non-ASCII UTF-16 unit as a lowercase \uXXXX escape.
+const asciiJson = (json: string): string =>
+  json.replace(/[\u0080-\uffff]/g, (unit) => `\\u${unit.charCodeAt(0).toString(16).padStart(4, "0")}`)
+
 const stringPattern = (text: string): string => {
-  const alternatives = new Set([`"${JSON.stringify(text).slice(1, -1)}"`, pythonRepr(text), celerySafeRepr(text)])
+  const json = JSON.stringify(text).slice(1, -1)
+  const alternatives = new Set([`"${json}"`, `"${asciiJson(json)}"`, pythonRepr(text), celerySafeRepr(text)])
   return `(?:${[...alternatives].map(escapeRegex).join("|")})`
 }
 

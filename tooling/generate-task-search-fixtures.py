@@ -30,6 +30,9 @@ TASKS: list[dict[str, Any]] = [
     },
     {"id": "ten", "workflow_id": "two", "kwargs": {"organization_id": 10}, "format": "json"},
     {"id": "json", "workflow_id": "two", "kwargs": {"organization_id": 1, "enabled": True}, "format": "json"},
+    # json.dumps escapes non-ASCII by default (ensure_ascii), so café is stored as caf\u00e9.
+    {"id": "json_ascii", "kwargs": {"channel": "café", "emoji": "😀"}, "format": "json"},
+    {"id": "json_ascii_compact", "kwargs": {"channel": "café"}, "format": "json_compact"},
     {"id": "string", "kwargs": {"organization_id": "1"}},
     {"id": "missing", "type": "reports.render"},
     {
@@ -102,6 +105,9 @@ WORKFLOWS: list[dict[str, Any]] = [
 ]
 
 QUERIES: list[tuple[str, list[str]]] = [
+    ("channel=café", ["json_ascii", "json_ascii_compact"]),
+    ('channel="caf\\u00e9"', ["json_ascii", "json_ascii_compact"]),
+    ("emoji=😀", ["json_ascii"]),
     ("organization_id=1", ["json", "one"]),
     ("organization_id = 10", ["ten"]),
     ('organization_id="1"', ["string"]),
@@ -193,6 +199,8 @@ def render_kwargs(value: dict[str, Any], text_format: str) -> str:
         return saferepr(value, KWARGSREPR_MAXSIZE)
     if text_format == "repr":
         return repr(value)
+    if text_format == "json_compact":
+        return json.dumps(value, separators=(",", ":"))
     return json.dumps(value)
 
 

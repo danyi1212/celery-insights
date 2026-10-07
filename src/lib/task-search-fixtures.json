@@ -19,6 +19,16 @@
       "format": "json"
     },
     {
+      "id": "json_ascii",
+      "kwargs": "{\"channel\": \"caf\\u00e9\", \"emoji\": \"\\ud83d\\ude00\"}",
+      "format": "json"
+    },
+    {
+      "id": "json_ascii_compact",
+      "kwargs": "{\"channel\":\"caf\\u00e9\"}",
+      "format": "json_compact"
+    },
+    {
       "id": "string",
       "kwargs": "{'organization_id': '1'}",
       "format": "saferepr"
@@ -193,6 +203,18 @@
     }
   ],
   "queries": [
+    {
+      "query": "channel=café",
+      "expected": ["json_ascii", "json_ascii_compact"]
+    },
+    {
+      "query": "channel=\"caf\\u00e9\"",
+      "expected": ["json_ascii", "json_ascii_compact"]
+    },
+    {
+      "query": "emoji=😀",
+      "expected": ["json_ascii"]
+    },
     {
       "query": "organization_id=1",
       "expected": ["json", "one"]
