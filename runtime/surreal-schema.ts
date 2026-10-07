@@ -371,10 +371,9 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
 
     // Apply core schema (tables, fields, indexes, permissions)
     await db.query(CORE_SCHEMA).collect()
-    await backfillWorkflows(db, log)
-
-    // Preserve evidence independently of the task's latest state. Historical events
-    // are used once at migration time, rather than scanned by every MCP search.
+    // Runs before any other write: rows written before `last_updated_observed` existed fail bool
+    // coercion on update until the flag is set. Preserve evidence independently of the task's latest
+    // state; historical events are used once at migration time, rather than scanned by every MCP search.
     await db
       .query(`UPDATE task SET
       first_observed_at = first_observed_at ?? sent_at ?? received_at ?? started_at ?? last_updated,
@@ -388,6 +387,7 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
         UPDATE type::record('task', $error.task_id) SET had_error = true;
       };`)
       .collect()
+    await backfillWorkflows(db, log)
 
     // Always create a read-only viewer user for the frontend.
     // SurrealDB requires authentication even for tables with FULL select permissions —

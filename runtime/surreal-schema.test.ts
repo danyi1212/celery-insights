@@ -180,6 +180,8 @@ describe("runSchemaMigration", () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
+      // The task backfill runs before the workflow backfill reads tasks.
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         [
           {

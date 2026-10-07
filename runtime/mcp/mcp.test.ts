@@ -1,50 +1,15 @@
 // @vitest-environment node
-import { spawn, type ChildProcess } from "node:child_process"
-import { createServer } from "node:net"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { Surreal, RecordId } from "surrealdb"
 import { CORE_SCHEMA, runSchemaMigration } from "../surreal-schema"
+import { startSurrealTestServer, type SurrealTestServer } from "../surreal-test-server"
 import { parseConfig } from "../config"
 import { createMcpHandler, McpTools } from "./index"
 import { Cursors, MAX_RESPONSE_BYTES, type Row, utf8Size } from "./common"
 import { outputSchemas } from "./output-schemas"
 
-let databaseProcess: ChildProcess | undefined
+let databaseServer: SurrealTestServer | undefined
 let databaseEndpoint: string
-const startDatabase = async (): Promise<string> => {
-  const port = await new Promise<number>((resolve, reject) => {
-    const socket = createServer()
-    socket.on("error", reject)
-    socket.listen(0, "127.0.0.1", () => {
-      const address = socket.address()
-      if (!address || typeof address === "string") return reject(new Error("No local port available"))
-      socket.close(() => resolve(address.port))
-    })
-  })
-  let failure: Error | undefined
-  databaseProcess = spawn(
-    "surreal",
-    ["start", "--bind", `127.0.0.1:${port}`, "--user", "root", "--pass", "root", "memory"],
-    { stdio: "ignore" },
-  )
-  databaseProcess.on("error", (error) => {
-    failure = error
-  })
-  databaseProcess.on("exit", (code) => {
-    failure ??= new Error(`SurrealDB exited with code ${code}`)
-  })
-  const end = Date.now() + 10_000
-  while (Date.now() < end) {
-    if (failure) throw new Error("MCP tests require the SurrealDB 3.3+ CLI on PATH", { cause: failure })
-    try {
-      if ((await fetch(`http://127.0.0.1:${port}/health`)).ok) return `ws://127.0.0.1:${port}/rpc`
-    } catch {
-      /* Starting. */
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100))
-  }
-  throw new Error("SurrealDB test instance did not become ready")
-}
 
 const NOW = Date.parse("2026-10-02T09:05:00Z")
 let db: Surreal
@@ -89,7 +54,8 @@ const asRows = (value: unknown) => value as Row[]
 describe("MCP tools against SurrealDB", () => {
   beforeAll(async () => {
     db = new Surreal()
-    databaseEndpoint = process.env.MCP_TEST_URL ?? (await startDatabase())
+    if (!process.env.MCP_TEST_URL) databaseServer = await startSurrealTestServer()
+    databaseEndpoint = process.env.MCP_TEST_URL ?? databaseServer!.endpoint
     await db.connect(databaseEndpoint, { authentication: { username: "root", password: "root" } })
     await db.use({ namespace: "test", database: "mcp" })
     await db.query(CORE_SCHEMA).collect()
@@ -104,7 +70,7 @@ describe("MCP tools against SurrealDB", () => {
   })
   afterAll(async () => {
     await db?.close()
-    databaseProcess?.kill("SIGTERM")
+    databaseServer?.stop()
   })
 
   it("finds fast completions and preserves errors independently of progress", async () => {
