@@ -45,7 +45,9 @@ HEX_ESCAPE_WIDTHS = {"x": 2, "u": 4, "U": 8}
 STRING_ESCAPES = {"n": "\n", "r": "\r", "t": "\t", "b": "\b", "f": "\f"}
 
 # One unit of serialized kwargs text: a plain character, a single-quoted string, or a double-quoted string.
-TOKEN = r"""(?:[^'"]|'(?:[^'\\]|\\.|\\)*'|"(?:[^"\\]|\\.)*")"""
+# saferepr only writes a backslash inside a string, so a plain backslash marks a misread quote.
+TOKEN = r"""(?:[^'"\\]|'(?:[^'\\]|\\.|\\)*'|"(?:[^"\\]|\\.)*")"""
+TOKENIZES_PATTERN = "^" + TOKEN + "*$"
 
 NUMBER_PATTERN = re.compile(r"^-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
 WORD_PATTERN = re.compile(r"^[A-Za-z]+")
@@ -225,18 +227,29 @@ def build_task_search(query: str) -> TaskSearch:
     pattern = (
         literal.pattern if literal and skip_space(value, literal.end) == len(value) else string_pattern(value.strip())
     )
+    key_value_pattern = r"\s*" + string_pattern(key) + r"\s*:\s*" + pattern + r"\s*"
     # The whole kwargs text must tokenize into plain characters and quoted strings around the key, so the key
     # only matches at a dictionary key position (top-level or nested). saferepr leaves backslashes raw, so a
     # backslash in a single-quoted string reads as either an escape pair or a plain character; a false early
     # close leaves a stray quote that cannot tokenize to the end, which rejects that reading.
-    kwargs_pattern = (
-        "^" + TOKEN + r"*?(?:^|[,{])\s*" + string_pattern(key) + r"\s*:\s*" + pattern + r"\s*(?:[,}]" + TOKEN + "*)?$"
-    )
+    kwargs_pattern = "^" + TOKEN + "*?(?:^|[,{])" + key_value_pattern + "(?:[,}]" + TOKEN + "*)?$"
+    # saferepr also stores text that does not tokenize: bytes with an unescaped quote (b'it's'), a budget cut
+    # inside UUID('…, or a custom __repr__ with a quote. Those rows match the key after any delimiter, which
+    # over-matches keys inside their strings rather than hiding the real ones.
+    lenient_kwargs_pattern = "(?:^|[,{])" + key_value_pattern + "(?:[,}]|$)"
+    # The lenient pattern is shorter than the strict one, so this bounds both.
     if len(kwargs_pattern) > MAX_KWARGS_PATTERN_LENGTH:
         return TaskSearch(PLAIN_TEXT_CLAUSE, bindings)
+    # Every strict match is also a lenient match, so the cheap lenient check runs first and skips most rows.
     return TaskSearch(
-        f"string::matches(kwargs ?? '', $kwargsPattern) OR {PLAIN_TEXT_CLAUSE}",
-        {**bindings, "kwargsPattern": kwargs_pattern},
+        "(string::matches(kwargs ?? '', $lenientKwargsPattern) AND (string::matches(kwargs ?? '', $kwargsPattern)"
+        f" OR !string::matches(kwargs ?? '', $tokenizesPattern))) OR {PLAIN_TEXT_CLAUSE}",
+        {
+            **bindings,
+            "kwargsPattern": kwargs_pattern,
+            "lenientKwargsPattern": lenient_kwargs_pattern,
+            "tokenizesPattern": TOKENIZES_PATTERN,
+        },
     )
 
 

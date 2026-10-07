@@ -122,6 +122,26 @@
       "id": "escaped_quote",
       "kwargs": "{'path': 'a\\\\'b', 'organization_id': 7}",
       "format": "saferepr"
+    },
+    {
+      "id": "bytes_before",
+      "kwargs": "{'organization_id': 11, 'blob': b'it's'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "bytes_after",
+      "kwargs": "{'blob': b'it's', 'organization_id': 12}",
+      "format": "saferepr"
+    },
+    {
+      "id": "bytes_apostrophe",
+      "kwargs": "{'blob': b'it's', 'organization_id': 14, 'note': 'it\\'s'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "truncated",
+      "kwargs": "{'organization_id': 13, 'pad': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'ref': UUID('00000000-0000-00..., ...",
+      "format": "saferepr"
     }
   ],
   "workflows": [
@@ -414,6 +434,22 @@
     {
       "query": "path=a\\'b",
       "expected": ["escaped_quote"]
+    },
+    {
+      "query": "organization_id=11",
+      "expected": ["bytes_before"]
+    },
+    {
+      "query": "organization_id=12",
+      "expected": ["bytes_after"]
+    },
+    {
+      "query": "organization_id=13",
+      "expected": ["truncated"]
+    },
+    {
+      "query": "organization_id=14",
+      "expected": ["bytes_apostrophe"]
     }
   ],
   "workflowQueries": [

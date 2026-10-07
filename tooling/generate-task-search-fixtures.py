@@ -8,6 +8,7 @@ Run from the repository root: `uv run python tooling/generate-task-search-fixtur
 """
 
 import json
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -71,6 +72,13 @@ TASKS: list[dict[str, Any]] = [
     {"id": "emoji", "kwargs": {"label": "😀"}},
     {"id": "delimiter_inside", "kwargs": {"message": 'it\', {"organization_id": 1}'}},
     {"id": "escaped_quote", "kwargs": {"path": "a\\'b", "organization_id": 7}},
+    # saferepr writes bytes without escaping, so b'it's' leaves a stray quote and the text never tokenizes.
+    {"id": "bytes_before", "kwargs": {"organization_id": 11, "blob": b"it's"}},
+    {"id": "bytes_after", "kwargs": {"blob": b"it's", "organization_id": 12}},
+    # The later escaped apostrophe would pair the stray quote if a plain backslash could tokenize.
+    {"id": "bytes_apostrophe", "kwargs": {"blob": b"it's", "organization_id": 14, "note": "it's"}},
+    # The 1024-character budget cuts the text inside UUID('…, leaving an unterminated quote.
+    {"id": "truncated", "kwargs": {"organization_id": 13, "pad": "x" * 960, "ref": uuid.UUID(int=1)}},
 ]
 
 WORKFLOWS: list[dict[str, Any]] = [
@@ -148,6 +156,10 @@ QUERIES: list[tuple[str, list[str]]] = [
     ('message=it\', {"organization_id": 1}', ["delimiter_inside"]),
     ("organization_id=7", ["escaped_quote"]),
     ("path=a\\'b", ["escaped_quote"]),
+    ("organization_id=11", ["bytes_before"]),
+    ("organization_id=12", ["bytes_after"]),
+    ("organization_id=13", ["truncated"]),
+    ("organization_id=14", ["bytes_apostrophe"]),
 ]
 
 WORKFLOW_QUERIES: list[tuple[str, list[str]]] = [

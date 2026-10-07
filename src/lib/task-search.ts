@@ -38,7 +38,9 @@ const HEX_ESCAPE_WIDTHS = new Map([
 const STRING_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f" }
 
 // One unit of serialized kwargs text: a plain character, a single-quoted string, or a double-quoted string.
-const TOKEN = `(?:[^'"]|'(?:[^'\\\\]|\\\\.|\\\\)*'|"(?:[^"\\\\]|\\\\.)*")`
+// saferepr only writes a backslash inside a string, so a plain backslash marks a misread quote.
+const TOKEN = `(?:[^'"\\\\]|'(?:[^'\\\\]|\\\\.|\\\\)*'|"(?:[^"\\\\]|\\\\.)*")`
+const TOKENIZES_PATTERN = `^${TOKEN}*$`
 
 interface Literal {
   pattern: string
@@ -168,16 +170,23 @@ export const buildTaskSearch = (query: string): { clause: string; bindings: Reco
   }
   const pattern =
     literal && skipSpace(value, literal.end) === value.length ? literal.pattern : stringPattern(value.trim())
+  const keyValuePattern = `\\s*${stringPattern(key)}\\s*:\\s*${pattern}\\s*`
   // The whole kwargs text must tokenize into plain characters and quoted strings around the key, so the key
   // only matches at a dictionary key position (top-level or nested). saferepr leaves backslashes raw, so a
   // backslash in a single-quoted string reads as either an escape pair or a plain character; a false early
   // close leaves a stray quote that cannot tokenize to the end, which rejects that reading.
-  const kwargsPattern = `^${TOKEN}*?(?:^|[,{])\\s*${stringPattern(key)}\\s*:\\s*${pattern}\\s*(?:[,}]${TOKEN}*)?$`
+  const kwargsPattern = `^${TOKEN}*?(?:^|[,{])${keyValuePattern}(?:[,}]${TOKEN}*)?$`
+  // saferepr also stores text that does not tokenize: bytes with an unescaped quote (b'it's'), a budget cut
+  // inside UUID('…, or a custom __repr__ with a quote. Those rows match the key after any delimiter, which
+  // over-matches keys inside their strings rather than hiding the real ones.
+  const lenientKwargsPattern = `(?:^|[,{])${keyValuePattern}(?:[,}]|$)`
+  // The lenient pattern is shorter than the strict one, so this bounds both.
   if (kwargsPattern.length > MAX_KWARGS_PATTERN_LENGTH) return { clause: PLAIN_TEXT_CLAUSE, bindings }
+  // Every strict match is also a lenient match, so the cheap lenient check runs first and skips most rows.
   // Plain text stays included so queries like `status=failed` still search exception and result text.
   return {
-    clause: `string::matches(kwargs ?? '', $kwargsPattern) OR ${PLAIN_TEXT_CLAUSE}`,
-    bindings: { ...bindings, kwargsPattern },
+    clause: `(string::matches(kwargs ?? '', $lenientKwargsPattern) AND (string::matches(kwargs ?? '', $kwargsPattern) OR !string::matches(kwargs ?? '', $tokenizesPattern))) OR ${PLAIN_TEXT_CLAUSE}`,
+    bindings: { ...bindings, kwargsPattern, lenientKwargsPattern, tokenizesPattern: TOKENIZES_PATTERN },
   }
 }
 
