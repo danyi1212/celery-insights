@@ -95,7 +95,22 @@
     },
     {
       "id": "trailing_backslash",
-      "kwargs": "{'path': 'C:\\', 'organization_id': 5}",
+      "kwargs": "{'path': 'C:\\', 'label': 'x', 'organization_id': 5}",
+      "format": "saferepr"
+    },
+    {
+      "id": "quoted_inside",
+      "kwargs": "{'message': 'it\\'s {\"organization_id\": 1}'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "quoted_inside_repr",
+      "kwargs": "{'message': 'it\\'s {\"organization_id\": 1}'}",
+      "format": "repr"
+    },
+    {
+      "id": "emoji",
+      "kwargs": "{'label': '😀'}",
       "format": "saferepr"
     }
   ],
@@ -348,6 +363,34 @@
     },
     {
       "query": "label='\\U0000dfff'",
+      "expected": []
+    },
+    {
+      "query": "label=x",
+      "expected": ["trailing_backslash"]
+    },
+    {
+      "query": "message=it's {\"organization_id\": 1}",
+      "expected": ["quoted_inside", "quoted_inside_repr"]
+    },
+    {
+      "query": "label=\"\\ud83d\\ude00\"",
+      "expected": ["emoji"]
+    },
+    {
+      "query": "label=\"😀\"",
+      "expected": ["emoji"]
+    },
+    {
+      "query": "label='\\U0001f600'",
+      "expected": ["emoji"]
+    },
+    {
+      "query": "label=\"\\ud83d\"",
+      "expected": []
+    },
+    {
+      "query": "label=\"\\ude00\"",
       "expected": []
     }
   ],

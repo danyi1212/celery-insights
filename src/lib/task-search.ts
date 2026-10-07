@@ -89,10 +89,17 @@ const parseQuoted = (text: string, start: number): Literal | undefined => {
     if (width) {
       const hex = text.slice(index + 1, index + 1 + width)
       if (hex.length !== width || !/^[0-9A-Fa-f]+$/.test(hex)) return undefined
-      const code = parseInt(hex, 16)
-      if (code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) return undefined
-      decoded += String.fromCodePoint(code)
+      let code = parseInt(hex, 16)
       index += width
+      if (code >= 0xd800 && code <= 0xdbff) {
+        // JSON writes astral characters as a \u surrogate pair; combine it, reject a lone high surrogate.
+        const low = /^\\u([Dd][C-Fc-f][0-9A-Fa-f]{2})/.exec(text.slice(index + 1))?.[1]
+        if (!low) return undefined
+        code = 0x10000 + ((code - 0xd800) << 10) + (parseInt(low, 16) - 0xdc00)
+        index += 6
+      }
+      if (code > 0x10ffff || (code >= 0xdc00 && code <= 0xdfff)) return undefined
+      decoded += String.fromCodePoint(code)
     } else if (octal) {
       decoded += String.fromCharCode(parseInt(octal, 8))
       index += octal.length - 1
@@ -160,9 +167,10 @@ export const buildTaskSearch = (query: string): { clause: string; bindings: Reco
     literal && skipSpace(value, literal.end) === value.length ? literal.pattern : stringPattern(value.trim())
   // The prefix consumes quoted strings whole, so the key only matches at a dictionary key position
   // (top-level or nested), never inside a string value that happens to contain dictionary-like text.
-  // Single-quoted strings come from saferepr, which leaves backslashes raw, so a backslash there may be
-  // either an escape or a plain character; the regex accepts both readings.
-  const kwargsPattern = `^(?:[^'"]|'(?:[^']|\\\\.)*'|"(?:[^"\\\\]|\\\\.)*")*?(?:^|[,{])\\s*${stringPattern(key)}\\s*:\\s*${pattern}\\s*(?:[,}]|$)`
+  // saferepr leaves backslashes raw, so a single-quoted string may also end in a raw backslash before its
+  // closing quote; that reading is only allowed when a structural delimiter follows, and the delimiter is
+  // consumed because the regex engine has no lookahead.
+  const kwargsPattern = `^(?:[^'"]|'(?:[^'\\\\]|\\\\.)*'|'(?:[^'\\\\]|\\\\.)*\\\\'\\s*[,:}\\]]|"(?:[^"\\\\]|\\\\.)*")*?(?:^|[,{]|'(?:[^'\\\\]|\\\\.)*\\\\'\\s*,)\\s*${stringPattern(key)}\\s*:\\s*${pattern}\\s*(?:[,}]|$)`
   if (kwargsPattern.length > MAX_KWARGS_PATTERN_LENGTH) return { clause: PLAIN_TEXT_CLAUSE, bindings }
   // Plain text stays included so queries like `status=failed` still search exception and result text.
   return {

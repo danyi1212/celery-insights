@@ -65,7 +65,10 @@ TASKS: list[dict[str, Any]] = [
     {"id": "escapes", "kwargs": {"path": "a\\b", "text": "line1\nline2", "quote": 'say "hi"'}},
     {"id": "escapes_repr", "kwargs": {"path": "a\\b", "text": "line1\nline2"}, "format": "repr"},
     {"id": "unicode_key", "kwargs": {"café": 1, "user-id": 7, "options": {"user-id": 8}}},
-    {"id": "trailing_backslash", "kwargs": {"path": "C:\\", "organization_id": 5}},
+    {"id": "trailing_backslash", "kwargs": {"path": "C:\\", "label": "x", "organization_id": 5}},
+    {"id": "quoted_inside", "kwargs": {"message": 'it\'s {"organization_id": 1}'}},
+    {"id": "quoted_inside_repr", "kwargs": {"message": 'it\'s {"organization_id": 1}'}, "format": "repr"},
+    {"id": "emoji", "kwargs": {"label": "😀"}},
 ]
 
 WORKFLOWS: list[dict[str, Any]] = [
@@ -133,6 +136,13 @@ QUERIES: list[tuple[str, list[str]]] = [
     ("items=" + "[" * 600 + "0" + "]" * 600, []),
     ("label='\\ud800'", []),
     ("label='\\U0000dfff'", []),
+    ("label=x", ["trailing_backslash"]),
+    ('message=it\'s {"organization_id": 1}', ["quoted_inside", "quoted_inside_repr"]),
+    ('label="\\ud83d\\ude00"', ["emoji"]),
+    ('label="😀"', ["emoji"]),
+    ("label='\\U0001f600'", ["emoji"]),
+    ('label="\\ud83d"', []),
+    ('label="\\ude00"', []),
 ]
 
 WORKFLOW_QUERIES: list[tuple[str, list[str]]] = [

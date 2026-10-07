@@ -48,6 +48,7 @@ NUMBER_PATTERN = re.compile(r"^-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
 WORD_PATTERN = re.compile(r"^[A-Za-z]+")
 OCTAL_PATTERN = re.compile(r"^[0-7]{1,3}")
 HEX_PATTERN = re.compile(r"^[0-9A-Fa-f]+$")
+LOW_SURROGATE_PATTERN = re.compile(r"^\\u([Dd][C-Fc-f][0-9A-Fa-f]{2})")
 KEYWORD_PATTERN = re.compile(r"^([^\s=]+)\s*=\s*(.+)$")
 
 RANGE_WORKFLOWS_QUERY = (
@@ -141,10 +142,17 @@ def parse_quoted(text: str, start: int) -> Literal | None:
             if len(hex_digits) != width or not HEX_PATTERN.match(hex_digits):
                 return None
             code = int(hex_digits, 16)
-            if code > 0x10FFFF or 0xD800 <= code <= 0xDFFF:
+            index += width
+            if 0xD800 <= code <= 0xDBFF:
+                # JSON writes astral characters as a \u surrogate pair; combine it, reject a lone high surrogate.
+                low = LOW_SURROGATE_PATTERN.match(text[index + 1 :])
+                if not low:
+                    return None
+                code = 0x10000 + ((code - 0xD800) << 10) + (int(low.group(1), 16) - 0xDC00)
+                index += 6
+            if code > 0x10FFFF or 0xDC00 <= code <= 0xDFFF:
                 return None
             decoded += chr(code)
-            index += width
         elif octal:
             decoded += chr(int(octal.group(0), 8))
             index += len(octal.group(0)) - 1
@@ -214,14 +222,12 @@ def build_task_search(query: str) -> TaskSearch:
     pattern = (
         literal.pattern if literal and skip_space(value, literal.end) == len(value) else string_pattern(value.strip())
     )
-    # Single-quoted strings come from saferepr, which leaves backslashes raw, so a backslash there may be
-    # either an escape or a plain character; the regex accepts both readings.
+    # saferepr leaves backslashes raw, so a single-quoted string may also end in a raw backslash before its
+    # closing quote; that reading is only allowed when a structural delimiter follows, and the delimiter is
+    # consumed because the regex engine has no lookahead.
     kwargs_pattern = (
-        r"""^(?:[^'"]|'(?:[^']|\\.)*'|"(?:[^"\\]|\\.)*")*?(?:^|[,{])\s*"""
-        + string_pattern(key)
-        + r"\s*:\s*"
-        + pattern
-        + r"\s*(?:[,}]|$)"
+        r"""^(?:[^'"]|'(?:[^'\\]|\\.)*'|'(?:[^'\\]|\\.)*\\'\s*[,:}\]]|"(?:[^"\\]|\\.)*")*?"""
+        r"""(?:^|[,{]|'(?:[^'\\]|\\.)*\\'\s*,)\s*""" + string_pattern(key) + r"\s*:\s*" + pattern + r"\s*(?:[,}]|$)"
     )
     if len(kwargs_pattern) > MAX_KWARGS_PATTERN_LENGTH:
         return TaskSearch(PLAIN_TEXT_CLAUSE, bindings)
