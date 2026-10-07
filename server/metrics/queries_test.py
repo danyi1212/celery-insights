@@ -112,6 +112,15 @@ class TestQueryWorkerActiveTasks:
         result = await query_worker_active_tasks()
         assert result == [{"worker": "w1@host", "count": 2}]
 
+    @pytest.mark.asyncio
+    async def test_counts_only_fresh_positive_observations(self, mock_db):
+        mock_db.query.return_value = []
+        await query_worker_active_tasks()
+        query = mock_db.query.call_args[0][0]
+        assert "execution_active = true" in query
+        assert "execution_observed_at >= time::now() - 2m" in query
+        assert "execution_observed_at <= time::now() + 2m" in query
+
 
 class TestQueryWorkerProcessedTasks:
     @pytest.mark.asyncio

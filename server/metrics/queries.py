@@ -97,7 +97,8 @@ async def query_worker_active_tasks() -> list[dict]:
         result = await db.query(
             "SELECT worker, count() AS count FROM task WHERE state = 'STARTED' AND worker IS NOT NONE "
             "AND execution_active = true AND execution_observed_at >= last_updated "
-            "AND execution_observed_at >= time::now() - 2m GROUP BY worker"
+            "AND execution_observed_at >= time::now() - 2m AND execution_observed_at <= time::now() + 2m "
+            "GROUP BY worker"
         )
         return _extract_rows(result)
     except Exception:
