@@ -44,6 +44,9 @@ HEX_ESCAPE_WIDTHS = {"x": 2, "u": 4, "U": 8}
 
 STRING_ESCAPES = {"n": "\n", "r": "\r", "t": "\t", "b": "\b", "f": "\f"}
 
+# One unit of serialized kwargs text: a plain character, a single-quoted string, or a double-quoted string.
+TOKEN = r"""(?:[^'"]|'(?:[^'\\]|\\.|\\)*'|"(?:[^"\\]|\\.)*")"""
+
 NUMBER_PATTERN = re.compile(r"^-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
 WORD_PATTERN = re.compile(r"^[A-Za-z]+")
 OCTAL_PATTERN = re.compile(r"^[0-7]{1,3}")
@@ -222,12 +225,12 @@ def build_task_search(query: str) -> TaskSearch:
     pattern = (
         literal.pattern if literal and skip_space(value, literal.end) == len(value) else string_pattern(value.strip())
     )
-    # saferepr leaves backslashes raw, so a single-quoted string may also end in a raw backslash before its
-    # closing quote; that reading is only allowed when a structural delimiter follows, and the delimiter is
-    # consumed because the regex engine has no lookahead.
+    # The whole kwargs text must tokenize into plain characters and quoted strings around the key, so the key
+    # only matches at a dictionary key position (top-level or nested). saferepr leaves backslashes raw, so a
+    # backslash in a single-quoted string reads as either an escape pair or a plain character; a false early
+    # close leaves a stray quote that cannot tokenize to the end, which rejects that reading.
     kwargs_pattern = (
-        r"""^(?:[^'"]|'(?:[^'\\]|\\.)*'|'(?:[^'\\]|\\.)*\\'\s*[,:}\]]|"(?:[^"\\]|\\.)*")*?"""
-        r"""(?:^|[,{]|'(?:[^'\\]|\\.)*\\'\s*,)\s*""" + string_pattern(key) + r"\s*:\s*" + pattern + r"\s*(?:[,}]|$)"
+        "^" + TOKEN + r"*?(?:^|[,{])\s*" + string_pattern(key) + r"\s*:\s*" + pattern + r"\s*(?:[,}]" + TOKEN + "*)?$"
     )
     if len(kwargs_pattern) > MAX_KWARGS_PATTERN_LENGTH:
         return TaskSearch(PLAIN_TEXT_CLAUSE, bindings)

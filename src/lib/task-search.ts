@@ -37,6 +37,9 @@ const HEX_ESCAPE_WIDTHS = new Map([
 
 const STRING_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f" }
 
+// One unit of serialized kwargs text: a plain character, a single-quoted string, or a double-quoted string.
+const TOKEN = `(?:[^'"]|'(?:[^'\\\\]|\\\\.|\\\\)*'|"(?:[^"\\\\]|\\\\.)*")`
+
 interface Literal {
   pattern: string
   end: number
@@ -165,12 +168,11 @@ export const buildTaskSearch = (query: string): { clause: string; bindings: Reco
   }
   const pattern =
     literal && skipSpace(value, literal.end) === value.length ? literal.pattern : stringPattern(value.trim())
-  // The prefix consumes quoted strings whole, so the key only matches at a dictionary key position
-  // (top-level or nested), never inside a string value that happens to contain dictionary-like text.
-  // saferepr leaves backslashes raw, so a single-quoted string may also end in a raw backslash before its
-  // closing quote; that reading is only allowed when a structural delimiter follows, and the delimiter is
-  // consumed because the regex engine has no lookahead.
-  const kwargsPattern = `^(?:[^'"]|'(?:[^'\\\\]|\\\\.)*'|'(?:[^'\\\\]|\\\\.)*\\\\'\\s*[,:}\\]]|"(?:[^"\\\\]|\\\\.)*")*?(?:^|[,{]|'(?:[^'\\\\]|\\\\.)*\\\\'\\s*,)\\s*${stringPattern(key)}\\s*:\\s*${pattern}\\s*(?:[,}]|$)`
+  // The whole kwargs text must tokenize into plain characters and quoted strings around the key, so the key
+  // only matches at a dictionary key position (top-level or nested). saferepr leaves backslashes raw, so a
+  // backslash in a single-quoted string reads as either an escape pair or a plain character; a false early
+  // close leaves a stray quote that cannot tokenize to the end, which rejects that reading.
+  const kwargsPattern = `^${TOKEN}*?(?:^|[,{])\\s*${stringPattern(key)}\\s*:\\s*${pattern}\\s*(?:[,}]${TOKEN}*)?$`
   if (kwargsPattern.length > MAX_KWARGS_PATTERN_LENGTH) return { clause: PLAIN_TEXT_CLAUSE, bindings }
   // Plain text stays included so queries like `status=failed` still search exception and result text.
   return {

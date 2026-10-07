@@ -112,6 +112,16 @@
       "id": "emoji",
       "kwargs": "{'label': '😀'}",
       "format": "saferepr"
+    },
+    {
+      "id": "delimiter_inside",
+      "kwargs": "{'message': 'it\\', {\"organization_id\": 1}'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "escaped_quote",
+      "kwargs": "{'path': 'a\\\\'b', 'organization_id': 7}",
+      "format": "saferepr"
     }
   ],
   "workflows": [
@@ -392,6 +402,18 @@
     {
       "query": "label=\"\\ude00\"",
       "expected": []
+    },
+    {
+      "query": "message=it', {\"organization_id\": 1}",
+      "expected": ["delimiter_inside"]
+    },
+    {
+      "query": "organization_id=7",
+      "expected": ["escaped_quote"]
+    },
+    {
+      "query": "path=a\\'b",
+      "expected": ["escaped_quote"]
     }
   ],
   "workflowQueries": [

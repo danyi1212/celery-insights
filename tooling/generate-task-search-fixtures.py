@@ -69,6 +69,8 @@ TASKS: list[dict[str, Any]] = [
     {"id": "quoted_inside", "kwargs": {"message": 'it\'s {"organization_id": 1}'}},
     {"id": "quoted_inside_repr", "kwargs": {"message": 'it\'s {"organization_id": 1}'}, "format": "repr"},
     {"id": "emoji", "kwargs": {"label": "😀"}},
+    {"id": "delimiter_inside", "kwargs": {"message": 'it\', {"organization_id": 1}'}},
+    {"id": "escaped_quote", "kwargs": {"path": "a\\'b", "organization_id": 7}},
 ]
 
 WORKFLOWS: list[dict[str, Any]] = [
@@ -143,6 +145,9 @@ QUERIES: list[tuple[str, list[str]]] = [
     ("label='\\U0001f600'", ["emoji"]),
     ('label="\\ud83d"', []),
     ('label="\\ude00"', []),
+    ('message=it\', {"organization_id": 1}', ["delimiter_inside"]),
+    ("organization_id=7", ["escaped_quote"]),
+    ("path=a\\'b", ["escaped_quote"]),
 ]
 
 WORKFLOW_QUERIES: list[tuple[str, list[str]]] = [
