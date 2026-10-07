@@ -31,10 +31,15 @@ describe("TaskExecutionPanel", () => {
   it("shows the frozen runtime when execution is unconfirmed", () => {
     render(
       <TaskExecutionPanel
-        task={startedTask({ execution_active: false, execution_observed_at: new Date(now.getTime() - 30_000) })}
+        task={startedTask({
+          started_at: new Date(now.getTime() - 200_000),
+          last_updated: new Date(now.getTime() - 200_000),
+          execution_active: true,
+          execution_observed_at: new Date(now.getTime() - 150_000),
+        })}
       />,
     )
-    expect(screen.getByText("Runtime unconfirmed:").nextElementSibling).toHaveTextContent("30.0s")
+    expect(screen.getByText("Runtime unconfirmed:").nextElementSibling).toHaveTextContent("50.0s")
   })
 
   it("shows a live runtime for observed execution", () => {

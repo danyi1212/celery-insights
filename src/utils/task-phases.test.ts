@@ -111,15 +111,15 @@ describe("getTaskEndTime", () => {
 
 describe("computeTaskPhases", () => {
   const now = new Date("2024-01-01T12:00:00Z")
-  it("freezes unconfirmed execution at the last inspection without inventing a finish", () => {
+  it("freezes unconfirmed execution at the last positive inspection without inventing a finish", () => {
     const task = createTask({
       state: TaskState.STARTED,
-      sent_at: new Date(now.getTime() - 10_000),
-      received_at: new Date(now.getTime() - 9_000),
-      started_at: new Date(now.getTime() - 8_000),
-      last_updated: new Date(now.getTime() - 8_000),
-      execution_active: false,
-      execution_observed_at: new Date(now.getTime() - 1_000),
+      sent_at: new Date(now.getTime() - 200_000),
+      received_at: new Date(now.getTime() - 199_000),
+      started_at: new Date(now.getTime() - 198_000),
+      last_updated: new Date(now.getTime() - 198_000),
+      execution_active: true,
+      execution_observed_at: new Date(now.getTime() - 150_000),
       succeeded_at: undefined,
     })
     const phase = computeTaskPhases(task, now).at(-1)!
@@ -128,6 +128,27 @@ describe("computeTaskPhases", () => {
     expect(phase.endMs).toBe(task.execution_observed_at!.getTime())
     expect(computeTaskPhases(task, new Date(now.getTime() + 60_000)).at(-1)).toEqual(phase)
     expect(task.state).toBe(TaskState.STARTED)
+  })
+
+  it("does not advance unconfirmed execution when a negative inspection is refreshed", () => {
+    const negative = (observedAt: Date) =>
+      createTask({
+        state: TaskState.STARTED,
+        sent_at: new Date(now.getTime() - 10_000),
+        received_at: new Date(now.getTime() - 9_000),
+        started_at: new Date(now.getTime() - 8_000),
+        last_updated: new Date(now.getTime() - 5_000),
+        execution_active: false,
+        execution_observed_at: observedAt,
+        succeeded_at: undefined,
+      })
+    const phase = computeTaskPhases(negative(new Date(now.getTime() - 1_000)), now).at(-1)!
+    expect(phase.label).toBe("Execution unconfirmed")
+    expect(phase.endMs).toBe(now.getTime() - 5_000)
+    const later = new Date(now.getTime() + 60_000)
+    expect(computeTaskPhases(negative(new Date(later.getTime() - 1_000)), later)).toEqual(
+      computeTaskPhases(negative(new Date(now.getTime() - 1_000)), now),
+    )
   })
 
   it("computes 3 phases for a full lifecycle task", () => {
