@@ -2,7 +2,7 @@ import CopyLinkButton from "@components/common/copy-link-button"
 import DetailItem from "@components/common/detail-item"
 import LinearProgressWithLabel from "@components/common/linear-progress-with-label"
 import Panel, { PanelProps } from "@components/common/panel"
-import WorkerStatus from "@components/worker/worker-status"
+import WorkerStatus, { isWorkerOffline } from "@components/worker/worker-status"
 import { useWorkerStats } from "@hooks/worker/use-worker-inspect"
 import { useWorker } from "@hooks/use-live-workers"
 import { formatBytes } from "@utils/format-bytes"
@@ -60,7 +60,7 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, ...prop
           <DetailItem
             label="Status"
             description="Latest worker status observed through events and inspection"
-            color={worker?.status === "offline" ? "danger" : "primary"}
+            color={isWorkerOffline(worker?.status) ? "danger" : "primary"}
             value={
               <div>
                 <WorkerStatus status={worker?.status} />

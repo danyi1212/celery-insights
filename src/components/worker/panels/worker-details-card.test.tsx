@@ -28,6 +28,7 @@ describe("WorkerDetailsCard status", () => {
   it("keeps an online worker online when no heartbeat expiry is stored", () => {
     const { rerender } = render(<WorkerDetailsCard workerId="test-worker" />)
     expect(screen.getByText("Online")).toBeInTheDocument()
+    expect(vi.getTimerCount()).toBe(0)
 
     act(() => vi.advanceTimersByTime(10_000))
     rerender(<WorkerDetailsCard workerId="test-worker" />)
@@ -41,13 +42,17 @@ describe("WorkerDetailsCard status", () => {
     const { rerender } = render(<WorkerDetailsCard workerId="test-worker" />)
     expect(screen.getByText("Online")).toBeInTheDocument()
 
+    expect(screen.getByText("Status:")).toHaveClass("text-primary")
+
     hooks.useWorker.mockReturnValue({ worker: { ...worker, status: "offline" } })
     rerender(<WorkerDetailsCard workerId="test-worker" />)
     expect(screen.getByText("Offline")).toBeInTheDocument()
+    expect(screen.getByText("Status:")).toHaveClass("text-destructive")
 
     hooks.useWorker.mockReturnValue({ worker })
     rerender(<WorkerDetailsCard workerId="test-worker" />)
     expect(screen.getByText("Online")).toBeInTheDocument()
+    expect(screen.getByText("Status:")).toHaveClass("text-primary")
   })
 
   it("does not infer offline status when no worker observation is available", () => {

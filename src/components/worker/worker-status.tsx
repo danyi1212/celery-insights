@@ -5,16 +5,22 @@ interface WorkerStatusProps {
   status?: string
 }
 
-const WorkerStatus: React.FC<WorkerStatusProps> = ({ status }) => (
-  <span
-    className={cn("text-base", {
-      "text-foreground": status === "online",
-      "text-destructive": status === "offline",
-      "text-status-warning": status !== "online" && status !== "offline",
-    })}
-  >
-    {status === "online" ? "Online" : status === "offline" ? "Offline" : "Unknown"}
-  </span>
-)
+export const isWorkerOffline = (status?: string): boolean => status === "offline"
+
+const WorkerStatus: React.FC<WorkerStatusProps> = ({ status }) => {
+  const online = status === "online"
+  const offline = isWorkerOffline(status)
+  return (
+    <span
+      className={cn("text-base", {
+        "text-foreground": online,
+        "text-destructive": offline,
+        "text-status-warning": !online && !offline,
+      })}
+    >
+      {online ? "Online" : offline ? "Offline" : "Unknown"}
+    </span>
+  )
+}
 
 export default WorkerStatus
