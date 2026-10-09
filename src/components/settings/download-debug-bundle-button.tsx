@@ -1,3 +1,4 @@
+import { authenticatedFetch } from "@lib/authenticated-fetch"
 import { appUrl } from "@lib/app-url"
 import { Alert, AlertDescription, AlertTitle } from "@components/ui/alert"
 import { Button } from "@components/ui/button"
@@ -49,7 +50,7 @@ export const DownloadDebugBundleButton: React.FC<{ label?: string }> = ({ label 
     setErrorMessage(null)
     setStatusMessage("Preparing debug bundle. This can take a moment.")
     try {
-      const response = await fetch(appUrl("/api/settings/download-debug-bundle"), {
+      const response = await authenticatedFetch(appUrl("/api/settings/download-debug-bundle"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
