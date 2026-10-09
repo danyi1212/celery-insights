@@ -1,0 +1,606 @@
+{
+  "tasks": [
+    {
+      "id": "one",
+      "workflow_id": "one",
+      "kwargs": "{'organization_id': 1, 'run_id': 'Run.A', 'enabled': True, 'label': 'North team'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "ten",
+      "workflow_id": "two",
+      "kwargs": "{\"organization_id\": 10}",
+      "format": "json"
+    },
+    {
+      "id": "json",
+      "workflow_id": "two",
+      "kwargs": "{\"organization_id\": 1, \"enabled\": true}",
+      "format": "json"
+    },
+    {
+      "id": "json_ascii",
+      "kwargs": "{\"channel\": \"caf\\u00e9\", \"emoji\": \"\\ud83d\\ude00\"}",
+      "format": "json"
+    },
+    {
+      "id": "json_ascii_compact",
+      "kwargs": "{\"channel\":\"caf\\u00e9\"}",
+      "format": "json_compact"
+    },
+    {
+      "id": "json_ascii_del",
+      "kwargs": "{\"label\": \"a\\u007fb\"}",
+      "format": "json"
+    },
+    {
+      "id": "string",
+      "kwargs": "{'organization_id': '1'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "missing",
+      "type": "reports.render"
+    },
+    {
+      "id": "containers",
+      "kwargs": "{'families': ['ad', 'query'], 'options': {'enabled': True, 'end': None}, 'empty': [], 'channel': 'FacebookAds'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "big",
+      "kwargs": "{'organization_id': 9007199254740993, 'ratio': 1.0, 'count': 1000}",
+      "format": "saferepr"
+    },
+    {
+      "id": "inside",
+      "kwargs": "{'message': '{\\'organization_id\\': 1}', 'organization_id': 2}",
+      "format": "saferepr"
+    },
+    {
+      "id": "apostrophe",
+      "kwargs": "{'note': 'it\\'s {', 'organization_id': 3}",
+      "format": "saferepr"
+    },
+    {
+      "id": "apostrophe_repr",
+      "kwargs": "{'note': \"it's {\", 'organization_id': 4}",
+      "format": "repr"
+    },
+    {
+      "id": "ordered",
+      "kwargs": "{'options': {'2': 'b', '1': 'a'}}",
+      "format": "saferepr"
+    },
+    {
+      "id": "failed",
+      "exception": "MaxRetriesExceededError: status=failed, retries=3 exceeded",
+      "kwargs": "{'retries': 3}",
+      "format": "saferepr"
+    },
+    {
+      "id": "keyword",
+      "kwargs": "{'kind': 'constructor', 'tags': ['constructor']}",
+      "format": "saferepr"
+    },
+    {
+      "id": "control",
+      "kwargs": "{'label': '\u0001', 'tags': ['​'], 'nested': {'key': ''}, 'plain': 'café', 'flag': '󠀁', 'quoted': 'it\\'s\u0001', 'quotes': ['it\\'s\u0001']}",
+      "format": "saferepr"
+    },
+    {
+      "id": "control_repr",
+      "kwargs": "{'label': '\\x01', 'tags': ['\\u200b'], 'quoted': \"it's\\x01\", 'quotes': [\"it's\\x01\"]}",
+      "format": "repr"
+    },
+    {
+      "id": "escapes",
+      "kwargs": "{'path': 'a\\b', 'text': 'line1\nline2', 'quote': 'say \"hi\"'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "escapes_repr",
+      "kwargs": "{'path': 'a\\\\b', 'text': 'line1\\nline2'}",
+      "format": "repr"
+    },
+    {
+      "id": "unicode_key",
+      "kwargs": "{'café': 1, 'user-id': 7, 'options': {'user-id': 8}}",
+      "format": "saferepr"
+    },
+    {
+      "id": "trailing_backslash",
+      "kwargs": "{'path': 'C:\\', 'label': 'x', 'organization_id': 5}",
+      "format": "saferepr"
+    },
+    {
+      "id": "quoted_inside",
+      "kwargs": "{'message': 'it\\'s {\"organization_id\": 1}'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "quoted_inside_repr",
+      "kwargs": "{'message': 'it\\'s {\"organization_id\": 1}'}",
+      "format": "repr"
+    },
+    {
+      "id": "emoji",
+      "kwargs": "{'label': '😀'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "delimiter_inside",
+      "kwargs": "{'message': 'it\\', {\"organization_id\": 1}'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "escaped_quote",
+      "kwargs": "{'path': 'a\\\\'b', 'organization_id': 7}",
+      "format": "saferepr"
+    },
+    {
+      "id": "bytes_before",
+      "kwargs": "{'organization_id': 11, 'blob': b'it's'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "bytes_after",
+      "kwargs": "{'blob': b'it's', 'organization_id': 12}",
+      "format": "saferepr"
+    },
+    {
+      "id": "bytes_apostrophe",
+      "kwargs": "{'blob': b'it's', 'organization_id': 14, 'note': 'it\\'s'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "truncated",
+      "kwargs": "{'organization_id': 13, 'pad': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'ref': UUID('00000000-0000-00..., ...",
+      "format": "saferepr"
+    },
+    {
+      "id": "two_bytes",
+      "kwargs": "{'a': b'it's', 'organization_id': 27, 'b': b'it's'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "two_reprs",
+      "kwargs": "{'a': <Opaque it's>, 'organization_id': 28, 'b': <Opaque it's>}",
+      "format": "saferepr"
+    },
+    {
+      "id": "angle_inside",
+      "kwargs": "{'note': 'a < b, \"organization_id\": 1, c'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "bytes_text_inside",
+      "kwargs": "{'note': 'see b\\'x, \"organization_id\": 1, c'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "delimited_angle_inside",
+      "kwargs": "{'note': 'a: < b, \"organization_id\": 1, c'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "escaped_angle_inside",
+      "kwargs": "{'note': 'it\\': < b, \"organization_id\": 1, c'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "bell",
+      "kwargs": "{'bell': '\u0007', 'vtab': '\u000b', 'path': '\\q'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "bell_repr",
+      "kwargs": "{'bell': '\\x07', 'vtab': '\\x0b', 'path': '\\\\q'}",
+      "format": "repr"
+    },
+    {
+      "id": "letters",
+      "kwargs": "{'bell': 'a', 'vtab': 'v', 'path': 'q'}",
+      "format": "saferepr"
+    },
+    {
+      "id": "odd_space",
+      "kwargs": "{'a\u001cb': 1, 'label': '﻿x', 'next': 'y'}",
+      "format": "saferepr"
+    }
+  ],
+  "workflows": [
+    {
+      "id": "one",
+      "root_task_id": "one",
+      "root_task_type": "reports.render"
+    },
+    {
+      "id": "two",
+      "root_task_id": "two",
+      "root_task_type": "sync"
+    },
+    {
+      "id": "three",
+      "root_task_id": "three",
+      "root_task_type": "sync",
+      "latest_exception_preview": "Timeout"
+    }
+  ],
+  "queries": [
+    {
+      "query": "channel=café",
+      "expected": ["json_ascii", "json_ascii_compact"]
+    },
+    {
+      "query": "channel=\"caf\\u00e9\"",
+      "expected": ["json_ascii", "json_ascii_compact"]
+    },
+    {
+      "query": "emoji=😀",
+      "expected": ["json_ascii"]
+    },
+    {
+      "query": "label=\"a\\x7fb\"",
+      "expected": ["json_ascii_del"]
+    },
+    {
+      "query": "organization_id=1",
+      "expected": ["json", "one"]
+    },
+    {
+      "query": "organization_id = 10",
+      "expected": ["ten"]
+    },
+    {
+      "query": "organization_id=\"1\"",
+      "expected": ["string"]
+    },
+    {
+      "query": "enabled=true",
+      "expected": ["containers", "json", "one"]
+    },
+    {
+      "query": "run_id=Run.A",
+      "expected": ["one"]
+    },
+    {
+      "query": "run_id=RunXA",
+      "expected": []
+    },
+    {
+      "query": "label=\"North team\"",
+      "expected": ["one"]
+    },
+    {
+      "query": "north TEAM",
+      "expected": ["one"]
+    },
+    {
+      "query": "reports.render",
+      "expected": ["missing"]
+    },
+    {
+      "query": "families=[\"ad\", \"query\"]",
+      "expected": ["containers"]
+    },
+    {
+      "query": "options={\"enabled\":true,\"end\":null}",
+      "expected": ["containers"]
+    },
+    {
+      "query": "families=[\"query\", \"ad\"]",
+      "expected": []
+    },
+    {
+      "query": "empty=[]",
+      "expected": ["containers"]
+    },
+    {
+      "query": "channel=FacebookAds",
+      "expected": ["containers"]
+    },
+    {
+      "query": "families=['ad', 'query']",
+      "expected": ["containers"]
+    },
+    {
+      "query": "options={'enabled': True, 'end': None}",
+      "expected": ["containers"]
+    },
+    {
+      "query": "label='North team'",
+      "expected": ["one"]
+    },
+    {
+      "query": "organization_id=9007199254740993",
+      "expected": ["big"]
+    },
+    {
+      "query": "organization_id=9007199254740992",
+      "expected": []
+    },
+    {
+      "query": "ratio=1.0",
+      "expected": ["big"]
+    },
+    {
+      "query": "ratio=1",
+      "expected": []
+    },
+    {
+      "query": "count=1e3",
+      "expected": []
+    },
+    {
+      "query": "organization_id=2",
+      "expected": ["inside"]
+    },
+    {
+      "query": "organization_id=3",
+      "expected": ["apostrophe"]
+    },
+    {
+      "query": "organization_id=4",
+      "expected": ["apostrophe_repr"]
+    },
+    {
+      "query": "note=it's {",
+      "expected": ["apostrophe", "apostrophe_repr"]
+    },
+    {
+      "query": "note=\"it's {\"",
+      "expected": ["apostrophe", "apostrophe_repr"]
+    },
+    {
+      "query": "options={\"2\":\"b\",\"1\":\"a\"}",
+      "expected": ["ordered"]
+    },
+    {
+      "query": "options={\"1\":\"a\",\"2\":\"b\"}",
+      "expected": []
+    },
+    {
+      "query": "label='",
+      "expected": []
+    },
+    {
+      "query": "status=failed",
+      "expected": ["failed"]
+    },
+    {
+      "query": "retries=3 exceeded",
+      "expected": ["failed"]
+    },
+    {
+      "query": "retries=3",
+      "expected": ["failed"]
+    },
+    {
+      "query": "kind=constructor",
+      "expected": ["keyword"]
+    },
+    {
+      "query": "tags=['constructor']",
+      "expected": ["keyword"]
+    },
+    {
+      "query": "tags=[constructor]",
+      "expected": []
+    },
+    {
+      "query": "label='\\x01'",
+      "expected": ["control", "control_repr"]
+    },
+    {
+      "query": "tags=['\\u200b']",
+      "expected": ["control", "control_repr"]
+    },
+    {
+      "query": "nested={'key': '\\x7f'}",
+      "expected": ["control"]
+    },
+    {
+      "query": "plain='caf\\xe9'",
+      "expected": ["control"]
+    },
+    {
+      "query": "plain=café",
+      "expected": ["control"]
+    },
+    {
+      "query": "flag='\\U000e0001'",
+      "expected": ["control"]
+    },
+    {
+      "query": "flag='\\U00110000'",
+      "expected": []
+    },
+    {
+      "query": "quoted=\"it's\\x01\"",
+      "expected": ["control", "control_repr"]
+    },
+    {
+      "query": "quotes=[\"it's\\x01\"]",
+      "expected": ["control", "control_repr"]
+    },
+    {
+      "query": "path='a\\\\b'",
+      "expected": ["escapes", "escapes_repr"]
+    },
+    {
+      "query": "text='line1\\nline2'",
+      "expected": ["escapes", "escapes_repr"]
+    },
+    {
+      "query": "text='line1\\012line2'",
+      "expected": ["escapes", "escapes_repr"]
+    },
+    {
+      "query": "quote='say \"hi\"'",
+      "expected": ["escapes"]
+    },
+    {
+      "query": "café=1",
+      "expected": ["unicode_key"]
+    },
+    {
+      "query": "user-id=7",
+      "expected": ["unicode_key"]
+    },
+    {
+      "query": "user-id=8",
+      "expected": ["unicode_key"]
+    },
+    {
+      "query": "user-id=9",
+      "expected": []
+    },
+    {
+      "query": "organization_id=5",
+      "expected": ["trailing_backslash"]
+    },
+    {
+      "query": "path='C:\\\\'",
+      "expected": ["trailing_backslash"]
+    },
+    {
+      "query": "items=[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[0]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]",
+      "expected": []
+    },
+    {
+      "query": "label='\\ud800'",
+      "expected": []
+    },
+    {
+      "query": "label='\\U0000dfff'",
+      "expected": []
+    },
+    {
+      "query": "label=x",
+      "expected": ["trailing_backslash"]
+    },
+    {
+      "query": "message=it's {\"organization_id\": 1}",
+      "expected": ["quoted_inside", "quoted_inside_repr"]
+    },
+    {
+      "query": "label=\"\\ud83d\\ude00\"",
+      "expected": ["emoji"]
+    },
+    {
+      "query": "label=\"😀\"",
+      "expected": ["emoji"]
+    },
+    {
+      "query": "label='\\U0001f600'",
+      "expected": ["emoji"]
+    },
+    {
+      "query": "label=\"\\ud83d\"",
+      "expected": []
+    },
+    {
+      "query": "label=\"\\ude00\"",
+      "expected": []
+    },
+    {
+      "query": "message=it', {\"organization_id\": 1}",
+      "expected": ["delimiter_inside"]
+    },
+    {
+      "query": "organization_id=7",
+      "expected": ["escaped_quote"]
+    },
+    {
+      "query": "path=a\\'b",
+      "expected": ["escaped_quote"]
+    },
+    {
+      "query": "organization_id=11",
+      "expected": ["bytes_before"]
+    },
+    {
+      "query": "organization_id=12",
+      "expected": ["bytes_after"]
+    },
+    {
+      "query": "organization_id=13",
+      "expected": ["truncated"]
+    },
+    {
+      "query": "organization_id=14",
+      "expected": ["bytes_apostrophe"]
+    },
+    {
+      "query": "organization_id=27",
+      "expected": ["two_bytes"]
+    },
+    {
+      "query": "organization_id=28",
+      "expected": ["two_reprs"]
+    },
+    {
+      "query": "bell='\\a'",
+      "expected": ["bell", "bell_repr"]
+    },
+    {
+      "query": "vtab='\\v'",
+      "expected": ["bell", "bell_repr"]
+    },
+    {
+      "query": "path='\\q'",
+      "expected": ["bell", "bell_repr"]
+    },
+    {
+      "query": "bell=a",
+      "expected": ["letters"]
+    },
+    {
+      "query": "vtab=v",
+      "expected": ["letters"]
+    },
+    {
+      "query": "path=q",
+      "expected": ["letters"]
+    },
+    {
+      "query": "a\u001cb=1",
+      "expected": ["odd_space"]
+    },
+    {
+      "query": "label=﻿x",
+      "expected": ["odd_space"]
+    },
+    {
+      "query": "next=y",
+      "expected": ["odd_space"]
+    }
+  ],
+  "workflowQueries": [
+    {
+      "query": "organization_id=1",
+      "expected": ["one", "two"]
+    },
+    {
+      "query": "organization_id=10",
+      "expected": ["two"]
+    },
+    {
+      "query": "north team",
+      "expected": []
+    },
+    {
+      "query": "sync",
+      "expected": ["three", "two"]
+    },
+    {
+      "query": "timeout",
+      "expected": ["three"]
+    },
+    {
+      "query": "organization_id=2",
+      "expected": []
+    }
+  ]
+}
