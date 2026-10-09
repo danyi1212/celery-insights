@@ -522,7 +522,6 @@ try {
   await shutdown("startup failure", 1)
 }
 
-
 if (replaySnapshot) {
   if (replaySnapshot.sourceDataSqlPath) {
     await importSurrealNative(runtimeConfig, db, replaySnapshot.sourceDataSqlPath)

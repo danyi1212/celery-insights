@@ -24,9 +24,7 @@ Use the bundle when:
 
 Open **Settings** and use **Download diagnostics**.
 
-By default, the download is redacted. That is the preferred option for almost every bug report and support handoff.
-
-Enable **Include secrets** only when someone actively investigating the issue needs the exact broker, backend, or database credentials to reproduce the environment.
+Configuration credentials are always redacted. Downloads cannot include broker, backend, database or account credentials from configuration. Task data and process logs remain part of the bundle.
 
 Capture the bundle while the problem is visible if possible. That preserves the task/event state and the recent process logs closest to the failure.
 

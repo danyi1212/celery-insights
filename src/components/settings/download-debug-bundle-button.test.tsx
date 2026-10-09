@@ -11,7 +11,7 @@ describe("DownloadDebugBundleButton", () => {
     useSettingsStore.setState({ demo: false })
   })
 
-  it("opens a dialog and downloads a redacted bundle by default", async () => {
+  it("downloads a redacted bundle without an option to include credentials", async () => {
     const user = userEvent.setup()
     const blob = new Blob(["bundle"], { type: "application/zip" })
     const responseHeaders = new Headers({
@@ -40,7 +40,10 @@ describe("DownloadDebugBundleButton", () => {
     render(<DownloadDebugBundleButton />)
 
     await user.click(screen.getByRole("button", { name: /download diagnostics/i }))
-    expect(screen.getByText(/bundle includes effective config/i)).toBeInTheDocument()
+    expect(screen.getByText(/configuration credentials are always redacted/i)).toBeInTheDocument()
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
+    expect(screen.queryByText("Include secrets")).not.toBeInTheDocument()
+    expect(screen.queryByText(/will include sensitive runtime credentials/i)).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: /download bundle/i }))
 
@@ -49,7 +52,7 @@ describe("DownloadDebugBundleButton", () => {
     })
     const request = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body))
     expect(new Headers(fetchSpy.mock.calls[0]?.[1]?.headers).get("X-Celery-Insights-Request")).toBe("1")
-    expect(request.includeSecrets).toBe(false)
+    expect(request).not.toHaveProperty("includeSecrets")
     expect(request.settings).toBeTruthy()
     expect(createObjectUrlSpy).toHaveBeenCalledWith(blob)
     expect(clickSpy).toHaveBeenCalled()

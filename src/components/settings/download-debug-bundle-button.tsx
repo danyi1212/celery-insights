@@ -2,10 +2,9 @@ import { authenticatedFetch } from "@lib/authenticated-fetch"
 import { appUrl } from "@lib/app-url"
 import { Alert, AlertDescription, AlertTitle } from "@components/ui/alert"
 import { Button } from "@components/ui/button"
-import { Checkbox } from "@components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@components/ui/dialog"
 import useSettingsStore from "@stores/use-settings-store"
-import { AlertCircle, Download, Loader2, TriangleAlert } from "lucide-react"
+import { AlertCircle, Download, Loader2 } from "lucide-react"
 import React, { useMemo, useState } from "react"
 
 function getDownloadFilename(response: Response): string {
@@ -25,14 +24,11 @@ export const DownloadDebugBundleButton: React.FC<{ label?: string }> = ({ label 
   const isDemo = useSettingsStore((state) => state.demo)
   const [isLoading, setIsLoading] = useState(false)
   const [open, setOpen] = useState(false)
-  const [includeSecrets, setIncludeSecrets] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const includeSecretsId = "download-debug-bundle-include-secrets"
 
   const clientInfo = useMemo(
     () => ({
-      includeSecrets,
       settings: useSettingsStore.getState(),
       screenWidth: window.innerWidth,
       screenHeight: window.innerHeight,
@@ -42,7 +38,7 @@ export const DownloadDebugBundleButton: React.FC<{ label?: string }> = ({ label 
       colorScheme: window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light",
       devicePixelRatio: window.devicePixelRatio ?? 1,
     }),
-    [includeSecrets],
+    [],
   )
 
   const handleDownloadDebugBundle = async () => {
@@ -112,31 +108,10 @@ export const DownloadDebugBundleButton: React.FC<{ label?: string }> = ({ label 
       <DialogContent className="sm:max-w-md">
         <DialogTitle>Download debug bundle v2</DialogTitle>
         <DialogDescription>
-          The bundle includes effective config, diagnostics, SurrealDB data, recent process logs, and local UI settings.
+          The bundle includes redacted config, diagnostics, SurrealDB data, recent process logs, and local UI settings.
+          Configuration credentials are always redacted.
         </DialogDescription>
         <div className="space-y-4 pt-2">
-          <div className="flex items-start gap-3 rounded-2xl border bg-background/60 p-4">
-            <Checkbox
-              id={includeSecretsId}
-              checked={includeSecrets}
-              onCheckedChange={(checked) => setIncludeSecrets(checked === true)}
-            />
-            <div className="space-y-1">
-              <label htmlFor={includeSecretsId} className="text-sm font-medium">
-                Include secrets
-              </label>
-              <p className="text-sm text-muted-foreground">
-                Off by default. Keep this disabled unless you explicitly need broker, backend, or database credentials
-                in the bundle.
-              </p>
-            </div>
-          </div>
-          {includeSecrets && (
-            <div className="rounded-2xl border border-status-warning/30 bg-status-warning/10 p-4 text-sm text-status-warning">
-              <TriangleAlert className="mr-2 inline-block size-4 -translate-y-px" />
-              This download will include sensitive runtime credentials.
-            </div>
-          )}
           {statusMessage && (
             <p className="text-sm text-muted-foreground" aria-live="polite">
               {statusMessage}
