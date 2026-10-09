@@ -294,7 +294,10 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
         f"first_observed_at = IF ${p}_previous.first_observed_at IS NONE"
         f" OR <datetime>${p}_ts < ${p}_previous.first_observed_at"
         f" THEN <datetime>${p}_ts ELSE ${p}_previous.first_observed_at END",
-        f"workflow_id = ${p}_workflow_id"
+        # The workflow follows root_id, so an older event can't regroup a task whose root is already known.
+        f"workflow_id = IF ${p}_previous.root_id IS NONE OR ${p}_previous.last_updated IS NONE"
+        f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
+        f" THEN ${p}_workflow_id ELSE ${p}_previous.workflow_id ?? ${p}_workflow_id END"
         if event.get("root_id")
         else f"workflow_id = ${p}_previous.workflow_id ?? ${p}_workflow_id",
     ]
@@ -307,8 +310,9 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
         if value is not None:
             pname = f"{p}_{db_field}"
             params[pname] = value if isinstance(value, int | float) else str(value)
+            # Result polling can observe a newer state before send/receive metadata arrives.
             set_clauses.append(
-                f"{db_field} = IF ${p}_previous.last_updated IS NONE"
+                f"{db_field} = IF ${p}_previous.{db_field} IS NONE OR ${p}_previous.last_updated IS NONE"
                 f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
                 f" THEN ${pname} ELSE ${p}_previous.{db_field} END"
             )
@@ -317,7 +321,8 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
     if hostname:
         params[f"{p}_worker"] = hostname
         set_clauses.append(
-            f"worker = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts >= ${p}_previous.last_updated"
+            f"worker = IF ${p}_previous.worker IS NONE OR ${p}_previous.last_updated IS NONE"
+            f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
             f" THEN ${p}_worker ELSE ${p}_previous.worker END"
         )
 
@@ -326,6 +331,14 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
     # Read persisted values explicitly: UPSERT can evaluate against a creation
     # candidate, including multiple updates to the same task in one transaction.
     query = f"LET ${p}_previous = (SELECT * FROM {target})[0] ?? {{}}; UPSERT {target} SET {assignments}"
+    if event.get("root_id"):
+        # Polling stores a task under its own id before ancestry arrives. Moving it to the real root
+        # leaves that workflow empty, so drop it rather than list a phantom single-task workflow.
+        query += (
+            f"; DELETE type::record('workflow', ${p}_previous.workflow_id ?? ${p}_workflow_id)"
+            f" WHERE ${p}_previous.workflow_id != NONE AND ${p}_previous.workflow_id != ${p}_workflow_id"
+            f" AND (SELECT VALUE id FROM task WHERE workflow_id = ${p}_previous.workflow_id LIMIT 1) = []"
+        )
     return query, params
 
 
