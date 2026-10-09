@@ -2,7 +2,7 @@ import CopyLinkButton from "@components/common/copy-link-button"
 import DetailItem from "@components/common/detail-item"
 import LinearProgressWithLabel from "@components/common/linear-progress-with-label"
 import Panel, { PanelProps } from "@components/common/panel"
-import WorkerStatus from "@components/worker/worker-status"
+import WorkerStatus, { isWorkerOffline } from "@components/worker/worker-status"
 import { useWorkerStats } from "@hooks/worker/use-worker-inspect"
 import { useWorker } from "@hooks/use-live-workers"
 import { formatBytes } from "@utils/format-bytes"
@@ -16,8 +16,6 @@ interface WorkerDetailsCardProps extends Omit<PanelProps, "title"> {
 const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, ...props }) => {
   const { worker } = useWorker(workerId)
   const { stats, isLoading, error } = useWorkerStats(workerId)
-
-  const heartbeatExpires = worker?.heartbeat_expires ? new Date(worker.heartbeat_expires) : undefined
 
   return (
     <Panel title="Worker" loading={isLoading} error={error} actions={<CopyLinkButton />} {...props}>
@@ -61,11 +59,11 @@ const WorkerDetailsCard: React.FC<WorkerDetailsCardProps> = ({ workerId, ...prop
         <div className="col-span-12 md:col-span-6">
           <DetailItem
             label="Status"
-            description="Amount of time until the worker is considered offline"
-            color={heartbeatExpires && heartbeatExpires < new Date() ? "danger" : "primary"}
+            description="Latest worker status observed through events and inspection"
+            color={isWorkerOffline(worker?.status) ? "danger" : "primary"}
             value={
               <div>
-                <WorkerStatus heartbeatExpires={heartbeatExpires || new Date()} />
+                <WorkerStatus status={worker?.status} />
               </div>
             }
           />

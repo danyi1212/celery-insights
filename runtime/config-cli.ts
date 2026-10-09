@@ -5,6 +5,7 @@ import { parse as parseEnv } from "dotenv"
 import { resolveConfig, describeConfig } from "./config-loader"
 import { SETTINGS } from "./config-registry"
 import { pythonConfig, pythonEnvironment } from "./python-config"
+import { createCeleryBridge } from "./celery-bridge"
 import { configurationJsonSchema } from "./config-json-schema"
 
 export function exampleConfig(): string {
@@ -112,6 +113,7 @@ function main(): void {
     return
   }
   if (command === "python") {
+    const bridge = createCeleryBridge()
     const child = spawn("python", ["run.py"], {
       cwd: existsSync(path.resolve(import.meta.dir, "server/run.py"))
         ? path.resolve(import.meta.dir, "server")
@@ -123,11 +125,13 @@ function main(): void {
     if (!pipe || !("end" in pipe)) throw new Error("Cannot open Python configuration pipe")
     pipe.on("error", () => process.stderr.write("Python configuration handoff failed\n"))
     child.on("error", () => {
+      bridge.close()
       process.stderr.write("Cannot start Python; activate the project virtual environment\n")
       process.exitCode = 1
     })
-    pipe.end(JSON.stringify(pythonConfig(resolved.config, Boolean(resolved.config.debugBundlePath))))
+    pipe.end(JSON.stringify(pythonConfig(resolved.config, Boolean(resolved.config.debugBundlePath), bridge)))
     child.on("exit", (code) => {
+      bridge.close()
       process.exitCode = code ?? 1
     })
     for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, () => child.kill(signal))

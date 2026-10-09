@@ -13,15 +13,15 @@ import httpx
 import pytest
 from surrealdb import AsyncSurreal
 
-from exports.router import (
-    ExplorerCsvExportRequest,
-    _build_task_query,
-    _build_workflow_query,
-    _extract_id,
-    _extract_rows,
-    _query_last,
+from surrealdb_test_helpers import _extract_id, _extract_rows, _query_last
+from tasks.task_search import (
+    build_task_search,
+    build_workflow_search,
+    kwargs_search_terms,
+    keyword_search_term,
+    build_indexed_task_search,
+    build_indexed_workflow_search,
 )
-from exports.task_search import build_task_search, build_workflow_search, kwargs_search_terms, keyword_search_term
 
 FIXTURES = json.loads(
     (Path(__file__).resolve().parents[2] / "src" / "lib" / "task-search-fixtures.json").read_text(encoding="utf-8")
@@ -115,8 +115,13 @@ def database_url(request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPa
         process.kill()
 
 
-def _payload(mode: str, query: str) -> ExplorerCsvExportRequest:
-    return ExplorerCsvExportRequest.model_validate({"kind": "explorer", "mode": mode, "query": query, **WIDE_RANGE})
+def _search_query(mode: str, query: str) -> tuple[str, dict[str, str | None]]:
+    search = build_indexed_task_search(query) if mode == "tasks" else build_indexed_workflow_search(query)
+    return (
+        "".join(search.prelude) + f"SELECT * FROM {search.source} WHERE ({search.clause}) "
+        "AND last_updated >= <datetime>$from AND last_updated <= <datetime>$to ORDER BY last_updated DESC",
+        {**search.bindings, **WIDE_RANGE},
+    )
 
 
 async def _connect(url: str) -> Any:
@@ -134,10 +139,10 @@ async def _ids(db: Any, sql: str, bindings: dict[str, Any]) -> list[str]:
 @requires_surreal
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("query", "expected"), [(case["query"], case["expected"]) for case in FIXTURES["queries"]])
-async def test_task_export_matches_explorer_vectors(database_url: str, query: str, expected: list[str]) -> None:
+async def test_task_search_matches_shared_vectors(database_url: str, query: str, expected: list[str]) -> None:
     db = await _connect(database_url)
     try:
-        sql, bindings = _build_task_query(_payload("tasks", query))
+        sql, bindings = _search_query("tasks", query)
         assert await _ids(db, sql, bindings) == expected
     finally:
         await db.close()
@@ -148,10 +153,10 @@ async def test_task_export_matches_explorer_vectors(database_url: str, query: st
 @pytest.mark.parametrize(
     ("query", "expected"), [(case["query"], case["expected"]) for case in FIXTURES["workflowQueries"]]
 )
-async def test_workflow_export_matches_explorer_vectors(database_url: str, query: str, expected: list[str]) -> None:
+async def test_workflow_search_matches_shared_vectors(database_url: str, query: str, expected: list[str]) -> None:
     db = await _connect(database_url)
     try:
-        sql, bindings = _build_workflow_query(_payload("workflows", query))
+        sql, bindings = _search_query("workflows", query)
         assert await _ids(db, sql, bindings) == expected
     finally:
         await db.close()
@@ -237,15 +242,15 @@ async def test_ingested_kwargs_updates_and_stale_events_keep_search_terms_curren
                 search_indexing_enabled=True,
             )
             await _query_last(db, sql, bindings)
-        sql, bindings = _build_task_query(_payload("tasks", "organization_id=987654"))
+        sql, bindings = _search_query("tasks", "organization_id=987654")
         assert "ingestion-test" in await _ids(db, sql, bindings)
-        sql, bindings = _build_task_query(_payload("tasks", "organization_id=987655"))
+        sql, bindings = _search_query("tasks", "organization_id=987655")
         assert "ingestion-test" not in await _ids(db, sql, bindings)
         sql, bindings = _build_task_meta_upsert(
             "ingestion-test", {"status": "SUCCESS", "kwargs": {"organization_id": 987656}}, search_indexing_enabled=True
         )
         await _query_last(db, sql, bindings)
-        sql, bindings = _build_task_query(_payload("tasks", "organization_id=987656"))
+        sql, bindings = _search_query("tasks", "organization_id=987656")
         assert "ingestion-test" in await _ids(db, sql, bindings)
     finally:
         await db.close()

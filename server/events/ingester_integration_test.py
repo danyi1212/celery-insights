@@ -12,7 +12,7 @@ import pytest
 from surrealdb import AsyncSurreal
 
 from events.ingester import build_task_upsert, build_workflow_membership_upsert, build_workflow_summary_recompute
-from exports.task_search import keyword_search_term
+from tasks.task_search import keyword_search_term
 from tasks.result_fetcher import _build_task_meta_upsert
 
 

@@ -16,7 +16,10 @@ const mockQuery = vi.fn()
 const mockLiveOf = vi.fn()
 const MOCK_LIVE_UUID = "mock-live-uuid"
 // Stable object reference — must not be recreated between renders
-const mockDb = { query: mockQuery, liveOf: mockLiveOf }
+const mockDb = {
+  query: (...args: unknown[]) => ({ retry: (_options: { attempts: number }) => mockQuery(...args) }),
+  liveOf: mockLiveOf,
+}
 let mockStatus = "connected"
 
 vi.mock("@components/surrealdb-provider", () => ({

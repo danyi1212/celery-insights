@@ -24,8 +24,8 @@ from surrealdb import AsyncSurreal
 
 from events.ingester import SurrealDBIngester
 from events.receiver import CeleryEventReceiver
-from exports.router import _extract_id, _query_last
-from exports.task_search import build_indexed_task_search
+from surrealdb_test_helpers import _extract_id, _query_last
+from tasks.task_search import build_indexed_task_search
 from tasks.result_fetcher import ResultFetcher
 
 logger = logging.getLogger(__name__)

@@ -10,11 +10,14 @@ import { kwargsSearchTerms, buildTaskSearch, buildWorkflowSearch } from "../src/
 import { buildIndexedTaskSearch, buildIndexedWorkflowSearch } from "../src/lib/indexed-search"
 import { CORE_SCHEMA } from "./surreal-schema"
 import { SEARCH_PROJECTION_SCHEMA, SearchIndexes } from "./search-indexes"
+import { ObservationApi } from "./observation-api"
+import { parseConfig } from "./config"
 
 describe("search projections on disk", () => {
   let db: Surreal
   let process: ChildProcess
   let indexes: SearchIndexes
+  let api: ObservationApi
   beforeAll(async () => {
     const directory = await mkdtemp(`${tmpdir()}/celery-search-indexes-`)
     const port = await new Promise<number>((resolve) => {
@@ -64,6 +67,7 @@ describe("search projections on disk", () => {
         .collect()
     }
     indexes = new SearchIndexes(db)
+    api = new ObservationApi(db, parseConfig({}), async () => null)
   }, 20_000)
   afterAll(async () => {
     await indexes?.stop()
@@ -85,7 +89,25 @@ describe("search projections on disk", () => {
       .sort()
   }
   const checkFixtures = async () => {
-    for (const { query, expected } of fixtures.queries) expect(await taskIds(query)).toEqual(expected)
+    const exportIds = async (mode: "tasks" | "workflows", query: string) => {
+      const response = await api.exportCsv({
+        kind: "explorer",
+        mode,
+        query,
+        from: "2000-01-01T00:00:00Z",
+        to: "2100-01-01T00:00:00Z",
+      })
+      // Split at record boundaries, allowing quoted cells to contain newlines and doubled quotes.
+      const rows = (await response.text())
+        .split(/\r\n(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+        .slice(1)
+        .filter(Boolean)
+      return rows.map((row) => row.match(/^"((?:[^"]|"")*)"/)![1].replaceAll('""', '"')).sort()
+    }
+    for (const { query, expected } of fixtures.queries) {
+      expect(await taskIds(query)).toEqual(expected)
+      expect(await exportIds("tasks", query)).toEqual(expected)
+    }
     for (const { query, expected } of fixtures.workflowQueries) {
       const search = buildIndexedWorkflowSearch(query)
       const results = await db
@@ -104,6 +126,7 @@ describe("search projections on disk", () => {
           .map((row) => extractId(row.id))
           .sort(),
       ).toEqual(expected)
+      expect(await exportIds("workflows", query)).toEqual(expected)
     }
   }
 

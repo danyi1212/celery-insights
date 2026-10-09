@@ -10,7 +10,7 @@ from celery.backends.redis import RedisBackend
 from surrealdb.types import Value
 
 from events.ingester import build_workflow_summary_recompute
-from exports.task_search import kwargs_search_terms
+from tasks.task_search import kwargs_search_terms
 from surrealdb_client import get_db
 
 logger = logging.getLogger(__name__)

@@ -5,7 +5,7 @@ import re
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
-from exports.task_search import kwargs_search_terms
+from tasks.task_search import kwargs_search_terms
 from surrealdb_client import get_db
 
 logger = logging.getLogger(__name__)

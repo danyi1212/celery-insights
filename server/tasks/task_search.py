@@ -1,4 +1,4 @@
-"""Port of src/lib/task-search.ts so the CSV export matches the explorer.
+"""Search normalization for ingestion; query helpers mirror the browser for native regression workloads.
 
 Keep both in sync; each test suite checks the shared vectors in src/lib/task-search-fixtures.json.
 """
