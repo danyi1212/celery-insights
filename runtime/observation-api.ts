@@ -1,5 +1,6 @@
 import os from "node:os"
-import { buildTaskSearch, buildWorkflowSearch, trimQuery } from "../src/lib/task-search"
+import { trimQuery } from "../src/lib/task-search"
+import { buildIndexedTaskSearch, buildIndexedWorkflowSearch } from "../src/lib/indexed-search"
 import { Gauge, Histogram, Registry } from "prom-client"
 import { RecordId, type Surreal } from "surrealdb"
 import { z } from "zod"
@@ -337,10 +338,11 @@ export class ObservationApi {
         bindings[field] = items
       }
     let prelude: string[] = []
+    let source: string = table
     if (table !== "event" && trimQuery(body.query)) {
-      const search: { clause: string; bindings: Record<string, string>; prelude?: string[] } =
-        table === "task" ? buildTaskSearch(body.query) : buildWorkflowSearch(body.query)
-      prelude = search.prelude ?? []
+      const search = table === "task" ? buildIndexedTaskSearch(body.query) : buildIndexedWorkflowSearch(body.query)
+      prelude = search.prelude
+      source = search.source
       conditions.push(`(${search.clause})`)
       Object.assign(bindings, search.bindings)
     } else if (table === "event" && body.query.trim()) {
@@ -369,7 +371,7 @@ export class ObservationApi {
     const sort =
       table === "event" ? "timestamp" : allowedSort.includes(body.sortField) ? body.sortField : "last_updated"
     const rows = await this.rows(
-      `${prelude.join("")}SELECT * FROM ${table} WHERE ${conditions.join(" AND ")} ORDER BY ${sort} ${table === "event" ? "DESC" : body.sortDirection}`,
+      `${prelude.join("")}SELECT * FROM ${source} WHERE ${conditions.join(" AND ")} ORDER BY ${sort} ${table === "event" ? "DESC" : body.sortDirection}`,
       bindings,
     )
     const columns = fields[table]

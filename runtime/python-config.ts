@@ -17,6 +17,7 @@ export function pythonConfig(config: Config, replay: boolean, bridge?: { socket:
       config_file: config.configFile,
       celery_options: config.celeryOptions ?? {},
       debug_snapshot_mode: replay,
+      search_indexing_enabled: config.searchIndexingEnabled && !replay,
       ingestion_batch_interval_ms: config.ingestionBatchIntervalMs,
       log_format: config.logFormat,
       log_level: config.logLevel,

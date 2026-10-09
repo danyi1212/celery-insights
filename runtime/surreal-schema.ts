@@ -25,6 +25,8 @@ function toSurrealStrand(value: string): string {
  * Fields and indexes use OVERWRITE to allow schema evolution.
  */
 export const CORE_SCHEMA = `
+DEFINE TABLE IF NOT EXISTS search_config SCHEMALESS PERMISSIONS FOR select FULL FOR create, update, delete NONE;
+
 DEFINE TABLE IF NOT EXISTS task SCHEMAFULL
   PERMISSIONS
     FOR select FULL
@@ -46,6 +48,7 @@ DEFINE FIELD OVERWRITE first_observed_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE had_error ON task TYPE bool DEFAULT false;
 DEFINE FIELD OVERWRITE args ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE kwargs ON task TYPE option<string>;
+DEFINE FIELD OVERWRITE kwargs_search_source ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE eta ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE expires ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE retries ON task TYPE option<int>;

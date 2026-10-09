@@ -10,6 +10,13 @@ export interface Setting {
 }
 
 export const SETTINGS: readonly Setting[] = [
+  {
+    path: "search.indexing.enabled",
+    key: "searchIndexingEnabled",
+    type: "boolean",
+    env: "CELERY_INSIGHTS_SEARCH_INDEXING_ENABLED",
+    legacy: "SEARCH_INDEXING_ENABLED",
+  },
   { path: "server.port", key: "port", type: "number", env: "CELERY_INSIGHTS_PORT", legacy: "PORT" },
   {
     path: "server.url_prefix",

@@ -37,6 +37,7 @@ const resolvedConfig = resolveConfig()
 const config = resolvedConfig.config
 configureLogging(config.logFormat, config.logLevel)
 for (const warning of resolvedConfig.warnings) bunLogger.warn(warning)
+import { startSearchIndexes, type SearchIndexes } from "./runtime/search-indexes"
 import { runSchemaMigration } from "./runtime/surreal-schema"
 import { createMcpHandler } from "./runtime/mcp"
 
@@ -120,6 +121,7 @@ const indexHtml = await Bun.file(path.join(DIST_DIR, "index.html")).text()
 
 let surrealProcess: ChildProcess | null = null
 let pythonProcess: ChildProcess | null = null
+let searchIndexes: SearchIndexes | null = null
 let leaderElection: LeaderElection | null = null
 let mcpDb: Surreal | null = null
 let cleanupTimer: ReturnType<typeof setTimeout> | null = null
@@ -432,6 +434,7 @@ async function shutdown(signal: string, exitCode = 0): Promise<void> {
   if (leaderElection) {
     await leaderElection.stop()
   }
+  await searchIndexes?.stop()
   await mcpDb?.close()
   if (cleanupTimer) clearTimeout(cleanupTimer)
 
@@ -504,6 +507,8 @@ try {
   bunLogger.error(`Failed to connect to SurrealDB: ${err}`)
   process.exit(1)
 }
+
+searchIndexes = await startSearchIndexes(db, runtimeConfig)
 
 if (replaySnapshot) {
   if (replaySnapshot.sourceDataSqlPath) {

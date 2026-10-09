@@ -30,6 +30,7 @@ class Settings(BaseModel):
     log_level: Literal["debug", "info", "warn", "error"] = "info"
 
     # Ingestion performance (received from Bun)
+    search_indexing_enabled: bool = False
     ingestion_batch_interval_ms: int = 100
     bridge_socket: str = ""
 

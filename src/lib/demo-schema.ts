@@ -4,6 +4,8 @@
  * and without ingestion_lock (no leader election in demo).
  */
 export const DEMO_SCHEMA = `
+DEFINE TABLE IF NOT EXISTS search_config SCHEMALESS PERMISSIONS FOR select FULL FOR create, update, delete NONE;
+
 DEFINE TABLE IF NOT EXISTS task SCHEMAFULL PERMISSIONS FULL;
 
 DEFINE FIELD OVERWRITE type ON task TYPE option<string>;

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import type { SurrealTask, SurrealWorker } from "@/types/surreal-records"
-import { buildTaskSearch } from "@lib/task-search"
+import { buildIndexedTaskSearch } from "@lib/indexed-search"
 
 export interface SearchTaskResult extends SurrealTask {
   workflow?: {
@@ -43,11 +43,12 @@ export const useSearch = (query: string, limit = 10) => {
       }
 
       try {
-        const search = buildTaskSearch(q)
-        const [tasks, workers] = await db.query<[SearchTaskResult[], SurrealWorker[]]>(
-          `SELECT *,
+        const search = buildIndexedTaskSearch(q)
+        const results = await db.query<[SearchTaskResult[], SurrealWorker[]]>(
+          search.prelude.join("") +
+            `SELECT *,
                         (SELECT root_task_type, aggregate_state, task_count FROM workflow WHERE id = type::record('workflow', workflow_id))[0] AS workflow
-                    FROM task WHERE
+                    FROM ${search.source} WHERE
                         (${search.clause})
                     ORDER BY last_updated DESC LIMIT $limit;
                     SELECT * FROM worker WHERE
@@ -55,6 +56,8 @@ export const useSearch = (query: string, limit = 10) => {
                     ORDER BY last_updated DESC LIMIT $limit;`,
           { ...search.bindings, limit },
         )
+
+        const [tasks, workers] = results.slice(search.prelude.length) as [SearchTaskResult[], SurrealWorker[]]
 
         // Only update if this is still the active query
         if (activeQueryRef.current === q) {

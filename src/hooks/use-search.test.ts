@@ -21,7 +21,7 @@ describe("useSearch", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.clearAllMocks()
     mockStatus = "connected"
-    mockQuery.mockResolvedValue([[], []])
+    mockQuery.mockResolvedValue([null, [], []])
   })
 
   afterEach(() => {
@@ -77,11 +77,11 @@ describe("useSearch", () => {
 
     const [queryStr, bindings] = mockQuery.mock.calls[0]
     expect(queryStr).toContain("SELECT *,")
-    expect(queryStr).toContain("FROM task WHERE")
+    expect(queryStr).toContain("FROM $searchTasks WHERE")
     expect(queryStr).toContain("FROM workflow WHERE id = type::record('workflow', workflow_id)")
     expect(queryStr).toContain("string::contains")
     expect(queryStr).toContain("SELECT * FROM worker WHERE")
-    expect(bindings).toEqual({ query: "myquery", limit: 5 })
+    expect(bindings).toEqual({ query: "myquery", limit: 5, searchGram: "ery", searchTerm: null })
   })
 
   it("returns task and worker results from the query", async () => {
@@ -89,7 +89,7 @@ describe("useSearch", () => {
       { id: "task:abc", type: "my.task", state: "SUCCESS", last_updated: "2025-01-01T00:00:00Z", children: [] },
     ]
     const workers = [{ id: "worker:w1", status: "online", last_updated: "2025-01-01T00:00:00Z" }]
-    mockQuery.mockResolvedValue([tasks, workers])
+    mockQuery.mockResolvedValue([null, tasks, workers])
 
     const { result } = renderHook(() => useSearch("test"))
 
@@ -128,7 +128,7 @@ describe("useSearch", () => {
     const tasks = [
       { id: "task:abc", type: "my.task", state: "SUCCESS", last_updated: "2025-01-01T00:00:00Z", children: [] },
     ]
-    mockQuery.mockResolvedValue([tasks, []])
+    mockQuery.mockResolvedValue([null, tasks, []])
 
     const { result, rerender } = renderHook(({ q }) => useSearch(q), {
       initialProps: { q: "test" },
