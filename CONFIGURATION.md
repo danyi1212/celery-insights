@@ -336,24 +336,20 @@ How often non-terminal Celery events are flushed to SurrealDB, in milliseconds. 
 
 ## Search indexing
 
-Search indexing is **disabled by default**. Enable it for workloads where selective task and workflow searches matter more than the extra ingestion work:
+Default: `false`
+
+Enable to speed up task and workflow searches. It adds ingestion work, so keep it off if events are falling behind.
 
 ```toml
 [search.indexing]
 enabled = true
 ```
 
-The permanent environment override is `CELERY_INSIGHTS_SEARCH_INDEXING_ENABLED=true`; `SEARCH_INDEXING_ENABLED` is the legacy alias. Set the value to `false` to disable it. Disabled indexing uses the existing regex and substring predicates and performs no search normalization or projection/index maintenance. Startup removes this feature's existing database events, projection tables and indexes when disabled.
+Or set `CELERY_INSIGHTS_SEARCH_INDEXING_ENABLED=true` (alias: `SEARCH_INDEXING_ENABLED`). Restart to apply.
 
-All instances sharing an observation database must use the same setting. To change modes, stop the existing instances, update their configuration, and restart them together. A conflicting active instance causes startup to fail before shared search maintenance changes. Instance leases expire after 60 seconds if an instance crashes.
+Existing tasks are indexed automatically. Set `false` to remove the indexes at startup; search still works with indexing off.
 
-Enabled indexing stores bounded substring candidates and exact kwargs terms in separate `task_search` and `workflow_search` tables. Each text field contributes at most 512 lowercase characters; larger values remain searchable through the original predicates. Results and args are never copied into a combined task field or added to task LIVE notifications. Short queries also keep the original queries. Candidate matches are always verified using the original predicates, preserving value types, nested ordering, numeric spelling, time ranges, counts and pagination across quick search, Explorer and CSV export.
-
-On enable, database events maintain projections atomically with task/workflow changes. Startup backfills existing records in batches before marking the projections ready; readers continue using the original queries during a build or a resumed failed build. Indexes are idempotent, and a missing physical index still allows the database to scan candidate records. Existing records without kwargs provenance, ambiguous backslashes, malformed representations and truncated inputs retain regex fallback. New Celery events and result metadata record their producer format; complete unambiguous kwargs produce exact terms when they change. Turning indexing off and back on rebuilds projections without changing stored observations.
-
-Demo/WASM and read-only debug snapshot replay use the original queries. Search projections are excluded from diagnostic bundles, so restoring a bundle requires neither derived search data nor indexes.
-
-Indexing is a workload tradeoff. The local disk comparison in `docs/search-index-validation.md` covers RocksDB and SurrealKV, 100 and 500 events/sec, 100 KiB results, actual Celery result-backend reads, LIVE delivery and concurrent searches. At the higher event rate, indexing adds lag; large or ambiguous payloads and common queries benefit less. These measurements are comparisons, not production capacity limits.
+For a shared database, stop all instances, give them the same setting, and restart them together.
 
 ## Retention and Cleanup
 
