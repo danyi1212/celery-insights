@@ -75,22 +75,21 @@ def _build_task_meta_upsert(task_id: str, meta: dict, *, search_indexing_enabled
         "last_updated": last_updated,
         "workflow_id": task_id,
         "type": meta.get("name"),
-        "args": repr(meta.get("args", [])),
-        "kwargs": repr(meta.get("kwargs", {})),
+        "args": repr(meta["args"]) if "args" in meta else None,
+        "kwargs": repr(meta["kwargs"]) if "kwargs" in meta else None,
         "worker": meta.get("worker"),
-        "retries": int(meta.get("retries") or 0),
+        "retries": int(meta["retries"] or 0) if "retries" in meta else None,
         "routing_key": meta.get("queue"),
     }
 
     set_clauses = [
         "state = $state",
-        "type = $type",
-        "args = $args",
-        "kwargs = $kwargs",
-        "kwargs_search_source = 'repr'",
-        "worker = $worker",
-        "retries = $retries",
-        "routing_key = $routing_key",
+        # Metadata without result_extended lacks these fields, so keep what task events stored.
+        *(
+            f"{field} = ${field} ?? $meta_previous.{field}"
+            for field in ("type", "args", "kwargs", "worker", "retries", "routing_key")
+        ),
+        "kwargs_search_source = IF $kwargs != NONE THEN 'repr' ELSE $meta_previous.kwargs_search_source END",
         "workflow_id = $meta_previous.workflow_id ?? $workflow_id",
         "last_updated = <datetime>$last_updated",
         "first_observed_at = $meta_previous.first_observed_at ?? <datetime>$last_updated",
@@ -128,7 +127,7 @@ def _build_task_meta_upsert(task_id: str, meta: dict, *, search_indexing_enabled
     target = "type::record('task', $task_id)"
     assignments = ", ".join(set_clauses)
     query = f"LET $meta_previous = (SELECT * FROM {target})[0] ?? {{}}; UPSERT {target} SET {assignments}"
-    if search_indexing_enabled:
+    if search_indexing_enabled and params["kwargs"] is not None:
         terms = kwargs_search_terms(params["kwargs"], "repr")
         params["search_terms"] = terms.terms
         params["search_fallback"] = terms.fallback
