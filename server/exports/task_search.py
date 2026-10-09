@@ -7,6 +7,7 @@ import json
 import re
 import unicodedata
 from dataclasses import dataclass
+from typing import Literal as ValueKind
 
 REGEX_SPECIAL = set(".*+?^${}()|[]\\")
 
@@ -83,11 +84,21 @@ RANGE_WORKFLOWS_QUERY = (
     "SELECT VALUE root_task_id FROM workflow WHERE last_updated >= <datetime>$from AND last_updated <= <datetime>$to"
 )
 
+# Tagged values retain numeric spelling and container order across both parser ports.
+type SearchValue = (
+    tuple[ValueKind["string", "number"], str]
+    | tuple[ValueKind["bool"], bool]
+    | tuple[ValueKind["null"], None]
+    | tuple[ValueKind["list"], list[SearchValue]]
+    | tuple[ValueKind["object"], list[tuple[SearchValue, SearchValue]]]
+)
+
 
 @dataclass(frozen=True)
 class Literal:
     pattern: str
     end: int
+    value: SearchValue
 
 
 @dataclass(frozen=True)
@@ -160,7 +171,7 @@ def parse_quoted(text: str, start: int) -> Literal | None:
     while index < len(text):
         character = text[index]
         if character == quote:
-            return Literal(string_pattern(decoded), index + 1)
+            return Literal(string_pattern(decoded), index + 1, ("string", decoded))
         if character != "\\":
             decoded += character
             index += 1
@@ -202,6 +213,8 @@ def parse_container(text: str, start: int, depth: int) -> Literal | None:
     is_dictionary = text[start] == "{"
     close = "}" if is_dictionary else "]"
     items: list[str] = []
+    values: list[SearchValue] = []
+    entries: list[tuple[SearchValue, SearchValue]] = []
     index = skip_space(text, start + 1)
     while character_at(text, index) != close:
         item = parse_literal(text, index, depth)
@@ -214,15 +227,21 @@ def parse_container(text: str, start: int, depth: int) -> Literal | None:
             value = parse_literal(text, index + 1, depth)
             if value is None:
                 return None
-            item = Literal(f"{item.pattern}\\s*:\\s*{value.pattern}", value.end)
+            entries.append((item.value, value.value))
+            item = Literal(f"{item.pattern}\\s*:\\s*{value.pattern}", value.end, item.value)
         items.append(item.pattern)
+        values.append(item.value)
         index = skip_space(text, item.end)
         if character_at(text, index) == ",":
             index = skip_space(text, index + 1)
         elif character_at(text, index) != close:
             return None
     open_pattern, close_pattern = ("\\{", "\\}") if is_dictionary else ("\\[", "\\]")
-    return Literal(open_pattern + "\\s*" + "\\s*,\\s*".join(items) + "\\s*" + close_pattern, index + 1)
+    return Literal(
+        open_pattern + "\\s*" + "\\s*,\\s*".join(items) + "\\s*" + close_pattern,
+        index + 1,
+        ("object", entries) if is_dictionary else ("list", values),
+    )
 
 
 def parse_literal(text: str, start: int, depth: int = 0) -> Literal | None:
@@ -234,10 +253,18 @@ def parse_literal(text: str, start: int, depth: int = 0) -> Literal | None:
         return parse_quoted(text, index)
     number = NUMBER_PATTERN.match(text[index:])
     if number:
-        return Literal(escape_regex(number.group(0)), index + len(number.group(0)))
+        return Literal(escape_regex(number.group(0)), index + len(number.group(0)), ("number", number.group(0)))
     word = WORD_PATTERN.match(text[index:])
     pattern = WORD_PATTERNS.get(word.group(0).lower()) if word else None
-    return Literal(pattern, index + len(word.group(0))) if word and pattern else None
+    return (
+        Literal(
+            pattern,
+            index + len(word.group(0)),
+            ("null", None) if word.group(0).lower() in {"none", "null"} else ("bool", word.group(0).lower() == "true"),
+        )
+        if word and pattern
+        else None
+    )
 
 
 def build_task_search(query: str) -> TaskSearch:
@@ -301,4 +328,102 @@ def build_workflow_search(query: str) -> WorkflowSearch:
         ],
         f"{WORKFLOW_TEXT_CLAUSE} OR root_task_id IN $searchWorkflows",
         search.bindings,
+    )
+
+
+def keyword_search_term(query: str) -> str | None:
+    if "kwargsPattern" not in build_task_search(query).bindings:
+        return None
+    keyword = KEYWORD_PATTERN.match(trim_query(query))
+    assert keyword is not None
+    key, raw = keyword.group(1), keyword.group(2)
+    parsed = parse_literal(raw, 0)
+    value = parsed.value if parsed and skip_space(raw, parsed.end) == len(raw) else ("string", raw)
+    return json.dumps([key, value], ensure_ascii=False, separators=(",", ":"))
+
+
+@dataclass(frozen=True)
+class KwargsSearchTerms:
+    terms: list[str]
+    fallback: bool
+
+
+def kwargs_search_terms(raw: str | None, source: str | None) -> KwargsSearchTerms:
+    if not raw:
+        return KwargsSearchTerms([], fallback=False)
+    fallback = KwargsSearchTerms([], fallback=True)
+    if source not in {"saferepr", "repr", "json"} or len(raw) > 4096 or "\\" in raw:
+        return fallback
+    try:
+        parsed = parse_literal(raw, 0)
+    except NestingLimitError:
+        return fallback
+    if not parsed or skip_space(raw, parsed.end) != len(raw) or parsed.value[0] != "object":
+        return fallback
+    terms: set[str] = set()
+
+    def visit(value: SearchValue) -> None:
+        if value[0] == "object":
+            for key, child in value[1]:
+                if key[0] == "string":
+                    terms.add(json.dumps([key[1], child], ensure_ascii=False, separators=(",", ":")))
+                visit(child)
+        elif value[0] == "list":
+            for child in value[1]:
+                visit(child)
+
+    visit(parsed.value)
+    return fallback if len(terms) > 256 else KwargsSearchTerms(sorted(terms), fallback=False)
+
+
+@dataclass(frozen=True)
+class IndexedSearch:
+    prelude: list[str]
+    source: str
+    clause: str
+    bindings: dict[str, str | None]
+
+
+def candidate_source(table: str, extra: str = "") -> str:
+    return (
+        f"IF (SELECT VALUE ready FROM search_config:current)[0] = true THEN "
+        f"(SELECT VALUE record FROM {table}_search WHERE grams CONTAINS $searchGram OR text_fallback = true {extra}) "
+        f"ELSE type::table('{table}') END"
+    )
+
+
+def build_indexed_task_search(query: str) -> IndexedSearch:
+    search = build_task_search(query)
+    trimmed = trim_query(query).lower()
+    if len(trimmed) < 3:
+        return IndexedSearch([], "task", search.clause, dict(search.bindings))
+    source = candidate_source(
+        "task", "OR kwargs_terms CONTAINS $searchTerm OR ($searchTerm != NULL AND kwargs_fallback = true)"
+    )
+    return IndexedSearch(
+        [f"LET $searchTasks = {source};"],
+        "$searchTasks",
+        search.clause,
+        {**search.bindings, "searchGram": trimmed[-3:], "searchTerm": keyword_search_term(query)},
+    )
+
+
+def build_indexed_workflow_search(query: str) -> IndexedSearch:
+    original = build_workflow_search(query)
+    search = build_indexed_task_search(query)
+    if len(trim_query(query).lower()) < 3:
+        return IndexedSearch(original.prelude, "workflow", original.clause, dict(original.bindings))
+    members = (
+        [
+            *search.prelude,
+            original.prelude[0],
+            "LET $searchWorkflows = array::distinct(SELECT VALUE workflow_id "
+            f"FROM {search.source} WHERE workflow_id IN $rangeWorkflows AND ({search.clause}));",
+        ]
+        if original.prelude
+        else []
+    )
+    source = candidate_source("workflow", "OR record.root_task_id IN $searchWorkflows" if members else "")
+    return IndexedSearch(
+        [*members, f"LET $searchWorkflowRows = {source};"], "$searchWorkflowRows", original.clause, search.bindings
     )

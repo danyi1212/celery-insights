@@ -40,6 +40,7 @@ class Settings(BaseModel):
     dead_worker_retention_hours: float | None = 24
 
     # Ingestion performance (received from Bun)
+    search_indexing_enabled: bool = False
     ingestion_batch_interval_ms: int = 100
 
 

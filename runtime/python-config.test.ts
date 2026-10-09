@@ -22,4 +22,10 @@ describe("scoped Python handoff", () => {
       }),
     ).toEqual({ PATH: "/bin", PYTHONUNBUFFERED: "1" })
   })
+
+  it("passes the search setting to writers and disables it during replay", () => {
+    const config = parseConfig({ SEARCH_INDEXING_ENABLED: "true" })
+    expect(pythonConfig(config, false).settings.search_indexing_enabled).toBe(true)
+    expect(pythonConfig(config, true).settings.search_indexing_enabled).toBe(false)
+  })
 })

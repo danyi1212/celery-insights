@@ -48,7 +48,9 @@ async def lifespan(_):
 
         # 3. Start services: EventReceiver -> SurrealDBIngester -> WorkerPoller -> CleanupJob
         result_fetcher = ResultFetcher(celery_app)
-        result_backend_poller = ResultBackendPoller(celery_app)
+        result_backend_poller = ResultBackendPoller(
+            celery_app, search_indexing_enabled=settings.search_indexing_enabled
+        )
 
         event_receiver = CeleryEventReceiver(celery_app, asyncio.get_running_loop())
         event_receiver.start()
@@ -57,6 +59,7 @@ async def lifespan(_):
             queue=event_receiver.queue,
             batch_interval_ms=settings.ingestion_batch_interval_ms,
             on_terminal=result_fetcher.fetch_and_store,
+            search_indexing_enabled=settings.search_indexing_enabled,
         )
         ingester.start()
 

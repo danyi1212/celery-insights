@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.responses import Response
 
-from exports.task_search import build_task_search, build_workflow_search, trim_query
+from exports.task_search import build_indexed_task_search, build_indexed_workflow_search, trim_query
 from surrealdb_client import get_db
 
 exports_router = APIRouter(prefix="/api/exports", tags=["exports"])
@@ -150,9 +150,12 @@ def _event_rows_to_csv(rows: list[dict[str, Any]]) -> str:
 def _build_task_query(payload: ExplorerCsvExportRequest) -> tuple[str, dict[str, Any]]:
     conditions = ["last_updated >= <datetime>$from", "last_updated <= <datetime>$to"]
     bindings: dict[str, Any] = {"from": payload.from_, "to": payload.to}
+    source = "task"
+    prelude: list[str] = []
 
     if trim_query(payload.query):
-        search = build_task_search(payload.query)
+        search = build_indexed_task_search(payload.query)
+        source, prelude = search.source, search.prelude
         conditions.append(f"({search.clause})")
         bindings.update(search.bindings)
     if payload.states:
@@ -167,16 +170,18 @@ def _build_task_query(payload: ExplorerCsvExportRequest) -> tuple[str, dict[str,
 
     sort_field = payload.sort_field if payload.sort_field in TASK_SORT_FIELDS else "last_updated"
     clause = f" WHERE {' AND '.join(conditions)}"
-    return f"SELECT * FROM task{clause} ORDER BY {sort_field} {payload.sort_direction}", bindings
+    return "".join(prelude) + f"SELECT * FROM {source}{clause} ORDER BY {sort_field} {payload.sort_direction}", bindings
 
 
 def _build_workflow_query(payload: ExplorerCsvExportRequest) -> tuple[str, dict[str, Any]]:
     conditions = ["last_updated >= <datetime>$from", "last_updated <= <datetime>$to"]
     bindings: dict[str, Any] = {"from": payload.from_, "to": payload.to}
+    source = "workflow"
     prelude: list[str] = []
 
     if trim_query(payload.query):
-        search = build_workflow_search(payload.query)
+        search = build_indexed_workflow_search(payload.query)
+        source = search.source
         prelude = search.prelude
         conditions.append(f"({search.clause})")
         bindings.update(search.bindings)
@@ -189,7 +194,7 @@ def _build_workflow_query(payload: ExplorerCsvExportRequest) -> tuple[str, dict[
 
     sort_field = payload.sort_field if payload.sort_field in WORKFLOW_SORT_FIELDS else "last_updated"
     clause = f" WHERE {' AND '.join(conditions)}"
-    return f"{''.join(prelude)}SELECT * FROM workflow{clause} ORDER BY {sort_field} {payload.sort_direction}", bindings
+    return f"{''.join(prelude)}SELECT * FROM {source}{clause} ORDER BY {sort_field} {payload.sort_direction}", bindings
 
 
 async def _query_last(db: Any, query: str, bindings: dict[str, Any]) -> object:

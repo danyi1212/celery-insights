@@ -71,7 +71,15 @@ const TOKENIZES_PATTERN = `^${TOKEN}*$`
 // around the marker, so a delimiter and marker inside a quoted string don't count.
 const MALFORMED_REPR_PATTERN = `^${TOKEN}*?[:,\\[({]\\s*(?:b${QUOTED}|<)${TOKEN}*$`
 
+export type SearchValue =
+  | ["string" | "number", string]
+  | ["bool", boolean]
+  | ["null", null]
+  | ["list", SearchValue[]]
+  | ["object", [SearchValue, SearchValue][]]
+
 interface Literal {
+  value: SearchValue
   pattern: string
   end: number
 }
@@ -119,7 +127,7 @@ const parseQuoted = (text: string, start: number): Literal | undefined => {
   let decoded = ""
   for (let index = start + 1; index < text.length; index++) {
     const character = text[index]
-    if (character === quote) return { pattern: stringPattern(decoded), end: index + 1 }
+    if (character === quote) return { value: ["string", decoded], pattern: stringPattern(decoded), end: index + 1 }
     if (character !== "\\") {
       decoded += character
       continue
@@ -158,6 +166,8 @@ const parseContainer = (text: string, start: number, depth: number): Literal | u
   const isDictionary = text[start] === "{"
   const close = isDictionary ? "}" : "]"
   const items: string[] = []
+  const values: SearchValue[] = []
+  const entries: [SearchValue, SearchValue][] = []
   let index = skipSpace(text, start + 1)
   while (text[index] !== close) {
     let item = parseLiteral(text, index, depth)
@@ -167,15 +177,21 @@ const parseContainer = (text: string, start: number, depth: number): Literal | u
       if (text[index] !== ":") return undefined
       const value = parseLiteral(text, index + 1, depth)
       if (!value) return undefined
-      item = { pattern: `${item.pattern}\\s*:\\s*${value.pattern}`, end: value.end }
+      entries.push([item.value, value.value])
+      item = { value: item.value, pattern: `${item.pattern}\\s*:\\s*${value.pattern}`, end: value.end }
     }
     items.push(item.pattern)
+    values.push(item.value)
     index = skipSpace(text, item.end)
     if (text[index] === ",") index = skipSpace(text, index + 1)
     else if (text[index] !== close) return undefined
   }
   const [open, shut] = isDictionary ? ["\\{", "\\}"] : ["\\[", "\\]"]
-  return { pattern: `${open}\\s*${items.join("\\s*,\\s*")}\\s*${shut}`, end: index + 1 }
+  return {
+    value: isDictionary ? ["object", entries] : ["list", values],
+    pattern: `${open}\\s*${items.join("\\s*,\\s*")}\\s*${shut}`,
+    end: index + 1,
+  }
 }
 
 // Accepts JSON and Python repr literals. Numbers keep their source text, so 64-bit ids and float formatting survive.
@@ -185,10 +201,16 @@ const parseLiteral = (text: string, start: number, depth = 0): Literal | undefin
   if (character === "[" || character === "{") return parseContainer(text, index, depth + 1)
   if (character === '"' || character === "'") return parseQuoted(text, index)
   const number = /^-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/.exec(text.slice(index))?.[0]
-  if (number) return { pattern: escapeRegex(number), end: index + number.length }
+  if (number) return { value: ["number", number], pattern: escapeRegex(number), end: index + number.length }
   const word = /^[A-Za-z]+/.exec(text.slice(index))?.[0]
   const pattern = word && WORD_PATTERNS.get(word.toLowerCase())
-  return word && pattern ? { pattern, end: index + word.length } : undefined
+  return word && pattern
+    ? {
+        value: ["none", "null"].includes(word.toLowerCase()) ? ["null", null] : ["bool", word.toLowerCase() === "true"],
+        pattern,
+        end: index + word.length,
+      }
+    : undefined
 }
 
 export const buildTaskSearch = (query: string): { clause: string; bindings: Record<string, string> } => {
@@ -252,5 +274,42 @@ export const buildWorkflowSearch = (
     ],
     clause: `${WORKFLOW_TEXT_CLAUSE} OR root_task_id IN $searchWorkflows`,
     bindings: search.bindings,
+  }
+}
+
+// Exact terms share the literal parser with the verifying predicates. Numbers retain their spelling.
+export const keywordSearchTerm = (query: string): string | null => {
+  if (!buildTaskSearch(query).bindings.kwargsPattern) return null
+  const keyword = KEYWORD.exec(trimQuery(query))!
+  const [, key, raw] = keyword
+  const parsed = parseLiteral(raw, 0)
+  const value: SearchValue = parsed && skipSpace(raw, parsed.end) === raw.length ? parsed.value : ["string", raw]
+  return JSON.stringify([key, value])
+}
+
+export const kwargsSearchTerms = (raw: string | null | undefined, source?: string | null) => {
+  const fallback = { terms: [] as string[], fallback: true }
+  if (!raw) return { terms: [] as string[], fallback: false }
+  // Backslashes admit different readings under #149's saferepr/repr predicates, even with a known producer.
+  // Legacy rows have no source label. Never guess a format or use a partial parse to exclude them.
+  if (!source || !["saferepr", "repr", "json"].includes(source) || raw.length > 4096 || raw.includes("\\"))
+    return fallback
+  try {
+    const parsed = parseLiteral(raw, 0)
+    if (!parsed || skipSpace(raw, parsed.end) !== raw.length || parsed.value[0] !== "object") return fallback
+    const terms = new Set<string>()
+    const visit = (value: SearchValue): void => {
+      if (value[0] === "object") {
+        for (const [key, child] of value[1]) {
+          if (key[0] === "string") terms.add(JSON.stringify([key[1], child]))
+          visit(child)
+        }
+      } else if (value[0] === "list") value[1].forEach(visit)
+    }
+    visit(parsed.value)
+    return terms.size > 256 ? fallback : { terms: [...terms], fallback: false }
+  } catch (error) {
+    if (error instanceof NestingLimitError) return fallback
+    throw error
   }
 }

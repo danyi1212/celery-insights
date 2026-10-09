@@ -25,6 +25,7 @@ export function pythonConfig(config: Config, replay: boolean) {
       task_max_count: config.taskMaxCount ?? null,
       task_retention_hours: config.taskRetentionHours ?? null,
       dead_worker_retention_hours: config.deadWorkerRetentionHours ?? null,
+      search_indexing_enabled: config.searchIndexingEnabled && !replay,
       ingestion_batch_interval_ms: config.ingestionBatchIntervalMs,
       log_format: config.logFormat,
       log_level: config.logLevel,
