@@ -129,6 +129,8 @@ jobs:
           echo "$RUNNER_TEMP/surreal-integration" >> "$GITHUB_PATH"
       - name: Vitest
         run: bun run test
+      - name: Bun observation API acceptance
+        run: bun run test:observation
 
   e2e:
     name: E2E tests (${{ matrix.deployment.name }})

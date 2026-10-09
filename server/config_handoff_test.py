@@ -5,7 +5,7 @@ import pytest
 
 import settings as settings_module
 from logging_config import build_logging_config
-from settings import Settings, read_settings_snapshot
+from settings import MAX_HANDOFF_BYTES, Settings, read_settings_snapshot
 
 
 def install_packet(monkeypatch: pytest.MonkeyPatch, packet: bytes) -> None:
@@ -34,7 +34,7 @@ def test_snapshot_is_authoritative_over_inherited_environment(monkeypatch: pytes
         b'{"version":2,"settings":{}}',
         b'{"version":true,"settings":{}}',
         b'{"version":1,"settings":{}}',
-        b"x" * (1024 * 1024 + 1),
+        b"x" * (MAX_HANDOFF_BYTES + 1),
     ],
 )
 def test_invalid_handoff_fails_without_configuration_fallback(monkeypatch: pytest.MonkeyPatch, packet: bytes):
@@ -55,5 +55,15 @@ def test_transport_error_does_not_expose_secret_values(monkeypatch: pytest.Monke
 def test_python_settings_do_not_resolve_environment(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("PORT", "1234")
     monkeypatch.setenv("BROKER_URL", "env-secret")
-    assert Settings().port == 8556
+    assert "port" not in Settings.model_fields
     assert Settings().broker_url != "env-secret"
+
+
+def test_authentication_data_is_rejected_by_python_snapshot(monkeypatch):
+    fields = Settings().model_dump()
+    fields["authentication"] = {"control_password": "DO-NOT-DISCLOSE"}
+    install_packet(monkeypatch, json.dumps({"version": 1, "settings": fields}).encode())
+    with pytest.raises(RuntimeError) as caught:
+        read_settings_snapshot()
+    assert "DO-NOT-DISCLOSE" not in str(caught.value)
+    assert "authentication" not in Settings.model_fields
