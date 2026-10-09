@@ -28,6 +28,16 @@ describe("useSearch", () => {
     vi.useRealTimers()
   })
 
+  it("searches exact keyword arguments in quick search", async () => {
+    renderHook(() => useSearch("organization_id=1"))
+    await act(async () => vi.advanceTimersByTime(300))
+
+    const [query, bindings] = mockQuery.mock.calls[0]
+    expect(query).toContain("string::matches(kwargs ?? '', $kwargsPattern)")
+    expect(bindings.kwargsPattern).toContain("organization_id")
+    expect(bindings.query).toBe("organization_id=1")
+  })
+
   it("returns empty results for empty query without querying DB", async () => {
     const { result } = renderHook(() => useSearch(""))
 
@@ -71,7 +81,7 @@ describe("useSearch", () => {
     expect(queryStr).toContain("FROM workflow WHERE id = type::record('workflow', workflow_id)")
     expect(queryStr).toContain("string::contains")
     expect(queryStr).toContain("SELECT * FROM worker WHERE")
-    expect(bindings).toEqual({ q: "myquery", limit: 5 })
+    expect(bindings).toEqual({ query: "myquery", limit: 5 })
   })
 
   it("returns task and worker results from the query", async () => {
@@ -176,7 +186,7 @@ describe("useSearch", () => {
 
     // Should have queried with "second", not "first"
     const [, bindings] = mockQuery.mock.calls[0]
-    expect(bindings.q).toBe("second")
+    expect(bindings.query).toBe("second")
   })
 
   it("uses default limit of 10", async () => {
@@ -206,7 +216,7 @@ describe("useSearch", () => {
     })
 
     const [, bindings] = mockQuery.mock.calls[0]
-    expect(bindings.q).toBe("mytask")
+    expect(bindings.query).toBe("mytask")
   })
 
   it("sets isLoading to true while debouncing and querying", async () => {

@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from celery import Celery
 
@@ -11,6 +11,11 @@ logger = logging.getLogger(__name__)
 
 MISSED_POLLS_THRESHOLD = 3
 DEFAULT_POLL_INTERVAL = 5
+
+
+def _json_default(value: object) -> str:
+    # Match the snapshot's other timestamps (isoformat); fall back to str() like the diagnostics exporters.
+    return value.isoformat() if isinstance(value, date) else str(value)
 
 
 def _inspect_sync(celery_app: Celery) -> dict[str, dict]:
@@ -100,11 +105,12 @@ class WorkerPoller:
         # Upsert responding workers
         for hostname, data in inspect_data.items():
             try:
+                serialized_data = json.dumps(data, default=_json_default)
                 params: dict = {
                     "id": hostname,
                     "ts": now,
-                    "data": json.dumps(data),
-                    "inspect_data": data,
+                    "data": serialized_data,
+                    "inspect_data": json.loads(serialized_data),
                 }
                 query = (
                     "UPSERT type::record('worker', $id) SET "

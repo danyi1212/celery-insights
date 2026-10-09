@@ -68,6 +68,8 @@ export const getFlowGraph = (
   const taskMap = new Map<string, Task>(tasks.map((task) => [task.id, task]))
   const childMap = getChildMap(tasks)
   const visited = new Set<string>()
+  // Stored children lists can be stale; only a reachable parent may adopt a parentless child, once.
+  const claimed = new Set<string>([rootTaskId])
   let nextLeafRow = 0
 
   const visitTask = (task: Task, column: number): number => {
@@ -75,7 +77,14 @@ export const getFlowGraph = (
     const node = createNode(task, column, 0)
     nodes.push(node)
 
-    const children = childMap.get(task.id) || []
+    const children = [...(childMap.get(task.id) || [])]
+    for (const childId of task.children) {
+      const child = taskMap.get(childId)
+      if (!child || child.parent_id || claimed.has(childId)) continue
+      claimed.add(childId)
+      children.push(child)
+    }
+
     const childRows = children
       .sort((a, b) => a.id.localeCompare(b.id))
       .map((child) => {

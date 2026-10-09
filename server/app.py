@@ -1,13 +1,11 @@
 import logging.config
 
-from fastapi import FastAPI
-from fastapi.routing import APIRoute
-from starlette.middleware.cors import CORSMiddleware
+import platform
 
-from exports.router import exports_router
+from fastapi import FastAPI, Request
+from fastapi.routing import APIRoute
+
 from lifespan import lifespan
-from metrics.router import metrics_router
-from server_info.router import settings_router
 
 logger = logging.getLogger(__name__)
 
@@ -28,27 +26,22 @@ app = FastAPI(
     redoc_url=None,
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:8555",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:8555",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
 
 
-app.include_router(settings_router)
-app.include_router(metrics_router)
-app.include_router(exports_router)
+@app.get("/bridge/status")
+async def bridge_status(request: Request):
+    ingester = getattr(request.app.state, "ingester", None)
+    return {
+        "python_version": platform.python_version(),
+        "ingestion": {
+            "queue_size": ingester.queue.qsize() if ingester else 0,
+            "buffer_size": len(ingester._buffer) if ingester else 0,
+            "dropped_events": ingester._dropped_count if ingester else 0,
+            "events_ingested_total": ingester._stats_events_total if ingester else 0,
+            "flushes_total": ingester._stats_flushes_total if ingester else 0,
+        },
+    }
