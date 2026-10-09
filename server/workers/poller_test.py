@@ -1,6 +1,11 @@
 import asyncio
+import json
+from datetime import UTC, date, datetime
+from decimal import Decimal
+from unittest.mock import AsyncMock
 
 import pytest
+from celery import Celery
 from pytest_mock import MockerFixture
 
 from workers.poller import MISSED_POLLS_THRESHOLD, WorkerPoller, _inspect_sync
@@ -224,6 +229,36 @@ class TestWorkerPoller:
         poller._stop_event.set()
         # Should exit after one iteration since stop event is set
         await poller._poll_loop()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("section", ["active", "reserved", "scheduled"])
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (date(2026, 10, 6), "2026-10-06"),
+            (datetime(2026, 10, 6, 12, 34, tzinfo=UTC), "2026-10-06T12:34:00+00:00"),
+            (Decimal("1.50"), "1.50"),
+        ],
+    )
+    async def test_poll_serializes_dates_in_task_kwargs(
+        self, mock_db: AsyncMock, celery_app: Celery, mocker: MockerFixture, section: str, value: object, expected: str
+    ) -> None:
+        task = {"kwargs": {"start": value, "resource_id": 2, "enabled": True, "end": None}}
+        observed_task = {"request": task} if section == "scheduled" else task
+        mocker.patch("workers.poller.asyncio.to_thread", return_value={"worker1@host": {section: [observed_task]}})
+        mock_db.query.return_value = [[]]
+
+        await WorkerPoller(celery_app)._poll()
+
+        assert mock_db.query.call_count == 2
+        query, parameters = mock_db.query.call_args_list[0].args
+        assert "UPSERT" in query
+        serialized = json.loads(parameters["data"])
+        assert parameters["inspect_data"] == serialized
+        stored_task = serialized[section][0]
+        if section == "scheduled":
+            stored_task = stored_task["request"]
+        assert stored_task["kwargs"] == {"start": expected, "resource_id": 2, "enabled": True, "end": None}
 
 
 def test_inspection_sections_record_their_capture_time(mocker: MockerFixture):
