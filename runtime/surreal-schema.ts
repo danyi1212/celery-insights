@@ -25,6 +25,8 @@ function toSurrealStrand(value: string): string {
  * Fields and indexes use OVERWRITE to allow schema evolution.
  */
 export const CORE_SCHEMA = `
+DEFINE TABLE IF NOT EXISTS search_config SCHEMALESS PERMISSIONS FOR select FULL FOR create, update, delete NONE;
+
 DEFINE TABLE IF NOT EXISTS task SCHEMAFULL
   PERMISSIONS
     FOR select FULL
@@ -50,6 +52,7 @@ DEFINE FIELD OVERWRITE first_observed_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE had_error ON task TYPE bool DEFAULT false;
 DEFINE FIELD OVERWRITE args ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE kwargs ON task TYPE option<string>;
+DEFINE FIELD OVERWRITE kwargs_search_source ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE eta ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE expires ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE retries ON task TYPE option<int>;
@@ -195,11 +198,10 @@ const compareMaybeIsoAsc = (left: string | null, right: string | null) => {
 const datetimeToIso = (value: BackfillTaskRecord["sent_at"]): string | null =>
   typeof value === "string" ? value : (value?.toISOString() ?? null)
 
-async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
-  const [tasks] = await db.query<[BackfillTaskRecord[]]>("SELECT * FROM task").collect()
-  if (!Array.isArray(tasks) || tasks.length === 0) {
-    return
-  }
+export function planWorkflowBackfill(
+  tasks: BackfillTaskRecord[],
+): Array<{ sql: string; bindings: Record<string, unknown> }> {
+  const steps: Array<{ sql: string; bindings: Record<string, unknown> }> = []
 
   const workflowIdsByTask = new Map<string, string>()
   const summaries = new Map<string, WorkflowSummarySeed>()
@@ -252,19 +254,11 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
     summaries.set(workflowId, summary)
   }
 
-  const updates = Array.from(workflowIdsByTask.entries())
-  for (const chunkStart of Array.from({ length: Math.ceil(updates.length / 100) }, (_, index) => index * 100)) {
-    const chunk = updates.slice(chunkStart, chunkStart + 100)
-    await Promise.all(
-      chunk.map(([taskId, workflowId]) =>
-        db
-          .query("UPSERT type::record('task', $taskId) SET workflow_id = $workflowId", {
-            taskId,
-            workflowId,
-          })
-          .collect(),
-      ),
-    )
+  for (const [taskId, workflowId] of workflowIdsByTask) {
+    steps.push({
+      sql: "UPSERT type::record('task', $taskId) SET workflow_id = $workflowId",
+      bindings: { taskId, workflowId },
+    })
   }
 
   for (const [workflowId, summary] of summaries) {
@@ -279,9 +273,8 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
               ? "SUCCESS"
               : "PENDING"
 
-    await db
-      .query(
-        `UPSERT type::record('workflow', $workflowId) SET
+    steps.push({
+      sql: `UPSERT type::record('workflow', $workflowId) SET
                     root_task_id = $rootTaskId,
                     root_task_type = IF $rootTaskType = NULL THEN NONE ELSE $rootTaskType END,
                     aggregate_state = $aggregateState,
@@ -294,47 +287,43 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
                     active_count = $activeCount,
                     worker_count = $workerCount,
                     latest_exception_preview = IF $latestExceptionPreview = NULL THEN NONE ELSE $latestExceptionPreview END`,
-        {
-          workflowId,
-          rootTaskId: summary.rootTaskId,
-          rootTaskType: summary.rootTaskType,
-          aggregateState,
-          firstSeenAt: summary.firstSeenAt ?? summary.lastUpdated ?? new Date(0).toISOString(),
-          lastUpdated: summary.lastUpdated ?? summary.firstSeenAt ?? new Date(0).toISOString(),
-          taskCount: summary.taskCount,
-          completedCount: summary.completedCount,
-          failureCount: summary.failureCount,
-          retryCount: summary.retryCount,
-          activeCount: summary.activeCount,
-          workerCount: summary.workerIds.size,
-          latestExceptionPreview: summary.latestExceptionPreview,
-        },
-      )
-      .collect()
+      bindings: {
+        workflowId,
+        rootTaskId: summary.rootTaskId,
+        rootTaskType: summary.rootTaskType,
+        aggregateState,
+        firstSeenAt: summary.firstSeenAt ?? summary.lastUpdated ?? new Date(0).toISOString(),
+        lastUpdated: summary.lastUpdated ?? summary.firstSeenAt ?? new Date(0).toISOString(),
+        taskCount: summary.taskCount,
+        completedCount: summary.completedCount,
+        failureCount: summary.failureCount,
+        retryCount: summary.retryCount,
+        activeCount: summary.activeCount,
+        workerCount: summary.workerIds.size,
+        latestExceptionPreview: summary.latestExceptionPreview,
+      },
+    })
 
     const memberTaskIds = Array.from(workflowIdsByTask.entries())
       .filter(([, taskWorkflowId]) => taskWorkflowId === workflowId)
       .map(([taskId]) => taskId)
 
-    await Promise.all(
-      memberTaskIds.map((taskId) =>
-        db
-          .query(
-            `RELATE OR UPDATE (type::record('workflow', $workflowId))->(type::record('workflow_task', $edgeId))->(type::record('task', $taskId))`,
-            {
-              edgeId: `${workflowId}:${taskId}`,
-              workflowId,
-              taskId,
-            },
-          )
-          .collect(),
-      ),
-    )
+    for (const taskId of memberTaskIds) {
+      steps.push({
+        sql: `RELATE OR UPDATE (type::record('workflow', $workflowId))->(type::record('workflow_task', $edgeId))->(type::record('task', $taskId))`,
+        bindings: { edgeId: `${workflowId}:${taskId}`, workflowId, taskId },
+      })
+    }
   }
-
-  log.info(`Workflow backfill completed for ${summaries.size} workflows`)
+  return steps
 }
 
+async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
+  const [tasks] = await db.query<[BackfillTaskRecord[]]>("SELECT * FROM task").collect()
+  if (!Array.isArray(tasks) || !tasks.length) return
+  for (const step of planWorkflowBackfill(tasks)) await db.query(step.sql, step.bindings).collect()
+  log.info(`Workflow backfill completed for ${tasks.length} tasks`)
+}
 /**
  * Runs idempotent schema migration against SurrealDB using root credentials.
  *

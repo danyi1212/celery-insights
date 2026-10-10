@@ -10,6 +10,7 @@ from celery.backends.redis import RedisBackend
 from surrealdb.types import Value
 
 from events.ingester import TERMINAL_TASK_STATES_SQL, build_workflow_summary_recompute
+from tasks.task_search import kwargs_search_terms
 from surrealdb_client import get_db
 
 logger = logging.getLogger(__name__)
@@ -64,7 +65,7 @@ def _outcome_fill(field: str) -> str:
     return f"$meta_apply_state OR ($meta_previous.state = $state AND $meta_previous.{field} = NONE)"
 
 
-def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
+def _build_task_meta_upsert(task_id: str, meta: dict, *, search_indexing_enabled: bool = False) -> tuple[str, dict]:
     state = str(meta.get("status") or "PENDING")
     last_updated = meta.get("date_done")
     observed_at = datetime.now(tz=UTC).isoformat()
@@ -90,6 +91,8 @@ def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
             f"ELSE $meta_previous.{field} ?? ${field} END"
             for field in ("type", "args", "kwargs", "worker", "retries", "routing_key")
         ),
+        "kwargs_search_source = IF $kwargs != NONE AND ($meta_apply_state OR $meta_previous.kwargs = NONE) "
+        "THEN 'repr' ELSE $meta_previous.kwargs_search_source END",
         "workflow_id = $meta_previous.workflow_id ?? $workflow_id",
         "last_updated = IF $meta_apply_state THEN $meta_timestamp ELSE $meta_previous.last_updated END",
         "last_updated_observed = IF $meta_apply_state THEN $meta_observed "
@@ -161,6 +164,16 @@ def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
         f"ELSE $meta_previous.state NOT IN {TERMINAL_TASK_STATES_SQL} END; "
         f"UPSERT {target} SET {assignments}"
     )
+    if search_indexing_enabled and params["kwargs"] is not None:
+        terms = kwargs_search_terms(params["kwargs"], "repr")
+        params["search_terms"] = terms.terms
+        params["search_fallback"] = terms.fallback
+        query += (
+            "; IF $meta_previous.kwargs != $kwargs AND ($meta_apply_state OR $meta_previous.kwargs = NONE) "
+            "AND (SELECT VALUE enabled FROM search_config:current)[0] = true { "
+            "UPDATE type::record('task_search', $task_id) SET kwargs_terms = $search_terms, "
+            "kwargs_fallback = $search_fallback; }"
+        )
     return query, params
 
 
@@ -216,7 +229,8 @@ class ResultFetcher:
 class ResultBackendPoller:
     """Polls Redis result backend metadata to backfill tasks when task events are absent."""
 
-    def __init__(self, celery_app: Celery, interval_seconds: int = 2):
+    def __init__(self, celery_app: Celery, interval_seconds: int = 2, *, search_indexing_enabled: bool = False):
+        self.search_indexing_enabled = search_indexing_enabled
         self.celery_app = celery_app
         self.interval_seconds = interval_seconds
         self._seen: dict[str, str] = {}
@@ -263,7 +277,7 @@ class ResultBackendPoller:
             if self._seen.get(task_id) == stamp:
                 continue
 
-            query, params = _build_task_meta_upsert(task_id, meta)
+            query, params = _build_task_meta_upsert(task_id, meta, search_indexing_enabled=self.search_indexing_enabled)
             summary_query, summary_params = build_workflow_summary_recompute(
                 {"uuid": task_id, "timestamp": datetime.now(tz=UTC).timestamp()},
                 0,
