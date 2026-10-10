@@ -83,6 +83,7 @@ COPY ./server ./server
 COPY --from=front-build /app/dist ./dist
 COPY --from=front-build /app/bun-server.js ./bun-server.js
 COPY --from=front-build /app/config-cli.js ./config-cli.js
+COPY --from=front-build /app/runtime/search-index-schema.surql ./search-index-schema.surql
 
 # Set environment for production
 ENV NODE_ENV=production

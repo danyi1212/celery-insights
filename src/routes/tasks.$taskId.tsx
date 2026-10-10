@@ -113,7 +113,7 @@ const DeliveryPanel = ({ task }: { task: Task }) => (
     <div className="grid gap-2 p-3 md:grid-cols-2">
       <DetailItem label="Exchange" value={task.exchange || "---"} />
       <DetailItem label="Routing key" value={task.routing_key || "---"} />
-      <DetailItem label="Root task" value={task.root_id || task.id} />
+      <DetailItem label="Root task" value={task.root_id || task.workflow_id || task.id} />
       <DetailItem label="Parent task" value={task.parent_id || "---"} />
     </div>
   </Panel>

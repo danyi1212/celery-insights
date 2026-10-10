@@ -18,18 +18,12 @@ class TestLifespan:
             patch("lifespan.CeleryEventReceiver") as receiver_cls,
             patch("lifespan.SurrealDBIngester") as ingester_cls,
             patch("lifespan.WorkerPoller") as poller_cls,
-            patch("lifespan.CleanupJob") as cleanup_cls,
             patch("lifespan.ResultFetcher") as fetcher_cls,
             patch("lifespan.ResultBackendPoller") as result_backend_poller_cls,
-            patch("lifespan.FastAPICache"),
         ):
             settings = mock_settings_cls.return_value
             settings.timezone = "UTC"
             settings.ingestion_batch_interval_ms = 100
-            settings.cleanup_interval_seconds = 60
-            settings.task_max_count = None
-            settings.task_retention_hours = None
-            settings.dead_worker_retention_hours = 24
             settings.debug_snapshot_mode = False
 
             get_app.return_value = MagicMock()
@@ -44,9 +38,6 @@ class TestLifespan:
             poller_cls.return_value.start = MagicMock()
             poller_cls.return_value.stop = AsyncMock()
 
-            cleanup_cls.return_value.start = MagicMock()
-            cleanup_cls.return_value.stop = AsyncMock()
-
             fetcher_cls.return_value.fetch_and_store = AsyncMock()
             result_backend_poller_cls.return_value.start = MagicMock()
             result_backend_poller_cls.return_value.stop = AsyncMock()
@@ -60,8 +51,6 @@ class TestLifespan:
             self.ingester_cls = ingester_cls
             self.ingester = ingester_cls.return_value
             self.poller = poller_cls.return_value
-            self.cleanup_cls = cleanup_cls
-            self.cleanup = cleanup_cls.return_value
             self.fetcher_cls = fetcher_cls
             self.fetcher = fetcher_cls.return_value
             self.result_backend_poller = result_backend_poller_cls.return_value
@@ -84,14 +73,12 @@ class TestLifespan:
             self.ingester.start.assert_called_once()
             self.poller.start.assert_called_once()
             self.result_backend_poller.start.assert_called_once()
-            self.cleanup.start.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_shutdown_stops_services_and_closes_surrealdb(self):
         async with lifespan(self.mock_app):
             pass
 
-        self.cleanup.stop.assert_called_once()
         self.result_backend_poller.stop.assert_called_once()
         self.poller.stop.assert_called_once()
         self.ingester.stop.assert_called_once()
@@ -112,21 +99,6 @@ class TestLifespan:
             assert call_kwargs.kwargs["on_terminal"] is self.fetcher.fetch_and_store
 
     @pytest.mark.asyncio
-    async def test_cleanup_job_uses_settings(self):
-        async with lifespan(self.mock_app):
-            self.cleanup_cls.assert_called_once_with(
-                interval_seconds=self.settings.cleanup_interval_seconds,
-                task_max_count=self.settings.task_max_count,
-                task_retention_hours=self.settings.task_retention_hours,
-                dead_worker_retention_hours=self.settings.dead_worker_retention_hours,
-            )
-
-    @pytest.mark.asyncio
-    async def test_exposes_cleanup_job_on_app_state(self):
-        async with lifespan(self.mock_app):
-            assert self.mock_app.state.cleanup_job is self.cleanup
-
-    @pytest.mark.asyncio
     async def test_snapshot_mode_skips_celery_services(self):
         self.settings.debug_snapshot_mode = True
 
@@ -138,7 +110,5 @@ class TestLifespan:
         self.ingester.start.assert_not_called()
         self.poller.start.assert_not_called()
         self.result_backend_poller.start.assert_not_called()
-        self.cleanup.start.assert_not_called()
         self.result_backend_poller.stop.assert_not_called()
-        self.cleanup.stop.assert_not_called()
         assert self.mock_app.state.debug_snapshot_mode is True

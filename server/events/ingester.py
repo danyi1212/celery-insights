@@ -5,6 +5,7 @@ import re
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
+from tasks.task_search import kwargs_search_terms
 from surrealdb_client import get_db
 
 logger = logging.getLogger(__name__)
@@ -85,9 +86,12 @@ class SurrealDBIngester:
         queue: asyncio.Queue[dict],
         batch_interval_ms: int = 100,
         on_terminal: Callable[[list[str]], Awaitable[None]] | None = None,
+        *,
+        search_indexing_enabled: bool = False,
     ):
         self.queue = queue
         self.batch_interval_ms = batch_interval_ms
+        self.search_indexing_enabled = search_indexing_enabled
         self.on_terminal = on_terminal
         self._buffer: list[dict] = []
         self._has_terminal = False
@@ -167,7 +171,7 @@ class SurrealDBIngester:
             category = event_type.split("-", 1)[0] if "-" in event_type else ""
 
             if category == "task":
-                q, p = build_task_upsert(event, i)
+                q, p = build_task_upsert(event, i, search_indexing_enabled=self.search_indexing_enabled)
                 if q:
                     queries.append(q)
                     params.update(p)
@@ -262,7 +266,7 @@ class SurrealDBIngester:
         logger.info("SurrealDB ingester stopped")
 
 
-def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
+def build_task_upsert(event: dict, idx: int, *, search_indexing_enabled: bool = False) -> tuple[str, dict]:
     """Build a conditional UPSERT for a task event with out-of-order protection."""
     task_id = event.get("uuid")
     event_type = event.get("type", "")
@@ -294,7 +298,10 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
         f"first_observed_at = IF ${p}_previous.first_observed_at IS NONE"
         f" OR <datetime>${p}_ts < ${p}_previous.first_observed_at"
         f" THEN <datetime>${p}_ts ELSE ${p}_previous.first_observed_at END",
-        f"workflow_id = ${p}_workflow_id"
+        # The workflow follows root_id, so an older event can't regroup a task whose root is already known.
+        f"workflow_id = IF ${p}_previous.root_id IS NONE OR ${p}_previous.last_updated IS NONE"
+        f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
+        f" THEN ${p}_workflow_id ELSE ${p}_previous.workflow_id ?? ${p}_workflow_id END"
         if event.get("root_id")
         else f"workflow_id = ${p}_previous.workflow_id ?? ${p}_workflow_id",
     ]
@@ -307,8 +314,9 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
         if value is not None:
             pname = f"{p}_{db_field}"
             params[pname] = value if isinstance(value, int | float) else str(value)
+            # Result polling can observe a newer state before send/receive metadata arrives.
             set_clauses.append(
-                f"{db_field} = IF ${p}_previous.last_updated IS NONE"
+                f"{db_field} = IF ${p}_previous.{db_field} IS NONE OR ${p}_previous.last_updated IS NONE"
                 f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
                 f" THEN ${pname} ELSE ${p}_previous.{db_field} END"
             )
@@ -317,15 +325,42 @@ def build_task_upsert(event: dict, idx: int) -> tuple[str, dict]:
     if hostname:
         params[f"{p}_worker"] = hostname
         set_clauses.append(
-            f"worker = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts >= ${p}_previous.last_updated"
+            f"worker = IF ${p}_previous.worker IS NONE OR ${p}_previous.last_updated IS NONE"
+            f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
             f" THEN ${p}_worker ELSE ${p}_previous.worker END"
         )
 
+    if event.get("kwargs") is not None:
+        set_clauses.append(
+            f"kwargs_search_source = IF ${p}_previous.kwargs IS NONE OR ${p}_previous.last_updated IS NONE "
+            f"OR <datetime>${p}_ts >= ${p}_previous.last_updated "
+            f"THEN 'saferepr' ELSE ${p}_previous.kwargs_search_source END"
+        )
     target = f"type::record('task', ${p}_id)"
     assignments = ", ".join(set_clauses)
     # Read persisted values explicitly: UPSERT can evaluate against a creation
     # candidate, including multiple updates to the same task in one transaction.
     query = f"LET ${p}_previous = (SELECT * FROM {target})[0] ?? {{}}; UPSERT {target} SET {assignments}"
+    if search_indexing_enabled and event.get("kwargs") is not None:
+        terms = kwargs_search_terms(str(event["kwargs"]), "saferepr")
+        params[f"{p}_search_terms"] = terms.terms
+        params[f"{p}_search_fallback"] = terms.fallback
+        query += (
+            f"; IF ${p}_previous.kwargs != ${p}_kwargs AND (${p}_previous.kwargs IS NONE "
+            f"OR ${p}_previous.last_updated IS NONE "
+            f"OR <datetime>${p}_ts >= ${p}_previous.last_updated) "
+            "AND (SELECT VALUE enabled FROM search_config:current)[0] = true { "
+            f"UPDATE type::record('task_search', ${p}_id) SET kwargs_terms = ${p}_search_terms, "
+            f"kwargs_fallback = ${p}_search_fallback; }}"
+        )
+    if event.get("root_id"):
+        # Polling stores a task under its own id before ancestry arrives. Moving it to the real root
+        # leaves that workflow empty, so drop it rather than list a phantom single-task workflow.
+        query += (
+            f"; DELETE type::record('workflow', ${p}_previous.workflow_id ?? ${p}_workflow_id)"
+            f" WHERE ${p}_previous.workflow_id != NONE AND ${p}_previous.workflow_id != ${p}_workflow_id"
+            f" AND (SELECT VALUE id FROM task WHERE workflow_id = ${p}_previous.workflow_id LIMIT 1) = []"
+        )
     return query, params
 
 

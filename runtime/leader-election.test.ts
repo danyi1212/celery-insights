@@ -22,6 +22,7 @@ function createConfig(overrides: Partial<Config> = {}): Config {
     surrealdbDatabase: "main",
     surrealdbStorage: "memory",
     surrealdbPort: 8557,
+    searchIndexingEnabled: true,
     ingestionEnabled: true,
     ingestionLeaderElection: true,
     ingestionLockTtlSeconds: 30,

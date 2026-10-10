@@ -146,7 +146,13 @@ Or run them in separate terminals:
 
 > **Note:** All application settings are owned by Bun (`runtime/config.ts`) and passed to Python via environment variables. The Bun package root is the repository root, but the application source now lives at the repository root under `src/`, `runtime/`, and `e2e/`. When adding new configuration, define it in the Bun config schema first.
 
-### MCP development
+### Runtime ownership
+
+Bun serves application APIs, metrics, CSV exports, backups and retention/cleanup. Python handles Celery ingestion and polling through a Unix socket in an owner-only temporary directory created by Bun; it no longer listens on a public TCP port. `bun run dev:all` starts the Bun supervisor and Vite, and Vite proxies application traffic through Bun. Activate the Python virtual environment before starting the supervisor.
+
+Use `bun run test:observation` for native API acceptance with SurrealDB 3.3.0. The existing frontend login and MCP credentials remain supported until the authentication PR in this stack.
+
+## MCP development
 
 Bun serves MCP at `http://localhost:8555/mcp`. The Vite dev server on port 3000 does not serve
 the MCP endpoint. With SurrealDB and the Python ingester already running, start Bun against

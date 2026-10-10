@@ -317,6 +317,23 @@ Default: `100`
 
 How often non-terminal Celery events are flushed to SurrealDB, in milliseconds. Lower values produce fresher data with more writes. Terminal events are flushed immediately regardless of this interval.
 
+## Search indexing
+
+Default: `false`
+
+Enable to speed up task and workflow searches. It adds ingestion work, so keep it off if events are falling behind.
+
+```toml
+[search.indexing]
+enabled = true
+```
+
+Or set `CELERY_INSIGHTS_SEARCH_INDEXING_ENABLED=true` (alias: `SEARCH_INDEXING_ENABLED`). Restart to apply.
+
+Existing tasks are indexed automatically. Set `false` to remove the indexes at startup; search still works with indexing off.
+
+For a shared database, stop all instances, give them the same setting, and restart them together.
+
 ## Retention and cleanup
 
 Retention policies are enforced by the Python cleanup job rather than native SurrealDB TTL behavior.
@@ -352,45 +369,44 @@ How often the cleanup job evaluates and applies retention policies.
 ## TOML setting reference
 
 {/* BEGIN GENERATED CONFIG REFERENCE */}
-
-| TOML path                                          | Type              | Permanent env override                                 | Legacy alias                       |
-| -------------------------------------------------- | ----------------- | ------------------------------------------------------ | ---------------------------------- |
-| `server.port`                                      | number            | `CELERY_INSIGHTS_PORT`                                 | `PORT`                             |
-| `server.url_prefix`                                | string            | `CELERY_INSIGHTS_URL_PREFIX`                           | `URL_PREFIX`                       |
-| `mcp.token` / `_file`                              | string; sensitive | `CELERY_INSIGHTS_MCP_TOKEN` / `_FILE`                  | `MCP_TOKEN`                        |
-| `mcp.allowed_hosts`                                | string            | —                                                      | `MCP_ALLOWED_HOSTS`                |
-| `database.observation.url` / `_file`               | string; sensitive | `CELERY_INSIGHTS_DATABASE_URL` / `_FILE`               | `SURREALDB_URL`                    |
-| `database.observation.ingester_password` / `_file` | string; sensitive | `CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD` / `_FILE` | `SURREALDB_INGESTER_PASS`          |
-| `migration.legacy_frontend_password` / `_file`     | string; sensitive | —                                                      | `SURREALDB_FRONTEND_PASS`          |
-| `database.observation.namespace`                   | string            | —                                                      | `SURREALDB_NAMESPACE`              |
-| `database.observation.database`                    | string            | —                                                      | `SURREALDB_DATABASE`               |
-| `database.observation.embedded.storage`            | string            | `CELERY_INSIGHTS_DATABASE_STORAGE`                     | `SURREALDB_STORAGE`                |
-| `database.observation.embedded.port`               | number            | —                                                      | `SURREALDB_PORT`                   |
-| `ingestion.enabled`                                | boolean           | `CELERY_INSIGHTS_INGESTION_ENABLED`                    | `INGESTION_ENABLED`                |
-| `ingestion.leader_election.enabled`                | boolean           | —                                                      | `INGESTION_LEADER_ELECTION`        |
-| `ingestion.leader_election.ttl_seconds`            | number            | —                                                      | `INGESTION_LOCK_TTL_SECONDS`       |
-| `ingestion.leader_election.heartbeat_seconds`      | number            | —                                                      | `INGESTION_LOCK_HEARTBEAT_SECONDS` |
-| `retention.cleanup_interval_seconds`               | number            | —                                                      | `CLEANUP_INTERVAL_SECONDS`         |
-| `retention.tasks.max_count.value`                  | number            | —                                                      | `TASK_MAX_COUNT`                   |
-| `retention.tasks.max_age_hours.value`              | number            | —                                                      | `TASK_RETENTION_HOURS`             |
-| `retention.workers.max_age_hours.value`            | number            | —                                                      | `DEAD_WORKER_RETENTION_HOURS`      |
-| `ingestion.batch_interval_ms`                      | number            | —                                                      | `INGESTION_BATCH_INTERVAL_MS`      |
-| `celery.broker_url` / `_file`                      | string; sensitive | `CELERY_INSIGHTS_BROKER_URL` / `_FILE`                 | `BROKER_URL`                       |
-| `celery.result_backend` / `_file`                  | string; sensitive | `CELERY_INSIGHTS_RESULT_BACKEND` / `_FILE`             | `RESULT_BACKEND`                   |
-| `celery.legacy_python_config_file`                 | string            | —                                                      | `CONFIG_FILE`                      |
-| `diagnostics.replay_bundle_file`                   | string            | `CELERY_INSIGHTS_REPLAY_BUNDLE_FILE`                   | `DEBUG_BUNDLE_PATH`                |
-| `celery.timezone`                                  | string            | —                                                      | `TIMEZONE`                         |
-| `server.debug`                                     | boolean           | —                                                      | `DEBUG`                            |
-| `logging.format`                                   | string            | `CELERY_INSIGHTS_LOG_FORMAT`                           | `LOG_FORMAT`                       |
-| `logging.level`                                    | string            | `CELERY_INSIGHTS_LOG_LEVEL`                            | `LOG_LEVEL`                        |
-| `server.api.host`                                  | string            | —                                                      | `HOST`                             |
-| `server.api.port`                                  | number            | —                                                      | —                                  |
-| `installation.public_url`                          | string            | `CELERY_INSIGHTS_PUBLIC_URL`                           | —                                  |
-| `ui.demo_available`                                | boolean           | —                                                      | —                                  |
-| `ui.defaults.theme`                                | string            | —                                                      | —                                  |
-| `ui.defaults.hide_welcome_banner`                  | boolean           | —                                                      | —                                  |
-| `ui.defaults.raw_events_limit`                     | number            | —                                                      | —                                  |
+| TOML path | Type | Permanent env override | Legacy alias |
+| --- | --- | --- | --- |
+| `search.indexing.enabled` | boolean | `CELERY_INSIGHTS_SEARCH_INDEXING_ENABLED` | `SEARCH_INDEXING_ENABLED` |
+| `server.port` | number | `CELERY_INSIGHTS_PORT` | `PORT` |
+| `server.url_prefix` | string | `CELERY_INSIGHTS_URL_PREFIX` | `URL_PREFIX` |
+| `mcp.token` / `_file` | string; sensitive | `CELERY_INSIGHTS_MCP_TOKEN` / `_FILE` | `MCP_TOKEN` |
+| `mcp.allowed_hosts` | string | — | `MCP_ALLOWED_HOSTS` |
+| `database.observation.url` / `_file` | string; sensitive | `CELERY_INSIGHTS_DATABASE_URL` / `_FILE` | `SURREALDB_URL` |
+| `database.observation.ingester_password` / `_file` | string; sensitive | `CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD` / `_FILE` | `SURREALDB_INGESTER_PASS` |
+| `migration.legacy_frontend_password` / `_file` | string; sensitive | — | `SURREALDB_FRONTEND_PASS` |
+| `database.observation.namespace` | string | — | `SURREALDB_NAMESPACE` |
+| `database.observation.database` | string | — | `SURREALDB_DATABASE` |
+| `database.observation.embedded.storage` | string | `CELERY_INSIGHTS_DATABASE_STORAGE` | `SURREALDB_STORAGE` |
+| `database.observation.embedded.port` | number | — | `SURREALDB_PORT` |
+| `ingestion.enabled` | boolean | `CELERY_INSIGHTS_INGESTION_ENABLED` | `INGESTION_ENABLED` |
+| `ingestion.leader_election.enabled` | boolean | — | `INGESTION_LEADER_ELECTION` |
+| `ingestion.leader_election.ttl_seconds` | number | — | `INGESTION_LOCK_TTL_SECONDS` |
+| `ingestion.leader_election.heartbeat_seconds` | number | — | `INGESTION_LOCK_HEARTBEAT_SECONDS` |
+| `retention.cleanup_interval_seconds` | number | — | `CLEANUP_INTERVAL_SECONDS` |
+| `retention.tasks.max_count.value` | number | — | `TASK_MAX_COUNT` |
+| `retention.tasks.max_age_hours.value` | number | — | `TASK_RETENTION_HOURS` |
+| `retention.workers.max_age_hours.value` | number | — | `DEAD_WORKER_RETENTION_HOURS` |
+| `ingestion.batch_interval_ms` | number | — | `INGESTION_BATCH_INTERVAL_MS` |
+| `celery.broker_url` / `_file` | string; sensitive | `CELERY_INSIGHTS_BROKER_URL` / `_FILE` | `BROKER_URL` |
+| `celery.result_backend` / `_file` | string; sensitive | `CELERY_INSIGHTS_RESULT_BACKEND` / `_FILE` | `RESULT_BACKEND` |
+| `celery.legacy_python_config_file` | string | — | `CONFIG_FILE` |
+| `diagnostics.replay_bundle_file` | string | `CELERY_INSIGHTS_REPLAY_BUNDLE_FILE` | `DEBUG_BUNDLE_PATH` |
+| `celery.timezone` | string | — | `TIMEZONE` |
+| `server.debug` | boolean | — | `DEBUG` |
+| `logging.format` | string | `CELERY_INSIGHTS_LOG_FORMAT` | `LOG_FORMAT` |
+| `logging.level` | string | `CELERY_INSIGHTS_LOG_LEVEL` | `LOG_LEVEL` |
+| `server.api.host` | string | — | `HOST` |
+| `server.api.port` | number | — | — |
+| `installation.public_url` | string | `CELERY_INSIGHTS_PUBLIC_URL` | — |
+| `ui.demo_available` | boolean | — | — |
+| `ui.defaults.theme` | string | — | — |
+| `ui.defaults.hide_welcome_banner` | boolean | — | — |
+| `ui.defaults.raw_events_limit` | number | — | — |
 
 Additional keys: `schema_version`, `database.observation.mode`, each retention limit's `enabled`, and `celery.options` (data-only connection options). `SURREALDB_EXTERNAL_URL` is a special topology compatibility alias.
-
 {/* END GENERATED CONFIG REFERENCE */}

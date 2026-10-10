@@ -50,6 +50,9 @@ export const flatConfigSchema = z.object({
   taskRetentionHours: z.coerce.number().positive().optional(),
   deadWorkerRetentionHours: z.coerce.number().positive().nullable().optional().default(24),
 
+  // Search projections
+  searchIndexingEnabled: booleanFromEnv.default(false),
+
   // Ingestion performance
   ingestionBatchIntervalMs: z.coerce.number().int().positive().default(100),
 
@@ -109,6 +112,7 @@ export const ENV_KEY_MAP: Record<string, string> = {
   TASK_MAX_COUNT: "taskMaxCount",
   TASK_RETENTION_HOURS: "taskRetentionHours",
   DEAD_WORKER_RETENTION_HOURS: "deadWorkerRetentionHours",
+  SEARCH_INDEXING_ENABLED: "searchIndexingEnabled",
   INGESTION_BATCH_INTERVAL_MS: "ingestionBatchIntervalMs",
   BROKER_URL: "brokerUrl",
   RESULT_BACKEND: "resultBackend",

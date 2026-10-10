@@ -1,7 +1,13 @@
 import pytest
 from pytest_mock import MockerFixture
 
-from tasks.result_fetcher import RESULT_SIZE_LIMIT, ResultFetcher, _fetch_result_sync, _truncate_result
+from tasks.result_fetcher import (
+    RESULT_SIZE_LIMIT,
+    ResultFetcher,
+    _build_task_meta_upsert,
+    _fetch_result_sync,
+    _truncate_result,
+)
 
 
 class TestTruncateResult:
@@ -26,6 +32,24 @@ class TestTruncateResult:
         value, truncated = _truncate_result("")
         assert value == ""
         assert truncated is False
+
+
+class TestBuildTaskMetaUpsert:
+    @pytest.mark.parametrize("search_indexing_enabled", [False, True])
+    def test_missing_invocation_fields_keep_stored_values(self, *, search_indexing_enabled: bool):
+        query, params = _build_task_meta_upsert(
+            "x", {"status": "STARTED"}, search_indexing_enabled=search_indexing_enabled
+        )
+        for field in ("type", "args", "kwargs", "worker", "retries", "routing_key"):
+            assert params[field] is None
+            assert f"{field} = ${field} ?? $meta_previous.{field}" in query
+        assert "task_search" not in query
+
+    def test_extended_invocation_fields_are_written(self):
+        meta = {"status": "SUCCESS", "name": "t", "args": [1], "kwargs": {}, "retries": None, "queue": "q"}
+        _query, params = _build_task_meta_upsert("x", meta)
+        assert (params["type"], params["args"], params["kwargs"], params["retries"]) == ("t", "[1]", "{}", 0)
+        assert params["routing_key"] == "q"
 
 
 class TestFetchResultSync:

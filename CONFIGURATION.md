@@ -334,6 +334,23 @@ Default: `100`
 
 How often non-terminal Celery events are flushed to SurrealDB, in milliseconds. Lower values produce fresher data with more writes. Terminal events are flushed immediately regardless of this interval.
 
+## Search indexing
+
+Default: `false`
+
+Enable to speed up task and workflow searches. It adds ingestion work, so keep it off if events are falling behind.
+
+```toml
+[search.indexing]
+enabled = true
+```
+
+Or set `CELERY_INSIGHTS_SEARCH_INDEXING_ENABLED=true` (alias: `SEARCH_INDEXING_ENABLED`). Restart to apply.
+
+Existing tasks are indexed automatically. Set `false` to remove the indexes at startup; search still works with indexing off.
+
+For a shared database, stop all instances, give them the same setting, and restart them together.
+
 ## Retention and Cleanup
 
 Retention policies are enforced by the Python cleanup job rather than native SurrealDB TTL behavior.
