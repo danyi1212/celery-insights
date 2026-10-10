@@ -2,6 +2,73 @@ import { createTask } from "@test-fixtures"
 import { getFlowGraph } from "./flow-chart"
 
 describe("getFlowGraph", () => {
+  it("keeps nested channel and resource branches in separate rows", () => {
+    const tasks = [
+      createTask({ id: "root" }),
+      createTask({ id: "channel-meta", parent_id: "root" }),
+      createTask({ id: "channel-linkedin", parent_id: "root" }),
+      createTask({ id: "meta-resource-1", parent_id: "channel-meta" }),
+      createTask({ id: "meta-resource-2", parent_id: "channel-meta" }),
+      createTask({ id: "linkedin-resource-1", parent_id: "channel-linkedin" }),
+      createTask({ id: "linkedin-resource-2", parent_id: "channel-linkedin" }),
+      createTask({ id: "linkedin-resource-3", parent_id: "channel-linkedin" }),
+      createTask({ id: "linkedin-resource-4", parent_id: "channel-linkedin" }),
+      createTask({ id: "meta-hierarchy-1", parent_id: "meta-resource-1" }),
+      createTask({ id: "meta-hierarchy-2", parent_id: "meta-resource-2" }),
+      createTask({ id: "linkedin-hierarchy-1", parent_id: "linkedin-resource-1" }),
+      createTask({ id: "linkedin-hierarchy-2", parent_id: "linkedin-resource-2" }),
+      createTask({ id: "linkedin-hierarchy-3", parent_id: "linkedin-resource-3" }),
+      createTask({ id: "linkedin-hierarchy-4", parent_id: "linkedin-resource-4" }),
+      createTask({ id: "meta-finalize", parent_id: "meta-hierarchy-1" }),
+      createTask({ id: "linkedin-metrics-1", parent_id: "linkedin-hierarchy-1" }),
+      createTask({ id: "linkedin-conversions-1", parent_id: "linkedin-hierarchy-1" }),
+      createTask({ id: "linkedin-metrics-2", parent_id: "linkedin-hierarchy-2" }),
+      createTask({ id: "linkedin-conversions-2", parent_id: "linkedin-hierarchy-2" }),
+    ]
+
+    const { nodes, edges } = getFlowGraph(tasks, "root")
+    const columns = new Map<number, number[]>()
+    for (const node of nodes) {
+      const rows = columns.get(node.position.x) ?? []
+      rows.push(node.position.y)
+      columns.set(node.position.x, rows)
+    }
+
+    expect(nodes).toHaveLength(tasks.length)
+    for (const rows of columns.values()) {
+      rows.sort((first, second) => first - second)
+      for (let index = 1; index < rows.length; index++) {
+        expect(rows[index] - rows[index - 1]).toBeGreaterThanOrEqual(100)
+      }
+    }
+    expect(edges.filter((edge) => edge.target === "meta-finalize")).toMatchObject([
+      { source: "meta-hierarchy-1", target: "meta-finalize" },
+    ])
+  })
+
+  it("centers a parent between child subtrees of different sizes", () => {
+    const tasks = [
+      createTask({ id: "root" }),
+      createTask({ id: "branch-a", parent_id: "root" }),
+      createTask({ id: "branch-b", parent_id: "root" }),
+      createTask({ id: "leaf-a1", parent_id: "branch-a" }),
+      createTask({ id: "leaf-a2", parent_id: "branch-a" }),
+      createTask({ id: "leaf-a3", parent_id: "branch-a" }),
+      createTask({ id: "leaf-b", parent_id: "branch-b" }),
+    ]
+
+    const { nodes } = getFlowGraph(tasks, "root", { x: 2, y: 3 })
+    const root = nodes.find((node) => node.id === "root")!
+    const branchA = nodes.find((node) => node.id === "branch-a")!
+    const branchB = nodes.find((node) => node.id === "branch-b")!
+    const branchALeaves = nodes.filter((node) => node.id.startsWith("leaf-a"))
+    const branchBLeaf = nodes.find((node) => node.id === "leaf-b")!
+
+    expect(root.position).toEqual({ x: 360, y: 300 })
+    expect(root.position.y).toBe((branchA.position.y + branchB.position.y) / 2)
+    expect(Math.max(...branchALeaves.map((node) => node.position.y))).toBeLessThan(branchBLeaf.position.y)
+  })
+
   it("connects stored children when the child's parent metadata is missing", () => {
     const tasks = [
       createTask({ id: "root", children: ["channel"] }),
