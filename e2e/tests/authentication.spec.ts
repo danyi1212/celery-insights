@@ -74,6 +74,7 @@ test.describe("Browser login", () => {
       await expect(page.locator('[aria-label="Account"]')).toContainText("admin")
       await page.getByRole("button", { name: "Sign out", exact: true }).click()
       await expect(page).toHaveURL(appURL("/login") + "?reason=signed-out")
+      await expect(page.getByRole("status")).toHaveText("You have signed out of Celery Insights.")
       expect((await context.request.get(appURL("/api/auth/identity"))).status()).toBe(401)
     } finally {
       await context.close()

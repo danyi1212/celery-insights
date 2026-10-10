@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { LogOut, Loader2, UserRound } from "lucide-react"
+import { LogOut, Loader2, UserRound, RotateCw } from "lucide-react"
 import { SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@components/ui/sidebar"
 import { useIdentity } from "@hooks/use-identity"
 import { authenticatedFetch } from "@lib/authenticated-fetch"
@@ -44,17 +44,24 @@ export default function AccountFooter() {
           </p>
         </div>
       </div>
-      {isError && (
-        <button type="button" onClick={() => void refetch()} className="text-xs underline">
-          Retry account details
-        </button>
-      )}
       <SidebarMenu>
+        {isError && (
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => void refetch()}
+              tooltip="Retry account details"
+              aria-label="Retry account details"
+            >
+              <RotateCw aria-hidden="true" />
+              <span>Retry account details</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        )}
         <SidebarMenuItem>
           <SidebarMenuButton
             onClick={() => void signOut()}
             disabled={signingOut}
-            tooltip="Sign out"
+            tooltip={error || "Sign out"}
             aria-label={signingOut ? "Signing out…" : "Sign out"}
           >
             {signingOut ? <Loader2 className="animate-spin" aria-hidden="true" /> : <LogOut aria-hidden="true" />}
@@ -63,7 +70,7 @@ export default function AccountFooter() {
         </SidebarMenuItem>
       </SidebarMenu>
       {error && (
-        <p role="alert" className="px-2 text-xs text-destructive">
+        <p role="alert" className="px-2 text-xs text-destructive group-data-[collapsible=icon]:sr-only">
           {error}
         </p>
       )}
