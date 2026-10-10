@@ -59,7 +59,7 @@ const WorkflowActivityFeed = (props: Omit<PanelProps, "title">) => {
             {workflows.map((rawWorkflow) => {
               const workflow = parseWorkflow(rawWorkflow)
               const workflowTasks = (tasksByWorkflow.get(workflow.id) ?? []).sort(sortNotableTasks)
-              const visibleTasks = workflowTasks.slice(0, 5)
+              const visibleTasks = workflowTasks.slice(0, workflowTasks.length === 6 ? 6 : 5)
               const remainingTaskCount = Math.max(workflowTasks.length - visibleTasks.length, 0)
               const supportingStats = [
                 `${workflow.task_count} task${workflow.task_count === 1 ? "" : "s"}`,

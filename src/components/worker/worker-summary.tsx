@@ -34,7 +34,7 @@ const WorkerSummary: React.FC<WorkerSummaryProps> = ({ workerId }) => {
   if (worker === null) return <></>
 
   const workerDisplayId = extractId(worker.id)
-  const visibleTasks = taskStrip.slice(0, 8)
+  const visibleTasks = taskStrip.slice(0, taskStrip.length === 9 ? 9 : 8)
   const overflowCount = taskStrip.length - visibleTasks.length
 
   return (
