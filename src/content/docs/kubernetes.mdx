@@ -65,15 +65,24 @@ spec:
                 secretKeyRef:
                   name: celery-insights
                   key: surrealdb-ingester-pass
-            - name: SURREALDB_FRONTEND_PASS
+            - name: CELERY_INSIGHTS_SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: celery-insights-auth
+                  key: session-secret
+            - name: INSIGHTS_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: celery-insights
-                  key: surrealdb-frontend-pass
+                  key: admin-password
             - name: INGESTION_LEADER_ELECTION
               value: "true"
             - name: LOG_FORMAT
               value: "json"
+          volumeMounts:
+            - name: application-config
+              mountPath: /etc/celery-insights
+              readOnly: true
           readinessProbe:
             httpGet:
               path: /health
@@ -82,6 +91,25 @@ spec:
             httpGet:
               path: /health
               port: 8555
+      volumes:
+        - name: application-config
+          configMap:
+            name: celery-insights-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: celery-insights-config
+data:
+  config.toml: |
+    schema_version = 1
+    installation.public_url = "https://insights.example.com"
+    authentication.mode = "basic"
+    # Session secret comes from CELERY_INSIGHTS_SESSION_SECRET above.
+    [[authentication.accounts]]
+    username = "admin"
+    password_env = "INSIGHTS_ADMIN_PASSWORD"
+    roles = ["administrator"]
 ---
 apiVersion: v1
 kind: Service

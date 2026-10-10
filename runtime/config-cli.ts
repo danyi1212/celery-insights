@@ -11,6 +11,21 @@ import { configurationJsonSchema } from "./config-json-schema"
 export function exampleConfig(): string {
   return `schema_version = 1
 
+[installation]
+public_url = "https://insights.example.com"
+
+[authentication]
+mode = "basic"
+
+[authentication.session]
+secret_file = "/run/secrets/insights/session-secret"
+max_age_seconds = 28800
+
+[[authentication.accounts]]
+username = "admin"
+password_file = "/run/secrets/insights/admin-password"
+roles = ["administrator"]
+
 [server]
 port = 8555
 
@@ -46,7 +61,7 @@ export function configReference(): string {
     "| --- | --- | --- | --- |",
     ...SETTINGS.map(
       (setting) =>
-        `| \`${setting.path}\`${setting.secret ? " / `_file`" : ""} | ${setting.type}${setting.secret ? "; sensitive" : ""} | ${setting.env ? `\`${setting.env}\`${setting.secret ? " / `_FILE`" : ""}` : "—"} | ${setting.legacy ? `\`${setting.legacy}\`` : "—"} |`,
+        `| \`${setting.path}\`${setting.secret && setting.type === "string" ? " / `_file`" : ""} | ${setting.type}${setting.secret ? "; sensitive" : ""} | ${setting.env ? `\`${setting.env}\`${setting.secret ? " / `_FILE`" : ""}` : "—"} | ${setting.legacy ? `\`${setting.legacy}\`` : "—"} |`,
     ),
     "",
     "Additional keys: `schema_version`, `database.observation.mode`, each retention limit's `enabled`, and `celery.options` (data-only connection options). `SURREALDB_EXTERNAL_URL` is a special topology compatibility alias.",
@@ -103,13 +118,27 @@ function main(): void {
     const description = describeConfig(resolved)
     process.stdout.write("schema_version = 1\n")
     for (const setting of SETTINGS) {
-      if (resolved.provenance[setting.path]?.source === "default") continue
+      if (
+        ["authAccounts", "oidcRoleMappings"].includes(setting.key) ||
+        resolved.provenance[setting.path]?.source === "default"
+      )
+        continue
       const item = description[setting.path] as { value: unknown }
       if (setting.secret)
         process.stdout.write(`${setting.path}_file = "/run/secrets/insights/${setting.key}" # Supply the secret here\n`)
       else process.stdout.write(`${setting.path} = ${JSON.stringify(item.value)}\n`)
     }
     if (resolved.config.surrealdbExternalUrl) process.stdout.write('database.observation.mode = "external"\n')
+    for (const mapping of resolved.config.oidcRoleMappings) {
+      process.stdout.write(
+        `\n[[authentication.oidc.role_mappings]]\nclaim = ${JSON.stringify(mapping.claim)}\nvalue = ${JSON.stringify(mapping.value)}\nroles = ${JSON.stringify(mapping.roles)}\n`,
+      )
+    }
+    for (const account of resolved.config.authAccounts) {
+      process.stdout.write(
+        `\n[[authentication.accounts]]\nusername = ${JSON.stringify(account.username)}\nroles = ${JSON.stringify(account.roles)}\npassword_file = "/run/secrets/insights/account-${account.username}" # Supply the secret here\n`,
+      )
+    }
     return
   }
   if (command === "python") {

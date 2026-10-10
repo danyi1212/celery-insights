@@ -131,6 +131,8 @@ jobs:
         run: bun run test
       - name: Bun observation API acceptance
         run: bun run test:observation
+      - name: Bun configured-account acceptance
+        run: bun run test:security
 
   e2e:
     name: E2E tests (${{ matrix.deployment.name }})
@@ -177,6 +179,11 @@ jobs:
         env:
           CI: "true"
           E2E_SKIP_BUILD: "1"
+      - name: OIDC HTTPS browser acceptance
+        run: |
+          oidc_fixture_dir=$(mktemp -d)
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -addext subjectAltName=DNS:localhost,IP:127.0.0.1 -keyout "$oidc_fixture_dir/key.pem" -out "$oidc_fixture_dir/certificate.pem"
+          NODE_EXTRA_CA_CERTS="$oidc_fixture_dir/certificate.pem" OIDC_FIXTURE_CERT="$oidc_fixture_dir/certificate.pem" OIDC_FIXTURE_KEY="$oidc_fixture_dir/key.pem" bun run tooling/verify-oidc.ts
       - name: Publish Playwright summary
         uses: daun/playwright-report-summary@v4.1.0
         if: always() && hashFiles('playwright-report/results.json') != ''

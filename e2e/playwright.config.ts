@@ -24,6 +24,7 @@ export default defineConfig({
     : [["html", { outputFolder: "../playwright-report" }]],
   use: {
     baseURL: appBaseURL,
+    ignoreHTTPSErrors: true,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "on-first-retry",

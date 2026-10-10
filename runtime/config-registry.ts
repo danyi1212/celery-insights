@@ -2,7 +2,7 @@
 export interface Setting {
   path: string
   key: string
-  type: "string" | "number" | "boolean"
+  type: "string" | "number" | "boolean" | "object"
   env?: string
   legacy?: string
   secret?: boolean
@@ -26,10 +26,10 @@ export const SETTINGS: readonly Setting[] = [
     legacy: "URL_PREFIX",
   },
   {
-    path: "mcp.token",
-    key: "mcpToken",
+    path: "mcp.cursor_secret",
+    key: "mcpCursorSecret",
     type: "string",
-    env: "CELERY_INSIGHTS_MCP_TOKEN",
+    env: "CELERY_INSIGHTS_MCP_CURSOR_SECRET",
     legacy: "MCP_TOKEN",
     secret: true,
   },
@@ -48,13 +48,6 @@ export const SETTINGS: readonly Setting[] = [
     type: "string",
     env: "CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD",
     legacy: "SURREALDB_INGESTER_PASS",
-    secret: true,
-  },
-  {
-    path: "migration.legacy_frontend_password",
-    key: "surrealdbFrontendPass",
-    type: "string",
-    legacy: "SURREALDB_FRONTEND_PASS",
     secret: true,
   },
   { path: "database.observation.namespace", key: "surrealdbNamespace", type: "string", legacy: "SURREALDB_NAMESPACE" },
@@ -159,4 +152,25 @@ export const SETTINGS: readonly Setting[] = [
   { path: "ui.defaults.theme", key: "uiTheme", type: "string" },
   { path: "ui.defaults.hide_welcome_banner", key: "uiHideWelcomeBanner", type: "boolean" },
   { path: "ui.defaults.raw_events_limit", key: "uiRawEventsLimit", type: "number" },
+  {
+    path: "authentication.session.secret",
+    key: "authSessionSecret",
+    type: "string",
+    secret: true,
+    env: "CELERY_INSIGHTS_SESSION_SECRET",
+  },
+  { path: "authentication.session.max_age_seconds", key: "authSessionSeconds", type: "number" },
+  { path: "authentication.oidc.issuer", key: "oidcIssuer", type: "string" },
+  { path: "authentication.oidc.client_id", key: "oidcClientId", type: "string" },
+  {
+    path: "authentication.oidc.client_secret",
+    key: "oidcClientSecret",
+    type: "string",
+    secret: true,
+    env: "CELERY_INSIGHTS_OIDC_CLIENT_SECRET",
+  },
+  { path: "authentication.oidc.scopes", key: "oidcScopes", type: "string" },
+  { path: "authentication.oidc.role_mappings", key: "oidcRoleMappings", type: "object" },
+  { path: "authentication.mode", key: "authMode", type: "string" },
+  { path: "authentication.accounts", key: "authAccounts", type: "object", secret: true },
 ]

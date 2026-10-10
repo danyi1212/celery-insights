@@ -5,11 +5,12 @@ These are the operational behaviors most likely to matter once the app is behind
 - Prefer external SurrealDB before introducing multiple replicas, HPA, or rolling updates.
 - Keep the app and workers on a network path that can reach the broker and result backend directly.
 - Enable Celery task events on every worker pool you want represented in the UI.
-- Change the default ingester password and add a frontend password on shared or public networks.
+- Change the default ingester password, configure explicit application accounts, and terminate HTTPS at private ingress.
 
 ## Health, metrics, and scrape targets
 
 - Use `/health` for liveness and readiness checks.
+- Configure Prometheus `basic_auth` with an explicit account permitted to read metrics.
 - Prometheus scrape targets are `/metrics`, `/metrics/verbose`, and `/metrics/system` depending on the level of detail you want.
 - Verbose metrics add label cardinality, so scrape them less frequently than the core endpoint.
 
@@ -18,12 +19,12 @@ These are the operational behaviors most likely to matter once the app is behind
 - Bun is the single entrypoint: it serves the SPA and proxies `/api`, `/metrics`, and `/surreal/*` internally.
 - Set [`URL_PREFIX`](/documentation/configuration#url_prefix) for a shared path such as `/tools/celery/`; preserve that prefix in proxy forwarding and enable WebSocket upgrades.
 - The built-in proxy is HTTP-only. Terminate TLS in your ingress, load balancer, or edge proxy.
-- If you expose the app publicly, prefer the frontend password and keep internal SurrealDB endpoints private.
+- Configure explicit application accounts, serve HTTPS, and keep Bun and SurrealDB endpoints private behind ingress.
 
 ## Security defaults to override
 
 - Change `SURREALDB_INGESTER_PASS` in every non-local deployment.
-- Set `SURREALDB_FRONTEND_PASS` when the dashboard is not on a fully trusted network.
+- Configure password accounts or OIDC with explicit role mappings in TOML, and a shared `authentication.session.secret` on every replica. Keep Bun/database listeners inaccessible outside the ingress; roll out every replica when credentials change.
 - Store `BROKER_URL`, `RESULT_BACKEND`, and any config-file secrets in your secret manager rather than baking them into images.
 
 ## Incident capture and replay

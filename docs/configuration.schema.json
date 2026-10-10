@@ -63,11 +63,11 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "token": {
+        "cursor_secret": {
           "type": "string",
           "minLength": 1
         },
-        "token_file": {
+        "cursor_secret_file": {
           "type": "string",
           "minLength": 1
         },
@@ -135,20 +135,6 @@
               ]
             }
           }
-        }
-      }
-    },
-    "migration": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "legacy_frontend_password": {
-          "type": "string",
-          "minLength": 1
-        },
-        "legacy_frontend_password_file": {
-          "type": "string",
-          "minLength": 1
         }
       }
     },
@@ -358,6 +344,162 @@
               "exclusiveMinimum": 0,
               "maximum": 9007199254740991
             }
+          }
+        }
+      }
+    },
+    "authentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "session": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "secret": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "secret_file": {
+              "type": "string",
+              "minLength": 1
+            },
+            "max_age_seconds": {
+              "default": 28800,
+              "type": "integer",
+              "minimum": 300,
+              "maximum": 86400
+            }
+          }
+        },
+        "oidc": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "issuer": {
+              "type": "string",
+              "format": "uri"
+            },
+            "client_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "client_secret": {
+              "type": "string",
+              "minLength": 1
+            },
+            "client_secret_file": {
+              "type": "string",
+              "minLength": 1
+            },
+            "scopes": {
+              "default": "openid profile",
+              "type": "string"
+            },
+            "role_mappings": {
+              "default": [],
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "claim": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]+$"
+                  },
+                  "value": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "roles": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "viewer",
+                        "operator",
+                        "administrator"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "claim",
+                  "value",
+                  "roles"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "mode": {
+          "default": "basic",
+          "type": "string",
+          "enum": [
+            "basic",
+            "oidc"
+          ]
+        },
+        "accounts": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "username": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"
+              },
+              "password": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              "roles": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "viewer",
+                    "operator",
+                    "administrator"
+                  ]
+                }
+              },
+              "password_file": {
+                "type": "string",
+                "minLength": 1
+              },
+              "password_env": {
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+              }
+            },
+            "required": [
+              "username",
+              "roles"
+            ],
+            "additionalProperties": false,
+            "oneOf": [
+              {
+                "required": [
+                  "password"
+                ]
+              },
+              {
+                "required": [
+                  "password_file"
+                ]
+              },
+              {
+                "required": [
+                  "password_env"
+                ]
+              }
+            ]
           }
         }
       }

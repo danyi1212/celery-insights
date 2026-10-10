@@ -285,3 +285,8 @@ describe("RetentionPolicyPanel", () => {
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 })
+
+// Session/CSRF transport is exercised by authenticated-fetch.test.ts.
+vi.mock("@lib/authenticated-fetch", () => ({
+  authenticatedFetch: (url: string, options?: RequestInit) => fetch(url, options),
+}))

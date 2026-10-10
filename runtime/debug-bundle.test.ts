@@ -172,5 +172,5 @@ INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
 })
 
 it("redacts the MCP token in diagnostic bundles", () => {
-  expect(redactConfig(parseConfig({ MCP_TOKEN: "private-token" }), false).mcpToken).toBe("***REDACTED***")
+  expect(redactConfig(parseConfig({ MCP_TOKEN: "private-token" }), false).mcpCursorSecret).toBe("***REDACTED***")
 })

@@ -131,24 +131,6 @@ DEFINE FIELD OVERWRITE heartbeat ON ingestion_lock TYPE datetime;
 DEFINE FIELD OVERWRITE ttl_seconds ON ingestion_lock TYPE int DEFAULT 30;
 `
 
-/**
- * Frontend authentication schema — viewer table and record access method.
- * Only applied when SURREALDB_FRONTEND_PASS is configured.
- */
-export const FRONTEND_AUTH_SCHEMA = `
-DEFINE TABLE IF NOT EXISTS viewer SCHEMAFULL
-  PERMISSIONS NONE;
-
-DEFINE FIELD OVERWRITE name ON viewer TYPE string;
-DEFINE FIELD OVERWRITE pass ON viewer TYPE string;
-
-DEFINE ACCESS OVERWRITE frontend ON DATABASE TYPE RECORD
-  SIGNUP NONE
-  SIGNIN (
-    SELECT * FROM viewer WHERE name = $name AND crypto::argon2::compare(pass, $pass)
-  );
-`
-
 interface BackfillTaskRecord {
   id: string | { toString(): string }
   type?: string | null
@@ -378,21 +360,10 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
     // anonymous (unauthenticated) connections cannot query anything.
     await db.query(`DEFINE USER OVERWRITE viewer ON DATABASE PASSWORD 'viewer' ROLES VIEWER`).collect()
 
-    // Conditional frontend auth setup (password-protected access)
-    if (config.surrealdbFrontendPass) {
-      await db.query(FRONTEND_AUTH_SCHEMA).collect()
-      await db
-        .query(`UPSERT viewer:frontend SET name = 'frontend', pass = crypto::argon2::generate($pass)`, {
-          pass: config.surrealdbFrontendPass,
-        })
-        .collect()
-      log.info("Schema migration completed (frontend auth enabled)")
-    } else {
-      // Clean up frontend auth if previously configured
-      await db.query(`REMOVE ACCESS IF EXISTS frontend ON DATABASE`).collect()
-      await db.query(`REMOVE TABLE IF EXISTS viewer`).collect()
-      log.info("Schema migration completed (anonymous access via viewer user)")
-    }
+    // Retire the old database-level application login records.
+    await db.query(`REMOVE ACCESS IF EXISTS frontend ON DATABASE`).collect()
+    await db.query(`REMOVE TABLE IF EXISTS viewer`).collect()
+    log.info("Schema migration completed (Bun-authorized viewer transport)")
   } finally {
     await db.close()
   }

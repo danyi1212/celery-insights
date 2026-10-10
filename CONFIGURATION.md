@@ -1,3 +1,25 @@
+## Application authentication
+
+Mount a TOML configuration selected by `CELERY_INSIGHTS_CONFIG_FILE`. Configure HTTPS ingress and explicit password accounts (or an external OIDC provider):
+
+```toml
+schema_version = 1
+installation.public_url = "https://insights.example.com"
+authentication.mode = "basic"
+authentication.session.secret_file = "/run/secrets/insights/session-secret"
+
+[[authentication.accounts]]
+username = "admin"
+password_env = "INSIGHTS_ADMIN_PASSWORD"
+roles = ["administrator"]
+```
+
+For each account choose exactly one of `password`, `password_file`, or `password_env`. Inline passwords require treating the TOML as a secret. File references resolve relative to TOML and lose one terminal newline. Missing/empty secrets, conflicting sources, duplicates and invalid roles fail validation without revealing values. No default account or password exists. Mount files from Kubernetes Secrets or inject the referenced variable using `secretKeyRef`; the application has no Kubernetes dependency.
+
+Keep Bun/database listeners private behind HTTPS ingress, and preserve Authorization/Origin. Roll out all replicas after changing credentials or roles. Browsers use a login page, encrypted HttpOnly cookies and application logout. Supply the same 32-byte base64url session secret on all replicas; generate it with `openssl rand -base64 32 | tr "+/" "-_" | tr -d "=\n"`. Session expiry defaults to eight hours. Logout clears the local cookie; copied cookies remain valid until expiry or configuration/secret rotation. OIDC discovery, PKCE and token validation use `openid-client`; configure explicit claim-to-role mappings and register the exact `/api/auth/callback` URL, including any URL prefix. See [the complete password/OIDC guide](src/content/docs/configuration.mdx#openid-connect). The IdP owns MFA, recovery and account lifecycle. Explicit Basic headers remain for programmatic clients in password mode; IdP bearer-token authentication for MCP is not supported.
+
+Roles are `viewer`, `operator`, and `administrator`. Current RPC/MCP payload access requires administrator permissions; restricted-role UI browsing awaits typed reads. Account secrets never enter Python, diagnostics, config output or observation backups.
+
 # Configuration
 
 Celery Insights is configured through environment variables passed to the container entrypoint. The settings panel inside the app covers UI preferences and some local behavior, but the variables below control Celery connectivity, storage, ingestion, cleanup, and logs.
@@ -12,7 +34,7 @@ If you only need the minimum set of values, start with one of these combinations
 
 - Local or disposable run: set `BROKER_URL` and `RESULT_BACKEND`, then leave the embedded SurrealDB on its default `memory` storage.
 - Durable single node: add `SURREALDB_STORAGE=rocksdb:///data/surreal` and mount `/data`.
-- HA or Kubernetes: use `SURREALDB_EXTERNAL_URL`, keep `INGESTION_LEADER_ELECTION=true`, and set both `SURREALDB_INGESTER_PASS` and `SURREALDB_FRONTEND_PASS`.
+- HA or Kubernetes: use `SURREALDB_EXTERNAL_URL`, keep `INGESTION_LEADER_ELECTION=true`, set `SURREALDB_INGESTER_PASS`, and configure the same explicit application accounts on all replicas.
 
 ## Quick Reference
 
@@ -26,72 +48,29 @@ If you only need the minimum set of values, start with one of these combinations
 
 ### Security
 
-[`SURREALDB_INGESTER_PASS`](#surrealdb_ingester_pass) · [`SURREALDB_FRONTEND_PASS`](#surrealdb_frontend_pass) · [`MCP_TOKEN`](#mcp_token) · [`MCP_ALLOWED_HOSTS`](#mcp_allowed_hosts) · [`LOG_FORMAT`](#log_format)
+[`SURREALDB_INGESTER_PASS`](#surrealdb_ingester_pass) · [`MCP cursor signing`](#mcp-cursor-signing) · [`MCP_ALLOWED_HOSTS`](#mcp_allowed_hosts) · [`LOG_FORMAT`](#log_format)
 
 ## MCP access for agents
 
-Start Celery Insights, then connect your agent to `http://localhost:8555/mcp`.
-**Authentication is off by default**, just like the dashboard. No token or header is needed
-unless you set `MCP_TOKEN` or `SURREALDB_FRONTEND_PASS`.
+Bun serves the read-only MCP endpoint at `/mcp`, under any configured URL prefix. It uses the same configured-account authentication and payload permissions as the dashboard. There is no independent bearer-token login or anonymous fallback.
 
-For Claude Code, run:
+Configure a client capable of supplying these headers over HTTPS:
 
-```shell
-claude mcp add --transport http celery-insights http://localhost:8555/mcp
+```text
+Authorization: Basic BASE64_OF_USERNAME_COLON_PASSWORD
+Origin: https://insights.example.com
+X-Celery-Insights-Request: 1
 ```
 
-For Codex, run:
+Keep credentials in the client's secret configuration, not a committed file. The current MCP payload transport requires administrator grants. The endpoint accepts POST requests without MCP sessions/SSE. Exact Origin, host validation and the custom mutation header remain enforced.
 
-```shell
-codex mcp add celery-insights --url http://localhost:8555/mcp
-```
+### MCP cursor signing
 
-For Cursor, add this to `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` for all projects:
-
-```json
-{
-  "mcpServers": {
-    "celery-insights": {
-      "url": "http://localhost:8555/mcp"
-    }
-  }
-}
-```
-
-Restart your agent session after configuring it. See the running app's
-[MCP Interface guide](http://localhost:8555/documentation/mcp) for connection checks,
-[optional authentication](http://localhost:8555/documentation/mcp#optional-authentication),
-and troubleshooting recipes. Client configuration details are documented by
-[Claude Code](https://code.claude.com/docs/en/mcp), [Codex](https://developers.openai.com/codex/mcp),
-and [Cursor](https://cursor.com/docs/mcp).
-
-To enable authentication, set `MCP_TOKEN` in your deployment and restart Celery Insights.
-Send it as `Authorization: Bearer YOUR_MCP_TOKEN` from the agent. If dashboard protection is already
-enabled with `SURREALDB_FRONTEND_PASS` and you do not set `MCP_TOKEN`, use the dashboard password
-as the bearer token. Setting `MCP_TOKEN` overrides that fallback for MCP and does not enable dashboard
-authentication. See the in-app guide above for the exact authenticated configuration for each agent.
-
-The endpoint accepts POST requests and does not maintain sessions or provide an SSE stream.
-For load-balanced deployments, configure the same MCP token or dashboard password across replicas
-so pagination cursors remain valid across instances. An unprotected instance with default database
-credentials uses a random cursor secret, so its cursors expire on restart.
-
-#### MCP_TOKEN
-
-Default: `SURREALDB_FRONTEND_PASS` when configured, otherwise no token.
-
-Bearer credential for MCP access. Set it to use a separate credential for agents. MCP uses this
-token when configured; otherwise it requires the dashboard password when dashboard protection
-is enabled. The token is redacted from debug bundles.
+`mcp.cursor_secret` (or `mcp.cursor_secret_file`) and `CELERY_INSIGHTS_MCP_CURSOR_SECRET` (or `_FILE`) configure pagination signing only; they do not authenticate clients. The legacy `MCP_TOKEN` alias is deprecated and now supplies the cursor secret. Authentication always requires configured accounts. Set one signing secret across replicas so cursors survive load balancing; otherwise Bun derives it from the ingester credential or generates a process-local key.
 
 #### MCP_ALLOWED_HOSTS
 
-Default: `localhost,127.0.0.1,[::1]`.
-
-Comma-separated hostnames accepted by the MCP endpoint. Use hostnames without schemes, paths,
-or ports, for example `insights.example.com,localhost`. Configure the public hostname when accessing
-MCP through a reverse proxy. Requests carrying an Origin must match the requested URL's origin.
-The host allowlist also limits DNS rebinding exposure for local deployments.
+Default: `localhost,127.0.0.1,[::1]`. Comma-separated allowed MCP hostnames without schemes, paths or ports. Include your public hostname for ingress access. Origin must match `installation.public_url`.
 
 ## Hosting under a shared reverse proxy
 
@@ -247,17 +226,9 @@ Password for the `ingester` database user. The Python ingester uses this credent
 
 Change this in every non-local deployment.
 
-#### SURREALDB_FRONTEND_PASS
+#### SURREALDB_FRONTEND_PASS (retired)
 
-Default: _(not set)_
-
-Optional dashboard password. When set, the frontend requires login and authenticates as a read-only database user. When unset, the dashboard connects anonymously with read-only access.
-
-## Debug Bundles and Snapshot Replay
-
-Operators usually create the bundle from **Settings** -> **Download diagnostics**. The generated `debug bundle v2` captures effective config, runtime diagnostics, recent Bun/Python/SurrealDB logs, and a full SurrealDB export of `task`, `event`, and `worker`.
-
-Secrets are redacted by default. Leave them redacted for bug reports unless someone investigating the issue explicitly needs the exact credentials.
+This frontend-only password setting is rejected. Configure explicit accounts in TOML instead; the old database login dialog and browser tokens have been removed.
 
 #### DEBUG_BUNDLE_PATH
 

@@ -13,7 +13,8 @@ import { randomBytes } from "node:crypto"
 import { Surreal } from "surrealdb"
 import { createCeleryBridge } from "./runtime/celery-bridge"
 import { ObservationApi } from "./runtime/observation-api"
-import { HttpError } from "./runtime/http-error"
+import { initializeAuthentication, secureApplicationRequest } from "./runtime/security/http"
+import { authorize, payloadPermissions } from "./runtime/security/permissions"
 import type { Config } from "./runtime/config"
 import { resolveConfig } from "./runtime/config-loader"
 import { pythonConfig, pythonEnvironment } from "./runtime/python-config"
@@ -124,6 +125,7 @@ let pythonProcess: ChildProcess | null = null
 let searchIndexes: SearchIndexes | null = null
 let leaderElection: LeaderElection | null = null
 let mcpDb: Surreal | null = null
+let authentication: Awaited<ReturnType<typeof initializeAuthentication>> | null = null
 let cleanupTimer: ReturnType<typeof setTimeout> | null = null
 let ingestionStatus: IngestionStatus = "disabled"
 let shuttingDown = false
@@ -137,6 +139,9 @@ registerLogSink("bun", (line) => bunLogBuffer.add(line))
 registerLogSink("surrealdb", (line) => surrealLogBuffer.add(line))
 
 const REQUEST_HOP_BY_HOP_HEADERS = new Set([
+  "authorization",
+  "cookie",
+  "x-celery-insights-request",
   "connection",
   "content-length",
   "host",
@@ -510,6 +515,13 @@ try {
 
 searchIndexes = await startSearchIndexes(db, runtimeConfig)
 
+try {
+  authentication = resolvedConfig.authentication ? initializeAuthentication(resolvedConfig.authentication) : null
+} catch {
+  bunLogger.error("Authentication initialization failed")
+  await shutdown("startup failure", 1)
+}
+
 if (replaySnapshot) {
   if (replaySnapshot.sourceDataSqlPath) {
     await importSurrealNative(runtimeConfig, db, replaySnapshot.sourceDataSqlPath)
@@ -557,15 +569,14 @@ await mcpDb.connect(runtimeConfig.surrealdbUrl, {
   },
 })
 const mcpCursorCredential =
-  runtimeConfig.mcpToken ??
-  runtimeConfig.surrealdbFrontendPass ??
+  runtimeConfig.mcpCursorSecret ??
   (runtimeConfig.surrealdbIngesterPass !== "changeme"
     ? runtimeConfig.surrealdbIngesterPass
     : randomBytes(32).toString("hex"))
 const handleMcp = createMcpHandler({
+  publicOrigin: resolvedConfig.authentication?.public_origin,
   db: mcpDb,
   cursorSecret: `${mcpCursorCredential}:${runtimeConfig.surrealdbNamespace}:${runtimeConfig.surrealdbDatabase}`,
-  token: runtimeConfig.mcpToken ?? runtimeConfig.surrealdbFrontendPass,
   allowedHosts: runtimeConfig.mcpAllowedHosts?.split(",").map((host) => host.trim()),
   mode: () => (replaySnapshot ? "snapshot" : runtimeConfig.ingestionEnabled ? "live" : "ingestion_disabled"),
 })
@@ -581,10 +592,24 @@ async function periodicCleanup() {
   if (!shuttingDown) cleanupTimer = setTimeout(periodicCleanup, observationApi.cleanupInterval())
 }
 cleanupTimer = setTimeout(periodicCleanup, observationApi.cleanupInterval())
+async function validateLiveAccount(ws: any): Promise<boolean> {
+  try {
+    const principal = ws.data.authRequest
+      ? await authentication?.authenticate(ws.data.authRequest)
+      : await authentication?.accountPrincipal(ws.data.account ?? "")
+    if (!principal) throw new Error("Account required")
+    authorize(principal, payloadPermissions, Boolean(replaySnapshot))
+    return true
+  } catch {
+    ws.close(1008, "Account unavailable")
+    ws._backendWs?.close()
+    return false
+  }
+}
 const server = Bun.serve({
   port: runtimeConfig.port,
   async fetch(req: Request, server: any) {
-    try {
+    return secureApplicationRequest(req, runtimeConfig.urlPrefix, authentication, Boolean(replaySnapshot), async () => {
       const url = new URL(req.url)
       const { httpBase: surrealHttpBase } = getSurrealBases(runtimeConfig)
 
@@ -612,6 +637,10 @@ const server = Bun.serve({
             targetPath: surrealPath + url.search,
             backend: "surreal" as const,
             protocols: req.headers.get("sec-websocket-protocol") ?? undefined,
+            account: authentication!.principal(req).account_id,
+            authRequest: req.headers.has("cookie")
+              ? new Request(req.url, { headers: { cookie: req.headers.get("cookie")! } })
+              : undefined,
           },
         })
         if (success) return undefined
@@ -620,10 +649,7 @@ const server = Bun.serve({
 
       // Bun-served endpoint: frontend configuration
       if (url.pathname === "/api/config") {
-        const authRequired =
-          runtimeConfig.surrealdbFrontendPass !== null && runtimeConfig.surrealdbFrontendPass !== undefined
         return Response.json({
-          authRequired,
           ui: {
             demoAvailable: runtimeConfig.demoAvailable ?? true,
             theme: runtimeConfig.uiTheme,
@@ -633,17 +659,11 @@ const server = Bun.serve({
           surrealPath: `${runtimeConfig.urlPrefix}/surreal/rpc`,
           ingestionStatus: leaderElection?.status ?? ingestionStatus,
           debugSnapshot: getSnapshotSummary(replaySnapshot),
-          // When auth is not required, pass viewer credentials so the frontend
-          // can authenticate as a read-only DB user. SurrealDB requires
-          // authentication even for tables with FULL select permissions.
-          ...(authRequired
-            ? {}
-            : {
-                viewerUser: "viewer",
-                viewerPass: "viewer",
-                viewerNs: runtimeConfig.surrealdbNamespace,
-                viewerDb: runtimeConfig.surrealdbDatabase,
-              }),
+          // Temporary read-only database transport behind the Bun gate.
+          viewerUser: "viewer",
+          viewerPass: "viewer",
+          viewerNs: runtimeConfig.surrealdbNamespace,
+          viewerDb: runtimeConfig.surrealdbDatabase,
         })
       }
 
@@ -680,7 +700,7 @@ const server = Bun.serve({
         ])
         const archive = await createDebugBundleArchive({
           config: runtimeConfig,
-          includeSecrets: clientInfo.includeSecrets === true,
+          includeSecrets: false,
           clientInfo,
           serverInfo,
           retentionInfo,
@@ -765,14 +785,11 @@ const server = Bun.serve({
           headers: { "Content-Type": "text/html" },
         },
       )
-    } catch (error) {
-      if (error instanceof HttpError) return Response.json({ error: error.message }, { status: error.status })
-      bunLogger.error("Application request failed")
-      return Response.json({ error: "Internal server error" }, { status: 500 })
-    }
+    })
   },
   websocket: {
-    open(ws: any) {
+    async open(ws: any) {
+      if (!(await validateLiveAccount(ws))) return
       const data = ws.data as { targetPath: string; backend: string; protocols?: string }
       ws._pendingMessages = [] as (string | Buffer)[]
 
@@ -790,13 +807,16 @@ const server = Bun.serve({
       }
 
       backendWs.onmessage = (event) => {
-        ws.send(event.data)
+        void validateLiveAccount(ws).then((valid) => {
+          if (valid) ws.send(event.data)
+        })
       }
 
       backendWs.onclose = () => ws.close()
       backendWs.onerror = () => ws.close()
     },
-    message(ws: any, message: string | Buffer) {
+    async message(ws: any, message: string | Buffer) {
+      if (!(await validateLiveAccount(ws))) return
       const backendWs = ws._backendWs as WebSocket | undefined
       if (backendWs && backendWs.readyState === WebSocket.OPEN) {
         backendWs.send(typeof message === "string" ? message : new Uint8Array(message))

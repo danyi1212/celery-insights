@@ -1,10 +1,10 @@
+import { parseConfig } from "../config"
 // @vitest-environment node
 import { spawn, type ChildProcess } from "node:child_process"
 import { createServer } from "node:net"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { Surreal, RecordId } from "surrealdb"
 import { CORE_SCHEMA, runSchemaMigration } from "../surreal-schema"
-import { parseConfig } from "../config"
 import { createMcpHandler, McpTools } from "./index"
 import { Cursors, MAX_RESPONSE_BYTES, type Row, utf8Size } from "./common"
 import { outputSchemas } from "./output-schemas"
@@ -317,7 +317,6 @@ describe("MCP tools against SurrealDB", () => {
       db,
       cursorSecret: "secret",
       mode: () => "live",
-      token: "secret-token",
       now: () => NOW,
     })
     const request = (body: Row, headers: Record<string, string> = {}, url = "http://localhost/mcp") =>
@@ -327,33 +326,30 @@ describe("MCP tools against SurrealDB", () => {
         body: JSON.stringify(body),
       })
     const body = { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "search_workflows", arguments: {} } }
-    expect((await handler(request(body))).status).toBe(401)
-    expect(
-      (await handler(request(body, { authorization: "Bearer secret-token", origin: "https://other.example" }))).status,
-    ).toBe(403)
-    expect(
-      (await handler(request(body, { authorization: "Bearer secret-token" }, "http://other.example/mcp"))).status,
-    ).toBe(403)
-    const response = await handler(
-      request(body, { authorization: "Bearer secret-token", "MCP-Protocol-Version": "2025-11-25" }),
-    )
-    expect(response.status).toBe(200)
-    const payload = await response.json()
-    expect(payload.result.structuredContent.workflows).toHaveLength(1)
-    const list = await handler(
-      request({ jsonrpc: "2.0", id: 2, method: "tools/list" }, { authorization: "Bearer secret-token" }),
-    )
-    expect((await list.json()).result.tools.map((tool: Row) => tool.name)).toHaveLength(5)
-    const defaultConfig = parseConfig({})
-    const publicHandler = createMcpHandler({
+    const behindProxy = createMcpHandler({
       db,
       cursorSecret: "secret",
       mode: () => "live",
-      token: defaultConfig.mcpToken ?? defaultConfig.surrealdbFrontendPass,
+      publicOrigin: "https://insights.example",
     })
-    const publicList = await publicHandler(request({ jsonrpc: "2.0", id: 3, method: "tools/list" }))
-    expect(publicList.status).toBe(200)
-    expect((await publicList.json()).result.tools).toHaveLength(5)
+    expect(
+      (
+        await behindProxy(
+          request({ jsonrpc: "2.0", id: 9, method: "tools/list" }, { origin: "https://insights.example" }),
+        )
+      ).status,
+    ).toBe(200)
+    expect((await behindProxy(request(body, { origin: "https://other.example" }))).status).toBe(403)
+
+    expect((await handler(request(body))).status).toBe(200)
+    expect((await handler(request(body, { origin: "https://other.example" }))).status).toBe(403)
+    expect((await handler(request(body, {}, "http://other.example/mcp"))).status).toBe(403)
+    const response = await handler(request(body, { "MCP-Protocol-Version": "2025-11-25" }))
+    expect(response.status).toBe(200)
+    const payload = await response.json()
+    expect(payload.result.structuredContent.workflows).toHaveLength(1)
+    const list = await handler(request({ jsonrpc: "2.0", id: 2, method: "tools/list" }, {}))
+    expect((await list.json()).result.tools.map((tool: Row) => tool.name)).toHaveLength(5)
   })
 })
 

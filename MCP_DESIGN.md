@@ -449,9 +449,7 @@ Bun owns the MCP endpoint and queries SurrealDB directly. Put matching, aggregat
 
 Transport: stateless Streamable HTTP at `/mcp`, with schema-defined structured results and read-only tool annotations, implemented with the official TypeScript MCP SDK. Each request returns JSON; GET/SSE and persistent sessions are not supported.
 
-Queries use the read-only database viewer connection. Requests use Bearer authentication with
-`MCP_TOKEN`, falling back to `SURREALDB_FRONTEND_PASS`; unprotected local deployments can omit
-the credential. Hosts are explicitly allowlisted and an Origin, if supplied, must match the request.
+Queries use a read-only database viewer connection behind the Bun application gate. Requests use configured HTTP Basic accounts with payload permissions, exact configured Origin and `X-Celery-Insights-Request: 1`. There is no separate MCP token authentication. `mcp.cursor_secret` signs pagination only; configure it consistently across replicas. Future OIDC and restrictive OPA decisions must cross the same gate.
 
 Current code informs several prerequisites and limitations:
 
@@ -477,7 +475,7 @@ Aggregates must describe their full stated scope, not just the rows sampled for 
 5. **Workflow overview:** Do agents need more failure rows, running rows, or structural context by default? Is the grouped-name view useful enough to keep?
 6. **Payload exposure:** Should task overview include input/output previews by default, or require explicit section retrieval?
 7. **Consistency:** Is live pagination with explicit limits sufficient, or do some investigations require a frozen membership snapshot?
-8. **Authentication:** Is Bearer access with a separate MCP token sufficient, or do deployments need OAuth-based credential discovery?
+8. **Authentication:** Add maintained OIDC integration and document client credential discovery without introducing an account or token-management platform.
 
 ## Scenarios for evaluating the design
 

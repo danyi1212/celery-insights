@@ -29,7 +29,7 @@ Use `bun run config validate --config PATH` to validate without connecting to Ce
 
 The permanent env overrides are `CELERY_INSIGHTS_CONFIG_FILE`, `CELERY_INSIGHTS_PORT`, `CELERY_INSIGHTS_DATABASE_URL`, `CELERY_INSIGHTS_DATABASE_STORAGE`, `CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD` (and `_FILE`), `CELERY_INSIGHTS_INGESTION_ENABLED`, `CELERY_INSIGHTS_BROKER_URL` (and `_FILE`), `CELERY_INSIGHTS_RESULT_BACKEND` (and `_FILE`), `CELERY_INSIGHTS_REPLAY_BUNDLE_FILE`, `CELERY_INSIGHTS_LOG_FORMAT`, `CELERY_INSIGHTS_LOG_LEVEL`, and `CELERY_INSIGHTS_PUBLIC_URL`. Advanced tuning has TOML paths; old env aliases remain available during migration. Authentication and OPA settings are follow-on features and are not accepted by this configuration release.
 
-In canonical TOML mode, Celery Python modules require an explicit `celery.legacy_python_config_file` and cannot coexist with canonical connection/options settings. Legacy env-only mode retains the previous module precedence. Raw configuration modules are excluded from new diagnostic bundles. For Python-only development use `bun run dev:server`; an explicit development env file can be selected with `--env-file PATH`. Direct `python run.py` requires a Bun handoff. Debug mode does not start an independent Uvicorn reload child.
+In canonical TOML mode, Celery Python modules require an explicit `celery.legacy_python_config_file` and cannot coexist with canonical connection/options settings. Legacy env-only mode retains the previous module precedence. Raw configuration modules are excluded from new diagnostic bundles. For Python bridge development use `bun run dev:bridge`; an explicit development env file can be selected with `--env-file PATH`. Direct `python run.py` requires a Bun handoff. `dev:server` runs the Bun application and supervises its private Python bridge; `dev:all` also starts Vite. Vite forwards application requests through Bun, including database RPC, and never connects directly to Python or SurrealDB. The authentication foundation requires configured Basic accounts and HTTPS ingress matching `installation.public_url`. Debug mode does not start an independent Uvicorn reload child.
 
 Retention limits use subtables with `enabled` and `value`, for example `[retention.tasks.max_age_hours]` with `enabled = true` and `value = 48`. Set `[retention.workers.max_age_hours] enabled = false` to disable worker expiry. Retention changes in the UI remain temporary for the running Python process and do not persist in deployment configuration.
 
@@ -41,7 +41,7 @@ If you only need the minimum set of values, start with one of these combinations
 
 - Local or disposable run: set `BROKER_URL` and `RESULT_BACKEND`, then leave the embedded SurrealDB on its default `memory` storage.
 - Durable single node: add `SURREALDB_STORAGE=rocksdb:///data/surreal` and mount `/data`.
-- HA or Kubernetes: use `SURREALDB_EXTERNAL_URL`, keep `INGESTION_LEADER_ELECTION=true`, and set both `SURREALDB_INGESTER_PASS` and `SURREALDB_FRONTEND_PASS`.
+- HA or Kubernetes: use `SURREALDB_EXTERNAL_URL`, keep `INGESTION_LEADER_ELECTION=true`, set `SURREALDB_INGESTER_PASS`, and configure the same explicit application accounts on all replicas.
 
 ## Quick reference
 
@@ -55,31 +55,29 @@ If you only need the minimum set of values, start with one of these combinations
 
 ### Security
 
-[`SURREALDB_INGESTER_PASS`](#surrealdb_ingester_pass) · [`SURREALDB_FRONTEND_PASS`](#surrealdb_frontend_pass) · [`MCP_TOKEN`](#mcp_token) · [`MCP_ALLOWED_HOSTS`](#mcp_allowed_hosts) · [`LOG_FORMAT`](#log_format)
+[`SURREALDB_INGESTER_PASS`](#surrealdb_ingester_pass) · [`MCP cursor signing`](#mcp-cursor-signing) · [`MCP_ALLOWED_HOSTS`](#mcp_allowed_hosts) · [`LOG_FORMAT`](#log_format)
 
 ## MCP access for agents
 
-Connect your agent to `http://localhost:8555/mcp`. Authentication is off by default, just like
-the dashboard: no token or header is needed when `MCP_TOKEN` and `SURREALDB_FRONTEND_PASS` are unset.
-See [MCP Interface](/documentation/mcp) for Claude Code, Codex, and Cursor setup, optional authentication,
-and troubleshooting recipes.
+Bun serves the read-only MCP endpoint at `/mcp`, under any configured URL prefix. It uses the same configured-account authentication and payload permissions as the dashboard. There is no independent bearer-token login or anonymous fallback.
 
-#### MCP_TOKEN
+Configure a client capable of supplying these headers over HTTPS:
 
-Default: `SURREALDB_FRONTEND_PASS` when configured, otherwise no token.
+```text
+Authorization: Basic BASE64_OF_USERNAME_COLON_PASSWORD
+Origin: https://insights.example.com
+X-Celery-Insights-Request: 1
+```
 
-Bearer credential for MCP access. Set it for a separate agent credential. MCP uses this token
-when configured; otherwise it requires the dashboard password when dashboard protection is enabled.
-The token is redacted from debug bundles. Use the same token or dashboard password across replicas
-so pagination cursors remain valid across instances.
+Keep credentials in the client's secret configuration, not a committed file. The current MCP payload transport requires administrator grants. The endpoint accepts POST requests without MCP sessions/SSE. Exact Origin, host validation and the custom mutation header remain enforced.
+
+### MCP cursor signing
+
+`mcp.cursor_secret` (or `mcp.cursor_secret_file`) and `CELERY_INSIGHTS_MCP_CURSOR_SECRET` (or `_FILE`) configure pagination signing only; they do not authenticate clients. The legacy `MCP_TOKEN` alias is deprecated and now supplies the cursor secret. Authentication always requires configured accounts. Set one signing secret across replicas so cursors survive load balancing; otherwise Bun derives it from the ingester credential or generates a process-local key.
 
 #### MCP_ALLOWED_HOSTS
 
-Default: `localhost,127.0.0.1,[::1]`.
-
-Comma-separated hostnames accepted by MCP, without schemes, paths, or ports. Configure your public
-hostname for reverse-proxy access, for example `insights.example.com,localhost`. An Origin header,
-if present, must match the request URL's origin.
+Default: `localhost,127.0.0.1,[::1]`. Comma-separated allowed MCP hostnames without schemes, paths or ports. Include your public hostname for ingress access. Origin must match `installation.public_url`.
 
 ## Hosting under a shared reverse proxy
 
@@ -235,17 +233,9 @@ Password for the `ingester` database user. The Python ingester uses this credent
 
 Change this in every non-local deployment.
 
-#### SURREALDB_FRONTEND_PASS
+#### SURREALDB_FRONTEND_PASS (retired)
 
-Default: _(not set)_
-
-Optional dashboard password. When set, the frontend requires login and authenticates as a read-only database user. When unset, the dashboard connects anonymously with read-only access.
-
-## Debug bundles and snapshot replay
-
-Operators usually create the bundle from **Settings** -> **Download diagnostics**. The generated `debug bundle v2` captures effective config, runtime diagnostics, recent Bun/Python/SurrealDB logs, and a full SurrealDB export of `task`, `event`, and `worker`.
-
-Secrets are redacted by default. Leave them redacted for bug reports unless someone investigating the issue explicitly needs the exact credentials.
+This frontend-only password setting is rejected. Configure explicit accounts in TOML instead; the old database login dialog and browser tokens have been removed.
 
 #### DEBUG_BUNDLE_PATH
 
@@ -374,11 +364,10 @@ How often the cleanup job evaluates and applies retention policies.
 | `search.indexing.enabled` | boolean | `CELERY_INSIGHTS_SEARCH_INDEXING_ENABLED` | `SEARCH_INDEXING_ENABLED` |
 | `server.port` | number | `CELERY_INSIGHTS_PORT` | `PORT` |
 | `server.url_prefix` | string | `CELERY_INSIGHTS_URL_PREFIX` | `URL_PREFIX` |
-| `mcp.token` / `_file` | string; sensitive | `CELERY_INSIGHTS_MCP_TOKEN` / `_FILE` | `MCP_TOKEN` |
+| `mcp.cursor_secret` / `_file` | string; sensitive | `CELERY_INSIGHTS_MCP_CURSOR_SECRET` / `_FILE` | `MCP_TOKEN` |
 | `mcp.allowed_hosts` | string | — | `MCP_ALLOWED_HOSTS` |
 | `database.observation.url` / `_file` | string; sensitive | `CELERY_INSIGHTS_DATABASE_URL` / `_FILE` | `SURREALDB_URL` |
 | `database.observation.ingester_password` / `_file` | string; sensitive | `CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD` / `_FILE` | `SURREALDB_INGESTER_PASS` |
-| `migration.legacy_frontend_password` / `_file` | string; sensitive | — | `SURREALDB_FRONTEND_PASS` |
 | `database.observation.namespace` | string | — | `SURREALDB_NAMESPACE` |
 | `database.observation.database` | string | — | `SURREALDB_DATABASE` |
 | `database.observation.embedded.storage` | string | `CELERY_INSIGHTS_DATABASE_STORAGE` | `SURREALDB_STORAGE` |
@@ -407,6 +396,84 @@ How often the cleanup job evaluates and applies retention policies.
 | `ui.defaults.theme` | string | — | — |
 | `ui.defaults.hide_welcome_banner` | boolean | — | — |
 | `ui.defaults.raw_events_limit` | number | — | — |
+| `authentication.session.secret` / `_file` | string; sensitive | `CELERY_INSIGHTS_SESSION_SECRET` / `_FILE` | — |
+| `authentication.session.max_age_seconds` | number | — | — |
+| `authentication.oidc.issuer` | string | — | — |
+| `authentication.oidc.client_id` | string | — | — |
+| `authentication.oidc.client_secret` / `_file` | string; sensitive | `CELERY_INSIGHTS_OIDC_CLIENT_SECRET` / `_FILE` | — |
+| `authentication.oidc.scopes` | string | — | — |
+| `authentication.oidc.role_mappings` | object | — | — |
+| `authentication.mode` | string | — | — |
+| `authentication.accounts` | object; sensitive | — | — |
 
 Additional keys: `schema_version`, `database.observation.mode`, each retention limit's `enabled`, and `celery.options` (data-only connection options). `SURREALDB_EXTERNAL_URL` is a special topology compatibility alias.
 {/* END GENERATED CONFIG REFERENCE */}
+
+## Configured application accounts
+
+Authentication protects the UI and application APIs in Bun. Configure explicit password accounts and terminate HTTPS at your ingress. Browsers use the login page and an HttpOnly session cookie; programmatic clients can still send explicit Basic credentials:
+
+```toml
+[installation]
+public_url = "https://insights.example.com"
+
+[authentication]
+mode = "basic"
+
+[authentication.session]
+secret_file = "/run/secrets/insights/session-secret"
+max_age_seconds = 28800
+
+[[authentication.accounts]]
+username = "admin"
+password_file = "/run/secrets/insights/admin-password"
+roles = ["administrator"]
+
+[[authentication.accounts]]
+username = "reader"
+password_env = "INSIGHTS_READER_PASSWORD"
+roles = ["viewer"]
+```
+
+Each account needs exactly one of `password`, `password_file`, or `password_env`. Inline passwords are accepted when the entire TOML file is stored as a secret. Files resolve relative to TOML and lose one terminal newline; environment references must exist and be nonempty. There are no implicit accounts or default passwords. Usernames are case-sensitive; roles are `viewer`, `operator`, or `administrator`. Restart every replica after changing account settings or referenced secrets.
+
+Passwords and session/IdP secrets never enter Python, configuration output, backups or debug bundles. Browser navigation redirects to `/login`, under any URL prefix. The application sends no Basic challenge and does not store credentials in browser storage. Sign out clears the application cookie; sessions expire after `max_age_seconds` (default eight hours; configurable from five minutes to one day).
+
+Generate the session secret with `openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n'`. Supply the same secret and authentication configuration to every replica. `authentication.session.secret` supports an inline value, `_file`, or `CELERY_INSIGHTS_SESSION_SECRET` / `_FILE` override. There is no randomly generated per-pod fallback. Session cookies are encrypted/authenticated with `jose`, marked HttpOnly/Secure/SameSite=Lax, and scoped to the installation path. They contain an identifier, expiry and configuration revocation tag; OIDC sessions also contain mapped application roles. Changes to credentials or authentication configuration invalidate sessions after all replicas roll out. Rotating the shared secret signs everyone out.
+
+Logout clears this browser's cookie, without maintaining a session database or revoking copied cookies. A copied cookie remains usable until expiry or configuration/secret rotation. Identity-provider account/group changes take effect at the next login or session expiry. Choose a shorter lifetime when immediate IdP revocation is important. Logging out of Celery Insights does not log out of the IdP. Use ingress rate limits for the login endpoint and keep the application private behind that ingress.
+
+### OpenID Connect
+
+Select OIDC instead of password accounts; the modes cannot be combined. Register a confidential web client at your provider (or a public client with PKCE), with the exact callback URL `https://insights.example.com/api/auth/callback`. Include the configured URL prefix in that URL when present. Client-secret authentication uses `client_secret_post`; enable that method at the provider.
+
+```toml
+schema_version = 1
+installation.public_url = "https://insights.example.com"
+authentication.mode = "oidc"
+authentication.session.secret_file = "/run/secrets/insights/session-secret"
+
+[authentication.oidc]
+issuer = "https://idp.example.com/realms/operations"
+client_id = "celery-insights"
+client_secret_file = "/run/secrets/insights/oidc-client-secret"
+scopes = "openid profile groups"
+
+[[authentication.oidc.role_mappings]]
+claim = "groups"
+value = "celery-insights-admins"
+roles = ["administrator"]
+
+[[authentication.oidc.role_mappings]]
+claim = "sub"
+value = "provider-subject-for-a-viewer"
+roles = ["viewer"]
+```
+
+Use the issuer from the provider's discovery document. The issuer and all provider endpoints must use HTTPS with trusted certificates; the app does not disable TLS verification. `CELERY_INSIGHTS_OIDC_CLIENT_SECRET` / `_FILE` can override the client secret for pod-based deployments. Arrange for mapped claims to appear in the **ID token**. Mappings match a top-level string or an exact member of a string array, union the configured roles, and deny users with no matching mapping. Email addresses are never used to link accounts. The issuer and verified subject identify the OIDC user; `account_id` is `oidc:<subject>` for authorization policies.
+
+Bun uses `openid-client` for discovery, authorization code exchange, PKCE, state/nonce checks and ID-token issuer/audience/signature validation. Provider access/refresh tokens are discarded. The IdP owns sign-in, passwords, MFA, recovery and account lifecycle. There is no user registration, account editor or identity database in Celery Insights.
+
+The ingress must preserve Authorization/Origin, keep Bun and the database private, and serve HTTPS. Mutating API clients must send the configured Origin and `X-Celery-Insights-Request: 1`. WebSocket upgrades require Origin. Application account passwords are unrelated to internal database credentials.
+
+Current RPC browsing requires all payload grants and therefore administrator access. Viewer/operator browsing awaits typed reads and field enforcement. The old `SURREALDB_FRONTEND_PASS` setting and database login dialog are retired; explicitly configure accounts when upgrading.

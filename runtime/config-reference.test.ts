@@ -20,7 +20,12 @@ it("validates the shipped example with supplied secret files", () => {
   const result = resolveConfig({
     env: {},
     configFile: "/example.toml",
-    readFile: (file) => (file === "/example.toml" ? exampleConfig() : "test-credential\n"),
+    readFile: (file) =>
+      file === "/example.toml"
+        ? exampleConfig()
+        : file.endsWith("session-secret")
+          ? Buffer.alloc(32, 5).toString("base64url")
+          : "test-credential\n",
   })
   expect(result.config.surrealdbStorage).toBe("rocksdb:///data/surreal")
   expect(result.config.brokerUrl).toBe("test-credential")

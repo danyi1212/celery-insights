@@ -1,9 +1,9 @@
-import { urlPrefix } from "./app-url"
 import { execFileSync } from "child_process"
 import { dirname, resolve } from "path"
 import { fileURLToPath } from "url"
 
 const COMPOSE_FILE = resolve(dirname(fileURLToPath(import.meta.url)), "../../test_project/docker-compose.yml")
+const composeFiles = ["-f", COMPOSE_FILE, "-f", resolve("e2e/docker-compose.auth.yml")]
 const SKIP = !!process.env.E2E_SKIP_COMPOSE
 const SHOULD_BUILD = process.env.E2E_SKIP_BUILD !== "1" && process.env.E2E_SKIP_BUILD !== "true"
 
@@ -15,8 +15,8 @@ export function composeUp() {
     return
   }
   logInfo("Starting docker compose stack...")
-  const args = ["compose", "-f", COMPOSE_FILE, "--profile", "interactive"]
-  if (urlPrefix) args.push("--profile", "reverse-proxy")
+  const args = ["compose", ...composeFiles, "--profile", "interactive"]
+  args.push("--profile", "reverse-proxy")
   args.push("up", "-d")
   if (SHOULD_BUILD) {
     args.push("--build")
@@ -38,8 +38,7 @@ export function composeDown() {
       "docker",
       [
         "compose",
-        "-f",
-        COMPOSE_FILE,
+        ...composeFiles,
         "--profile",
         "interactive",
         "--profile",
@@ -63,7 +62,7 @@ function captureComposeOutput(args: string[]): string {
   try {
     return execFileSync(
       "docker",
-      ["compose", "-f", COMPOSE_FILE, "--profile", "interactive", "--profile", "reverse-proxy", ...args],
+      ["compose", ...composeFiles, "--profile", "interactive", "--profile", "reverse-proxy", ...args],
       {
         encoding: "utf8",
         timeout: 60_000,
@@ -81,4 +80,30 @@ export function composePs() {
 
 export function composeLogs(services: string[], tail = 200) {
   return captureComposeOutput(["logs", "--no-color", "--tail", String(tail), ...services])
+}
+
+/** Fixture authority stays inside the container, outside the public app boundary. */
+export async function privateObservationQuery(sql: string): Promise<Response> {
+  const output = execFileSync(
+    "docker",
+    [
+      "compose",
+      ...composeFiles,
+      "exec",
+      "-T",
+      "celery-insights",
+      "curl",
+      "--fail-with-body",
+      "-sS",
+      "-u",
+      "root:root",
+      "-H",
+      "Accept: application/json",
+      "--data-binary",
+      "@-",
+      "http://127.0.0.1:8557/sql",
+    ],
+    { input: sql, encoding: "utf8", timeout: 10000 },
+  )
+  return new Response(output, { status: 200 })
 }
