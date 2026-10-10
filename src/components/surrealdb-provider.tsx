@@ -1,3 +1,4 @@
+import { useSessionRecheck } from "@hooks/use-session-recheck"
 import { authenticatedFetch } from "@lib/authenticated-fetch"
 import { appUrl } from "@lib/app-url"
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
@@ -131,6 +132,7 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
   const [error, setError] = useState<Error | null>(null)
   const [configLoaded, setConfigLoaded] = useState(false)
   const configRef = useRef<AppConfig | null>(null)
+  useSessionRecheck(status === "connected")
 
   // Subscribe to connection status events
   useEffect(() => {
