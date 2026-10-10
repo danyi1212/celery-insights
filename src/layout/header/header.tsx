@@ -1,3 +1,5 @@
+import { authenticatedFetch } from "@lib/authenticated-fetch"
+import { appUrl } from "@lib/app-url"
 import { ConnectionStatusIndicator } from "@components/connection-status"
 import { appShortcuts } from "@components/keyboard/shortcut-definitions"
 import { ShortcutHint } from "@components/keyboard/shortcut-hint"
@@ -14,6 +16,14 @@ import React, { useEffect, useRef, useState } from "react"
 const Header: React.FC = () => {
   const [visible, setVisible] = useState(true)
   const lastScrollYRef = useRef(0)
+
+  useEffect(() => {
+    const check = () => {
+      void authenticatedFetch(appUrl("/api/auth/identity")).catch(() => {})
+    }
+    const timer = window.setInterval(check, 60000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -45,6 +55,15 @@ const Header: React.FC = () => {
       <SearchBox />
       <div className="flex-1" />
       <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          onClick={async () => {
+            const response = await authenticatedFetch(appUrl("/api/auth/logout"), { method: "POST" })
+            if (response.ok) window.location.assign(appUrl("/login"))
+          }}
+        >
+          Sign out
+        </Button>
         <ConnectionStatusIndicator />
         <KeyboardShortcutsButton />
         <Button variant="ghost" size="icon" asChild>

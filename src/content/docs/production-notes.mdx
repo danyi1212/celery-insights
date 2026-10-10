@@ -24,7 +24,7 @@ These are the operational behaviors most likely to matter once the app is behind
 ## Security defaults to override
 
 - Change `SURREALDB_INGESTER_PASS` in every non-local deployment.
-- Set `authentication.accounts` in TOML. Keep Bun/database listeners inaccessible outside the ingress; roll out every replica when credentials change.
+- Configure password accounts or OIDC with explicit role mappings in TOML, and a shared `authentication.session.secret` on every replica. Keep Bun/database listeners inaccessible outside the ingress; roll out every replica when credentials change.
 - Store `BROKER_URL`, `RESULT_BACKEND`, and any config-file secrets in your secret manager rather than baking them into images.
 
 ## Incident capture and replay

@@ -40,6 +40,8 @@ export function prepareAuthenticationFixture() {
 public_url = "${appOrigin}${appPath("/")}"
 [authentication]
 mode = "basic"
+[authentication.session]
+secret = "${Buffer.alloc(32, 9).toString("base64url")}"
 [[authentication.accounts]]
 username = "${fixtureCredentials.username}"
 password = "${fixtureCredentials.password}"

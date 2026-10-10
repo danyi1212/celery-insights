@@ -37,7 +37,7 @@ describe("Bun configured-account gate", () => {
       const { response, dispatch } = run(request("/metrics", "GET", { authorization }))
       const result = await response
       expect(result?.status).toBe(401)
-      expect(result?.headers.get("www-authenticate")).toContain("Basic")
+      expect(result?.headers.get("www-authenticate")).toBeNull()
       expect(dispatch).not.toHaveBeenCalled()
     }
     const { response, dispatch } = run(request("/metrics"), null)
@@ -116,7 +116,7 @@ describe("Bun configured-account gate", () => {
   })
   it("masks unexpected failures before dispatch", async () => {
     const failing = new AuthenticationHttp({ public_origin: origin, accounts: [] })
-    vi.spyOn(failing, "principal").mockImplementation(() => {
+    vi.spyOn(failing, "authenticate").mockImplementation(() => {
       throw new Error("PRIVATE-CREDENTIAL")
     })
     const { response, dispatch } = run(request("/metrics"), failing)

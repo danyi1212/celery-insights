@@ -179,6 +179,9 @@ level = "info"
 [authentication]
 mode = "basic"
 
+[authentication.session]
+secret_file = "/run/secrets/insights/session-secret"
+
 [[authentication.accounts]]
 username = "admin"
 password_file = "/run/secrets/insights/admin-password"

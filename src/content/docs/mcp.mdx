@@ -23,7 +23,7 @@ Origin: https://insights.example.com
 X-Celery-Insights-Request: 1
 ```
 
-Keep credentials in client secret configuration. `mcp.cursor_secret` signs pagination only and never authenticates a request. There is no separate bearer-token login or dashboard-password fallback. OIDC support is a planned integration; account lifecycle belongs at the identity provider.
+Keep credentials in client secret configuration. `mcp.cursor_secret` signs pagination only and never authenticates a request. There is no separate bearer-token login or dashboard-password fallback. OIDC supports interactive browser sign-in; this release does not accept IdP bearer tokens for MCP. Programmatic MCP clients require password mode with explicit Basic credentials. Account lifecycle belongs at the identity provider.
 
 ## Connect to a remote deployment
 

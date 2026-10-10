@@ -75,6 +75,27 @@ export const flatConfigSchema = z.object({
   uiRawEventsLimit: z.number().int().positive().optional(),
   publicUrl: z.string().url().optional(),
   authMode: z.enum(["basic", "oidc"]).default("basic"),
+  authSessionSecret: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{43}$/, "Expected a base64url-encoded 32-byte session secret")
+    .optional(),
+  authSessionSeconds: z.coerce.number().int().min(300).max(86400).default(28800),
+  oidcIssuer: z.string().url().optional(),
+  oidcClientId: z.string().min(1).optional(),
+  oidcClientSecret: z.string().min(1).optional(),
+  oidcScopes: z.string().default("openid profile"),
+  oidcRoleMappings: z
+    .array(
+      z
+        .object({
+          claim: z.string().regex(/^[A-Za-z0-9_-]+$/),
+          value: z.string().min(1),
+          roles: z.array(z.enum(["viewer", "operator", "administrator"])).min(1),
+        })
+        .strict(),
+    )
+    .max(100)
+    .default([]),
   authAccounts: z
     .array(
       z

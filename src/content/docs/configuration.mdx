@@ -396,6 +396,13 @@ How often the cleanup job evaluates and applies retention policies.
 | `ui.defaults.theme` | string | — | — |
 | `ui.defaults.hide_welcome_banner` | boolean | — | — |
 | `ui.defaults.raw_events_limit` | number | — | — |
+| `authentication.session.secret` / `_file` | string; sensitive | `CELERY_INSIGHTS_SESSION_SECRET` / `_FILE` | — |
+| `authentication.session.max_age_seconds` | number | — | — |
+| `authentication.oidc.issuer` | string | — | — |
+| `authentication.oidc.client_id` | string | — | — |
+| `authentication.oidc.client_secret` / `_file` | string; sensitive | `CELERY_INSIGHTS_OIDC_CLIENT_SECRET` / `_FILE` | — |
+| `authentication.oidc.scopes` | string | — | — |
+| `authentication.oidc.role_mappings` | object | — | — |
 | `authentication.mode` | string | — | — |
 | `authentication.accounts` | object; sensitive | — | — |
 
@@ -404,7 +411,7 @@ Additional keys: `schema_version`, `database.observation.mode`, each retention l
 
 ## Configured application accounts
 
-Authentication protects the UI and application APIs in Bun. Configure explicit HTTP Basic accounts and terminate HTTPS at your ingress:
+Authentication protects the UI and application APIs in Bun. Configure explicit password accounts and terminate HTTPS at your ingress. Browsers use the login page and an HttpOnly session cookie; programmatic clients can still send explicit Basic credentials:
 
 ```toml
 [installation]
@@ -412,6 +419,10 @@ public_url = "https://insights.example.com"
 
 [authentication]
 mode = "basic"
+
+[authentication.session]
+secret_file = "/run/secrets/insights/session-secret"
+max_age_seconds = 28800
 
 [[authentication.accounts]]
 username = "admin"
@@ -426,7 +437,42 @@ roles = ["viewer"]
 
 Each account needs exactly one of `password`, `password_file`, or `password_env`. Inline passwords are accepted when the entire TOML file is stored as a secret. Files resolve relative to TOML and lose one terminal newline; environment references must exist and be nonempty. There are no implicit accounts or default passwords. Usernames are case-sensitive; roles are `viewer`, `operator`, or `administrator`. Restart every replica after changing account settings or referenced secrets.
 
-Passwords never enter Python, configuration output, backups or debug bundles. Basic authentication uses the browser's credential cache; it has no application logout, account UI, MFA or session expiry. Use an external IdP for those features. OIDC integration is planned; `mode = "oidc"` currently fails startup without falling back to Basic.
+Passwords and session/IdP secrets never enter Python, configuration output, backups or debug bundles. Browser navigation redirects to `/login`, under any URL prefix. The application sends no Basic challenge and does not store credentials in browser storage. Sign out clears the application cookie; sessions expire after `max_age_seconds` (default eight hours; configurable from five minutes to one day).
+
+Generate the session secret with `openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n'`. Supply the same secret and authentication configuration to every replica. `authentication.session.secret` supports an inline value, `_file`, or `CELERY_INSIGHTS_SESSION_SECRET` / `_FILE` override. There is no randomly generated per-pod fallback. Session cookies are encrypted/authenticated with `jose`, marked HttpOnly/Secure/SameSite=Lax, and scoped to the installation path. They contain an identifier, expiry and configuration revocation tag; OIDC sessions also contain mapped application roles. Changes to credentials or authentication configuration invalidate sessions after all replicas roll out. Rotating the shared secret signs everyone out.
+
+Logout clears this browser's cookie, without maintaining a session database or revoking copied cookies. A copied cookie remains usable until expiry or configuration/secret rotation. Identity-provider account/group changes take effect at the next login or session expiry. Choose a shorter lifetime when immediate IdP revocation is important. Logging out of Celery Insights does not log out of the IdP. Use ingress rate limits for the login endpoint and keep the application private behind that ingress.
+
+### OpenID Connect
+
+Select OIDC instead of password accounts; the modes cannot be combined. Register a confidential web client at your provider (or a public client with PKCE), with the exact callback URL `https://insights.example.com/api/auth/callback`. Include the configured URL prefix in that URL when present. Client-secret authentication uses `client_secret_post`; enable that method at the provider.
+
+```toml
+schema_version = 1
+installation.public_url = "https://insights.example.com"
+authentication.mode = "oidc"
+authentication.session.secret_file = "/run/secrets/insights/session-secret"
+
+[authentication.oidc]
+issuer = "https://idp.example.com/realms/operations"
+client_id = "celery-insights"
+client_secret_file = "/run/secrets/insights/oidc-client-secret"
+scopes = "openid profile groups"
+
+[[authentication.oidc.role_mappings]]
+claim = "groups"
+value = "celery-insights-admins"
+roles = ["administrator"]
+
+[[authentication.oidc.role_mappings]]
+claim = "sub"
+value = "provider-subject-for-a-viewer"
+roles = ["viewer"]
+```
+
+Use the issuer from the provider's discovery document. The issuer and all provider endpoints must use HTTPS with trusted certificates; the app does not disable TLS verification. `CELERY_INSIGHTS_OIDC_CLIENT_SECRET` / `_FILE` can override the client secret for pod-based deployments. Arrange for mapped claims to appear in the **ID token**. Mappings match a top-level string or an exact member of a string array, union the configured roles, and deny users with no matching mapping. Email addresses are never used to link accounts. The issuer and verified subject identify the OIDC user; `account_id` is `oidc:<subject>` for authorization policies.
+
+Bun uses `openid-client` for discovery, authorization code exchange, PKCE, state/nonce checks and ID-token issuer/audience/signature validation. Provider access/refresh tokens are discarded. The IdP owns sign-in, passwords, MFA, recovery and account lifecycle. There is no user registration, account editor or identity database in Celery Insights.
 
 The ingress must preserve Authorization/Origin, keep Bun and the database private, and serve HTTPS. Mutating API clients must send the configured Origin and `X-Celery-Insights-Request: 1`. WebSocket upgrades require Origin. Application account passwords are unrelated to internal database credentials.
 

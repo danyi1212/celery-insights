@@ -6,6 +6,10 @@ public_url = "https://insights.example.com"
 [authentication]
 mode = "basic"
 
+[authentication.session]
+secret_file = "/run/secrets/insights/session-secret"
+max_age_seconds = 28800
+
 [[authentication.accounts]]
 username = "admin"
 password_file = "/run/secrets/insights/admin-password"

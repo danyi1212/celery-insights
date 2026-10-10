@@ -43,3 +43,36 @@ test.describe("Authenticated API boundary", () => {
     }
   })
 })
+
+test.describe("Browser login", () => {
+  test("signs in through the form, preserves the destination and signs out", async ({ browser }) => {
+    const context = await browser.newContext({ ignoreHTTPSErrors: true })
+    const page = await context.newPage()
+    try {
+      await page.goto(appURL("/settings"))
+      await expect(page.getByRole("heading", { name: "Celery Insights" })).toBeVisible()
+      await expect(page).toHaveURL(/\/login\?returnTo=/)
+      await page.getByLabel("Username", { exact: true }).fill("admin")
+      await page.getByLabel("Password", { exact: true }).fill("wrong-password")
+      await page.getByRole("button", { name: "Sign in", exact: true }).click()
+      await expect(page.getByRole("alert")).toHaveText("Invalid username or password.")
+      await page.getByLabel("Username", { exact: true }).fill("admin")
+      await page.getByLabel("Password", { exact: true }).fill("synthetic-ci-configured-password")
+      await page.getByRole("button", { name: "Sign in", exact: true }).click()
+      await expect(page).toHaveURL(appURL("/settings"))
+      await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible()
+      const identity = await context.request.get(appURL("/api/auth/identity"))
+      expect(identity.status()).toBe(200)
+      expect((await identity.json()).account_id).toBe("admin")
+      const cookies = await context.cookies()
+      expect(
+        cookies.some((cookie) => cookie.httpOnly && cookie.secure && cookie.name.startsWith("__Secure-insights-")),
+      ).toBe(true)
+      await page.getByRole("button", { name: "Sign out", exact: true }).click()
+      await expect(page).toHaveURL(appURL("/login"))
+      expect((await context.request.get(appURL("/api/auth/identity"))).status()).toBe(401)
+    } finally {
+      await context.close()
+    }
+  })
+})

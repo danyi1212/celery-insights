@@ -332,7 +332,7 @@ describe("SurrealDBProvider — demo mode", () => {
       expect(screen.getByTestId("ingestion")).toHaveTextContent("disabled")
     })
 
-    expect(fetchSpy).toHaveBeenCalledWith("/api/config")
+    expect(fetchSpy).toHaveBeenCalledWith("/api/config", expect.objectContaining({ credentials: "same-origin" }))
     expect(mockConnect).toHaveBeenCalledWith("mem://")
   })
 

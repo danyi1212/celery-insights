@@ -13,6 +13,7 @@ schema_version = 1
 installation.public_url = "https://insights.example.com/tools/celery/"
 server.url_prefix = "/tools/celery"
 authentication.mode = "basic"
+authentication.session.secret_file = "/run/secrets/insights/session-secret"
 
 [[authentication.accounts]]
 username = "admin"
@@ -29,8 +30,9 @@ Each account selects exactly one source: `password`, `password_file`, or `passwo
 
 Bun resolves secrets once at startup. All replicas receive the same deployment configuration. Changes, removals and rotation require rollout of every replica; connections end with their process. There is no live account API, bootstrap state, account reconciliation, session database, MFA keyring or recovery operation. Secrets remain in Bun and are excluded from Python, config output, errors, backup and diagnostic exports, including exports requesting secrets.
 
-HTTP Basic credentials are verified on requests with the native constant-time comparison primitive. Browser navigation receives a challenge before the UI loads. The browser manages the credential cache; the application never stores credentials in browser storage. Basic has no portable application logout or session expiry. Use OIDC when those capabilities are needed.
+The browser signs in using an accessible native form and receives an encrypted/authenticated HttpOnly/Secure/SameSite=Lax cookie. Bun compares configured passwords with the native constant-time primitive; there are no password hashes or identity records. Explicit Basic headers remain available to programmatic clients without WWW-Authenticate challenges. A shared 32-byte base64url session secret is mandatory; never generate a per-pod fallback. `jose` implements authenticated cookie encryption and expiry.
 
+Sessions carry identity, expiry and a keyed configuration revocation tag. Password/account/configuration changes or secret rotation invalidate them on rollout. OIDC cookies carry mapped roles, never provider tokens. Logout clears the browser cookie; copied cookies remain valid until expiry or configuration rotation. There is no per-session revocation database. OIDC provider role/account changes take effect at session expiry or next sign-in; default lifetime is eight hours, configurable from five minutes to one day. Live connections reauthenticate their upgrade request before forwarding messages/delivery so expired cookies cannot keep a connection authorized.
 Require an HTTPS public URL and deploy HTTPS ingress. Keep Bun and database listeners inaccessible outside the trusted ingress/network. Do not infer trust from client-supplied forwarding headers. The ingress must preserve Authorization and Origin. Reject foreign Origin and cross-site requests. Browser mutations require exact configured Origin plus `X-Celery-Insights-Request: 1`; WebSockets require exact Origin. Configure ingress rate limits if login-attempt limiting is needed; there is no custom distributed login throttle.
 
 ## Application authorization
@@ -39,11 +41,11 @@ Use one authenticated principal containing account identifier and builtin roles.
 
 The current browser SurrealDB RPC transport exposes all task payload fields. It therefore requires all payload grants, which currently means administrator access. Viewer and operator UI browsing is incomplete; adding accounts does not imply field-level enforcement. Replace browser database credentials/arbitrary RPC with typed task, event and worker reads and authorized streams before claiming restricted-role browsing or OPA resource/field restrictions. Public SQL/import/export transports remain denied.
 
-## OIDC follow-up
+## OIDC integration (PR #143)
 
-OIDC is planned, not implemented by PR #143. Selecting `oidc` fails startup; it never falls back to Basic. Use a maintained OIDC client/integration rather than writing protocol or token-validation code. Account creation, passwords, MFA and recovery stay at the customer's IdP; support standard providers without requiring Keycloak-specific administration APIs.
+`openid-client` owns discovery, authorization code flow with PKCE, state/nonce and ID-token signature/issuer/audience checks. Use HTTPS issuer and endpoints; no insecure TLS fallback. A five-minute encrypted, browser-bound transaction cookie carries PKCE/state/nonce and a constrained return path, enabling callbacks to land on any replica. Transactions use the provider's one-time authorization code. Provider access/refresh tokens are discarded.
 
-Resolve principals from verified issuer and subject, with explicitly configured claim/group-to-role mapping and default deny. Validate the configured issuer, audience and authentication response using the integration library. Test callback state/nonce/PKCE, key rotation, redirect restrictions, logout, expiry and live-connection authorization. Document the library's session model and its multi-replica/revocation tradeoffs. Never accept identity from untrusted headers or silently link accounts by email. Avoid introducing a second custom session engine alongside the library.
+Configure issuer, client ID, optional client secret (`client_secret_post`) and explicit top-level claim-to-role mappings. Mappings support a string or string array; no mapping means no access. Identify users by issuer-bound subject, never email. Password and OIDC modes are exclusive. The IdP owns all account lifecycle operations and MFA; app logout clears only its own session. See the configuration guide for Kubernetes-secret inputs and an OIDC example.
 
 ## OPA follow-up (#140)
 
@@ -52,9 +54,8 @@ Bun asks OPA about an authenticated principal, action and resource after builtin
 ## Delivery plan
 
 1. Land the TOML resolver and strict Python handoff (#142, merged).
-2. Simplify #143 to configured Basic accounts, request authorization and the private Python bridge. Remove old identity modules, settings, frontend login and lifecycle tests. Verify real Basic browser/WebSocket traffic at root and a shared prefix over TLS.
+2. Deliver #143 with configured password accounts or OIDC, a login page, bounded cookie sessions and shared request authorization. Verify browser cookies and WebSockets at root and a shared prefix over TLS. Runtime/Python prerequisites remain in merged #146.
 3. Introduce typed observation reads/streams and retire browser DB credentials; verify restricted-role reads cannot expose payloads through another transport.
-4. Add maintained OIDC integration and deployment documentation with provider-managed lifecycle.
 5. Add restrictive OPA decisions and equivalent resource/field enforcement across all transports.
 
 Do not ship unsupported modes, direct database access or anonymous fallbacks as compatibility bypasses. Existing frontend-password deployments must explicitly configure accounts before upgrading.

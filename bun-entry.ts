@@ -594,7 +594,9 @@ async function periodicCleanup() {
 cleanupTimer = setTimeout(periodicCleanup, observationApi.cleanupInterval())
 async function validateLiveAccount(ws: any): Promise<boolean> {
   try {
-    const principal = await authentication?.accountPrincipal(ws.data.account ?? "")
+    const principal = ws.data.authRequest
+      ? await authentication?.authenticate(ws.data.authRequest)
+      : await authentication?.accountPrincipal(ws.data.account ?? "")
     if (!principal) throw new Error("Account required")
     authorize(principal, payloadPermissions, Boolean(replaySnapshot))
     return true
@@ -636,6 +638,9 @@ const server = Bun.serve({
             backend: "surreal" as const,
             protocols: req.headers.get("sec-websocket-protocol") ?? undefined,
             account: authentication!.principal(req).account_id,
+            authRequest: req.headers.has("cookie")
+              ? new Request(req.url, { headers: { cookie: req.headers.get("cookie")! } })
+              : undefined,
           },
         })
         if (success) return undefined
