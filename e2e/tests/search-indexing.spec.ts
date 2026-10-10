@@ -1,3 +1,4 @@
+import { privateObservationQuery } from "../helpers/docker-compose"
 import { randomUUID } from "node:crypto"
 import { test, expect } from "../fixtures/base"
 import { appURL } from "../helpers/app-url"
@@ -10,11 +11,7 @@ test("exact kwargs matches agree across quick search, Explorer and CSV", async (
     { id: randomUUID(), type: "test.search.string", kwargs: JSON.stringify({ [key]: "1" }) },
   ]
   const queryDatabase = async (sql: string) => {
-    const response = await fetch(appURL("/surreal/sql"), {
-      method: "POST",
-      headers: { Accept: "application/json", Authorization: `Basic ${btoa("root:root")}` },
-      body: `USE NS celery_insights DB main; ${sql}`,
-    })
+    const response = await privateObservationQuery(`USE NS celery_insights DB main; ${sql}`)
     expect(response.ok).toBe(true)
     const results = (await response.json()) as { status: string; result: unknown }[]
     for (const result of results) expect(result.status, JSON.stringify(result.result)).toBe("OK")
