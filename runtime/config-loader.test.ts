@@ -16,6 +16,16 @@ function fromToml(toml: string, env: Record<string, string> = {}, files: Record<
 }
 
 describe("Bun configuration resolver", () => {
+  it("defaults search indexing off and accepts its TOML and environment settings", () => {
+    expect(fromToml("").config.searchIndexingEnabled).toBe(false)
+    expect(fromToml("[search.indexing]\nenabled = true").config.searchIndexingEnabled).toBe(true)
+    expect(fromToml("", { SEARCH_INDEXING_ENABLED: "true" }).config.searchIndexingEnabled).toBe(true)
+    expect(
+      fromToml("[search.indexing]\nenabled = true", {
+        CELERY_INSIGHTS_SEARCH_INDEXING_ENABLED: "false",
+      }).config.searchIndexingEnabled,
+    ).toBe(false)
+  })
   it("preserves reverse-proxy and MCP settings through the structured resolver", () => {
     const resolved = fromToml(
       '[server]\nurl_prefix = "insights"\n[mcp]\ntoken_file = "mcp-secret"\nallowed_hosts = "insights.example"',

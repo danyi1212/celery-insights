@@ -65,12 +65,20 @@ export const getFlowGraph = (
   const taskMap = new Map<string, Task>(tasks.map((task) => [task.id, task]))
   const childMap = getChildMap(tasks)
   const visited = new Set<string>()
+  // Stored children lists can be stale; only a reachable parent may adopt a parentless child, once.
+  const claimed = new Set<string>([rootTaskId])
 
   function dfs(task: Task, x: number, y: number) {
     visited.add(task.id)
     nodes.push(createNode(task, x, y))
 
-    const children = childMap.get(task.id) || []
+    const children = [...(childMap.get(task.id) || [])]
+    for (const childId of task.children) {
+      const child = taskMap.get(childId)
+      if (!child || child.parent_id || claimed.has(childId)) continue
+      claimed.add(childId)
+      children.push(child)
+    }
 
     const startY = y - (children.length - 1) / 2
     const childX = x + 1

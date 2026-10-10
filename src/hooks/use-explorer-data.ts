@@ -4,6 +4,8 @@ import type { TimeRange } from "@danyi1212/time-range-picker"
 import { isLiveTimeRange } from "@danyi1212/time-range-picker/time-range"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import { resolveTimeRangeBindings } from "@lib/time-range-utils"
+import { trimQuery } from "@lib/task-search"
+import { buildIndexedTaskSearch, buildIndexedWorkflowSearch } from "@lib/indexed-search"
 import type { SurrealTask, SurrealWorkflow } from "@/types/surreal-records"
 
 export type ExplorerMode = "tasks" | "workflows"
@@ -91,16 +93,24 @@ function appendCondition(clause: string, condition: string): string {
   return `${clause} AND ${condition}`
 }
 
-function buildTaskWhereClause(state: ExplorerQueryState): { clause: string; bindings: Record<string, unknown> } {
+function buildTaskWhereClause(state: ExplorerQueryState): {
+  prelude: string[]
+  source: string
+  clause: string
+  bindings: Record<string, unknown>
+} {
   const conditions = ["last_updated >= <datetime>$from", "last_updated <= <datetime>$to"]
   const bindings: Record<string, unknown> = {}
-  const trimmedQuery = state.query.trim()
+  let source = "task"
+  let prelude: string[] = []
+  const trimmedQuery = trimQuery(state.query)
 
   if (trimmedQuery) {
-    conditions.push(
-      "(string::contains(string::lowercase(string::concat('', id)), $query) OR string::contains(string::lowercase(type ?? ''), $query) OR string::contains(string::lowercase(worker ?? ''), $query) OR string::contains(string::lowercase(exception ?? ''), $query) OR string::contains(string::lowercase(result ?? ''), $query))",
-    )
-    bindings.query = trimmedQuery.toLowerCase()
+    const search = buildIndexedTaskSearch(trimmedQuery)
+    source = search.source
+    prelude = search.prelude
+    conditions.push(`(${search.clause})`)
+    Object.assign(bindings, search.bindings)
   }
   if (state.states.length > 0) {
     conditions.push("state IN $states")
@@ -115,19 +125,27 @@ function buildTaskWhereClause(state: ExplorerQueryState): { clause: string; bind
     bindings.workers = state.workers
   }
 
-  return { clause: ` WHERE ${conditions.join(" AND ")}`, bindings }
+  return { source, prelude, clause: ` WHERE ${conditions.join(" AND ")}`, bindings }
 }
 
-function buildWorkflowWhereClause(state: ExplorerQueryState): { clause: string; bindings: Record<string, unknown> } {
+function buildWorkflowWhereClause(state: ExplorerQueryState): {
+  prelude: string[]
+  source: string
+  clause: string
+  bindings: Record<string, unknown>
+} {
   const conditions = ["last_updated >= <datetime>$from", "last_updated <= <datetime>$to"]
   const bindings: Record<string, unknown> = {}
-  const trimmedQuery = state.query.trim()
+  let source = "workflow"
+  const trimmedQuery = trimQuery(state.query)
+  let prelude: string[] = []
 
   if (trimmedQuery) {
-    conditions.push(
-      "(string::contains(string::lowercase(root_task_id), $query) OR string::contains(string::lowercase(root_task_type ?? ''), $query) OR string::contains(string::lowercase(latest_exception_preview ?? ''), $query))",
-    )
-    bindings.query = trimmedQuery.toLowerCase()
+    const search = buildIndexedWorkflowSearch(trimmedQuery)
+    source = search.source
+    prelude = search.prelude
+    conditions.push(`(${search.clause})`)
+    Object.assign(bindings, search.bindings)
   }
   if (state.workflowStates.length > 0) {
     conditions.push("aggregate_state IN $workflowStates")
@@ -138,7 +156,7 @@ function buildWorkflowWhereClause(state: ExplorerQueryState): { clause: string; 
     bindings.rootTypes = state.rootTypes
   }
 
-  return { clause: ` WHERE ${conditions.join(" AND ")}`, bindings }
+  return { source, prelude, clause: ` WHERE ${conditions.join(" AND ")}`, bindings }
 }
 
 function normalizeStateForKey(state: ExplorerQueryState) {
@@ -184,9 +202,9 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
       const bindings = resolveTimeRangeBindings(state.range, new Date())
 
       if (state.mode === "tasks") {
-        const { clause, bindings: whereBindings } = buildTaskWhereClause(state)
+        const { prelude, source, clause, bindings: whereBindings } = buildTaskWhereClause(state)
         const sortField = TASK_SORT_FIELDS.has(state.sortField) ? state.sortField : "last_updated"
-        const [taskRows, countRows, stateFilters, typeFilters, workerFilters, buckets] = await db.query<
+        const results = await db.query<
           [
             SurrealTask[],
             [{ count: number }],
@@ -196,14 +214,19 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
             { bucket: string; state: string; count: number }[],
           ]
         >(
-          `SELECT * FROM task${clause} ORDER BY ${sortField} ${state.sortDirection} LIMIT $rowLimit;` +
-            `SELECT count() AS count FROM task${clause} GROUP ALL;` +
-            `SELECT state, count() AS count FROM task${clause} GROUP BY state;` +
-            `SELECT type, count() AS count FROM task${appendCondition(clause, "type != NONE")} GROUP BY type;` +
-            `SELECT worker, count() AS count FROM task${appendCondition(clause, "worker != NONE")} GROUP BY worker;` +
-            `SELECT time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket, state, count() AS count FROM task${clause} GROUP BY bucket, state ORDER BY bucket ASC;`,
+          prelude.join("") +
+            `SELECT * FROM ${source}${clause} ORDER BY ${sortField} ${state.sortDirection} LIMIT $rowLimit;` +
+            `SELECT count() AS count FROM ${source}${clause} GROUP ALL;` +
+            `SELECT state, count() AS count FROM ${source}${clause} GROUP BY state;` +
+            `SELECT type, count() AS count FROM ${source}${appendCondition(clause, "type != NONE")} GROUP BY type;` +
+            `SELECT worker, count() AS count FROM ${source}${appendCondition(clause, "worker != NONE")} GROUP BY worker;` +
+            `SELECT time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket, state, count() AS count FROM ${source}${clause} GROUP BY bucket, state ORDER BY bucket ASC;`,
           { ...bindings, ...whereBindings, rowLimit },
         )
+
+        const [taskRows, countRows, stateFilters, typeFilters, workerFilters, buckets] = results.slice(
+          prelude.length,
+        ) as typeof results
 
         return {
           tasks: Array.isArray(taskRows) ? taskRows : [],
@@ -220,9 +243,9 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
         }
       }
 
-      const { clause, bindings: whereBindings } = buildWorkflowWhereClause(state)
+      const { prelude, source, clause, bindings: whereBindings } = buildWorkflowWhereClause(state)
       const sortField = WORKFLOW_SORT_FIELDS.has(state.sortField) ? state.sortField : "last_updated"
-      const [workflowRows, countRows, workflowStateFilters, rootTypeFilters, buckets] = await db.query<
+      const results = await db.query<
         [
           SurrealWorkflow[],
           [{ count: number }],
@@ -231,13 +254,18 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
           { bucket: string; aggregate_state: string; count: number }[],
         ]
       >(
-        `SELECT * FROM workflow${clause} ORDER BY ${sortField} ${state.sortDirection} LIMIT $rowLimit;` +
-          `SELECT count() AS count FROM workflow${clause} GROUP ALL;` +
-          `SELECT aggregate_state, count() AS count FROM workflow${clause} GROUP BY aggregate_state;` +
-          `SELECT root_task_type, count() AS count FROM workflow${appendCondition(clause, "root_task_type != NONE")} GROUP BY root_task_type;` +
-          `SELECT time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket, aggregate_state, count() AS count FROM workflow${clause} GROUP BY bucket, aggregate_state ORDER BY bucket ASC;`,
+        prelude.join("") +
+          `SELECT * FROM ${source}${clause} ORDER BY ${sortField} ${state.sortDirection} LIMIT $rowLimit;` +
+          `SELECT count() AS count FROM ${source}${clause} GROUP ALL;` +
+          `SELECT aggregate_state, count() AS count FROM ${source}${clause} GROUP BY aggregate_state;` +
+          `SELECT root_task_type, count() AS count FROM ${source}${appendCondition(clause, "root_task_type != NONE")} GROUP BY root_task_type;` +
+          `SELECT time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket, aggregate_state, count() AS count FROM ${source}${clause} GROUP BY bucket, aggregate_state ORDER BY bucket ASC;`,
         { ...bindings, ...whereBindings, rowLimit },
       )
+      // Each LET statement occupies a result slot.
+      const [workflowRows, countRows, workflowStateFilters, rootTypeFilters, buckets] = results.slice(
+        prelude.length,
+      ) as typeof results
 
       return {
         tasks: [],

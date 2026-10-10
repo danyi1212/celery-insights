@@ -11,6 +11,22 @@
       "type": "integer",
       "const": 1
     },
+    "search": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "indexing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
     "server": {
       "type": "object",
       "additionalProperties": false,

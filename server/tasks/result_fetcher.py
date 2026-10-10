@@ -10,6 +10,7 @@ from celery.backends.redis import RedisBackend
 from surrealdb.types import Value
 
 from events.ingester import build_workflow_summary_recompute
+from tasks.task_search import kwargs_search_terms
 from surrealdb_client import get_db
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ def _query_errors(result: object) -> list[str]:
     return errors
 
 
-def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
+def _build_task_meta_upsert(task_id: str, meta: dict, *, search_indexing_enabled: bool = False) -> tuple[str, dict]:
     state = str(meta.get("status") or "PENDING")
     last_updated = _iso_datetime(meta.get("date_done"))
     params: dict = {
@@ -74,21 +75,21 @@ def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
         "last_updated": last_updated,
         "workflow_id": task_id,
         "type": meta.get("name"),
-        "args": repr(meta.get("args", [])),
-        "kwargs": repr(meta.get("kwargs", {})),
+        "args": repr(meta["args"]) if "args" in meta else None,
+        "kwargs": repr(meta["kwargs"]) if "kwargs" in meta else None,
         "worker": meta.get("worker"),
-        "retries": int(meta.get("retries") or 0),
+        "retries": int(meta["retries"] or 0) if "retries" in meta else None,
         "routing_key": meta.get("queue"),
     }
 
     set_clauses = [
         "state = $state",
-        "type = $type",
-        "args = $args",
-        "kwargs = $kwargs",
-        "worker = $worker",
-        "retries = $retries",
-        "routing_key = $routing_key",
+        # Metadata without result_extended lacks these fields, so keep what task events stored.
+        *(
+            f"{field} = ${field} ?? $meta_previous.{field}"
+            for field in ("type", "args", "kwargs", "worker", "retries", "routing_key")
+        ),
+        "kwargs_search_source = IF $kwargs != NONE THEN 'repr' ELSE $meta_previous.kwargs_search_source END",
         "workflow_id = $meta_previous.workflow_id ?? $workflow_id",
         "last_updated = <datetime>$last_updated",
         "first_observed_at = $meta_previous.first_observed_at ?? <datetime>$last_updated",
@@ -126,6 +127,15 @@ def _build_task_meta_upsert(task_id: str, meta: dict) -> tuple[str, dict]:
     target = "type::record('task', $task_id)"
     assignments = ", ".join(set_clauses)
     query = f"LET $meta_previous = (SELECT * FROM {target})[0] ?? {{}}; UPSERT {target} SET {assignments}"
+    if search_indexing_enabled and params["kwargs"] is not None:
+        terms = kwargs_search_terms(params["kwargs"], "repr")
+        params["search_terms"] = terms.terms
+        params["search_fallback"] = terms.fallback
+        query += (
+            "; IF $meta_previous.kwargs != $kwargs AND (SELECT VALUE enabled FROM search_config:current)[0] = true { "
+            "UPDATE type::record('task_search', $task_id) SET kwargs_terms = $search_terms, "
+            "kwargs_fallback = $search_fallback; }"
+        )
     return query, params
 
 
@@ -181,7 +191,8 @@ class ResultFetcher:
 class ResultBackendPoller:
     """Polls Redis result backend metadata to backfill tasks when task events are absent."""
 
-    def __init__(self, celery_app: Celery, interval_seconds: int = 2):
+    def __init__(self, celery_app: Celery, interval_seconds: int = 2, *, search_indexing_enabled: bool = False):
+        self.search_indexing_enabled = search_indexing_enabled
         self.celery_app = celery_app
         self.interval_seconds = interval_seconds
         self._seen: dict[str, str] = {}
@@ -228,7 +239,7 @@ class ResultBackendPoller:
             if self._seen.get(task_id) == stamp:
                 continue
 
-            query, params = _build_task_meta_upsert(task_id, meta)
+            query, params = _build_task_meta_upsert(task_id, meta, search_indexing_enabled=self.search_indexing_enabled)
             summary_query, summary_params = build_workflow_summary_recompute(
                 {"uuid": task_id, "timestamp": datetime.now(tz=UTC).timestamp()},
                 0,

@@ -5,11 +5,8 @@ import time
 from asyncio import CancelledError
 from contextlib import asynccontextmanager
 
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.inmemory import InMemoryBackend
 
 from celery_app import get_celery_app
-from cleanup import CleanupJob
 from events.ingester import SurrealDBIngester
 from events.receiver import CeleryEventReceiver
 from settings import get_settings
@@ -29,9 +26,6 @@ async def lifespan(_):
     os.environ["TZ"] = settings.timezone
     time.tzset()
 
-    # Setup cache
-    FastAPICache.init(InMemoryBackend())
-
     # 1. Initialize SurrealDB connection
     await init_surrealdb(settings)
 
@@ -46,9 +40,11 @@ async def lifespan(_):
         # 2. Connect to Celery broker
         celery_app = await get_celery_app()
 
-        # 3. Start services: EventReceiver -> SurrealDBIngester -> WorkerPoller -> CleanupJob
+        # 3. Start services: EventReceiver -> SurrealDBIngester -> WorkerPoller
         result_fetcher = ResultFetcher(celery_app)
-        result_backend_poller = ResultBackendPoller(celery_app)
+        result_backend_poller = ResultBackendPoller(
+            celery_app, search_indexing_enabled=settings.search_indexing_enabled
+        )
 
         event_receiver = CeleryEventReceiver(celery_app, asyncio.get_running_loop())
         event_receiver.start()
@@ -57,6 +53,7 @@ async def lifespan(_):
             queue=event_receiver.queue,
             batch_interval_ms=settings.ingestion_batch_interval_ms,
             on_terminal=result_fetcher.fetch_and_store,
+            search_indexing_enabled=settings.search_indexing_enabled,
         )
         ingester.start()
 
@@ -64,21 +61,11 @@ async def lifespan(_):
         worker_poller.start()
         result_backend_poller.start()
     else:
-        logger.info("Debug snapshot mode enabled; starting control-plane-only services")
+        logger.info("Debug snapshot mode enabled; Celery ingestion disabled")
 
-    cleanup_job = CleanupJob(
-        interval_seconds=settings.cleanup_interval_seconds,
-        task_max_count=settings.task_max_count,
-        task_retention_hours=settings.task_retention_hours,
-        dead_worker_retention_hours=settings.dead_worker_retention_hours,
-    )
-    if not settings.debug_snapshot_mode:
-        cleanup_job.start()
-
-    # Expose services on app.state for other routers
+    # Expose ingestion status to the private bridge
     _.state.settings = settings
     _.state.ingester = ingester
-    _.state.cleanup_job = cleanup_job
     _.state.debug_snapshot_mode = settings.debug_snapshot_mode
 
     try:
@@ -87,8 +74,6 @@ async def lifespan(_):
         logger.info("Stopping server...")
     finally:
         # Shutdown in reverse order — await async tasks before closing DB
-        if not settings.debug_snapshot_mode:
-            await cleanup_job.stop()
         if result_backend_poller is not None:
             await result_backend_poller.stop()
         if worker_poller is not None:

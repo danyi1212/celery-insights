@@ -13,16 +13,12 @@ class Settings(BaseModel):
     debug: bool = False
     timezone: str = "UTC"
 
-    host: str = "0.0.0.0"
-    port: int = 8556
-
     # SurrealDB connection (received from Bun)
     surrealdb_url: str = "ws://localhost:8557/rpc"
     surrealdb_external_url: str | None = None
     surrealdb_ingester_pass: str = Field(default="changeme", repr=False)
     surrealdb_namespace: str = "celery_insights"
     surrealdb_database: str = "main"
-    surrealdb_storage: str = "memory"
 
     # Celery connection (received from Bun)
     broker_url: str = Field(default="amqp://guest:guest@host.docker.internal/", repr=False)
@@ -33,17 +29,14 @@ class Settings(BaseModel):
     log_format: Literal["pretty", "json"] = "pretty"
     log_level: Literal["debug", "info", "warn", "error"] = "info"
 
-    # Data retention (received from Bun)
-    cleanup_interval_seconds: int = 60
-    task_max_count: int | None = None
-    task_retention_hours: float | None = None
-    dead_worker_retention_hours: float | None = 24
-
     # Ingestion performance (received from Bun)
+    search_indexing_enabled: bool = False
     ingestion_batch_interval_ms: int = 100
+    bridge_socket: str = ""
 
 
 _runtime_settings: Settings | None = None
+MAX_HANDOFF_BYTES = 32 * 1024 * 1024
 
 
 def configure_settings(settings: Settings) -> None:
@@ -61,8 +54,8 @@ def read_settings_snapshot(fd: int = 3) -> Settings:
     """Read bounded private IPC data. Bun has already resolved and validated config."""
     try:
         with os.fdopen(fd, "rb") as stream:
-            content = stream.read(1024 * 1024 + 1)
-        if len(content) > 1024 * 1024:
+            content = stream.read(MAX_HANDOFF_BYTES + 1)
+        if len(content) > MAX_HANDOFF_BYTES:
             raise ValueError
         envelope = json.loads(content)
         if (
