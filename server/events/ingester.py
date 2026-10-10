@@ -171,11 +171,18 @@ class SurrealDBIngester:
 
     async def _flush(self) -> None:
         async with self._flush_lock:
-            await self._flush_buffer()
+            terminal_task_ids = await self._flush_buffer()
+        # The result fetch can block on the result backend; only the transaction needs the lock.
+        if terminal_task_ids and self.on_terminal:
+            try:
+                await self.on_terminal(terminal_task_ids)
+            except Exception:
+                logger.exception("Terminal event callback failed for %d tasks", len(terminal_task_ids))
 
-    async def _flush_buffer(self) -> None:
+    async def _flush_buffer(self) -> list[str]:
+        """Commit the buffered events and return the terminal task ids that were written."""
         if not self._buffer:
-            return
+            return []
 
         events = self._buffer
         self._buffer = []
@@ -235,18 +242,19 @@ class SurrealDBIngester:
                 logger.debug("Flushed %d events (%d queries) to SurrealDB", len(events), len(queries))
             except TransactionConflictError as exc:
                 logger.warning("Keeping %d events for the next flush: %s", len(events), exc)
-                self._buffer = events + self._buffer
-                return
+                self._requeue(events, terminal_task_ids)
+                return []
             except Exception:
                 logger.exception("Failed to flush %d events to SurrealDB", len(events))
-                self._buffer = events + self._buffer
-                return
+                self._requeue(events, terminal_task_ids)
+                return []
 
-        if terminal_task_ids and self.on_terminal:
-            try:
-                await self.on_terminal(terminal_task_ids)
-            except Exception:
-                logger.exception("Terminal event callback failed for %d tasks", len(terminal_task_ids))
+        return terminal_task_ids
+
+    def _requeue(self, events: list[dict], terminal_task_ids: list[str]) -> None:
+        self._buffer = events + self._buffer
+        # Keep the consume loop flushing promptly while terminal events are waiting.
+        self._has_terminal = self._has_terminal or bool(terminal_task_ids)
 
     async def _stats_loop(self) -> None:
         prev_events = 0

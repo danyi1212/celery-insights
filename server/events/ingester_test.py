@@ -526,6 +526,52 @@ class TestSurrealDBIngester:
         assert ingester._buffer == []
 
     @pytest.mark.asyncio
+    async def test_persistent_conflict_skips_callback_and_keeps_terminal_flush(
+        self, mock_db, queue, mocker: MockerFixture
+    ):
+        mocker.patch("events.ingester.CONFLICT_BACKOFF_SECONDS", 0)
+        mock_db.query_raw.return_value = {
+            "result": [{"status": "ERR", "result": "Transaction conflict. This transaction can be retried"}]
+        }
+        callback = mocker.AsyncMock()
+        ingester = SurrealDBIngester(queue, on_terminal=callback)
+        ingester._buffer = [{"type": "task-succeeded", "uuid": "abc", "timestamp": 1700000000.0}]
+
+        await ingester._flush()
+
+        callback.assert_not_called()
+        assert ingester._has_terminal is True
+
+    @pytest.mark.asyncio
+    async def test_terminal_callback_runs_after_commit_outside_the_lock(self, mock_db, queue):
+        calls: list[str] = []
+        callback_started = asyncio.Event()
+        release_callback = asyncio.Event()
+
+        async def query(*_args, **_kwargs):
+            calls.append("commit")
+            return {"result": [{"status": "OK", "result": []}]}
+
+        async def on_terminal(task_ids: list[str]) -> None:
+            calls.append(f"callback:{task_ids}")
+            callback_started.set()
+            await release_callback.wait()
+
+        mock_db.query_raw.side_effect = query
+        ingester = SurrealDBIngester(queue, on_terminal=on_terminal)
+        ingester._buffer = [{"type": "task-succeeded", "uuid": "abc", "timestamp": 1700000000.0}]
+
+        first = asyncio.create_task(ingester._flush())
+        await callback_started.wait()
+        # A slow callback must not hold up the next flush.
+        ingester._buffer = [{"type": "task-sent", "uuid": "def", "timestamp": 1700000001.0}]
+        await asyncio.wait_for(ingester._flush(), timeout=1)
+        release_callback.set()
+        await first
+
+        assert calls == ["commit", "callback:['abc']", "commit"]
+
+    @pytest.mark.asyncio
     async def test_flush_handles_db_error_gracefully(self, mock_db, queue):
         mock_db.query_raw.side_effect = Exception("Connection lost")
         ingester = SurrealDBIngester(queue)
