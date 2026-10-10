@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import http from "node:http"
 import https from "node:https"
 import { resolve } from "node:path"
-import { request } from "../../tooling/playwright"
+import { request, type Page } from "../../tooling/playwright"
 import { appOrigin, appPath, appURL } from "./app-url"
 
 export const fixtureDirectory = resolve("test_project/.e2e-auth")
@@ -149,4 +149,12 @@ export async function fixtureFetch(url: string, options: RequestInit = {}): Prom
     req.setTimeout(10000, () => req.destroy(new Error("Fixture request timed out")))
     req.end(options.body)
   })
+}
+
+export async function signIn(page: Page, credentials: { username: string; password: string } = fixtureCredentials) {
+  await page.goto(appURL("/login"))
+  await page.getByLabel("Username", { exact: true }).fill(credentials.username)
+  await page.getByLabel("Password", { exact: true }).fill(credentials.password)
+  await page.getByRole("button", { name: "Sign in", exact: true }).click()
+  await page.waitForURL(appURL("/"))
 }

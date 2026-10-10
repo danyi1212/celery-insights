@@ -1,3 +1,4 @@
+import { signIn } from "../helpers/authentication"
 import { test, expect } from "../fixtures/base"
 import { request as createRequest } from "../../tooling/playwright"
 import { appURL, appOrigin } from "../helpers/app-url"
@@ -122,7 +123,6 @@ test.describe("Restrictive OPA authorization", () => {
     })
     const context = await browser.newContext({
       ignoreHTTPSErrors: true,
-      httpCredentials: { username: "reader", password: "synthetic-reader-secret" },
     })
     try {
       for (const action of ["task.metadata.read", "task.input.read", "task.result.read", "task.failure.read"]) {
@@ -143,6 +143,7 @@ test.describe("Restrictive OPA authorization", () => {
       expect(task.type).toBeTruthy()
       for (const field of ["args", "kwargs", "result", "exception", "traceback"]) expect(task).not.toHaveProperty(field)
       const page = await context.newPage()
+      await signIn(page, { username: "reader", password: "synthetic-reader-secret" })
       await page.goto(appURL(`/tasks/${task_id}`))
       await expect(page.getByTestId("header-connection-status").getByText("Connected", { exact: true })).toBeVisible()
       await expect(page.locator("main")).toContainText(task_id)
@@ -183,7 +184,7 @@ test.describe("Restrictive OPA authorization", () => {
       },
     })
     const restricted = await policyContext()
-    const context = await browser.newContext({ ignoreHTTPSErrors: true, httpCredentials: policyCredentials })
+    const context = await browser.newContext({ ignoreHTTPSErrors: true })
     try {
       const read = async (data: Record<string, unknown>) => {
         const response = await restricted.post(appURL("/api/observation/rpc"), { headers, data })
@@ -295,6 +296,7 @@ test.describe("Restrictive OPA authorization", () => {
         },
       })
       const page = await context.newPage()
+      await signIn(page, policyCredentials)
       await page.goto(appURL("/tasks/scope_visible"))
       await expect(page.getByTestId("header-connection-status").getByText("Connected", { exact: true })).toBeVisible()
       await expect(page.locator("main")).toContainText("scope.visible")
@@ -335,8 +337,9 @@ test.describe("Restrictive OPA authorization", () => {
       browser,
       request,
     }) => {
-      const context = await browser.newContext({ ignoreHTTPSErrors: true, httpCredentials: policyCredentials })
+      const context = await browser.newContext({ ignoreHTTPSErrors: true })
       const page = await context.newPage()
+      await signIn(page, policyCredentials)
       try {
         await page.goto(appURL("/documentation/configuration"))
         await page.evaluate(
@@ -381,8 +384,9 @@ test.describe("Restrictive OPA authorization", () => {
     scenario,
   }) => {
     test.setTimeout(60000)
-    const context = await browser.newContext({ ignoreHTTPSErrors: true, httpCredentials: policyCredentials })
+    const context = await browser.newContext({ ignoreHTTPSErrors: true })
     const page = await context.newPage()
+    await signIn(page, policyCredentials)
     try {
       updatePolicyFixture({ deny_websocket: true })
       const restricted = await policyContext()
