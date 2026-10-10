@@ -253,3 +253,14 @@ describe("OIDC sign-in", () => {
     },
   )
 })
+
+it("does not let a browser's cached Basic credentials bypass login or logout", async () => {
+  const auth = new AuthenticationHttp(snapshot)
+  const authorization = "Basic " + Buffer.from("admin:configured-secret").toString("base64")
+  const result = (
+    await run(auth, "/api/auth/identity", { headers: { authorization, "Sec-Fetch-Site": "same-origin" } })
+  ).response
+  expect(result.status).toBe(401)
+  expect(result.headers.has("www-authenticate")).toBe(false)
+  expect((await run(auth, "/api/auth/identity", { headers: { authorization } })).response.status).toBe(200)
+})

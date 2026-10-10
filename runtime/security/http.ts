@@ -85,6 +85,13 @@ export class AuthenticationHttp {
   }
 
   async authenticate(request: Request): Promise<Principal> {
+    // Browser sign-in/logout must not fall back to a previously cached Basic credential.
+    if (
+      this.sessions &&
+      request.headers.has("sec-fetch-site") &&
+      !request.headers.get("cookie")?.includes("__Secure-insights-")
+    )
+      throw new AuthError(401, "Sign in required")
     const principal =
       this.sessions && request.headers.get("cookie")?.includes("__Secure-insights-")
         ? await this.sessions.principal(request)
