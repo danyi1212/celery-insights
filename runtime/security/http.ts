@@ -49,7 +49,7 @@ export async function secureApplicationRequest(
     await auth.authenticate(request)
     if (normalized === "/api/auth/identity" && request.method === "GET") {
       const principal = auth.principal(request)
-      return noStore(Response.json({ account_id: principal.account_id, permissions: [...grants(principal)].sort() }))
+      return noStore(Response.json({ ...auth.identity(request), permissions: [...grants(principal)].sort() }))
     }
     if (/^\/(api(?:\/|$)|metrics(?:\/|$)|surreal(?:\/|$)|mcp(?:\/|$)|ws(?:\/|$))/.test(normalized))
       auth.gate(request, normalized, replay)
@@ -98,6 +98,15 @@ export class AuthenticationHttp {
         : this.basicPrincipal(request)
     this.principals.set(request, principal)
     return principal
+  }
+
+  identity(request: Request) {
+    const principal = this.principal(request)
+    return {
+      account_id: principal.account_id,
+      display_name: principal.display_name ?? principal.account_id,
+      authentication_mode: this.snapshot.mode ?? "basic",
+    }
   }
 
   principal(request: Request): Principal {
@@ -150,6 +159,12 @@ export class AuthenticationHttp {
           ? "Your account does not have access to this installation."
           : error
             ? "Unable to sign in. Please try again."
+            : "",
+        200,
+        url.searchParams.get("reason") === "expired"
+          ? "Your session expired. Sign in again to continue."
+          : url.searchParams.get("reason") === "signed-out"
+            ? "You have signed out of Celery Insights."
             : "",
       )
     }

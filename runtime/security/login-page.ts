@@ -10,6 +10,7 @@ export function loginPage(
   returnTo: string,
   error = "",
   status = 200,
+  notice = "",
 ): Response {
   return new Response(
     `<!doctype html>
@@ -52,6 +53,7 @@ export function loginPage(
     :focus-visible { outline: 3px solid light-dark(#789a3b, #a9cc54); outline-offset: 3px; }
     .help { margin: 24px 0 0; color: var(--muted); text-align: center; font-size: 12px; line-height: 1.7; }
     .error { padding: 12px 14px; margin: 0 0 24px; border: 1px solid light-dark(#f2c9c2, #703c33); border-radius: 7px; background: light-dark(#fff4f1, #35221e); color: light-dark(#a33526, #ffb4a5); font-size: 13px; line-height: 1.5; }
+    .notice { padding: 12px 14px; margin: 0 0 24px; border: 1px solid var(--border); border-radius: 7px; color: var(--muted); font-size: 13px; line-height: 1.5; }
     .footer { color: var(--muted); font-size: 11px; line-height: 1.6; }
     .visual-panel { display: flex; flex-direction: column; justify-content: center; overflow: hidden; position: relative; margin: 12px 12px 12px 0; border-radius: 16px; background: radial-gradient(ellipse at 50% 38%, #2b402b 0, #1d3025 45%, #14271f 100%); color: #f1f5e9; padding: 56px clamp(32px, 5vw, 88px); }
     .visual-panel::before { content: ""; position: absolute; inset: 12px; border: 1px solid #c9e99a0c; border-radius: 10px; pointer-events: none; }
@@ -80,6 +82,7 @@ export function loginPage(
           <p class="eyebrow">Your cluster, in focus</p>
           <h1 id="sign-in-title">Welcome back</h1>
           <p class="intro">${mode === "basic" ? "Sign in to your Celery Insights workspace." : "Sign in with your organization’s identity provider."}</p>
+          ${notice ? `<p class="notice" role="status">${escape(notice)}</p>` : ""}
           ${error ? `<p class="error" role="alert">${escape(error)}</p>` : ""}
           ${
             mode === "basic"
@@ -91,6 +94,7 @@ export function loginPage(
           </form>`
               : `<a class="signin" href="${escape(prefix)}/api/auth/oidc?returnTo=${escape(encodeURIComponent(returnTo))}">Sign in with your identity provider <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`
           }
+          ${mode === "oidc" ? `<p class="help">Your organization’s sign-in session may still be active after you sign out here.</p>` : ""}
           <p class="help">Need access? Contact your administrator.</p>
         </div>
       </div>

@@ -173,7 +173,7 @@ describe("OIDC sign-in", () => {
         const body = new URLSearchParams(String(options?.body))
         assert.ok(body.get("code_verifier"))
         assert.equal(body.get("redirect_uri"), origin + "/insights/api/auth/callback")
-        const id_token = await new SignJWT({ nonce, groups })
+        const id_token = await new SignJWT({ nonce, groups, preferred_username: "Alice", name: "Alice Example" })
           .setProtectedHeader({ alg: "RS256", kid: "fixture" })
           .setIssuer(tokenIssuer)
           .setAudience(audience)
@@ -232,7 +232,11 @@ describe("OIDC sign-in", () => {
     const session = cookies[1].split(";")[0]
     const identity = (await run(fixture.auth, "/api/auth/identity", { headers: { Cookie: session } })).response
     expect(identity.status).toBe(200)
-    expect(await identity.json()).toMatchObject({ account_id: "oidc:user-123" })
+    expect(await identity.json()).toMatchObject({
+      account_id: "oidc:user-123",
+      display_name: "Alice",
+      authentication_mode: "oidc",
+    })
     expect((await run(fixture.auth, "/metrics", { headers: { Cookie: session } })).response.status).toBe(403)
     expect(session).not.toContain("discarded")
   })

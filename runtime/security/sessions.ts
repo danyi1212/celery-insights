@@ -75,14 +75,18 @@ export class Sessions {
       roles.some((role) => !["viewer", "operator", "administrator"].includes(role))
     )
       throw new AuthError(401, "Sign in required")
-    return { account_id: `oidc:${payload.sub}`, roles: roles as Principal["roles"] }
+    return {
+      account_id: `oidc:${payload.sub}`,
+      roles: roles as Principal["roles"],
+      display_name: typeof payload.display_name === "string" ? payload.display_name : "Organization account",
+    }
   }
   async issue(principal: Principal): Promise<string> {
     const seconds = this.config.session_seconds ?? 28800
     const token = await this.seal(
       {
         sub: principal.account_id.replace(/^oidc:/, ""),
-        ...(this.config.mode === "oidc" ? { roles: principal.roles } : {}),
+        ...(this.config.mode === "oidc" ? { roles: principal.roles, display_name: principal.display_name } : {}),
       },
       "session",
       seconds,
@@ -179,7 +183,17 @@ export class Sessions {
         ),
       ]
       if (!roles.length) throw new AuthError(403, "Account is not authorized")
-      headers.append("Set-Cookie", await this.issue({ account_id: `oidc:${claims.sub}`, roles }))
+      const displayName = [claims.preferred_username, claims.name].find(
+        (value) => typeof value === "string" && value.trim(),
+      )
+      headers.append(
+        "Set-Cookie",
+        await this.issue({
+          account_id: `oidc:${claims.sub}`,
+          roles,
+          display_name: typeof displayName === "string" ? displayName.trim().slice(0, 128) : "Organization account",
+        }),
+      )
       return loginComplete(
         this.returnPath(typeof transaction.returnTo === "string" ? transaction.returnTo : null),
         headers,

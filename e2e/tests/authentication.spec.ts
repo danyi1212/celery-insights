@@ -50,7 +50,7 @@ test.describe("Browser login", () => {
     const page = await context.newPage()
     try {
       await page.goto(appURL("/settings"))
-      await expect(page.getByRole("heading", { name: "Celery Insights" })).toBeVisible()
+      await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible()
       await expect(page).toHaveURL(/\/login\?returnTo=/)
       await page.getByLabel("Username", { exact: true }).fill("admin")
       await page.getByLabel("Password", { exact: true }).fill("wrong-password")
@@ -68,8 +68,12 @@ test.describe("Browser login", () => {
       expect(
         cookies.some((cookie) => cookie.httpOnly && cookie.secure && cookie.name.startsWith("__Secure-insights-")),
       ).toBe(true)
+      await expect(page.locator('[aria-label="Account"]')).toContainText("admin")
+      await page.setViewportSize({ width: 390, height: 844 })
+      await page.getByRole("button", { name: "Toggle Sidebar", exact: true }).click()
+      await expect(page.locator('[aria-label="Account"]')).toContainText("admin")
       await page.getByRole("button", { name: "Sign out", exact: true }).click()
-      await expect(page).toHaveURL(appURL("/login"))
+      await expect(page).toHaveURL(appURL("/login") + "?reason=signed-out")
       expect((await context.request.get(appURL("/api/auth/identity"))).status()).toBe(401)
     } finally {
       await context.close()

@@ -24,6 +24,7 @@ export type Permission = (typeof permissions)[number]
 export type Role = "viewer" | "operator" | "administrator"
 export interface Principal {
   account_id: string
+  display_name?: string
   roles: Role[]
 }
 const viewer: Permission[] = ["task.metadata.read", "worker.metadata.read", "analytics.read"]

@@ -7,7 +7,9 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
   const response = await fetch(url, { ...options, headers, credentials: "same-origin" })
   if (response.status === 401)
     window.location.assign(
-      appUrl("/login") + "?returnTo=" + encodeURIComponent(window.location.pathname + window.location.search),
+      appUrl("/login") +
+        "?reason=expired&returnTo=" +
+        encodeURIComponent(window.location.pathname + window.location.search),
     )
   return response
 }

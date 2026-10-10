@@ -16,3 +16,14 @@ it("keeps GET requests simple and preserves caller headers", async () => {
   expect(headers.get("Accept")).toBe("application/json")
   expect(headers.has("X-Celery-Insights-Request")).toBe(false)
 })
+
+it("explains session expiry and preserves the destination, but does not redirect permission denials", async () => {
+  const navigate = vi.spyOn(window.location, "assign").mockImplementation(() => {})
+  vi.spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(new Response(null, { status: 403 }))
+    .mockResolvedValueOnce(new Response(null, { status: 401 }))
+  await authenticatedFetch("/api/settings/info")
+  expect(navigate).not.toHaveBeenCalled()
+  await authenticatedFetch("/api/auth/identity")
+  expect(navigate).toHaveBeenCalledWith(expect.stringContaining("/login?reason=expired&returnTo="))
+})
