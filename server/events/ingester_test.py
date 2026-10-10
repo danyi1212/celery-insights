@@ -6,6 +6,7 @@ from pytest_mock import MockerFixture
 
 from events.ingester import (
     BACKPRESSURE_THRESHOLD,
+    CONFLICT_RETRIES,
     SurrealDBIngester,
     build_children_update,
     build_raw_event,
@@ -454,6 +455,125 @@ class TestSurrealDBIngester:
         assert ingester._has_terminal is False
 
     @pytest.mark.asyncio
+    async def test_retryable_conflict_is_retried_without_an_error_log(
+        self, mock_db, queue, mocker: MockerFixture, caplog
+    ):
+        mocker.patch("events.ingester.CONFLICT_BACKOFF_SECONDS", 0)
+        conflict = {
+            "result": [
+                {"status": "ERR", "result": "The query was not executed due to a failed transaction"},
+                {
+                    "status": "ERR",
+                    "result": "Cannot COMMIT: Transaction conflict: Resource busy. This transaction can be retried",
+                },
+            ]
+        }
+        mock_db.query_raw.side_effect = [conflict, {"result": [{"status": "OK", "result": []}]}]
+        ingester = SurrealDBIngester(queue)
+        ingester._buffer = [{"type": "task-sent", "uuid": "abc", "timestamp": 1700000000.0}]
+
+        with caplog.at_level("DEBUG", logger="events.ingester"):
+            await ingester._flush()
+
+        assert mock_db.query_raw.call_count == 2
+        assert ingester._buffer == []
+        assert ingester._stats_flushes_total == 1
+        assert not [record for record in caplog.records if record.levelname == "ERROR"]
+
+    @pytest.mark.asyncio
+    async def test_persistent_conflict_keeps_events_with_a_warning(self, mock_db, queue, mocker: MockerFixture, caplog):
+        mocker.patch("events.ingester.CONFLICT_BACKOFF_SECONDS", 0)
+        mock_db.query_raw.return_value = {
+            "result": [
+                {"status": "ERR", "result": "Transaction conflict: Resource busy. This transaction can be retried"}
+            ]
+        }
+        ingester = SurrealDBIngester(queue)
+        events = [{"type": "task-sent", "uuid": "abc", "timestamp": 1700000000.0}]
+        ingester._buffer = list(events)
+
+        await ingester._flush()
+
+        assert mock_db.query_raw.call_count == CONFLICT_RETRIES + 1
+        assert ingester._buffer == events
+        levels = {record.levelname for record in caplog.records if record.name == "events.ingester"}
+        assert "WARNING" in levels
+        assert "ERROR" not in levels
+
+    @pytest.mark.asyncio
+    async def test_concurrent_flushes_never_overlap(self, mock_db, queue):
+        in_flight = 0
+        overlapped = False
+
+        async def slow_query(*_args, **_kwargs):
+            nonlocal in_flight, overlapped
+            in_flight += 1
+            overlapped = overlapped or in_flight > 1
+            await asyncio.sleep(0.01)
+            in_flight -= 1
+            return {"result": [{"status": "OK", "result": []}]}
+
+        mock_db.query_raw.side_effect = slow_query
+        ingester = SurrealDBIngester(queue)
+
+        async def flush_one(uuid: str) -> None:
+            ingester._buffer.append({"type": "task-sent", "uuid": uuid, "timestamp": 1700000000.0})
+            await ingester._flush()
+
+        await asyncio.gather(flush_one("a"), flush_one("b"))
+
+        assert not overlapped
+        assert mock_db.query_raw.call_count == 2
+        assert ingester._buffer == []
+
+    @pytest.mark.asyncio
+    async def test_persistent_conflict_skips_callback_and_waits_for_the_timer(
+        self, mock_db, queue, mocker: MockerFixture
+    ):
+        mocker.patch("events.ingester.CONFLICT_BACKOFF_SECONDS", 0)
+        mock_db.query_raw.return_value = {
+            "result": [{"status": "ERR", "result": "Transaction conflict. This transaction can be retried"}]
+        }
+        callback = mocker.AsyncMock()
+        ingester = SurrealDBIngester(queue, on_terminal=callback)
+        ingester._buffer = [{"type": "task-succeeded", "uuid": "abc", "timestamp": 1700000000.0}]
+
+        await ingester._flush()
+
+        callback.assert_not_called()
+        # Re-arming would make the consume loop retry the busy rows on every incoming event; the timer retries.
+        assert ingester._has_terminal is False
+
+    @pytest.mark.asyncio
+    async def test_terminal_callback_runs_after_commit_outside_the_lock(self, mock_db, queue):
+        calls: list[str] = []
+        callback_started = asyncio.Event()
+        release_callback = asyncio.Event()
+
+        async def query(*_args, **_kwargs):
+            calls.append("commit")
+            return {"result": [{"status": "OK", "result": []}]}
+
+        async def on_terminal(task_ids: list[str]) -> None:
+            calls.append(f"callback:{task_ids}")
+            callback_started.set()
+            await release_callback.wait()
+
+        mock_db.query_raw.side_effect = query
+        ingester = SurrealDBIngester(queue, on_terminal=on_terminal)
+        ingester._buffer = [{"type": "task-succeeded", "uuid": "abc", "timestamp": 1700000000.0}]
+
+        first = asyncio.create_task(ingester._flush())
+        await callback_started.wait()
+        # A slow callback must not hold up the next flush.
+        ingester._buffer = [{"type": "task-sent", "uuid": "def", "timestamp": 1700000001.0}]
+        await asyncio.wait_for(ingester._flush(), timeout=1)
+        release_callback.set()
+        await first
+
+        assert calls == ["commit", "callback:['abc']", "commit"]
+
+    @pytest.mark.asyncio
     async def test_flush_handles_db_error_gracefully(self, mock_db, queue):
         mock_db.query_raw.side_effect = Exception("Connection lost")
         ingester = SurrealDBIngester(queue)
@@ -466,6 +586,17 @@ class TestSurrealDBIngester:
 
         # Events are re-queued for retry on failure
         assert ingester._buffer == events
+
+    @pytest.mark.asyncio
+    async def test_failed_terminal_flush_waits_for_the_timer(self, mock_db, queue):
+        mock_db.query_raw.side_effect = Exception("Connection lost")
+        ingester = SurrealDBIngester(queue)
+        ingester._buffer = [{"type": "task-succeeded", "uuid": "abc", "timestamp": 1700000000.0}]
+
+        await ingester._flush()
+
+        # Re-arming here would retry the whole buffer on every incoming event during an outage.
+        assert ingester._has_terminal is False
 
     @pytest.mark.asyncio
     async def test_later_statement_failure_requeues_events(self, mock_db, queue, mocker: MockerFixture):

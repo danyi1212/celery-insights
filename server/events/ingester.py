@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import random
 import re
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
@@ -11,6 +12,18 @@ from surrealdb_client import get_db
 logger = logging.getLogger(__name__)
 
 TERMINAL_EVENT_TYPES = frozenset({"task-succeeded", "task-failed", "task-revoked", "task-rejected"})
+
+# SurrealDB rejects a commit whose rows another transaction is writing, and marks the error
+# as retryable. The batch is retried in place a few times before it goes back to the buffer.
+# Matched against the message text, as observed with SurrealDB 3.3.0: "... This transaction can be retried".
+RETRYABLE_CONFLICT_MARKER = "can be retried"
+CONFLICT_RETRIES = 3
+CONFLICT_BACKOFF_SECONDS = 0.05
+
+
+class TransactionConflictError(RuntimeError):
+    """A SurrealDB commit kept conflicting with concurrent writes after its retries."""
+
 
 EVENT_STATE_MAP: dict[str, str] = {
     "task-sent": "PENDING",
@@ -102,6 +115,9 @@ class SurrealDBIngester:
         self._dropped_count = 0
         self._stats_events_total = 0
         self._stats_flushes_total = 0
+        # The consume loop and the flush timer both flush; two transactions in flight
+        # conflict on the same task and workflow rows.
+        self._flush_lock = asyncio.Lock()
 
     def start(self) -> None:
         self._consume_task = asyncio.create_task(self._consume_loop())
@@ -155,8 +171,19 @@ class SurrealDBIngester:
                 await self._flush()
 
     async def _flush(self) -> None:
+        async with self._flush_lock:
+            terminal_task_ids = await self._flush_buffer()
+        # The result fetch can block on the result backend; only the transaction needs the lock.
+        if terminal_task_ids and self.on_terminal:
+            try:
+                await self.on_terminal(terminal_task_ids)
+            except Exception:
+                logger.exception("Terminal event callback failed for %d tasks", len(terminal_task_ids))
+
+    async def _flush_buffer(self) -> list[str]:
+        """Commit the buffered events and return the terminal task ids that were written."""
         if not self._buffer:
-            return
+            return []
 
         events = self._buffer
         self._buffer = []
@@ -209,28 +236,21 @@ class SurrealDBIngester:
 
         if queries:
             try:
-                db = get_db()
                 full_query = "BEGIN TRANSACTION;\n" + ";\n".join(queries) + ";\nCOMMIT TRANSACTION;"
-                response = await db.query_raw(full_query, params)
-                if "error" in response:
-                    raise RuntimeError(f"SurrealDB transaction failed: {response['error']}")
-                results = response.get("result", [])
-                errors = [result.get("result") for result in results if result.get("status") == "ERR"]
-                if errors:
-                    raise RuntimeError(f"SurrealDB transaction failed: {errors}")
+                await _commit(full_query, params)
                 self._stats_events_total += len(events)
                 self._stats_flushes_total += 1
                 logger.debug("Flushed %d events (%d queries) to SurrealDB", len(events), len(queries))
+            except TransactionConflictError as exc:
+                logger.warning("Keeping %d events for the next flush: %s", len(events), exc)
+                self._buffer = events + self._buffer
+                return []
             except Exception:
                 logger.exception("Failed to flush %d events to SurrealDB", len(events))
                 self._buffer = events + self._buffer
-                return
+                return []
 
-        if terminal_task_ids and self.on_terminal:
-            try:
-                await self.on_terminal(terminal_task_ids)
-            except Exception:
-                logger.exception("Terminal event callback failed for %d tasks", len(terminal_task_ids))
+        return terminal_task_ids
 
     async def _stats_loop(self) -> None:
         prev_events = 0
@@ -264,6 +284,28 @@ class SurrealDBIngester:
                 t.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
         logger.info("SurrealDB ingester stopped")
+
+
+async def _commit(query: str, params: dict) -> None:
+    """Run one transaction, retrying it while SurrealDB reports a retryable conflict."""
+    db = get_db()
+    for attempt in range(CONFLICT_RETRIES + 1):
+        response = await db.query_raw(query, params)
+        if "error" in response:
+            errors = [response["error"]]
+        else:
+            results = response.get("result", [])
+            errors = [result.get("result") for result in results if result.get("status") == "ERR"]
+        if not errors:
+            return
+        if not any(RETRYABLE_CONFLICT_MARKER in str(error) for error in errors):
+            raise RuntimeError(f"SurrealDB transaction failed: {errors}")
+        if attempt == CONFLICT_RETRIES:
+            raise TransactionConflictError(
+                f"SurrealDB transaction still conflicted after {CONFLICT_RETRIES} retries: {errors[-1]}"
+            )
+        logger.debug("SurrealDB transaction conflict, retrying (attempt %d)", attempt + 1)
+        await asyncio.sleep(CONFLICT_BACKOFF_SECONDS * 2**attempt * random.uniform(0.5, 1.0))
 
 
 def build_task_upsert(event: dict, idx: int, *, search_indexing_enabled: bool = False) -> tuple[str, dict]:
