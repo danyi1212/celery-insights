@@ -9,7 +9,13 @@ import {
   fixtureTlsOptions,
   fixtureAuthenticationHeaders,
 } from "./helpers/authentication"
-import { composeLogs, composePs, composeUp, privateObservationQuery } from "./helpers/docker-compose"
+import {
+  composeLogs,
+  composePs,
+  composeUp,
+  privateObservationQuery,
+  verifyPolicyExamples,
+} from "./helpers/docker-compose"
 
 const E2E_HOST = process.env.E2E_HOST ?? "127.0.0.1"
 const HEALTH_TIMEOUT = 60_000
@@ -115,7 +121,7 @@ async function waitForSurrealRpcReady() {
 
 async function probeWebSocketUpgrade(): Promise<UpgradeProbeResult> {
   return new Promise((resolve) => {
-    const destination = new URL(appURL("/surreal/rpc"))
+    const destination = new URL(appURL("/api/observation/rpc"))
     const req = (destination.protocol === "https:" ? https : http).request(destination, {
       ...fixtureTlsOptions(),
       headers: {
@@ -123,6 +129,7 @@ async function probeWebSocketUpgrade(): Promise<UpgradeProbeResult> {
         Connection: "Upgrade",
         Upgrade: "websocket",
         "Sec-WebSocket-Version": "13",
+        "Sec-WebSocket-Protocol": "cbor",
         "Sec-WebSocket-Key": randomBytes(16).toString("base64"),
       },
     })
@@ -199,6 +206,7 @@ export default async function globalSetup() {
 
   try {
     composeUp()
+    verifyPolicyExamples()
     logInfo("Waiting for services to be healthy...")
     await Promise.all([
       pollHealth(appURL("/health"), "celery-insights"),

@@ -1,9 +1,12 @@
+import { queryObservation, isObservationRefresh } from "@lib/observation-query"
+import type { ReadRequest } from "../../runtime/observation/queries"
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { ConnectionStatus, LiveMessage, LiveSubscription, Uuid } from "surrealdb"
 import { useSurrealDB } from "@components/surrealdb-provider"
 
 export interface UseLiveQueryOptions<T> {
-  /** Initial data fetch query — supports full SurrealQL (ORDER BY, LIMIT, GROUP BY, etc.) */
+  /** Local demo query; production executes the typed request above. */
+  request?: ReadRequest
   initialQuery: string
   /** Table to subscribe to via LIVE SELECT (no ORDER/LIMIT/GROUP support) */
   liveTable: string
@@ -25,23 +28,20 @@ export interface UseLiveQueryResult<T> {
   error: Error | null
 }
 
-/**
- * Generic hook for SurrealDB live queries using a two-phase pattern:
- * 1. Run an initial query (full SurrealQL with ORDER/LIMIT/GROUP)
- * 2. Subscribe via LIVE SELECT for real-time CREATE/UPDATE/DELETE notifications
- * 3. Apply client-side ordering and limiting after live patches
- *
- * Handles reconnection recovery: on reconnect, re-runs the initial query
- * and re-subscribes to catch events missed during disconnection.
+/** Initial read plus live refreshes. Production refetches authorized typed reads;
+ * the embedded demo applies local database record notifications directly.
+ * Reconnection reruns the read and creates a fresh subscription.
  */
 export function useLiveQuery<T extends { id: unknown }>(options: UseLiveQueryOptions<T>): UseLiveQueryResult<T> {
-  const { initialQuery, liveTable, bindings, orderBy, limit, filter, enabled = true } = options
+  const { request, initialQuery, liveTable, bindings, orderBy, limit, filter, enabled = true } = options
   const { db, status } = useSurrealDB()
 
   const [data, setData] = useState<T[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
+  const refreshRef = useRef<() => Promise<void>>(undefined)
+  const requestKey = JSON.stringify(request)
   const subscriptionRef = useRef<LiveSubscription | null>(null)
   const initializedRef = useRef(false)
   const prevStatusRef = useRef<ConnectionStatus>(status)
@@ -69,6 +69,10 @@ export function useLiveQuery<T extends { id: unknown }>(options: UseLiveQueryOpt
   const handleLiveMessage = useCallback(
     (message: LiveMessage) => {
       const { action, value } = message
+      if (isObservationRefresh(value)) {
+        void refreshRef.current?.()
+        return
+      }
       const record = value as T
       const matchesFilter = !filterRef.current || filterRef.current(record)
 
@@ -111,7 +115,12 @@ export function useLiveQuery<T extends { id: unknown }>(options: UseLiveQueryOpt
 
   const runInitialQuery = useCallback(async () => {
     try {
-      const [result] = await db.query<[T[]]>(initialQuery, bindings).retry({ attempts: 4 })
+      const [result] = await queryObservation<[T[]]>(
+        db,
+        requestKey ? JSON.parse(requestKey) : undefined,
+        initialQuery,
+        bindings,
+      ).retry({ attempts: 4 })
       // SurrealDB JS SDK v2 returns a single object (not an array) for
       // record-specific SELECTs (e.g. SELECT * FROM $rid).
       // Normalize to always work with arrays.
@@ -123,7 +132,8 @@ export function useLiveQuery<T extends { id: unknown }>(options: UseLiveQueryOpt
     } finally {
       setIsLoading(false)
     }
-  }, [db, initialQuery, bindings])
+  }, [db, initialQuery, bindings, requestKey])
+  refreshRef.current = runInitialQuery
 
   const startLiveSubscription = useCallback(async () => {
     // Kill existing subscription if any

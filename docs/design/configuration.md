@@ -94,9 +94,9 @@ Database topology becomes `mode = "embedded" | "external"`. If no mode is provid
 
 Keep permanent overrides focused on container wiring: `CELERY_INSIGHTS_CONFIG_FILE`, `CELERY_INSIGHTS_PORT`, `CELERY_INSIGHTS_DATABASE_URL`, `CELERY_INSIGHTS_DATABASE_STORAGE`, `CELERY_INSIGHTS_INGESTION_ENABLED`, `CELERY_INSIGHTS_BROKER_URL`, `CELERY_INSIGHTS_RESULT_BACKEND`, `CELERY_INSIGHTS_REPLAY_BUNDLE_FILE`, `CELERY_INSIGHTS_LOG_FORMAT`, `CELERY_INSIGHTS_LOG_LEVEL`, and `CELERY_INSIGHTS_PUBLIC_URL` (`installation.public_url`). Advanced tuning, role/group maps, and OPA contracts are file-only.
 
-Registered database and future OIDC client-secret value/file pairs have explicit override names. Configured account entries select exactly one inline password, relative/absolute password file, or environment-variable reference. Account references are Bun-only and never appear in diagnostics; no identity/control database or bootstrap secret is needed.
+Registered database and OIDC client-secret value/file pairs have explicit override names. Configured account entries select exactly one inline password, relative/absolute password file, or environment-variable reference. Account references are Bun-only and never appear in diagnostics; no identity/control database or bootstrap secret is needed.
 
-Authentication uses `authentication.mode`, explicit password accounts or OIDC issuer/client/claim-to-role settings, `installation.public_url` and a shared session secret. Browser cookie lifetimes are configurable; the app has no account-management API or identity store. Restrictive OPA settings belong to the subsequent policy integration. Configuration owns the account set and roles; changes require rollout to all replicas.
+Authentication uses `authentication.mode`, explicit password accounts or OIDC issuer/client/claim-to-role settings, `installation.public_url` and a shared session secret. Browser cookie lifetimes are configurable; the app has no account-management API or identity store. OPA settings configure the restrictive external policy integration. Configuration owns the account set and roles; changes require rollout to all replicas.
 
 ## Secret resolution
 

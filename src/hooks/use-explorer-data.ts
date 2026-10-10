@@ -1,3 +1,5 @@
+import type { ReadRequest } from "../../runtime/observation/queries"
+import { queryObservation } from "@lib/observation-query"
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import type { TimeRange } from "@danyi1212/time-range-picker"
@@ -204,7 +206,7 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
       if (state.mode === "tasks") {
         const { prelude, source, clause, bindings: whereBindings } = buildTaskWhereClause(state)
         const sortField = TASK_SORT_FIELDS.has(state.sortField) ? state.sortField : "last_updated"
-        const results = await db.query<
+        const results = await queryObservation<
           [
             SurrealTask[],
             [{ count: number }],
@@ -214,6 +216,21 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
             { bucket: string; state: string; count: number }[],
           ]
         >(
+          db,
+          {
+            operation: "explorer",
+            table: "task",
+            ...bindings,
+            query: state.query,
+            states: state.states,
+            types: state.types,
+            workers: state.workers,
+            workflowStates: state.workflowStates,
+            rootTypes: state.rootTypes,
+            sortField: sortField as ReadRequest["sortField"],
+            sortDirection: state.sortDirection,
+            limit: rowLimit,
+          },
           prelude.join("") +
             `SELECT * FROM ${source}${clause} ORDER BY ${sortField} ${state.sortDirection} LIMIT $rowLimit;` +
             `SELECT count() AS count FROM ${source}${clause} GROUP ALL;` +
@@ -221,11 +238,12 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
             `SELECT type, count() AS count FROM ${source}${appendCondition(clause, "type != NONE")} GROUP BY type;` +
             `SELECT worker, count() AS count FROM ${source}${appendCondition(clause, "worker != NONE")} GROUP BY worker;` +
             `SELECT time::format(time::floor(last_updated, <duration>$bucketDuration), '%Y-%m-%dT%H:%M') AS bucket, state, count() AS count FROM ${source}${clause} GROUP BY bucket, state ORDER BY bucket ASC;`,
+
           { ...bindings, ...whereBindings, rowLimit },
         )
 
         const [taskRows, countRows, stateFilters, typeFilters, workerFilters, buckets] = results.slice(
-          prelude.length,
+          -6,
         ) as typeof results
 
         return {
@@ -245,7 +263,7 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
 
       const { prelude, source, clause, bindings: whereBindings } = buildWorkflowWhereClause(state)
       const sortField = WORKFLOW_SORT_FIELDS.has(state.sortField) ? state.sortField : "last_updated"
-      const results = await db.query<
+      const results = await queryObservation<
         [
           SurrealWorkflow[],
           [{ count: number }],
@@ -254,6 +272,21 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
           { bucket: string; aggregate_state: string; count: number }[],
         ]
       >(
+        db,
+        {
+          operation: "explorer",
+          table: "workflow",
+          ...bindings,
+          query: state.query,
+          states: state.states,
+          types: state.types,
+          workers: state.workers,
+          workflowStates: state.workflowStates,
+          rootTypes: state.rootTypes,
+          sortField: sortField as ReadRequest["sortField"],
+          sortDirection: state.sortDirection,
+          limit: rowLimit,
+        },
         prelude.join("") +
           `SELECT * FROM ${source}${clause} ORDER BY ${sortField} ${state.sortDirection} LIMIT $rowLimit;` +
           `SELECT count() AS count FROM ${source}${clause} GROUP ALL;` +
@@ -264,7 +297,7 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
       )
       // Each LET statement occupies a result slot.
       const [workflowRows, countRows, workflowStateFilters, rootTypeFilters, buckets] = results.slice(
-        prelude.length,
+        -5,
       ) as typeof results
 
       return {

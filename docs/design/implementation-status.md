@@ -10,9 +10,13 @@ Bun resolves configured password accounts or explicitly mapped OIDC principals a
 
 Origin and custom-header checks protect mutations; WebSocket upgrades require Origin. Role checks, unknown-route denial, replay write restrictions and no-store responses remain in Bun. Live delivery checks the configured account and payload permissions by reauthenticating the original upgrade request, including cookie expiry. All replicas use the same configuration; rotating/removing accounts requires a rollout.
 
-The previous frontend database password/login/token path has been retired. Legacy `SURREALDB_FRONTEND_PASS` fails with migration guidance. Database viewer transport remains temporarily behind Bun and requires all payload permissions. Public SQL/import/export routes are denied.
+The previous frontend database password/login/token path has been retired. Legacy `SURREALDB_FRONTEND_PASS` fails with migration guidance. The browser uses Bun-owned typed observation reads and refresh subscriptions with role and OPA scopes; no database credentials are published. Public SQL/import/export routes are denied.
 
 Session tests cover replicas, credential/configuration rotation, expiry, secure cookie attributes, constrained return paths, login/logout CSRF, bounded input and real RSA-signed OIDC tokens with invalid issuer, audience, state, nonce and unmapped roles. Browser E2E uses the login form for normal application navigation.
+
+## Restrictive OPA policies (stacked on #143)
+
+Bun queries an optional external OPA Data API after role checks. Decisions cover navigation/identity, registered APIs, typed reads, exports, individual MCP tools and live messages/delivery. Strict boolean or read-scope results, timeouts, bounded responses and no caching provide fail-closed behavior. Policies remain operator-owned. See [the contract and examples](../../AUTHORIZATION.md). Task ID/type/worker selectors, worker hostname selectors and denied payload groups apply before counts/search/exports. Cross-task workflows and opaque inspection blobs are conservatively unavailable for scoped reads.
 
 ## Verification
 
@@ -25,8 +29,7 @@ bun run test:security
 
 ## Planned work
 
-- Typed task/event/worker reads and authorized streams, replacing browser database credentials and arbitrary RPC. Viewer/operator UI browsing and resource/field restrictions are incomplete.
-- Restrictive OPA queries and equivalent read/export/stream scope enforcement (#140).
+- Broader UI permission affordances for restricted roles; server-owned typed reads and payload projections are implemented.
 - Shared durable retention configuration and ingestion-leader fencing. Retention UI edits remain process-local.
 
-Green checks verify implemented behavior; OPA and restricted-role browsing are not advertised as completed capabilities.
+Green checks verify implemented behavior; Restricted roles can read task/worker metadata through typed APIs; payload-required features remain denied.

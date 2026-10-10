@@ -59,7 +59,7 @@ export const payloadPermissions: Permission[] = [
   "worker.inspect.read",
 ]
 export const routePermissions: Record<string, Permission[]> = {
-  "GET /api/config": [...payloadPermissions],
+  "GET /api/config": ["task.metadata.read"],
   "GET /api/settings/info": ["diagnostics.export"],
   "GET /api/settings/debug-snapshot": ["diagnostics.export"],
   "POST /api/settings/download-debug-bundle": ["diagnostics.export", "backup.export", ...payloadPermissions],

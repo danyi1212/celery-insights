@@ -1,3 +1,4 @@
+import { queryObservation } from "@lib/observation-query"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { subMinutes } from "date-fns"
 import { Table, type ConnectionStatus, type LiveMessage, type LiveSubscription } from "surrealdb"
@@ -92,9 +93,11 @@ export const useHomepageSummary = () => {
 
   const runQueries = useCallback(async () => {
     try {
-      const [recentTasks, recentFailures, latestTask, throughputTasks, throughputErrors] = await db.query<
+      const [recentTasks, recentFailures, latestTask, throughputTasks, throughputErrors] = await queryObservation<
         [SummaryCountsRow[], FailureCountsRow[], LatestUpdateRow[], ThroughputCountRow[], ThroughputCountRow[]]
       >(
+        db,
+        { operation: "home" },
         `SELECT count() AS recent_task_count
                 FROM task
                 WHERE last_updated > time::now() - <duration>$recentWindow;` +

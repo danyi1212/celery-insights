@@ -1,3 +1,5 @@
+import { ObservationRpc } from "../observation/rpc"
+import { Surreal } from "surrealdb"
 import assert from "node:assert/strict"
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
@@ -60,7 +62,7 @@ describe("browser authentication sessions", () => {
     )
     expect(
       (
-        await run(replica, "/surreal/rpc", {
+        await run(replica, "/api/observation/rpc", {
           headers: { Cookie: cookie(response), Origin: origin, Upgrade: "websocket" },
         })
       ).response.status,
@@ -263,4 +265,36 @@ it("does not let a browser's cached Basic credentials bypass login or logout", a
   expect(result.status).toBe(401)
   expect(result.headers.has("www-authenticate")).toBe(false)
   expect((await run(auth, "/api/auth/identity", { headers: { authorization } })).response.status).toBe(200)
+})
+
+it("closes a live typed observation connection when its browser session expires", async () => {
+  const auth = new AuthenticationHttp(snapshot)
+  const { response } = await login(auth)
+  const upgrade = new Request(origin + "/insights/api/observation/rpc", { headers: { Cookie: cookie(response) } })
+  const socket = { send: vi.fn(), close: vi.fn() }
+  vi.useFakeTimers()
+  try {
+    vi.setSystemTime(new Date(Date.now() + 301000))
+    const rpc = new ObservationRpc(
+      socket,
+      auth,
+      "admin",
+      new Surreal(),
+      { deny_fields: [] },
+      false,
+      true,
+      5000,
+      upgrade,
+    )
+    try {
+      await vi.advanceTimersByTimeAsync(5000)
+      await rpc.receive(JSON.stringify({ id: "ping", method: "ping", params: [] }))
+      expect(socket.close).toHaveBeenCalledWith(1008, "Authorization unavailable")
+      expect(socket.send).not.toHaveBeenCalled()
+    } finally {
+      rpc.stop()
+    }
+  } finally {
+    vi.useRealTimers()
+  }
 })

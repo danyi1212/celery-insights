@@ -1,3 +1,5 @@
+import type { ReadRequest } from "../../../runtime/observation/queries"
+import { queryObservation } from "@lib/observation-query"
 import { Button } from "@components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
@@ -42,7 +44,18 @@ const ExportButton: React.FC<ExportButtonProps> = ({ filters, sort, total }) => 
   const fetchAllFilteredTasks = useCallback(async (): Promise<SurrealTask[]> => {
     const { clause, bindings } = buildWhereClause(filters)
     const query = `SELECT * FROM task${clause} ORDER BY ${sort.field} ${sort.direction}`
-    const [result] = await db.query<[SurrealTask[]]>(query, bindings)
+    const [result] = await queryObservation<[SurrealTask[]]>(
+      db,
+      {
+        operation: "export",
+        ...filters,
+        sortField: sort.field as ReadRequest["sortField"],
+        sortDirection: sort.direction === "ASC" ? "ASC" : "DESC",
+        limit: 10000,
+      },
+      query,
+      bindings,
+    )
     return Array.isArray(result) ? result : []
   }, [db, filters, sort])
 
