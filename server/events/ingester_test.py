@@ -586,6 +586,17 @@ class TestSurrealDBIngester:
         assert ingester._buffer == events
 
     @pytest.mark.asyncio
+    async def test_failed_terminal_flush_waits_for_the_timer(self, mock_db, queue):
+        mock_db.query_raw.side_effect = Exception("Connection lost")
+        ingester = SurrealDBIngester(queue)
+        ingester._buffer = [{"type": "task-succeeded", "uuid": "abc", "timestamp": 1700000000.0}]
+
+        await ingester._flush()
+
+        # Re-arming here would retry the whole buffer on every incoming event during an outage.
+        assert ingester._has_terminal is False
+
+    @pytest.mark.asyncio
     async def test_later_statement_failure_requeues_events(self, mock_db, queue, mocker: MockerFixture):
         mock_db.query_raw.return_value = {
             "result": [
