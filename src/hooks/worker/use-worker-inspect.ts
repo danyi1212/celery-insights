@@ -2,6 +2,8 @@ import { useWorker } from "@hooks/use-live-workers"
 import type { QueueInfo, ScheduledTask, TaskRequest } from "@/types/surreal-records"
 import { parseWorkerInspect } from "@/types/surreal-records"
 import { useMemo } from "react"
+import { useNow } from "@hooks/use-now"
+import { isExecutionObservationCurrent } from "@utils/task-execution"
 
 /**
  * Access parsed inspect data from a SurrealDB worker record.
@@ -47,8 +49,11 @@ export const useWorkerStats = (workerId: string) => {
 }
 
 export const useWorkerActiveTasks = (workerId: string) => {
-  const { inspect, isLoading, error } = useWorkerInspect(workerId)
-  return { tasks: inspect?.active as TaskRequest[] | undefined, isLoading, error }
+  const { worker, inspect, isLoading, error } = useWorkerInspect(workerId)
+  const now = useNow(10_000)
+  const isCurrent =
+    worker?.status === "online" && isExecutionObservationCurrent(inspect?._observed_at?.active, now.getTime())
+  return { tasks: isCurrent ? inspect?.active : undefined, isLoading, error }
 }
 
 export const useWorkerRegisteredTasks = (workerId: string) => {

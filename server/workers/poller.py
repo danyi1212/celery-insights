@@ -10,7 +10,30 @@ from surrealdb_client import get_db
 logger = logging.getLogger(__name__)
 
 MISSED_POLLS_THRESHOLD = 3
+# Half the reader-side expiry (EXECUTION_OBSERVATION_MAX_AGE_MS in src/utils/task-execution.ts): an unchanged
+# observation is rewritten only this often, so steady-state polls stop firing a live-query event per task.
+OBSERVATION_REFRESH_SECONDS = 60
 DEFAULT_POLL_INTERVAL = 5
+
+
+def _without_active_inspection(worker: dict) -> dict:
+    data = worker.get("inspect_data")
+    if not isinstance(data, dict):
+        try:
+            data = json.loads(worker.get("inspect") or "{}")
+        except TypeError, ValueError:
+            data = {}
+    data = {key: value for key, value in data.items() if key != "active"}
+    observed = data.get("_observed_at")
+    if isinstance(observed, dict):
+        data["_observed_at"] = {key: value for key, value in observed.items() if key != "active"}
+    return data
+
+
+_CLEAR_EXECUTION = (
+    "UPDATE task SET execution_active = NONE "
+    "WHERE worker = $hostname AND state = 'STARTED' AND execution_active != NONE"
+)
 
 
 def _json_default(value: object) -> str:
@@ -27,15 +50,17 @@ def _inspect_sync(celery_app: Celery) -> dict[str, dict]:
 
     calls = {
         "stats": inspect.stats,
-        "active": inspect.active,
         "registered": inspect.registered,
         "scheduled": inspect.scheduled,
         "reserved": inspect.reserved,
         "active_queues": inspect.active_queues,
+        "active": inspect.active,
     }
 
     results: dict[str, dict] = {}
     for key, fn in calls.items():
+        # A task may start while replies are collected; absence only proves anything before the request.
+        observed_at = datetime.now(UTC).isoformat()
         try:
             response = fn() or {}
         except Exception:
@@ -43,7 +68,7 @@ def _inspect_sync(celery_app: Celery) -> dict[str, dict]:
             response = {}
         for hostname, data in response.items():
             results.setdefault(hostname, {})[key] = data
-            results[hostname].setdefault("_observed_at", {})[key] = datetime.now(UTC).isoformat()
+            results[hostname].setdefault("_observed_at", {})[key] = observed_at
 
     return results
 
@@ -121,15 +146,38 @@ class WorkerPoller:
                     "inspect_data = $inspect_data"
                 )
                 await db.query(query, params)
+                active = data.get("active")
+                observed_at = data.get("_observed_at", {}).get("active")
+                if isinstance(active, list) and observed_at:
+                    await db.query(
+                        "UPDATE task SET execution_active = record::id(id) IN $active_ids, "
+                        "execution_observed_at = <datetime>$observed_at, "
+                        # The last positive time bounds a frozen runtime; clears and negative inspections keep it.
+                        "execution_active_at = IF record::id(id) IN $active_ids THEN <datetime>$observed_at "
+                        "ELSE execution_active_at END "
+                        "WHERE worker = $hostname AND state = 'STARTED' "
+                        "AND last_updated <= <datetime>$observed_at "
+                        "AND (execution_active != (record::id(id) IN $active_ids) OR execution_observed_at = NONE "
+                        "OR execution_observed_at < last_updated "
+                        "OR execution_observed_at < <datetime>$observed_at - <duration>$refresh)",
+                        {
+                            "hostname": hostname,
+                            "active_ids": [task["id"] for task in active if isinstance(task, dict) and task.get("id")],
+                            "observed_at": observed_at,
+                            "refresh": f"{OBSERVATION_REFRESH_SECONDS}s",
+                        },
+                    )
+                else:
+                    await db.query(_CLEAR_EXECUTION, {"hostname": hostname})
             except Exception:
                 logger.exception("Failed to upsert worker %s", hostname)
 
         # Handle offline detection for known workers
         try:
             existing: list = await db.query(  # ty: ignore[invalid-assignment]
-                "SELECT id, missed_polls FROM worker WHERE status = 'online'"
+                "SELECT id, missed_polls, inspect, inspect_data FROM worker WHERE status = 'online'"
             )
-            known_workers: list[dict] = existing[0] if existing and isinstance(existing[0], list) else []
+            known_workers: list[dict] = existing[0] if existing and isinstance(existing[0], list) else existing
         except Exception:
             logger.exception("Failed to query existing workers for offline detection")
             return
@@ -146,18 +194,30 @@ class WorkerPoller:
                 continue
 
             missed = (worker.get("missed_polls") or 0) + 1
+            # A missing reply is no observation: tasks and the stored active list are cleared at once;
+            # only the worker's status keeps the missed-poll grace.
+            inspection = _without_active_inspection(worker)
+            params = {
+                "id": hostname,
+                "missed": missed,
+                "ts": now,
+                "data": json.dumps(inspection),
+                "inspect_data": inspection,
+            }
             try:
+                await db.query(_CLEAR_EXECUTION, {"hostname": hostname})
                 if missed >= MISSED_POLLS_THRESHOLD:
                     await db.query(
-                        "UPDATE type::record('worker', $id) SET "
-                        "status = 'offline', missed_polls = $missed, last_updated = <datetime>$ts",
-                        {"id": hostname, "missed": missed, "ts": now},
+                        "UPDATE type::record('worker', $id) SET status = 'offline', missed_polls = $missed, "
+                        "last_updated = <datetime>$ts, inspect = $data, inspect_data = $inspect_data",
+                        params,
                     )
                     logger.info("Worker %s marked offline after %d missed polls", hostname, missed)
                 else:
                     await db.query(
-                        "UPDATE type::record('worker', $id) SET missed_polls = $missed",
-                        {"id": hostname, "missed": missed},
+                        "UPDATE type::record('worker', $id) SET missed_polls = $missed, "
+                        "inspect = $data, inspect_data = $inspect_data",
+                        params,
                     )
             except Exception:
                 logger.exception("Failed to update missed polls for worker %s", hostname)

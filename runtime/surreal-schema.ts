@@ -37,6 +37,9 @@ DEFINE FIELD OVERWRITE state ON task TYPE string;
 DEFINE FIELD OVERWRITE sent_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE received_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE started_at ON task TYPE option<datetime>;
+DEFINE FIELD OVERWRITE execution_active ON task TYPE option<bool>;
+DEFINE FIELD OVERWRITE execution_observed_at ON task TYPE option<datetime>;
+DEFINE FIELD OVERWRITE execution_active_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE succeeded_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE failed_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE retried_at ON task TYPE option<datetime>;
@@ -44,6 +47,7 @@ DEFINE FIELD OVERWRITE revoked_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE rejected_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE runtime ON task TYPE option<float>;
 DEFINE FIELD OVERWRITE last_updated ON task TYPE datetime;
+DEFINE FIELD OVERWRITE last_updated_observed ON task TYPE bool DEFAULT false;
 DEFINE FIELD OVERWRITE first_observed_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE had_error ON task TYPE bool DEFAULT false;
 DEFINE FIELD OVERWRITE args ON task TYPE option<string>;
@@ -357,13 +361,15 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
 
     // Apply core schema (tables, fields, indexes, permissions)
     await db.query(CORE_SCHEMA).collect()
-    await backfillWorkflows(db, log)
-
-    // Preserve evidence independently of the task's latest state. Historical events
-    // are used once at migration time, rather than scanned by every MCP search.
+    // Runs before any other write: rows written before `last_updated_observed` existed fail bool
+    // coercion on update until the flag is set. Preserve evidence independently of the task's latest
+    // state; historical events are used once at migration time, rather than scanned by every MCP search.
     await db
       .query(`UPDATE task SET
       first_observed_at = first_observed_at ?? sent_at ?? received_at ?? started_at ?? last_updated,
+      execution_active_at = execution_active_at ?? (IF execution_active = true THEN execution_observed_at ELSE NONE END),
+      last_updated_observed = last_updated_observed ?? (state NOT IN ['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED']
+        AND started_at = NONE AND received_at = NONE AND retried_at = NONE),
       had_error = had_error OR state = 'FAILURE' OR failed_at != NONE
         OR (exception ?? '') != '' OR (traceback ?? '') != '';
       LET $errors = SELECT task_id FROM event WHERE task_id != NONE AND
@@ -372,6 +378,7 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
         UPDATE type::record('task', $error.task_id) SET had_error = true;
       };`)
       .collect()
+    await backfillWorkflows(db, log)
 
     // Always create a read-only viewer user for the frontend.
     // SurrealDB requires authentication even for tables with FULL select permissions —

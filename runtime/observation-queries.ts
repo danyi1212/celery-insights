@@ -8,7 +8,10 @@ export const metricQueries = {
   query_exceptions_by_type:
     "SELECT exception, count() AS count FROM task WHERE exception IS NOT NONE GROUP BY exception",
   query_worker_active_tasks:
-    "SELECT worker, count() AS count FROM task WHERE state = 'STARTED' AND worker IS NOT NONE GROUP BY worker",
+    "SELECT worker, count() AS count FROM task WHERE state = 'STARTED' AND worker IS NOT NONE " +
+    "AND execution_active = true AND execution_observed_at >= last_updated " +
+    "AND execution_observed_at >= time::now() - 2m AND execution_observed_at <= time::now() + 2m " +
+    "GROUP BY worker",
   query_worker_processed_tasks:
     "SELECT worker, count() AS count FROM task WHERE state IN ['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED'] AND worker IS NOT NONE GROUP BY worker",
 } as const

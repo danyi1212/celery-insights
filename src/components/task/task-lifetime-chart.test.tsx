@@ -10,6 +10,25 @@ vi.mock("@hooks/use-now", () => ({
 }))
 
 describe("TaskLifetimeChart", () => {
+  it.each([false, undefined])(
+    "does not claim live execution without a positive observation (%s)",
+    (execution_active) => {
+      const task = createTask({
+        state: TaskState.STARTED,
+        execution_active,
+        execution_observed_at: MOCK_NOW,
+        last_updated: new Date(MOCK_NOW.getTime() - 3000),
+        sent_at: new Date(MOCK_NOW.getTime() - 5000),
+        received_at: new Date(MOCK_NOW.getTime() - 4000),
+        started_at: new Date(MOCK_NOW.getTime() - 3000),
+        succeeded_at: undefined,
+      })
+      render(<TaskLifetimeChart task={task} />)
+      expect(screen.queryByText("Live")).not.toBeInTheDocument()
+      expect(screen.getByText("Execution unconfirmed")).toBeInTheDocument()
+    },
+  )
+
   it("shows empty message when task has no lifecycle data", () => {
     // A task with sent_at equal to now and no further timestamps produces empty phases
     const task = createTask({
@@ -40,12 +59,27 @@ describe("TaskLifetimeChart", () => {
     expect(phaseButtons).toHaveLength(3)
   })
 
-  it("shows live indicator for active (non-terminal) tasks", () => {
+  it("shows live indicator only for worker-observed execution", () => {
     const task = createTask({
       state: TaskState.STARTED,
+      execution_active: true,
+      execution_observed_at: MOCK_NOW,
+      last_updated: new Date(MOCK_NOW.getTime() - 3000),
       sent_at: new Date(MOCK_NOW.getTime() - 5000),
       received_at: new Date(MOCK_NOW.getTime() - 4000),
       started_at: new Date(MOCK_NOW.getTime() - 3000),
+      succeeded_at: undefined,
+    })
+    render(<TaskLifetimeChart task={task} />)
+    expect(screen.getByText("Live")).toBeInTheDocument()
+  })
+
+  it.each([TaskState.PENDING, TaskState.RECEIVED])("keeps the live indicator for an unfinished %s task", (state) => {
+    const task = createTask({
+      state,
+      sent_at: new Date(MOCK_NOW.getTime() - 5000),
+      received_at: state === TaskState.RECEIVED ? new Date(MOCK_NOW.getTime() - 4000) : undefined,
+      started_at: undefined,
       succeeded_at: undefined,
     })
     render(<TaskLifetimeChart task={task} />)

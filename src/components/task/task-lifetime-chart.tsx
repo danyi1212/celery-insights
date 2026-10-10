@@ -1,3 +1,5 @@
+import { getTaskExecution } from "@utils/task-execution"
+import { TaskState } from "@/types/surreal-records"
 import { useNow } from "@hooks/use-now"
 import { cn } from "@lib/utils"
 import type { Task } from "@/types/surreal-records"
@@ -55,8 +57,11 @@ const TaskLifetimeChart: React.FC<TaskLifetimeChartProps> = ({
   showDurationLabels = true,
   minPhaseWidth = 2,
 }) => {
-  const isActive = !isTerminalState(task.state)
-  const now = useNow(isActive ? REALTIME_INTERVAL : undefined)
+  const now = useNow(!isTerminalState(task.state) ? REALTIME_INTERVAL : undefined)
+  const isActive =
+    !isTerminalState(task.state) &&
+    (task.state !== TaskState.STARTED || getTaskExecution(task, now.getTime()) === "active")
+  const executionLabel = task.state === TaskState.STARTED && !isActive ? "Execution unconfirmed" : "Running"
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
   const [hoveredPhase, setHoveredPhase] = useState<number | null>(null)
@@ -219,10 +224,17 @@ const TaskLifetimeChart: React.FC<TaskLifetimeChartProps> = ({
               <div key={item.label} className="flex items-center gap-1" role="listitem">
                 <span
                   className="size-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: item.color }}
+                  style={{
+                    backgroundColor:
+                      item.label === "Running" && !isActive && task.state === TaskState.STARTED
+                        ? PHASE_COLORS.unconfirmed
+                        : item.color,
+                  }}
                   aria-hidden="true"
                 />
-                <span className="text-xs leading-none text-muted-foreground">{item.label}</span>
+                <span className="text-xs leading-none text-muted-foreground">
+                  {item.label === "Running" ? executionLabel : item.label}
+                </span>
               </div>
             ))}
           </div>

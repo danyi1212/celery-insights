@@ -4,14 +4,21 @@ import asyncio
 import shutil
 import socket
 import subprocess
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any, cast
 
 import httpx
 import pytest
 from surrealdb import AsyncSurreal
+from surrealdb.connections.async_ws import AsyncWsSurrealConnection
 
-from events.ingester import build_task_upsert, build_workflow_membership_upsert, build_workflow_summary_recompute
+from events.ingester import (
+    build_task_upsert,
+    build_worker_upsert,
+    build_workflow_membership_upsert,
+    build_workflow_summary_recompute,
+)
 from tasks.task_search import keyword_search_term
 from tasks.result_fetcher import _build_task_meta_upsert
 
@@ -166,3 +173,117 @@ async def test_batched_recovery_preserves_workflow_invocation_and_errors(
     finally:
         process.terminate()
         await asyncio.to_thread(process.wait, timeout=10)
+
+
+@pytest.mark.asyncio
+async def test_worker_offline_event_clears_earlier_execution_observations(
+    surreal_db: AsyncWsSurrealConnection,
+) -> None:
+    await surreal_db.query(
+        "CREATE worker:`worker@host` SET status = 'online', last_updated = <datetime>'2026-10-06T12:00:00Z'; "
+        "CREATE task:observed, task:later, task:other SET state = 'STARTED', worker = 'worker@host', "
+        "workflow_id = 'root', execution_active = true, "
+        "execution_observed_at = <datetime>'2026-10-06T12:00:00Z', last_updated = <datetime>'2026-10-06T11:59:00Z'; "
+        "UPDATE task:later SET execution_observed_at = <datetime>'2026-10-06T12:02:00Z'; "
+        "UPDATE task:other SET worker = 'other@host'"
+    )
+    offline_at = datetime(2026, 10, 6, 12, 1, tzinfo=UTC).timestamp()
+    query, parameters = build_worker_upsert(
+        {"type": "worker-offline", "hostname": "worker@host", "timestamp": offline_at}, 0
+    )
+    await surreal_db.query(query, parameters)
+    worker = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM worker:`worker@host`"))[0]
+    tasks = {str(task["id"]): task for task in cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task"))}
+    assert worker["status"] == "offline"
+    assert tasks["task:observed"].get("execution_active") is None
+    assert tasks["task:observed"]["execution_observed_at"] == datetime(2026, 10, 6, 12, tzinfo=UTC)
+    assert tasks["task:observed"]["state"] == "STARTED"
+    assert tasks["task:later"]["execution_active"] is True
+    assert tasks["task:other"]["execution_active"] is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("terminal_event", "expected_fields"),
+    [
+        (
+            {"type": "task-succeeded", "result": "42", "runtime": 1.5},
+            {"state": "SUCCESS", "result": "42", "runtime": 1.5},
+        ),
+        (
+            {"type": "task-failed", "exception": "ValueError('boom')", "traceback": "Traceback ..."},
+            {"state": "FAILURE", "exception": "ValueError('boom')", "traceback": "Traceback ..."},
+        ),
+    ],
+)
+async def test_older_terminal_event_replaces_an_undated_observation(
+    surreal_db: AsyncWsSurrealConnection, terminal_event: dict[str, Any], expected_fields: dict[str, Any]
+) -> None:
+    query, parameters = _build_task_meta_upsert(
+        "undated", {"status": "STARTED", "result": {"pid": 7, "hostname": "stale@host"}}
+    )
+    await surreal_db.query(query, parameters)
+    observed_at = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]["last_updated"]
+    event_at = observed_at - timedelta(seconds=2)
+
+    query, parameters = build_task_upsert(
+        {"type": "task-received", "uuid": "undated", "timestamp": event_at.timestamp()}, 0
+    )
+    await surreal_db.query(query, parameters)
+    task = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]
+    assert task["state"] == "STARTED"
+    assert task["last_updated"] == observed_at
+    assert task["last_updated_observed"] is True
+
+    query, parameters = build_task_upsert(
+        {**terminal_event, "uuid": "undated", "timestamp": event_at.timestamp(), "hostname": "worker@host"}, 0
+    )
+    await surreal_db.query(query, parameters)
+    task = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]
+    assert {field: task.get(field) for field in expected_fields} == expected_fields
+    assert task["worker"] == "worker@host"
+    assert task["last_updated"] == event_at
+    assert task["last_updated_observed"] is False
+
+
+@pytest.mark.asyncio
+async def test_same_state_event_fills_missing_outcome_fields(surreal_db: AsyncWsSurrealConnection) -> None:
+    query, parameters = _build_task_meta_upsert("done", {"status": "SUCCESS", "date_done": "2026-10-06T12:00:00Z"})
+    await surreal_db.query(query, parameters)
+    query, parameters = build_task_upsert(
+        {
+            "type": "task-succeeded",
+            "uuid": "done",
+            "timestamp": datetime(2026, 10, 6, 11, 59, 59, tzinfo=UTC).timestamp(),
+            "result": "42",
+            "runtime": 1.5,
+        },
+        0,
+    )
+    await surreal_db.query(query, parameters)
+    task = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:done"))[0]
+    assert task["state"] == "SUCCESS"
+    assert task["result"] == "42"
+    assert task["runtime"] == 1.5
+    assert task["last_updated"] == datetime(2026, 10, 6, 12, tzinfo=UTC)
+
+
+@pytest.mark.asyncio
+async def test_same_terminal_event_replaces_an_undated_terminal_observation(
+    surreal_db: AsyncWsSurrealConnection,
+) -> None:
+    query, parameters = _build_task_meta_upsert("undated", {"status": "SUCCESS", "result": 42})
+    await surreal_db.query(query, parameters)
+    observed_at = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]["last_updated"]
+    event_at = observed_at - timedelta(seconds=2)
+
+    query, parameters = build_task_upsert(
+        {"type": "task-succeeded", "uuid": "undated", "timestamp": event_at.timestamp(), "runtime": 1.5}, 0
+    )
+    await surreal_db.query(query, parameters)
+    task = cast(list[dict[str, Any]], await surreal_db.query("SELECT * FROM task:undated"))[0]
+    assert task["state"] == "SUCCESS"
+    assert task["succeeded_at"] == event_at
+    assert task["runtime"] == 1.5
+    assert task["last_updated"] == event_at
+    assert task["last_updated_observed"] is False

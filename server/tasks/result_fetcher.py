@@ -9,7 +9,7 @@ from celery.result import AsyncResult
 from celery.backends.redis import RedisBackend
 from surrealdb.types import Value
 
-from events.ingester import build_workflow_summary_recompute
+from events.ingester import TERMINAL_TASK_STATES_SQL, build_workflow_summary_recompute
 from tasks.task_search import kwargs_search_terms
 from surrealdb_client import get_db
 
@@ -46,12 +46,6 @@ def _fetch_result_sync(task_id: str, celery_app: Celery) -> dict:
     return data
 
 
-def _iso_datetime(value: str | None) -> str:
-    if value:
-        return value
-    return datetime.now(tz=UTC).isoformat()
-
-
 def _query_errors(result: object) -> list[str]:
     if not isinstance(result, list):
         return []
@@ -66,13 +60,20 @@ def _query_errors(result: object) -> list[str]:
     return errors
 
 
+def _outcome_fill(field: str) -> str:
+    # Metadata for the stored state fills outcome fields that a failed or skipped result fetch left empty.
+    return f"$meta_apply_state OR ($meta_previous.state = $state AND $meta_previous.{field} = NONE)"
+
+
 def _build_task_meta_upsert(task_id: str, meta: dict, *, search_indexing_enabled: bool = False) -> tuple[str, dict]:
     state = str(meta.get("status") or "PENDING")
-    last_updated = _iso_datetime(meta.get("date_done"))
+    last_updated = meta.get("date_done")
+    observed_at = datetime.now(tz=UTC).isoformat()
     params: dict = {
         "task_id": task_id,
         "state": state,
         "last_updated": last_updated,
+        "observed_at": observed_at,
         "workflow_id": task_id,
         "type": meta.get("name"),
         "args": repr(meta["args"]) if "args" in meta else None,
@@ -83,26 +84,39 @@ def _build_task_meta_upsert(task_id: str, meta: dict, *, search_indexing_enabled
     }
 
     set_clauses = [
-        "state = $state",
-        # Metadata without result_extended lacks these fields, so keep what task events stored.
+        "state = IF $meta_apply_state THEN $state ELSE $meta_previous.state END",
+        # Invocation metadata is not state: older backend metadata still fills gaps left by terminal-only events.
         *(
-            f"{field} = ${field} ?? $meta_previous.{field}"
+            f"{field} = IF $meta_apply_state THEN ${field} ?? $meta_previous.{field} "
+            f"ELSE $meta_previous.{field} ?? ${field} END"
             for field in ("type", "args", "kwargs", "worker", "retries", "routing_key")
         ),
-        "kwargs_search_source = IF $kwargs != NONE THEN 'repr' ELSE $meta_previous.kwargs_search_source END",
+        "kwargs_search_source = IF $kwargs != NONE AND ($meta_apply_state OR $meta_previous.kwargs = NONE) "
+        "THEN 'repr' ELSE $meta_previous.kwargs_search_source END",
         "workflow_id = $meta_previous.workflow_id ?? $workflow_id",
-        "last_updated = <datetime>$last_updated",
-        "first_observed_at = $meta_previous.first_observed_at ?? <datetime>$last_updated",
-        "sent_at = $meta_previous.sent_at ?? <datetime>$last_updated",
+        "last_updated = IF $meta_apply_state THEN $meta_timestamp ELSE $meta_previous.last_updated END",
+        "last_updated_observed = IF $meta_apply_state THEN $meta_observed "
+        "ELSE $meta_previous.last_updated_observed ?? false END",
+        "first_observed_at = $meta_previous.first_observed_at ?? $meta_timestamp",
+        "sent_at = $meta_previous.sent_at ?? $meta_timestamp",
         "children = $meta_previous.children ?? []",
     ]
 
-    if state == "SUCCESS":
-        set_clauses.append("succeeded_at = $meta_previous.succeeded_at ?? <datetime>$last_updated")
-    elif state == "FAILURE":
-        set_clauses.append("failed_at = $meta_previous.failed_at ?? <datetime>$last_updated")
-    elif state == "RETRY":
-        set_clauses.append("retried_at = $meta_previous.retried_at ?? <datetime>$last_updated")
+    if state == "SUCCESS" and last_updated:
+        set_clauses.append(
+            "succeeded_at = IF $meta_apply_state THEN $meta_previous.succeeded_at ?? $meta_timestamp "
+            "ELSE $meta_previous.succeeded_at END"
+        )
+    elif state == "FAILURE" and last_updated:
+        set_clauses.append(
+            "failed_at = IF $meta_apply_state THEN $meta_previous.failed_at ?? $meta_timestamp "
+            "ELSE $meta_previous.failed_at END"
+        )
+    elif state == "RETRY" and last_updated:
+        set_clauses.append(
+            "retried_at = IF $meta_apply_state THEN $meta_previous.retried_at ?? $meta_timestamp "
+            "ELSE $meta_previous.retried_at END"
+        )
 
     result_value = meta.get("result")
     if result_value is not None:
@@ -110,29 +124,53 @@ def _build_task_meta_upsert(task_id: str, meta: dict, *, search_indexing_enabled
         truncated_result, was_truncated = _truncate_result(result_str)
         params["result"] = truncated_result
         params["result_truncated"] = was_truncated
-        set_clauses.append("result = $result")
-        set_clauses.append("result_truncated = $result_truncated")
+        set_clauses.append(f"result = IF {_outcome_fill('result')} THEN $result ELSE $meta_previous.result END")
+        set_clauses.append(
+            f"result_truncated = IF {_outcome_fill('result')} THEN $result_truncated "
+            "ELSE $meta_previous.result_truncated END"
+        )
 
     if meta.get("traceback") is not None:
         params["traceback"] = str(meta["traceback"])
-        set_clauses.append("traceback = $traceback")
+        set_clauses.append(
+            f"traceback = IF {_outcome_fill('traceback')} THEN $traceback ELSE $meta_previous.traceback END"
+        )
 
     if state == "FAILURE" and result_value is not None:
         params["exception"] = repr(result_value)
-        set_clauses.append("exception = $exception")
+        set_clauses.append(
+            f"exception = IF {_outcome_fill('exception')} THEN $exception ELSE $meta_previous.exception END"
+        )
 
     if state == "FAILURE" or meta.get("traceback"):
         set_clauses.append("had_error = true")
 
     target = "type::record('task', $task_id)"
     assignments = ", ".join(set_clauses)
-    query = f"LET $meta_previous = (SELECT * FROM {target})[0] ?? {{}}; UPSERT {target} SET {assignments}"
+    # An undated import stores the monitor's observation time as last_updated. That time is not task
+    # evidence, so dated terminal or same-state metadata may replace it; event-derived timestamps keep the
+    # freshness guard.
+    query = (
+        f"LET $meta_previous = (SELECT * FROM {target})[0] ?? {{}}; "
+        "LET $meta_timestamp = IF $last_updated != NONE THEN <datetime>$last_updated "
+        "ELSE $meta_previous.last_updated ?? <datetime>$observed_at END; "
+        "LET $meta_observed = IF $last_updated != NONE THEN false "
+        "ELSE ($meta_previous.last_updated_observed ?? ($meta_previous.last_updated = NONE)) END; "
+        "LET $meta_apply_state = $meta_previous.state = NONE OR "
+        "IF $last_updated != NONE THEN $meta_previous.last_updated = NONE "
+        "OR $meta_timestamp >= $meta_previous.last_updated "
+        "OR ($meta_previous.last_updated_observed = true "
+        f"AND ($meta_previous.state NOT IN {TERMINAL_TASK_STATES_SQL} OR $meta_previous.state = $state)) "
+        f"ELSE $meta_previous.state NOT IN {TERMINAL_TASK_STATES_SQL} END; "
+        f"UPSERT {target} SET {assignments}"
+    )
     if search_indexing_enabled and params["kwargs"] is not None:
         terms = kwargs_search_terms(params["kwargs"], "repr")
         params["search_terms"] = terms.terms
         params["search_fallback"] = terms.fallback
         query += (
-            "; IF $meta_previous.kwargs != $kwargs AND (SELECT VALUE enabled FROM search_config:current)[0] = true { "
+            "; IF $meta_previous.kwargs != $kwargs AND ($meta_apply_state OR $meta_previous.kwargs = NONE) "
+            "AND (SELECT VALUE enabled FROM search_config:current)[0] = true { "
             "UPDATE type::record('task_search', $task_id) SET kwargs_terms = $search_terms, "
             "kwargs_fallback = $search_fallback; }"
         )

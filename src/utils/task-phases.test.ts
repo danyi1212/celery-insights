@@ -81,8 +81,10 @@ describe("getTaskEndTime", () => {
     expect(getTaskEndTime(task, now)).toEqual(new Date("2024-01-01T11:25:00Z"))
   })
 
-  it("falls back to now when no terminal timestamp exists", () => {
+  it("falls back to now for an unfinished task without a finish timestamp", () => {
     const task = createTask({
+      state: TaskState.RECEIVED,
+      started_at: undefined,
       succeeded_at: undefined,
       failed_at: undefined,
       retried_at: undefined,
@@ -91,10 +93,103 @@ describe("getTaskEndTime", () => {
     })
     expect(getTaskEndTime(task, now)).toEqual(now)
   })
+
+  it("freezes an undated finished task at its last update instead of now", () => {
+    const task = createTask({
+      state: TaskState.SUCCESS,
+      succeeded_at: undefined,
+      failed_at: undefined,
+      retried_at: undefined,
+      rejected_at: undefined,
+      revoked_at: undefined,
+      last_updated: new Date("2024-01-01T11:05:00Z"),
+    })
+    expect(getTaskEndTime(task, now)).toEqual(new Date("2024-01-01T11:05:00Z"))
+    expect(getTaskEndTime(task, new Date(now.getTime() + 60_000))).toEqual(new Date("2024-01-01T11:05:00Z"))
+  })
 })
 
 describe("computeTaskPhases", () => {
   const now = new Date("2024-01-01T12:00:00Z")
+  it("freezes unconfirmed execution at the last positive inspection without inventing a finish", () => {
+    const task = createTask({
+      state: TaskState.STARTED,
+      sent_at: new Date(now.getTime() - 200_000),
+      received_at: new Date(now.getTime() - 199_000),
+      started_at: new Date(now.getTime() - 198_000),
+      last_updated: new Date(now.getTime() - 198_000),
+      execution_active: true,
+      execution_observed_at: new Date(now.getTime() - 150_000),
+      execution_active_at: new Date(now.getTime() - 150_000),
+      succeeded_at: undefined,
+    })
+    const phase = computeTaskPhases(task, now).at(-1)!
+    expect(phase.kind).toBe("running")
+    expect(phase.label).toBe("Execution unconfirmed")
+    expect(phase.endMs).toBe(task.execution_active_at!.getTime())
+    expect(computeTaskPhases(task, new Date(now.getTime() + 60_000)).at(-1)).toEqual(phase)
+    expect(task.state).toBe(TaskState.STARTED)
+  })
+
+  // Each clearing path keeps the 12:10 positive observation in execution_active_at.
+  it.each([
+    ["a missed poll", undefined, "2024-01-01T12:10:00Z"],
+    ["a worker-offline event", undefined, "2024-01-01T12:10:00Z"],
+    ["an inspection without the task", false, "2024-01-01T12:11:00Z"],
+  ])("keeps the runtime at the last positive inspection after %s", (_, executionActive, observedAt) => {
+    const task = createTask({
+      state: TaskState.STARTED,
+      sent_at: new Date("2024-01-01T12:00:00Z"),
+      received_at: new Date("2024-01-01T12:00:00Z"),
+      started_at: new Date("2024-01-01T12:00:00Z"),
+      last_updated: new Date("2024-01-01T12:00:00Z"),
+      execution_active: executionActive,
+      execution_observed_at: new Date(observedAt),
+      execution_active_at: new Date("2024-01-01T12:10:00Z"),
+      succeeded_at: undefined,
+    })
+    const later = new Date("2024-01-01T12:30:00Z")
+    expect(getTaskEndTime(task, new Date("2024-01-01T12:12:00Z"))).toEqual(new Date("2024-01-01T12:10:00Z"))
+    expect(getTaskEndTime(task, later)).toEqual(new Date("2024-01-01T12:10:00Z"))
+    const phase = computeTaskPhases(task, later).at(-1)!
+    expect(phase.label).toBe("Execution unconfirmed")
+    expect(phase.durationMs).toBe(600_000)
+  })
+
+  it("does not advance unconfirmed execution when a negative inspection is refreshed", () => {
+    const negative = (observedAt: Date) =>
+      createTask({
+        state: TaskState.STARTED,
+        sent_at: new Date(now.getTime() - 10_000),
+        received_at: new Date(now.getTime() - 9_000),
+        started_at: new Date(now.getTime() - 8_000),
+        last_updated: new Date(now.getTime() - 5_000),
+        execution_active: false,
+        execution_observed_at: observedAt,
+        succeeded_at: undefined,
+      })
+    const phase = computeTaskPhases(negative(new Date(now.getTime() - 1_000)), now).at(-1)!
+    expect(phase.label).toBe("Execution unconfirmed")
+    expect(phase.endMs).toBe(now.getTime() - 5_000)
+    const later = new Date(now.getTime() + 60_000)
+    expect(computeTaskPhases(negative(new Date(later.getTime() - 1_000)), later)).toEqual(
+      computeTaskPhases(negative(new Date(now.getTime() - 1_000)), now),
+    )
+  })
+
+  it("bounds phases with missing lifecycle timestamps by the frozen end", () => {
+    const task = createTask({
+      state: TaskState.STARTED,
+      sent_at: new Date(now.getTime() - 10_000),
+      received_at: undefined,
+      started_at: new Date(now.getTime() - 8_000),
+      last_updated: new Date(now.getTime() - 5_000),
+      succeeded_at: undefined,
+    })
+    const phases = computeTaskPhases(task, now)
+    expect(phases.map((phase) => phase.endMs)).toEqual([now.getTime() - 5_000, now.getTime() - 5_000])
+    expect(computeTaskPhases(task, new Date(now.getTime() + 60_000))).toEqual(phases)
+  })
 
   it("computes 3 phases for a full lifecycle task", () => {
     const sent_at = new Date("2024-01-01T11:00:00Z")
@@ -159,6 +254,9 @@ describe("computeTaskPhases", () => {
       started_at,
       succeeded_at: undefined,
       state: TaskState.STARTED,
+      execution_active: true,
+      execution_observed_at: now,
+      last_updated: started_at,
     })
     const phases = computeTaskPhases(task, now)
 

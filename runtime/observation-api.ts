@@ -247,6 +247,8 @@ export class ObservationApi {
                 "rejected_at",
                 "last_updated",
                 "first_observed_at",
+                "execution_observed_at",
+                "execution_active_at",
               ]
             : table === "event"
               ? ["timestamp"]

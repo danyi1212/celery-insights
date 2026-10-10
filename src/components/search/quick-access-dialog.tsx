@@ -178,7 +178,15 @@ const QuickAccessDialog: React.FC<QuickAccessDialogProps> = ({ focusNonce = 0, o
             .filter(Boolean)
             .join(" • "),
           taskId,
-          icon: <TaskAvatar taskId={taskId} type={task.type} status={task.state as TaskState} disableLink />,
+          icon: (
+            <TaskAvatar
+              taskId={taskId}
+              type={task.type}
+              status={task.state as TaskState}
+              execution={task}
+              disableLink
+            />
+          ),
         }
       }),
     [tasks],
