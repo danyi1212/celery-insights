@@ -523,10 +523,11 @@ class TestSurrealDBIngester:
         await asyncio.gather(flush_one("a"), flush_one("b"))
 
         assert not overlapped
+        assert mock_db.query_raw.call_count == 2
         assert ingester._buffer == []
 
     @pytest.mark.asyncio
-    async def test_persistent_conflict_skips_callback_and_keeps_terminal_flush(
+    async def test_persistent_conflict_skips_callback_and_waits_for_the_timer(
         self, mock_db, queue, mocker: MockerFixture
     ):
         mocker.patch("events.ingester.CONFLICT_BACKOFF_SECONDS", 0)
@@ -540,7 +541,8 @@ class TestSurrealDBIngester:
         await ingester._flush()
 
         callback.assert_not_called()
-        assert ingester._has_terminal is True
+        # Re-arming would make the consume loop retry the busy rows on every incoming event; the timer retries.
+        assert ingester._has_terminal is False
 
     @pytest.mark.asyncio
     async def test_terminal_callback_runs_after_commit_outside_the_lock(self, mock_db, queue):

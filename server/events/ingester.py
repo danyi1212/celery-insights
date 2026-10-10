@@ -15,6 +15,7 @@ TERMINAL_EVENT_TYPES = frozenset({"task-succeeded", "task-failed", "task-revoked
 
 # SurrealDB rejects a commit whose rows another transaction is writing, and marks the error
 # as retryable. The batch is retried in place a few times before it goes back to the buffer.
+# Matched against the message text, as observed with SurrealDB 3.3.0: "... This transaction can be retried".
 RETRYABLE_CONFLICT_MARKER = "can be retried"
 CONFLICT_RETRIES = 3
 CONFLICT_BACKOFF_SECONDS = 0.05
@@ -243,9 +244,6 @@ class SurrealDBIngester:
             except TransactionConflictError as exc:
                 logger.warning("Keeping %d events for the next flush: %s", len(events), exc)
                 self._buffer = events + self._buffer
-                # A conflict clears quickly, so let the consume loop retry waiting terminal events promptly.
-                # Other failures (e.g. the database is down) are left to the flush timer.
-                self._has_terminal = self._has_terminal or bool(terminal_task_ids)
                 return []
             except Exception:
                 logger.exception("Failed to flush %d events to SurrealDB", len(events))
