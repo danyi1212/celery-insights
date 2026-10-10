@@ -40,7 +40,15 @@ export class Authorization {
           Accept: "application/json",
           ...(this.config.opaBearerToken ? { Authorization: `Bearer ${this.config.opaBearerToken}` } : {}),
         },
-        body: JSON.stringify({ input: { version: 1, principal, actions, request, installation: { replay } } }),
+        body: JSON.stringify({
+          input: {
+            version: 1,
+            principal: { account_id: principal.account_id, roles: principal.roles },
+            actions,
+            request,
+            installation: { replay },
+          },
+        }),
       })
       if (!response.ok || !response.body) throw new Error("Unavailable")
       // Bound the entire response, including chunked bodies; the timeout also covers body reads.

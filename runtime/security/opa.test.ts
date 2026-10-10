@@ -54,6 +54,11 @@ describe("restrictive OPA decisions", () => {
       await expect(authorization.check(principal, [action], context, true)).rejects.toMatchObject({ status: 403 })
     expect(fetch).not.toHaveBeenCalled()
   })
+  it("keeps display names out of the policy identity contract", async () => {
+    const fetch = fake({ result: true })
+    await new Authorization(config, fetch).check({ ...principal, display_name: "Alice" }, ["metrics.read"], context)
+    expect(JSON.parse(String(fetch.mock.calls[0][1]!.body)).input.principal).toEqual(principal)
+  })
   it.each([false, null, "true", 1, {}, [], undefined])("accepts only literal boolean true: %j", async (result) => {
     const authorization = new Authorization(config, fake({ result }))
     await expect(authorization.check(principal, ["metrics.read"], context)).rejects.toMatchObject({

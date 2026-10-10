@@ -96,6 +96,8 @@ test.describe("Restrictive OPA authorization", () => {
       await page.goto(appURL(`/tasks/${task_id}`))
       await expect(page.getByText("Access to task inputs is restricted", { exact: false })).toBeVisible()
       await page.getByRole("button", { name: "Sign out", exact: true }).click()
+      await expect(page).toHaveURL(appURL("/login?reason=signed-out"))
+      await expect(page.getByRole("status")).toContainText("You have signed out")
       await signIn(page, policyCredentials)
       updatePolicyFixture({ deny_actions: ["cleanup.run"] })
       await page.goto(appURL("/settings"))
