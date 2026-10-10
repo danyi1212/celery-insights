@@ -146,3 +146,9 @@ bunx vitest run runtime/security
 bun run e2e
 URL_PREFIX=/tools/celery bun run e2e
 ```
+
+## Permission feedback in the UI
+
+The sidebar displays the signed-in account. Role grants hide unavailable management sections and disable actions such as export and cleanup. These hints do not grant access: Bun checks every request against roles and the current OPA policy. A policy denial keeps the session active and explains that access is restricted.
+
+Scoped task and worker responses include server-generated `restricted_fields` metadata. Detail and comparison views label omitted inputs, results, failure details and worker inspection data as restricted, rather than treating them as empty values. A missing task or worker may be absent or outside the permitted view; the UI does not distinguish those cases.

@@ -39,6 +39,6 @@ test.describe("Worker Detail", () => {
   test("unknown worker shows not-found message", async ({ page }) => {
     await page.goto("/workers/celery@nonexistent-worker-xyz")
     await expect(page.getByTestId("app-connection-loading")).toBeHidden({ timeout: 30_000 })
-    await expect(page.getByText("Could not find worker")).toBeVisible()
+    await expect(page.getByText("Worker not found or outside your permitted view")).toBeVisible()
   })
 })

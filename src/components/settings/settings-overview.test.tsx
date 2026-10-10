@@ -1,3 +1,4 @@
+vi.mock("@hooks/use-permissions", () => ({ usePermissions: () => ({ can: () => true }) }))
 import { screen, waitFor } from "@/test-utils"
 import { render } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"

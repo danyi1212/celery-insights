@@ -1,3 +1,4 @@
+import { usePermissions } from "@hooks/use-permissions"
 import { appHref } from "@lib/app-url"
 import { createFileRoute } from "@tanstack/react-router"
 import { DebugSnapshotPanel } from "@components/settings/debug-snapshot-panel"
@@ -40,15 +41,16 @@ const SectionBlock = ({
 )
 
 const SettingsPage = () => {
+  const { can } = usePermissions()
   const { appConfig } = useSurrealDB()
   const snapshotEnabled = appConfig?.debugSnapshot?.enabled === true
   const sections = [
     { id: "workspace", label: "Workspace" },
     ...(snapshotEnabled ? [{ id: "snapshot", label: "Snapshot overview" }] : []),
-    { id: "system", label: "System status" },
+    ...(can("diagnostics.export") ? [{ id: "system", label: "System status" }] : []),
     { id: "cleanup", label: "Cleanup" },
-    { id: "backups", label: "Backups" },
-    { id: "danger-zone", label: "Danger zone" },
+    ...(can("backup.export") || can("backup.import") ? [{ id: "backups", label: "Backups" }] : []),
+    ...(can("history.clear") ? [{ id: "danger-zone", label: "Danger zone" }] : []),
   ]
 
   return (
@@ -65,6 +67,10 @@ const SettingsPage = () => {
         </header>
 
         <SettingsOverview />
+        <p className="text-sm text-muted-foreground">
+          Available controls depend on your account permissions. Organization policies may further restrict individual
+          actions.
+        </p>
 
         <SectionBlock id="workspace" label="Workspace" action={<SettingsPanelAction />}>
           <SettingsPanel hideHeader />
@@ -76,21 +82,27 @@ const SettingsPage = () => {
           </SectionBlock>
         )}
 
-        <SectionBlock id="system" label="System status" action={<ServerInfoPanelAction />}>
-          <ServerInfoPanel hideHeader />
-        </SectionBlock>
+        {can("diagnostics.export") && (
+          <SectionBlock id="system" label="System status" action={<ServerInfoPanelAction />}>
+            <ServerInfoPanel hideHeader />
+          </SectionBlock>
+        )}
 
         <SectionBlock id="cleanup" label="Cleanup" action={<RetentionPolicyPanelAction />}>
           <RetentionPolicyPanel hideHeader />
         </SectionBlock>
 
-        <SectionBlock id="backups" label="Backups">
-          <DatabaseBackupPanel hideHeader />
-        </SectionBlock>
+        {(can("backup.export") || can("backup.import")) && (
+          <SectionBlock id="backups" label="Backups">
+            <DatabaseBackupPanel hideHeader />
+          </SectionBlock>
+        )}
 
-        <SectionBlock id="danger-zone" label="Danger zone">
-          <DangerZonePanel hideHeader />
-        </SectionBlock>
+        {can("history.clear") && (
+          <SectionBlock id="danger-zone" label="Danger zone">
+            <DangerZonePanel hideHeader />
+          </SectionBlock>
+        )}
       </div>
 
       <aside className="hidden lg:block">

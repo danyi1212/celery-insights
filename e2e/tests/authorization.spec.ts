@@ -77,6 +77,37 @@ test.describe("Restrictive OPA authorization", () => {
     }
   })
 
+  test("shows viewer limits before actions and keeps policy-denied administrators signed in", async ({
+    browser,
+    scenario,
+    waitForTask,
+  }) => {
+    const { task_id } = await scenario.triggerScenario("noop")
+    await waitForTask(task_id, ["SUCCESS"])
+    const context = await browser.newContext({ ignoreHTTPSErrors: true })
+    const page = await context.newPage()
+    try {
+      await signIn(page, { username: "reader", password: "synthetic-reader-secret" })
+      await page.goto(appURL("/settings"))
+      await expect(page.getByRole("button", { name: "Run cleanup now" })).toBeDisabled()
+      await expect(page.getByRole("heading", { name: "Backups", exact: true })).toHaveCount(0)
+      await expect(page.getByRole("heading", { name: "Danger zone", exact: true })).toHaveCount(0)
+      await expect(page.locator('[aria-label="Account"]')).toContainText("reader")
+      await page.goto(appURL(`/tasks/${task_id}`))
+      await expect(page.getByText("Access to task inputs is restricted", { exact: false })).toBeVisible()
+      await page.getByRole("button", { name: "Sign out", exact: true }).click()
+      await signIn(page, policyCredentials)
+      updatePolicyFixture({ deny_actions: ["cleanup.run"] })
+      await page.goto(appURL("/settings"))
+      await page.getByRole("button", { name: "Run cleanup now" }).click()
+      await expect(page.getByText(/Cleanup failed:.*permission/)).toBeVisible()
+      await expect(page).toHaveURL(appURL("/settings"))
+      expect((await context.request.get(appURL("/api/auth/identity"))).status()).toBe(200)
+    } finally {
+      await context.close()
+    }
+  })
+
   test("checks all five MCP tools independently of endpoint access", async () => {
     const restricted = await policyContext()
     try {
@@ -300,6 +331,8 @@ test.describe("Restrictive OPA authorization", () => {
       await page.goto(appURL("/tasks/scope_visible"))
       await expect(page.getByTestId("header-connection-status").getByText("Connected", { exact: true })).toBeVisible()
       await expect(page.locator("main")).toContainText("scope.visible")
+      await expect(page.getByText("Access to task inputs is restricted", { exact: false })).toBeVisible()
+      await expect(page.getByText("Access to some outcome data is restricted", { exact: false })).toBeVisible()
       expect(await page.content()).not.toMatch(/secret-.*-marker|hidden-row-marker|scope.hidden/)
       updatePolicyFixture({ result: { allow: true, scope: { task_ids: [], deny_fields: [] } } })
       await expect(page.locator("main")).not.toContainText("scope.visible", { timeout: 15000 })

@@ -82,6 +82,7 @@ export function scopedDatabase(db: Pick<Surreal, "query">, scope: ReadScope): Pi
     "id,type,state,sent_at,received_at,started_at,succeeded_at,failed_at,retried_at,revoked_at,rejected_at,runtime,last_updated,first_observed_at,had_error,eta,expires,retries,exchange,routing_key,worker"
   const taskFields = [
     taskMetadata,
+    `${JSON.stringify(scope.deny_fields)} AS restricted_fields`,
     ...(!taskScoped(scope) ? ["root_id,parent_id,workflow_id,children"] : ["[] AS children"]),
     ...(!denied.has("task.input.read") ? ["args,kwargs"] : []),
     ...(!denied.has("task.result.read") ? ["result,result_truncated"] : []),
@@ -93,7 +94,7 @@ export function scopedDatabase(db: Pick<Surreal, "query">, scope: ReadScope): Pi
     // Omit cross-task workflow summaries entirely when task visibility is constrained.
     workflow: `(SELECT id,root_task_id,root_task_type,aggregate_state,first_seen_at,last_updated,task_count,completed_count,failure_count,retry_count,active_count,worker_count${denied.has("task.failure.read") ? "" : ",latest_exception_preview"} FROM workflow WHERE ${taskScoped(scope) ? "false" : "true"})`,
     workflow_task: `(SELECT * FROM workflow_task WHERE ${taskScoped(scope) ? "false" : "true"})`,
-    worker: `(SELECT id,hostname,pid,software_identity,software_version,software_sys,last_updated,heartbeat_expires,cpu_load,status,missed_polls${!rowScoped(scope) ? ",active_tasks,processed_tasks" : ""}${!denied.has("worker.inspect.read") && !restricted(scope) ? ",inspect" : ""} FROM worker${scope.worker_hostnames !== undefined ? " WHERE record::id(id) IN $__scope_worker_hostnames" : ""})`,
+    worker: `(SELECT id,hostname,pid,software_identity,software_version,software_sys,last_updated,heartbeat_expires,cpu_load,status,missed_polls${restricted(scope) ? ',["worker.inspect.read"] AS restricted_fields' : ""}${!rowScoped(scope) ? ",active_tasks,processed_tasks" : ""}${!denied.has("worker.inspect.read") && !restricted(scope) ? ",inspect" : ""} FROM worker${scope.worker_hostnames !== undefined ? " WHERE record::id(id) IN $__scope_worker_hostnames" : ""})`,
     event: `(SELECT ${!restricted(scope) && !denied.has("event.raw.read") ? "*" : "id,event_type,task_id,timestamp,hostname"} FROM event${taskScoped(scope) ? ` WHERE task_id IN (SELECT VALUE record::id(id) FROM task WHERE ${taskWhere})` : ""})`,
   }
   return {

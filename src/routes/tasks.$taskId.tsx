@@ -1,3 +1,5 @@
+import ErrorAlert from "@components/errors/error-alert"
+import RestrictedData from "@components/common/restricted-data"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import DetailItem from "@components/common/detail-item"
 import JsonViewThemed from "@components/common/json-view-themed"
@@ -36,12 +38,16 @@ const InputsPanel = ({ task }: { task: Task }) => (
         <DetailItem label="ETA" value={task.eta || "---"} />
         <DetailItem label="Expires" value={task.expires || "---"} />
       </div>
-      <JsonViewThemed
-        value={{
-          args: safeParseJson(task.args) ?? task.args ?? "Unknown",
-          kwargs: safeParseJson(task.kwargs) ?? task.kwargs ?? "Unknown",
-        }}
-      />
+      {task.restricted_fields?.includes("task.input.read") ? (
+        <RestrictedData label="Task inputs" />
+      ) : (
+        <JsonViewThemed
+          value={{
+            args: safeParseJson(task.args) ?? task.args ?? "Unknown",
+            kwargs: safeParseJson(task.kwargs) ?? task.kwargs ?? "Unknown",
+          }}
+        />
+      )}
     </div>
   </Panel>
 )
@@ -51,13 +57,21 @@ const OutcomePanel = ({ task }: { task: Task }) => (
     <div className="space-y-3 p-3">
       <div className="grid gap-2 md:grid-cols-2">
         <DetailItem label="Truncated" value={task.result_truncated ? "Yes" : "No"} />
-        <DetailItem label="Exception" value={task.exception || "---"} />
+        <DetailItem
+          label="Exception"
+          value={task.restricted_fields?.includes("task.failure.read") ? "Restricted" : task.exception || "---"}
+        />
       </div>
+      {task.restricted_fields?.some((field) => ["task.result.read", "task.failure.read"].includes(field)) && (
+        <RestrictedData label="Some outcome data" />
+      )}
       <JsonViewThemed
         value={{
-          result: safeParseJson(task.result) ?? task.result ?? null,
-          exception: task.exception ?? null,
-          traceback: task.traceback ?? null,
+          result: task.restricted_fields?.includes("task.result.read")
+            ? "Restricted"
+            : (safeParseJson(task.result) ?? task.result ?? null),
+          exception: task.restricted_fields?.includes("task.failure.read") ? "Restricted" : (task.exception ?? null),
+          traceback: task.restricted_fields?.includes("task.failure.read") ? "Restricted" : (task.traceback ?? null),
         }}
       />
     </div>
@@ -109,19 +123,26 @@ const RelatedTasksPanel = ({ currentTask, members }: { currentTask: Task; member
 
 const TaskPage = () => {
   const { taskId } = Route.useParams()
-  const { task: surrealTask, workflow: surrealWorkflow, members, isLoading } = useTaskWorkflow(taskId)
+  const { task: surrealTask, workflow: surrealWorkflow, members, isLoading, error } = useTaskWorkflow(taskId)
   const task = useMemo(() => (surrealTask ? parseTask(surrealTask) : undefined), [surrealTask])
   const workflow = useMemo(() => (surrealWorkflow ? parseWorkflow(surrealWorkflow) : undefined), [surrealWorkflow])
   const parsedMembers = useMemo(() => members.map(parseTask), [members])
   const [chartType, setChartType] = React.useState<WorkflowChartType>(WorkflowChartType.FLOWCHART)
   useTourChangeStepOnLoad(2, task !== undefined)
 
+  if (error)
+    return (
+      <div className="p-4">
+        <ErrorAlert error={error} />
+      </div>
+    )
+
   if (!isLoading && task === undefined) {
     return (
       <div className="flex h-full flex-col items-center justify-center">
         <div className="flex items-center">
           <TaskAvatar taskId={taskId} type={undefined} />
-          <h2 className="ml-2 text-2xl font-semibold">Could not find this task</h2>
+          <h2 className="ml-2 text-2xl font-semibold">Task not found or outside your permitted view</h2>
         </div>
       </div>
     )

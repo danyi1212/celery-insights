@@ -217,3 +217,22 @@ describe("TaskComparisonView", () => {
     expect(screen.getByText(/Right:/)).toBeInTheDocument()
   })
 })
+
+it("labels restricted payloads instead of comparing them as identical missing values", () => {
+  mockUseTask.mockReturnValue({
+    task: {
+      ...leftSurrealTask,
+      args: undefined,
+      kwargs: undefined,
+      result: undefined,
+      restricted_fields: ["task.input.read", "task.result.read"],
+    },
+    data: [],
+    isLoading: false,
+    error: null,
+  })
+  render(<TaskComparisonView leftId="left-id" rightId="right-id" onChangeLeft={vi.fn()} onChangeRight={vi.fn()} />)
+  expect(screen.getByText(/Access to task arguments is restricted/)).toBeVisible()
+  expect(screen.getByText(/Access to task outcome data is restricted/)).toBeVisible()
+  expect(screen.queryByText("Identical")).not.toBeInTheDocument()
+})

@@ -1,3 +1,4 @@
+import { usePermissions } from "@hooks/use-permissions"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import {
   describeDurability,
@@ -46,12 +47,14 @@ const SummaryCard = ({
 )
 
 const SettingsOverview = () => {
+  const { can } = usePermissions()
+  const canReadDiagnostics = can("diagnostics.export")
   const theme = useSettingsStore((state) => state.theme)
   const hideWelcomeBanner = useSettingsStore((state) => state.hideWelcomeBanner)
   const isDemo = useSettingsStore((state) => state.demo)
   const rawEventsLimit = useSettingsStore((state) => state.rawEventsLimit)
   const { status, ingestionStatus, appConfig } = useSurrealDB()
-  const { data, error } = useSettingsDiagnostics({ enabled: !isDemo })
+  const { data, error } = useSettingsDiagnostics({ enabled: !isDemo && canReadDiagnostics })
   const { data: demoCounts, isLoading: isLoadingDemoCounts } = useDemoRecordCounts({ enabled: isDemo })
   const snapshotEnabled = appConfig?.debugSnapshot?.enabled === true
 
@@ -88,58 +91,69 @@ const SettingsOverview = () => {
         hint={`${hideWelcomeBanner ? "Banner hidden" : "Banner visible"} · ${isDemo ? "Sample data" : "Live data"} · ${rawEventsLimit} events`}
         badge={<Badge variant="outline">Local</Badge>}
       />
-      <SummaryCard
-        icon={<HardDrive className="size-4" />}
-        title="Database"
-        value={
-          isDemo
-            ? "Sample data"
-            : data
-              ? formatTopology(topology)
-              : diagnosticsUnavailable
-                ? "Unavailable"
-                : "Loading..."
-        }
-        hint={
-          isDemo
-            ? "Showing the embedded sample database instead of server-side storage details."
-            : data
-              ? describeDurability(durability)
-              : diagnosticsUnavailable
-                ? "System details could not be loaded."
-                : "Checking the connected SurrealDB instance."
-        }
-        badge={
-          isDemo ? (
-            <Badge variant="outline">Demo</Badge>
-          ) : data ? (
-            <Badge variant="outline">{formatDurability(durability)}</Badge>
-          ) : undefined
-        }
-      />
-      <SummaryCard
-        icon={<Gauge className="size-4" />}
-        title="Runtime"
-        value={isDemo ? "Demo mode" : snapshotEnabled ? "Snapshot replay" : formatConnectionStatus(status)}
-        hint={
-          isDemo
-            ? "Using the embedded sample database; server runtime diagnostics stay disabled."
-            : snapshotEnabled
-              ? "Offline debug bundle loaded at startup."
-              : `${formatIngestionStatus(ingestionStatus)}${data ? ` · ${formatVersion(data.server_version)}` : ""}`
-        }
-        badge={
-          <Badge variant={isDemo || snapshotEnabled || status === "connected" ? "secondary" : "destructive"}>
-            {isDemo ? "Demo" : snapshotEnabled ? "Snapshot" : formatIngestionStatus(ingestionStatus)}
-          </Badge>
-        }
-      />
-      <SummaryCard
-        icon={<Database className="size-4" />}
-        title="Stored data"
-        value={storedDataValue}
-        hint={storedDataHint}
-      />
+      {canReadDiagnostics || isDemo ? (
+        <>
+          <SummaryCard
+            icon={<HardDrive className="size-4" />}
+            title="Database"
+            value={
+              isDemo
+                ? "Sample data"
+                : data
+                  ? formatTopology(topology)
+                  : diagnosticsUnavailable
+                    ? "Unavailable"
+                    : "Loading..."
+            }
+            hint={
+              isDemo
+                ? "Showing the embedded sample database instead of server-side storage details."
+                : data
+                  ? describeDurability(durability)
+                  : diagnosticsUnavailable
+                    ? "System details could not be loaded."
+                    : "Checking the connected SurrealDB instance."
+            }
+            badge={
+              isDemo ? (
+                <Badge variant="outline">Demo</Badge>
+              ) : data ? (
+                <Badge variant="outline">{formatDurability(durability)}</Badge>
+              ) : undefined
+            }
+          />
+          <SummaryCard
+            icon={<Gauge className="size-4" />}
+            title="Runtime"
+            value={isDemo ? "Demo mode" : snapshotEnabled ? "Snapshot replay" : formatConnectionStatus(status)}
+            hint={
+              isDemo
+                ? "Using the embedded sample database; server runtime diagnostics stay disabled."
+                : snapshotEnabled
+                  ? "Offline debug bundle loaded at startup."
+                  : `${formatIngestionStatus(ingestionStatus)}${data ? ` · ${formatVersion(data.server_version)}` : ""}`
+            }
+            badge={
+              <Badge variant={isDemo || snapshotEnabled || status === "connected" ? "secondary" : "destructive"}>
+                {isDemo ? "Demo" : snapshotEnabled ? "Snapshot" : formatIngestionStatus(ingestionStatus)}
+              </Badge>
+            }
+          />
+          <SummaryCard
+            icon={<Database className="size-4" />}
+            title="Stored data"
+            value={storedDataValue}
+            hint={storedDataHint}
+          />
+        </>
+      ) : (
+        <SummaryCard
+          icon={<Gauge className="size-4" />}
+          title="Access"
+          value="Limited system access"
+          hint="Your account can browse tasks and workers. System diagnostics require additional permissions."
+        />
+      )}
     </div>
   )
 }
