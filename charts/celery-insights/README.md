@@ -3,6 +3,7 @@
 Deploy Insights against an existing Celery cluster. By default the chart installs one private, shared in-memory SurrealDB instance through the official SurrealDB chart. Every Insights replica connects to that instance. It provisions no Celery workers, broker, or result backend.
 
 **Release status:** configuration and authentication are integrated with the merged application runtime. Publication remains gated on a matching released application image and hosted SurrealDB Cloud verification. Development installations must explicitly select an image built from this PR.
+
 ## First installation
 
 Create one Secret in the installation namespace. Replace every placeholder; never commit real credentials. The database root account is private to provisioning/native diagnostics, and all replicas must use matching credentials.
@@ -64,7 +65,7 @@ With no custom TOML source, the chart generates a schema-versioned configuration
 
 Set `authentication.mode: oidc` with `issuer`, `clientId`, and `roleMappings` under `authentication.oidc`; see [oidc.yaml](examples/oidc.yaml). The default confidential client reads `oidc-client-secret` from the existing Secret. Public clients can set `useClientSecret: false`. Register the HTTPS callback at `PUBLIC_URL/api/auth/callback` with your provider.
 
-Select one of `config.toml.structured`, `content`, `existingConfigMap`, or `existingSecret` to replace the generated **entire** application file. Custom files must include `schema_version`, `installation.public_url`, and authentication configuration. Structured values support nested tables and arrays of accounts/role mappings. The file mounts at `/etc/celery-insights/config.toml`, selected with `CELERY_INSIGHTS_CONFIG_FILE`. The application's resolver validates application settings and applies environment overrides; Helm does not duplicate its parser.
+Select one of `config.toml.structured`, `content`, `existingConfigMap`, or `existingSecret` to replace the generated **entire** application file. Custom files must include `schema_version`, `installation.public_url`, and authentication configuration. Structured values support nested tables and arrays of accounts/role mappings. Keep `authentication.mode` consistent with your custom file: it controls which standard Secret keys the Deployment references. Use `extraEnv` or Secret file mounts for additional accounts. The file mounts at `/etc/celery-insights/config.toml`, selected with `CELERY_INSIGHTS_CONFIG_FILE`. The application's resolver validates application settings and applies environment overrides; Helm does not duplicate its parser.
 
 Python configuration can coexist with TOML for Celery-specific options:
 
@@ -105,7 +106,7 @@ SurrealDB uses Recreate, so upgrades interrupt database access. Switching from m
 
 ### External or SurrealDB Cloud
 
-Disable `surrealdb.enabled` and supply `database.externalUrl`, for example `wss://YOUR-INSTANCE.surreal.cloud/rpc`. Keep credentials in the existing Secret. Use the tested database version and an administrative account permitted to initialize the application schema. The chart provisions no cloud account or instance and no external storage.
+Disable `surrealdb.enabled` and supply `database.externalUrl`, for example `wss://YOUR-INSTANCE.surreal.cloud/rpc`. Keep credentials in the existing Secret. Use the tested database version and a root-level account named `root` permitted to initialize the application schema; the current application runtime fixes this provisioning username. The chart provisions no cloud account or instance and no external storage.
 
 See [external.yaml](examples/external.yaml). Test Cloud with the final configuration/authentication runtime before using it in production; the external connection path is tested against a separate local database, not a hosted service.
 
@@ -139,5 +140,7 @@ uv run python tooling/helm/chart_test.py
 ```
 
 Kubernetes E2E: create a disposable Kind cluster named `celery-helm`, build/load the app as `celery-insights-helm:e2e` and the existing test harness as `celery-insights-test-project:local`, install Playwright Chromium, and run `uv run python tooling/helm/e2e.py`. The runner only accepts a dedicated Kind context. It owns its fixture namespace and deletes it afterwards; do not use it against a shared cluster.
+
+Publication validates generated Basic/OIDC TOML with the configuration CLI inside the selected released Docker image.
 
 Chart publication is gated by the `celery-insights.io/release-ready` annotation. Set it only after the matching application release and Cloud verification are complete. Chart versions are independent of `appVersion`; trusted `chart-v*` tags publish OCI packages after validation and image availability checks.

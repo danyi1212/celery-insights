@@ -26,7 +26,7 @@ jobs:
           import os
           import yaml
           chart = yaml.safe_load(open('charts/celery-insights/Chart.yaml'))
-          assert chart['annotations']['celery-insights.io/release-ready'] == 'true', 'Configuration/authentication integration and release validation are not complete'
+          assert chart['annotations']['celery-insights.io/release-ready'] == 'true', 'Matching application release and hosted Cloud validation are not complete'
           assert os.environ['GITHUB_REF_NAME'] == 'chart-v' + chart['version'], 'Tag must match chart version'
           PY
       - name: Install pinned validation tools
@@ -42,7 +42,7 @@ jobs:
           bash tooling/helm/validate-manifests.sh
           app_version=$(uv run python -c 'import yaml; print(yaml.safe_load(open("charts/celery-insights/Chart.yaml"))["appVersion"])')
           docker pull "ghcr.io/danyi1212/celery-insights:$app_version"
-          docker run --rm --entrypoint sh "ghcr.io/danyi1212/celery-insights:$app_version" -c 'test -f /app/bun-server.js && test -f /app/server/run.py'
+          HELM_CONFIG_VALIDATOR_IMAGE="ghcr.io/danyi1212/celery-insights:$app_version" uv run python tooling/helm/chart_test.py
 
       - name: Package and publish OCI chart
         env:

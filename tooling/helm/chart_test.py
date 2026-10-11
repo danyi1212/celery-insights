@@ -53,16 +53,33 @@ class ChartContract(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".toml") as config:
             config.write(cm["data"]["config.toml"])
             config.flush()
-            result = subprocess.run(
-                [
-                    "bun",
-                    "--no-env-file",
+            command = [
+                "bun",
+                "--no-env-file",
+                "run",
+                str(CHART.parents[1] / "runtime/config-cli.ts"),
+                "validate",
+                "--config",
+                config.name,
+            ]
+            if image := os.environ.get("HELM_CONFIG_VALIDATOR_IMAGE"):
+                command = [
+                    "docker",
                     "run",
-                    str(CHART.parents[1] / "runtime/config-cli.ts"),
-                    "validate",
-                    "--config",
-                    config.name,
-                ],
+                    "--rm",
+                    "--network",
+                    "none",
+                    "--entrypoint",
+                    "bun",
+                    "--mount",
+                    f"type=bind,src={config.name},dst=/tmp/chart.toml,readonly",
+                ]
+                for item in app["spec"]["template"]["spec"]["containers"][0]["env"]:
+                    if item["name"] in env:
+                        command.extend(["--env", f"{item['name']}={env[item['name']]}"])
+                command.extend([image, "/app/config-cli.js", "validate", "--config", "/tmp/chart.toml"])
+            result = subprocess.run(
+                command,
                 env=env,
                 capture_output=True,
                 text=True,
