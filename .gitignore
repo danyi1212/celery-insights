@@ -305,3 +305,5 @@ test-results/
 
 # Helm dependencies are reproducibly fetched from Chart.lock
 charts/*/charts/
+# Disposable authentication E2E certificate and sessions
+test_project/.e2e-auth/

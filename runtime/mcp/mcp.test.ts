@@ -1,50 +1,16 @@
 // @vitest-environment node
-import { spawn, type ChildProcess } from "node:child_process"
-import { createServer } from "node:net"
+import { databaseReaderPassword } from "../database-config"
+import { parseConfig } from "../config"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { Surreal, RecordId } from "surrealdb"
 import { CORE_SCHEMA, runSchemaMigration } from "../surreal-schema"
-import { parseConfig } from "../config"
+import { startSurrealTestServer, type SurrealTestServer } from "../surreal-test-server"
 import { createMcpHandler, McpTools } from "./index"
 import { Cursors, MAX_RESPONSE_BYTES, type Row, utf8Size } from "./common"
 import { outputSchemas } from "./output-schemas"
 
-let databaseProcess: ChildProcess | undefined
+let databaseServer: SurrealTestServer | undefined
 let databaseEndpoint: string
-const startDatabase = async (): Promise<string> => {
-  const port = await new Promise<number>((resolve, reject) => {
-    const socket = createServer()
-    socket.on("error", reject)
-    socket.listen(0, "127.0.0.1", () => {
-      const address = socket.address()
-      if (!address || typeof address === "string") return reject(new Error("No local port available"))
-      socket.close(() => resolve(address.port))
-    })
-  })
-  let failure: Error | undefined
-  databaseProcess = spawn(
-    "surreal",
-    ["start", "--bind", `127.0.0.1:${port}`, "--user", "root", "--pass", "root", "memory"],
-    { stdio: "ignore" },
-  )
-  databaseProcess.on("error", (error) => {
-    failure = error
-  })
-  databaseProcess.on("exit", (code) => {
-    failure ??= new Error(`SurrealDB exited with code ${code}`)
-  })
-  const end = Date.now() + 10_000
-  while (Date.now() < end) {
-    if (failure) throw new Error("MCP tests require the SurrealDB 3.3+ CLI on PATH", { cause: failure })
-    try {
-      if ((await fetch(`http://127.0.0.1:${port}/health`)).ok) return `ws://127.0.0.1:${port}/rpc`
-    } catch {
-      /* Starting. */
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100))
-  }
-  throw new Error("SurrealDB test instance did not become ready")
-}
 
 const NOW = Date.parse("2026-10-02T09:05:00Z")
 let db: Surreal
@@ -89,7 +55,8 @@ const asRows = (value: unknown) => value as Row[]
 describe("MCP tools against SurrealDB", () => {
   beforeAll(async () => {
     db = new Surreal()
-    databaseEndpoint = process.env.MCP_TEST_URL ?? (await startDatabase())
+    if (!process.env.MCP_TEST_URL) databaseServer = await startSurrealTestServer()
+    databaseEndpoint = process.env.MCP_TEST_URL ?? databaseServer!.endpoint
     await db.connect(databaseEndpoint, { authentication: { username: "root", password: "root" } })
     await db.use({ namespace: "test", database: "mcp" })
     await db.query(CORE_SCHEMA).collect()
@@ -104,7 +71,7 @@ describe("MCP tools against SurrealDB", () => {
   })
   afterAll(async () => {
     await db?.close()
-    databaseProcess?.kill("SIGTERM")
+    databaseServer?.stop()
   })
 
   it("finds fast completions and preserves errors independently of progress", async () => {
@@ -129,8 +96,8 @@ describe("MCP tools against SurrealDB", () => {
       SURREALDB_NAMESPACE: "test",
       SURREALDB_DATABASE: "mcp",
     })
-    await runSchemaMigration(config)
-    await runSchemaMigration(config)
+    await runSchemaMigration({ ...config, surrealdbRootPass: "root" })
+    await runSchemaMigration({ ...config, surrealdbRootPass: "root" })
     const [edges] = await db.query<Row[]>("SELECT * FROM workflow_task").collect()
     expect(edges).toHaveLength(2)
     const viewer = new Surreal()
@@ -138,7 +105,12 @@ describe("MCP tools against SurrealDB", () => {
       await viewer.connect(databaseEndpoint, {
         namespace: "test",
         database: "mcp",
-        authentication: { username: "viewer", password: "viewer", namespace: "test", database: "mcp" },
+        authentication: {
+          username: "observation_reader",
+          password: databaseReaderPassword(config),
+          namespace: "test",
+          database: "mcp",
+        },
       })
       const readOnly = new McpTools({ db: viewer, cursorSecret: "secret", mode: () => "live", now: () => NOW })
       const result = await readOnly.call("search_workflows", { has_errors: true })
@@ -148,6 +120,44 @@ describe("MCP tools against SurrealDB", () => {
       await viewer.close()
     }
   })
+
+  it("reports execution observations and limits running tasks to fresh positive evidence", async () => {
+    const observations = [
+      ["active", true, NOW - 10_000, "active"],
+      ["ahead", true, NOW + 30_000, "active"],
+      ["missing", false, NOW - 10_000, "not_active"],
+      ["expired", true, NOW - 180_000, "unknown"],
+      ["unconfirmed", undefined, undefined, "unknown"],
+    ] as const
+    for (const [id, execution_active, observedAt] of observations) {
+      await task(id, {
+        state: "STARTED",
+        started_at: new Date(NOW - 300_000),
+        last_updated: new Date(NOW - 300_000),
+        execution_active,
+        execution_observed_at: observedAt ? new Date(observedAt) : undefined,
+      })
+    }
+    const overview = await call("inspect_workflow", { workflow_id: "root" })
+    expect(asRows(overview.running_tasks).map((row) => row.task_id)).toEqual(["active", "ahead"])
+    expect(overview.omitted_running_task_count).toBe(0)
+    for (const [task_id, , , execution_status] of observations) {
+      const result = await call("inspect_task", { task_id })
+      expect(result.task).toMatchObject({ state: "STARTED", execution_status })
+    }
+    await task("cleared", {
+      state: "STARTED",
+      started_at: new Date(NOW - 300_000),
+      last_updated: new Date(NOW - 300_000),
+      execution_observed_at: new Date(NOW - 10_000),
+      execution_active_at: new Date(NOW - 60_000),
+    })
+    expect((await call("inspect_task", { task_id: "cleared" })).task).toMatchObject({
+      execution_status: "unknown",
+      execution_active_at: new Date(NOW - 60_000).toISOString(),
+    })
+  })
+
   it("requires task name and worker to match the same member", async () => {
     await task("render", { worker: "celery@A" })
     await task("publish", { type: "reports.publish", worker: "celery@B" })
@@ -317,7 +327,6 @@ describe("MCP tools against SurrealDB", () => {
       db,
       cursorSecret: "secret",
       mode: () => "live",
-      token: "secret-token",
       now: () => NOW,
     })
     const request = (body: Row, headers: Record<string, string> = {}, url = "http://localhost/mcp") =>
@@ -327,33 +336,30 @@ describe("MCP tools against SurrealDB", () => {
         body: JSON.stringify(body),
       })
     const body = { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "search_workflows", arguments: {} } }
-    expect((await handler(request(body))).status).toBe(401)
-    expect(
-      (await handler(request(body, { authorization: "Bearer secret-token", origin: "https://other.example" }))).status,
-    ).toBe(403)
-    expect(
-      (await handler(request(body, { authorization: "Bearer secret-token" }, "http://other.example/mcp"))).status,
-    ).toBe(403)
-    const response = await handler(
-      request(body, { authorization: "Bearer secret-token", "MCP-Protocol-Version": "2025-11-25" }),
-    )
-    expect(response.status).toBe(200)
-    const payload = await response.json()
-    expect(payload.result.structuredContent.workflows).toHaveLength(1)
-    const list = await handler(
-      request({ jsonrpc: "2.0", id: 2, method: "tools/list" }, { authorization: "Bearer secret-token" }),
-    )
-    expect((await list.json()).result.tools.map((tool: Row) => tool.name)).toHaveLength(5)
-    const defaultConfig = parseConfig({})
-    const publicHandler = createMcpHandler({
+    const behindProxy = createMcpHandler({
       db,
       cursorSecret: "secret",
       mode: () => "live",
-      token: defaultConfig.mcpToken ?? defaultConfig.surrealdbFrontendPass,
+      publicOrigin: "https://insights.example",
     })
-    const publicList = await publicHandler(request({ jsonrpc: "2.0", id: 3, method: "tools/list" }))
-    expect(publicList.status).toBe(200)
-    expect((await publicList.json()).result.tools).toHaveLength(5)
+    expect(
+      (
+        await behindProxy(
+          request({ jsonrpc: "2.0", id: 9, method: "tools/list" }, { origin: "https://insights.example" }),
+        )
+      ).status,
+    ).toBe(200)
+    expect((await behindProxy(request(body, { origin: "https://other.example" }))).status).toBe(403)
+
+    expect((await handler(request(body))).status).toBe(200)
+    expect((await handler(request(body, { origin: "https://other.example" }))).status).toBe(403)
+    expect((await handler(request(body, {}, "http://other.example/mcp"))).status).toBe(403)
+    const response = await handler(request(body, { "MCP-Protocol-Version": "2025-11-25" }))
+    expect(response.status).toBe(200)
+    const payload = await response.json()
+    expect(payload.result.structuredContent.workflows).toHaveLength(1)
+    const list = await handler(request({ jsonrpc: "2.0", id: 2, method: "tools/list" }, {}))
+    expect((await list.json()).result.tools.map((tool: Row) => tool.name)).toHaveLength(5)
   })
 })
 

@@ -16,7 +16,10 @@ const mockQuery = vi.fn()
 const mockLiveOf = vi.fn()
 const MOCK_LIVE_UUID = "mock-live-uuid"
 // Stable object reference — must not be recreated between renders
-const mockDb = { query: mockQuery, liveOf: mockLiveOf }
+const mockDb = {
+  query: (...args: unknown[]) => ({ retry: (_options: { attempts: number }) => mockQuery(...args) }),
+  liveOf: mockLiveOf,
+}
 let mockStatus = "connected"
 
 vi.mock("@components/surrealdb-provider", () => ({
@@ -101,7 +104,7 @@ describe("useLiveQuery", () => {
 
     expect(result.current.data).toEqual(records)
     expect(result.current.error).toBeNull()
-    expect(mockQuery).toHaveBeenCalledWith("SELECT * FROM task ORDER BY score DESC", undefined)
+    expect(mockQuery).toHaveBeenCalledWith("SELECT * FROM task ORDER BY score DESC")
   })
 
   it("passes bindings to the initial query", async () => {

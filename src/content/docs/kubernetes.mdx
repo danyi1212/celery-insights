@@ -1,27 +1,150 @@
-Install Celery Insights using the [official Helm chart source](https://github.com/danyi1212/celery-insights/tree/main/charts/celery-insights). The chart is currently a draft pending the configuration/authentication runtime and a matching image release; follow its README for development installation. It connects to your existing Celery cluster and does not install workers, a broker, or a result backend.
+Deploy Celery Insights against your existing Celery cluster using the [official Helm chart](https://github.com/danyi1212/celery-insights/tree/main/charts/celery-insights). It installs no Celery workers, broker, or result backend.
 
-## Default topology
+The default is an Insights Deployment and one private shared in-memory SurrealDB instance, using the official SurrealDB dependency. Add a PVC for persistent history, or disable the dependency and connect to an externally managed SurrealDB instance. Insights replicas share ingestion leadership and authenticated application sessions. CPU HPA scales Insights; advanced database scaling belongs to a separately managed database.
 
-The chart runs one shared, private SurrealDB instance in memory. Insights pods connect to that Service instead of starting an embedded database per pod. Replacing an Insights pod preserves history; replacing the in-memory database loses it.
+Create an existing credentials Secret, set the external HTTPS public URL, and configure your ingress controller and TLS Secret. The chart generates authentication TOML with one Basic administrator by default; OIDC and custom TOML/Python files are supported. Credentials stay in Kubernetes Secrets, and the session key must be shared by all replicas and retained across upgrades.
 
-## Installation
+Follow the [chart README](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md) for installation, storage profiles, configuration migration, authentication, HPA, and E2E verification. Chart publication remains gated on a matching application image and hosted SurrealDB Cloud verification; development installations must select an image built from the Helm PR.
 
-Create the explicit connection/credential Secret shown in the [chart README](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md), then install the chart using a tested image containing the Helm runtime changes. Access the ClusterIP Service through port-forwarding first; add ingress/TLS or a LoadBalancer when ready.
+## Manual manifests
 
-## Persistence and external databases
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-insights
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: celery-insights
+  template:
+    metadata:
+      labels:
+        app: celery-insights
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/danyi1212/celery-insights:latest
+          ports:
+            - containerPort: 8555
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          env:
+            - name: CELERY_INSIGHTS_CONFIG_FILE
+              value: /etc/celery-insights/config.toml
+            - name: CELERY_INSIGHTS_DATABASE_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: celery-insights
+                  key: surrealdb-root-password
+            - name: BROKER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: celery-insights
+                  key: broker-url
+            - name: RESULT_BACKEND
+              valueFrom:
+                secretKeyRef:
+                  name: celery-insights
+                  key: result-backend
+            - name: SURREALDB_EXTERNAL_URL
+              valueFrom:
+                secretKeyRef:
+                  name: celery-insights
+                  key: surrealdb-url
+            - name: SURREALDB_INGESTER_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: celery-insights
+                  key: surrealdb-ingester-pass
+            - name: CELERY_INSIGHTS_SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: celery-insights-auth
+                  key: session-secret
+            - name: INSIGHTS_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: celery-insights
+                  key: admin-password
+            - name: INGESTION_LEADER_ELECTION
+              value: "true"
+            - name: LOG_FORMAT
+              value: "json"
+          volumeMounts:
+            - name: application-config
+              mountPath: /etc/celery-insights
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8555
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8555
+      volumes:
+        - name: application-config
+          configMap:
+            name: celery-insights-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: celery-insights-config
+data:
+  config.toml: |
+    schema_version = 1
+    installation.public_url = "https://insights.example.com"
+    authentication.mode = "basic"
+    # Session secret comes from CELERY_INSIGHTS_SESSION_SECRET above.
+    [[authentication.accounts]]
+    username = "admin"
+    password_env = "INSIGHTS_ADMIN_PASSWORD"
+    roles = ["administrator"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: celery-insights
+spec:
+  selector:
+    app: celery-insights
+  ports:
+    - port: 80
+      targetPort: 8555
+```
 
-Enable a PVC and disk-backed datastore together to preserve observation history. Existing claims are supported without Helm taking ownership. Chart-created PVCs are retained on uninstall by default. Switching from memory to disk needs an explicit export/restore if you want to retain existing history.
+## HPA example
 
-For SurrealDB Cloud or a separately managed database, disable the bundled dependency and supply its endpoint and Secret-backed credentials. Advanced database scaling is managed outside this chart.
+Use shared SurrealDB, Metrics Server, and resource requests before enabling HPA. Scale web capacity and availability; only the elected leader ingests events.
 
-## Insights replicas and autoscaling
-
-Insights APIs run on every replica, while leader election controls background ingestion and automatic cleanup. The chart defaults to one replica and offers optional CPU HPA. Install Metrics Server and configure requests/minimum/maximum replicas before enabling it. Scaling increases frontend/API capacity, not ingestion throughput.
-
-The bundled database stays a single instance. Database upgrades use Recreate and interrupt access; Insights pods roll independently. Authentication requires durable identity/control storage even when observation history is disposable; see the chart's release prerequisites.
-
-## Operational notes
-
-Chart-managed file changes roll the Insights pods. Existing ConfigMaps/Secrets require an explicit rollout restart after updates. The public URL prefix must match the ingress path, and live WebSocket traffic must be forwarded. Core metrics describe shared history and should not be summed across replicas.
-
-Use `/health` for process liveness and `/ready` for API responsiveness. These do not guarantee broker connectivity or ongoing ingestion. Helm rollback does not reverse database migrations; back up persistent storage before upgrades.
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: celery-insights
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: celery-insights
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+```

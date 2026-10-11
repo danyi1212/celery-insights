@@ -130,6 +130,13 @@ jobs:
           echo "$RUNNER_TEMP/surreal-integration" >> "$GITHUB_PATH"
       - name: Vitest
         run: bun run test
+      - name: Bun observation API acceptance
+        run: bun run test:observation
+      - name: Bun configured-account acceptance
+        run: |
+          bun run test:security
+          bun run tooling/verify-snapshot-security.ts
+          bun run tooling/verify-database-credentials.ts
 
   e2e:
     name: E2E tests (${{ matrix.deployment.name }})
@@ -176,6 +183,11 @@ jobs:
         env:
           CI: "true"
           E2E_SKIP_BUILD: "1"
+      - name: OIDC HTTPS browser acceptance
+        run: |
+          oidc_fixture_dir=$(mktemp -d)
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -addext subjectAltName=DNS:localhost,IP:127.0.0.1 -keyout "$oidc_fixture_dir/key.pem" -out "$oidc_fixture_dir/certificate.pem"
+          NODE_EXTRA_CA_CERTS="$oidc_fixture_dir/certificate.pem" OIDC_FIXTURE_CERT="$oidc_fixture_dir/certificate.pem" OIDC_FIXTURE_KEY="$oidc_fixture_dir/key.pem" bun run tooling/verify-oidc.ts
       - name: Publish Playwright summary
         uses: daun/playwright-report-summary@v4.1.0
         if: always() && hashFiles('playwright-report/results.json') != ''
@@ -199,6 +211,36 @@ jobs:
       - name: Cleanup docker compose
         if: always()
         run: docker compose -f test_project/docker-compose.yml --profile interactive down -v --remove-orphans || true
+
+  e2e-results:
+    # Branch protection requires this stable name; deployment names may change.
+    name: E2E tests
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [changes, e2e]
+    steps:
+      - name: Verify applicable E2E deployments passed
+        env:
+          JOBS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          jobs = json.loads(os.environ['JOBS_JSON'])
+          if jobs['changes']['result'] != 'success':
+              sys.exit('Change detection did not succeed')
+          required = jobs['changes']['outputs'].get('e2e')
+          if required not in ('true', 'false'):
+              sys.exit('Missing or invalid E2E change detection output')
+          result = jobs['e2e']['result']
+          print(f'E2E deployments: {result} (required={required})')
+          if required == 'true' and result != 'success':
+              sys.exit('Required E2E deployments did not all succeed')
+          if required == 'false' and result not in ('success', 'skipped'):
+              sys.exit('E2E deployments failed or were cancelled')
+          PY
 
   database-upgrade:
     name: Database upgrade and restore
@@ -291,6 +333,7 @@ jobs:
           mkdir -p test-results/helm
           kubectl -n celery-helm-e2e get pods,deploy,svc,pvc,hpa -o wide > test-results/helm/resources.txt || true
           kubectl -n celery-helm-e2e get events > test-results/helm/events.txt || true
+          kubectl -n celery-helm-e2e logs -l app.kubernetes.io/name=celery-insights --all-containers --prefix --tail=200 > test-results/helm/application.txt || true
       - uses: actions/upload-artifact@v7.0.1
         if: failure()
         with:
@@ -305,7 +348,7 @@ jobs:
     name: Test Results
     runs-on: ubuntu-latest
     if: always()
-    needs: [changes, lint-backend, test-backend, lint-frontend, test-frontend, e2e, database-upgrade, helm]
+    needs: [changes, lint-backend, test-backend, lint-frontend, test-frontend, e2e, e2e-results, database-upgrade, helm]
     steps:
       - name: Verify all applicable checks passed
         env:
@@ -326,9 +369,11 @@ jobs:
               'lint-frontend': 'frontend',
               'test-frontend': 'frontend',
               'e2e': 'e2e',
+              'e2e-results': 'always',
               'database-upgrade': 'database',
               'helm': 'helm',
           }
+          outputs['always'] = 'true'
           for job, component in checks.items():
               result = jobs[job]['result']
               required = outputs[component] == 'true'

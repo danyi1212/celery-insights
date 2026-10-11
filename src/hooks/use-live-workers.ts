@@ -11,6 +11,7 @@ const isOnline = (w: SurrealWorker) => w.status === "online"
 /** All workers ordered by last_updated descending. */
 export const useLiveWorkers = () =>
   useLiveQuery<SurrealWorker>({
+    request: { operation: "list", table: "worker", limit: 10000 },
     initialQuery: "SELECT * FROM worker ORDER BY last_updated DESC",
     liveTable: "worker",
     orderBy: byLastUpdatedDesc,
@@ -22,6 +23,7 @@ export const useWorker = (workerId: string) => {
   const filter = useCallback((w: SurrealWorker) => extractId(w.id) === workerId, [workerId])
 
   const result = useLiveQuery<SurrealWorker>({
+    request: { operation: "list", table: "worker", id: workerId },
     initialQuery: "SELECT * FROM $rid",
     liveTable: "worker",
     bindings,
@@ -38,6 +40,7 @@ export const useWorker = (workerId: string) => {
 /** Online workers only — filtered by status field set by the backend poller. */
 export const useOnlineWorkers = () =>
   useLiveQuery<SurrealWorker>({
+    request: { operation: "list", table: "worker", online: true, limit: 10000 },
     initialQuery: "SELECT * FROM worker WHERE status = 'online' ORDER BY last_updated DESC",
     liveTable: "worker",
     orderBy: byLastUpdatedDesc,

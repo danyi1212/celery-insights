@@ -13,7 +13,10 @@ vi.mock("surrealdb", () => ({
 const mockQuery = vi.fn()
 const mockLiveOf = vi.fn()
 const MOCK_LIVE_UUID = "mock-live-uuid"
-const mockDb = { query: mockQuery, liveOf: mockLiveOf }
+const mockDb = {
+  query: (...args: unknown[]) => ({ retry: (_options: { attempts: number }) => mockQuery(...args) }),
+  liveOf: mockLiveOf,
+}
 let mockStatus = "connected"
 
 vi.mock("@components/surrealdb-provider", () => ({
@@ -61,7 +64,7 @@ describe("useLiveWorkers", () => {
     renderHook(() => useLiveWorkers())
 
     await waitFor(() => {
-      expect(mockQuery).toHaveBeenCalledWith("SELECT * FROM worker ORDER BY last_updated DESC", undefined)
+      expect(mockQuery).toHaveBeenCalledWith("SELECT * FROM worker ORDER BY last_updated DESC")
     })
   })
 
@@ -162,10 +165,7 @@ describe("useOnlineWorkers", () => {
     renderHook(() => useOnlineWorkers())
 
     await waitFor(() => {
-      expect(mockQuery).toHaveBeenCalledWith(
-        "SELECT * FROM worker WHERE status = 'online' ORDER BY last_updated DESC",
-        undefined,
-      )
+      expect(mockQuery).toHaveBeenCalledWith("SELECT * FROM worker WHERE status = 'online' ORDER BY last_updated DESC")
     })
   })
 

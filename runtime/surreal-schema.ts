@@ -1,3 +1,4 @@
+import { databaseReaderPassword } from "./database-config"
 import { Surreal } from "surrealdb"
 import type { Config } from "./config"
 import type { Logger } from "./logger"
@@ -26,6 +27,8 @@ function toSurrealStrand(value: string): string {
  */
 export const CORE_SCHEMA = `
 DEFINE TABLE IF NOT EXISTS runtime_state TYPE NORMAL SCHEMALESS PERMISSIONS NONE;
+DEFINE TABLE IF NOT EXISTS search_config SCHEMALESS PERMISSIONS FOR select FULL FOR create, update, delete NONE;
+
 DEFINE TABLE IF NOT EXISTS task SCHEMAFULL
   PERMISSIONS
     FOR select FULL
@@ -36,6 +39,9 @@ DEFINE FIELD OVERWRITE state ON task TYPE string;
 DEFINE FIELD OVERWRITE sent_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE received_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE started_at ON task TYPE option<datetime>;
+DEFINE FIELD OVERWRITE execution_active ON task TYPE option<bool>;
+DEFINE FIELD OVERWRITE execution_observed_at ON task TYPE option<datetime>;
+DEFINE FIELD OVERWRITE execution_active_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE succeeded_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE failed_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE retried_at ON task TYPE option<datetime>;
@@ -43,10 +49,12 @@ DEFINE FIELD OVERWRITE revoked_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE rejected_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE runtime ON task TYPE option<float>;
 DEFINE FIELD OVERWRITE last_updated ON task TYPE datetime;
+DEFINE FIELD OVERWRITE last_updated_observed ON task TYPE bool DEFAULT false;
 DEFINE FIELD OVERWRITE first_observed_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE had_error ON task TYPE bool DEFAULT false;
 DEFINE FIELD OVERWRITE args ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE kwargs ON task TYPE option<string>;
+DEFINE FIELD OVERWRITE kwargs_search_source ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE eta ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE expires ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE retries ON task TYPE option<int>;
@@ -129,24 +137,6 @@ DEFINE FIELD OVERWRITE heartbeat ON ingestion_lock TYPE datetime;
 DEFINE FIELD OVERWRITE ttl_seconds ON ingestion_lock TYPE int DEFAULT 30;
 `
 
-/**
- * Frontend authentication schema — viewer table and record access method.
- * Only applied when SURREALDB_FRONTEND_PASS is configured.
- */
-export const FRONTEND_AUTH_SCHEMA = `
-DEFINE TABLE IF NOT EXISTS viewer SCHEMAFULL
-  PERMISSIONS NONE;
-
-DEFINE FIELD OVERWRITE name ON viewer TYPE string;
-DEFINE FIELD OVERWRITE pass ON viewer TYPE string;
-
-DEFINE ACCESS OVERWRITE frontend ON DATABASE TYPE RECORD
-  SIGNUP NONE
-  SIGNIN (
-    SELECT * FROM viewer WHERE name = $name AND crypto::argon2::compare(pass, $pass)
-  );
-`
-
 interface BackfillTaskRecord {
   id: string | { toString(): string }
   type?: string | null
@@ -192,11 +182,10 @@ const compareMaybeIsoAsc = (left: string | null, right: string | null) => {
 const datetimeToIso = (value: BackfillTaskRecord["sent_at"]): string | null =>
   typeof value === "string" ? value : (value?.toISOString() ?? null)
 
-async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
-  const [tasks] = await db.query<[BackfillTaskRecord[]]>("SELECT * FROM task").collect()
-  if (!Array.isArray(tasks) || tasks.length === 0) {
-    return
-  }
+export function planWorkflowBackfill(
+  tasks: BackfillTaskRecord[],
+): Array<{ sql: string; bindings: Record<string, unknown> }> {
+  const steps: Array<{ sql: string; bindings: Record<string, unknown> }> = []
 
   const workflowIdsByTask = new Map<string, string>()
   const summaries = new Map<string, WorkflowSummarySeed>()
@@ -249,19 +238,11 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
     summaries.set(workflowId, summary)
   }
 
-  const updates = Array.from(workflowIdsByTask.entries())
-  for (const chunkStart of Array.from({ length: Math.ceil(updates.length / 100) }, (_, index) => index * 100)) {
-    const chunk = updates.slice(chunkStart, chunkStart + 100)
-    await Promise.all(
-      chunk.map(([taskId, workflowId]) =>
-        db
-          .query("UPSERT type::record('task', $taskId) SET workflow_id = $workflowId", {
-            taskId,
-            workflowId,
-          })
-          .collect(),
-      ),
-    )
+  for (const [taskId, workflowId] of workflowIdsByTask) {
+    steps.push({
+      sql: "UPSERT type::record('task', $taskId) SET workflow_id = $workflowId",
+      bindings: { taskId, workflowId },
+    })
   }
 
   for (const [workflowId, summary] of summaries) {
@@ -276,9 +257,8 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
               ? "SUCCESS"
               : "PENDING"
 
-    await db
-      .query(
-        `UPSERT type::record('workflow', $workflowId) SET
+    steps.push({
+      sql: `UPSERT type::record('workflow', $workflowId) SET
                     root_task_id = $rootTaskId,
                     root_task_type = IF $rootTaskType = NULL THEN NONE ELSE $rootTaskType END,
                     aggregate_state = $aggregateState,
@@ -291,47 +271,43 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
                     active_count = $activeCount,
                     worker_count = $workerCount,
                     latest_exception_preview = IF $latestExceptionPreview = NULL THEN NONE ELSE $latestExceptionPreview END`,
-        {
-          workflowId,
-          rootTaskId: summary.rootTaskId,
-          rootTaskType: summary.rootTaskType,
-          aggregateState,
-          firstSeenAt: summary.firstSeenAt ?? summary.lastUpdated ?? new Date(0).toISOString(),
-          lastUpdated: summary.lastUpdated ?? summary.firstSeenAt ?? new Date(0).toISOString(),
-          taskCount: summary.taskCount,
-          completedCount: summary.completedCount,
-          failureCount: summary.failureCount,
-          retryCount: summary.retryCount,
-          activeCount: summary.activeCount,
-          workerCount: summary.workerIds.size,
-          latestExceptionPreview: summary.latestExceptionPreview,
-        },
-      )
-      .collect()
+      bindings: {
+        workflowId,
+        rootTaskId: summary.rootTaskId,
+        rootTaskType: summary.rootTaskType,
+        aggregateState,
+        firstSeenAt: summary.firstSeenAt ?? summary.lastUpdated ?? new Date(0).toISOString(),
+        lastUpdated: summary.lastUpdated ?? summary.firstSeenAt ?? new Date(0).toISOString(),
+        taskCount: summary.taskCount,
+        completedCount: summary.completedCount,
+        failureCount: summary.failureCount,
+        retryCount: summary.retryCount,
+        activeCount: summary.activeCount,
+        workerCount: summary.workerIds.size,
+        latestExceptionPreview: summary.latestExceptionPreview,
+      },
+    })
 
     const memberTaskIds = Array.from(workflowIdsByTask.entries())
       .filter(([, taskWorkflowId]) => taskWorkflowId === workflowId)
       .map(([taskId]) => taskId)
 
-    await Promise.all(
-      memberTaskIds.map((taskId) =>
-        db
-          .query(
-            `RELATE OR UPDATE (type::record('workflow', $workflowId))->(type::record('workflow_task', $edgeId))->(type::record('task', $taskId))`,
-            {
-              edgeId: `${workflowId}:${taskId}`,
-              workflowId,
-              taskId,
-            },
-          )
-          .collect(),
-      ),
-    )
+    for (const taskId of memberTaskIds) {
+      steps.push({
+        sql: `RELATE OR UPDATE (type::record('workflow', $workflowId))->(type::record('workflow_task', $edgeId))->(type::record('task', $taskId))`,
+        bindings: { edgeId: `${workflowId}:${taskId}`, workflowId, taskId },
+      })
+    }
   }
-
-  log.info(`Workflow backfill completed for ${summaries.size} workflows`)
+  return steps
 }
 
+async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
+  const [tasks] = await db.query<[BackfillTaskRecord[]]>("SELECT * FROM task").collect()
+  if (!Array.isArray(tasks) || !tasks.length) return
+  for (const step of planWorkflowBackfill(tasks)) await db.query(step.sql, step.bindings).collect()
+  log.info(`Workflow backfill completed for ${tasks.length} tasks`)
+}
 /**
  * Runs idempotent schema migration against SurrealDB using root credentials.
  *
@@ -340,17 +316,45 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
  */
 export async function runSchemaMigration(config: Config, logger?: Logger): Promise<void> {
   const log = logger ?? bunLogger
+  // Replicas bootstrap the same schema concurrently. SurrealDB reports these
+  // write conflicts as retryable; every migration step is idempotent.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await runSchemaMigrationOnce(config, log)
+      return
+    } catch (error) {
+      if (
+        attempt >= 4 ||
+        typeof error !== "object" ||
+        error === null ||
+        !("details" in error) ||
+        typeof error.details !== "object" ||
+        error.details === null ||
+        !("kind" in error.details) ||
+        error.details.kind !== "TransactionConflict"
+      )
+        throw error
+      log.warn("Concurrent schema migration conflicted; retrying")
+      await new Promise((resolve) => setTimeout(resolve, 100 * 2 ** attempt + Math.random() * 100))
+    }
+  }
+}
+
+async function runSchemaMigrationOnce(config: Config, logger?: Logger): Promise<void> {
+  const log = logger ?? bunLogger
   const ns = assertIdent(config.surrealdbNamespace, "namespace")
   const dbName = assertIdent(config.surrealdbDatabase, "database")
 
+  const rootPassword = config.surrealdbRootPass
+  if (!rootPassword) throw new Error("Database root password is required")
   const db = new Surreal()
 
   try {
     // Connect as root (only Bun knows root credentials)
     await db.connect(config.surrealdbUrl, {
       authentication: {
-        username: config.surrealdbRootUser,
-        password: config.surrealdbRootPass,
+        username: "root",
+        password: rootPassword,
       },
     })
 
@@ -369,13 +373,15 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
 
     // Apply core schema (tables, fields, indexes, permissions)
     await db.query(CORE_SCHEMA).collect()
-    await backfillWorkflows(db, log)
-
-    // Preserve evidence independently of the task's latest state. Historical events
-    // are used once at migration time, rather than scanned by every MCP search.
+    // Runs before any other write: rows written before `last_updated_observed` existed fail bool
+    // coercion on update until the flag is set. Preserve evidence independently of the task's latest
+    // state; historical events are used once at migration time, rather than scanned by every MCP search.
     await db
       .query(`UPDATE task SET
       first_observed_at = first_observed_at ?? sent_at ?? received_at ?? started_at ?? last_updated,
+      execution_active_at = execution_active_at ?? (IF execution_active = true THEN execution_observed_at ELSE NONE END),
+      last_updated_observed = last_updated_observed ?? (state NOT IN ['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED']
+        AND started_at = NONE AND received_at = NONE AND retried_at = NONE),
       had_error = had_error OR state = 'FAILURE' OR failed_at != NONE
         OR (exception ?? '') != '' OR (traceback ?? '') != '';
       LET $errors = SELECT task_id FROM event WHERE task_id != NONE AND
@@ -384,27 +390,20 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
         UPDATE type::record('task', $error.task_id) SET had_error = true;
       };`)
       .collect()
+    await backfillWorkflows(db, log)
 
-    // Always create a read-only viewer user for the frontend.
-    // SurrealDB requires authentication even for tables with FULL select permissions —
-    // anonymous (unauthenticated) connections cannot query anything.
-    await db.query(`DEFINE USER OVERWRITE viewer ON DATABASE PASSWORD 'viewer' ROLES VIEWER`).collect()
+    // Server-only read connection; no fixed browser credential remains.
+    await db
+      .query(
+        `DEFINE USER OVERWRITE observation_reader ON DATABASE PASSWORD ${toSurrealStrand(databaseReaderPassword(config))} ROLES VIEWER`,
+      )
+      .collect()
+    await db.query(`REMOVE USER IF EXISTS viewer ON DATABASE`).collect()
 
-    // Conditional frontend auth setup (password-protected access)
-    if (config.surrealdbFrontendPass) {
-      await db.query(FRONTEND_AUTH_SCHEMA).collect()
-      await db
-        .query(`UPSERT viewer:frontend SET name = 'frontend', pass = crypto::argon2::generate($pass)`, {
-          pass: config.surrealdbFrontendPass,
-        })
-        .collect()
-      log.info("Schema migration completed (frontend auth enabled)")
-    } else {
-      // Clean up frontend auth if previously configured
-      await db.query(`REMOVE ACCESS IF EXISTS frontend ON DATABASE`).collect()
-      await db.query(`REMOVE TABLE IF EXISTS viewer`).collect()
-      log.info("Schema migration completed (anonymous access via viewer user)")
-    }
+    // Retire the old database-level application login records.
+    await db.query(`REMOVE ACCESS IF EXISTS frontend ON DATABASE`).collect()
+    await db.query(`REMOVE TABLE IF EXISTS viewer`).collect()
+    log.info("Schema migration completed (Bun-owned observation reads)")
   } finally {
     await db.close()
   }

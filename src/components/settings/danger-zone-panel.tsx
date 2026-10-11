@@ -1,3 +1,4 @@
+import { authenticatedFetch } from "@lib/authenticated-fetch"
 import { appUrl } from "@lib/app-url"
 import Panel from "@components/common/panel"
 import { useSurrealDB } from "@components/surrealdb-provider"
@@ -34,7 +35,7 @@ const DangerZonePanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fals
     setIsClearing(true)
     setStatusMessage(null)
     try {
-      const res = await fetch(appUrl("/api/settings/clear"), { method: "POST" })
+      const res = await authenticatedFetch(appUrl("/api/settings/clear"), { method: "POST" })
       const success = res.ok ? ((await res.json()) as boolean) : false
       if (!success) throw new Error("clear failed")
 
@@ -44,8 +45,12 @@ const DangerZonePanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fals
       ])
       setStatusMessage("Stored data cleared.")
       setConfirming(false)
-    } catch {
-      setStatusMessage("Unable to clear stored data. Check the server logs and try again.")
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error && error.name === "Access denied"
+          ? error.message
+          : "Unable to clear stored data. Check the server logs and try again.",
+      )
     } finally {
       setIsClearing(false)
     }

@@ -59,6 +59,45 @@ describe("useExplorerData", () => {
     ])
   })
 
+  it.each(["tasks", "workflows"] as const)("searches keyword arguments in %s", async (mode) => {
+    renderHook(() => useExplorerData({ ...createState(), mode, query: "organization_id=1" }), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(mockQuery).toHaveBeenCalledTimes(1))
+    const [query, bindings] = mockQuery.mock.calls[0]
+    expect(query).toContain("string::matches(kwargs ?? '', $kwargsPattern)")
+    expect(bindings.kwargsPattern).toContain("organization_id")
+    expect(query.includes("LET $rangeWorkflows =")).toBe(mode === "workflows")
+    expect(query.includes("workflow_id IN $rangeWorkflows")).toBe(mode === "workflows")
+    expect(query.includes("root_task_id IN $searchWorkflows")).toBe(mode === "workflows")
+  })
+
+  it("searches workflows by plain text without scanning member tasks", async () => {
+    renderHook(() => useExplorerData({ ...createState(), mode: "workflows", query: "sync" }), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(mockQuery).toHaveBeenCalledTimes(1))
+    const [query, bindings] = mockQuery.mock.calls[0]
+    expect(query).toContain("SELECT * FROM $searchWorkflowRows WHERE")
+    expect(query).not.toContain("$searchWorkflows")
+    expect(query).toContain("string::contains(string::lowercase(root_task_type ?? ''), $query)")
+    expect(bindings.query).toBe("sync")
+  })
+
+  it("skips the LET result slots when searching workflows", async () => {
+    const workflow = { id: "workflow:one", root_task_id: "one", aggregate_state: "SUCCESS" }
+    mockQuery.mockResolvedValue([null, null, null, null, [workflow], [{ count: 1 }], [], [], []])
+    const { result } = renderHook(
+      () => useExplorerData({ ...createState(), mode: "workflows", query: "organization_id=1" }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.total).toBe(1))
+    expect(result.current.workflows).toEqual([workflow])
+  })
+
   it("builds filter queries without duplicate WHERE clauses", async () => {
     renderHook(() => useExplorerData(createState()), { wrapper: createWrapper() })
 

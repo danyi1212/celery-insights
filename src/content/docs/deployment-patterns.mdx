@@ -1,3 +1,5 @@
+Configure explicit accounts and HTTPS ingress for every application deployment. Use the same TOML account configuration and secret inputs on every replica. See [configured accounts](/documentation/configuration#configured-application-accounts).
+
 Choose the SurrealDB topology first. That one decision determines whether the app behaves like a disposable single container, a durable single node, or a shared multi-replica service.
 
 ## Summary
@@ -126,7 +128,7 @@ docker run -p 8555:8555 --name celery-insights \
   -e RESULT_BACKEND=redis://redis:6379/0 \
   -e SURREALDB_EXTERNAL_URL=wss://surrealdb.example.com/rpc \
   -e SURREALDB_INGESTER_PASS=replace-this \
-  -e SURREALDB_FRONTEND_PASS=replace-this \
+  -v "$PWD/config.toml:/etc/celery-insights/config.toml:ro" --env-file deployment.env \
   -e INGESTION_LEADER_ELECTION=true \
   ghcr.io/danyi1212/celery-insights:latest
 ```

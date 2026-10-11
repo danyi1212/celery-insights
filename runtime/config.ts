@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { randomBytes } from "node:crypto"
 
 /**
  * Coerces string/boolean values to boolean.
@@ -6,67 +7,141 @@ import { z } from "zod"
  */
 const booleanFromEnv = z
   .union([z.boolean(), z.string()])
+  .refine((v) => typeof v === "boolean" || ["true", "false", "1", "0"].includes(v), "Expected a boolean")
   .transform((v) => (typeof v === "string" ? v === "true" || v === "1" : v))
 
-const configSchema = z
-  .object({
-    // Server
-    port: z.coerce.number().int().positive().default(8555),
-    urlPrefix: z
-      .string()
-      .default("")
-      .transform((value) => value.replace(/^\/+|\/+$/g, ""))
-      .refine(
-        (value) =>
-          value === "" ||
-          value
-            .split("/")
-            .every((segment) => /^[A-Za-z0-9_-][A-Za-z0-9._~-]*$/.test(segment) && segment !== "." && segment !== ".."),
-        { message: "URL_PREFIX must be a URL path with no query, fragment, or dot segments" },
+export const flatConfigSchema = z.object({
+  // Server
+  port: z.coerce.number().int().min(1).max(65535).default(8555),
+  urlPrefix: z
+    .string()
+    .default("")
+    .transform((value) => value.replace(/^\/+|\/+$/g, ""))
+    .refine(
+      (value) =>
+        value === "" ||
+        value
+          .split("/")
+          .every((segment) => /^[A-Za-z0-9_-][A-Za-z0-9._~-]*$/.test(segment) && segment !== "." && segment !== ".."),
+      { message: "URL_PREFIX must be a URL path with no query, fragment, or dot segments" },
+    )
+    .transform((value) => (value ? `/${value}` : "")),
+  mcpCursorSecret: z.string().min(1).optional(),
+  mcpAllowedHosts: z.string().min(1).optional(),
+
+  // SurrealDB
+  surrealdbUrl: z.string().url().default("ws://localhost:8557/rpc"),
+  surrealdbExternalUrl: z.string().url().optional(),
+  surrealdbRootPass: z.string().min(1).optional(),
+  surrealdbIngesterPass: z
+    .string()
+    .min(1)
+    .default(() => randomBytes(32).toString("base64url")),
+  surrealdbNamespace: z.string().min(1).default("celery_insights"),
+  surrealdbDatabase: z.string().min(1).default("main"),
+  surrealdbStorage: z.string().default("memory"),
+  surrealdbPort: z.coerce.number().int().min(1).max(65535).default(8557),
+
+  // Ingestion control
+  ingestionEnabled: booleanFromEnv.default(true),
+  ingestionLeaderElection: booleanFromEnv.default(true),
+  ingestionLockTtlSeconds: z.coerce.number().int().positive().default(30),
+  ingestionLockHeartbeatSeconds: z.coerce.number().int().positive().default(10),
+
+  // Data retention (passed to Python)
+  cleanupIntervalSeconds: z.coerce.number().int().positive().default(60),
+  taskMaxCount: z.coerce.number().int().positive().optional(),
+  taskRetentionHours: z.coerce.number().positive().optional(),
+  deadWorkerRetentionHours: z.coerce.number().positive().nullable().optional().default(24),
+
+  // Search projections
+  searchIndexingEnabled: booleanFromEnv.default(false),
+
+  // Ingestion performance
+  ingestionBatchIntervalMs: z.coerce.number().int().positive().default(100),
+
+  // Celery connection (passed to Python)
+  brokerUrl: z.string().default("amqp://guest:guest@host.docker.internal/"),
+  resultBackend: z.string().default("redis://host.docker.internal:6379/0"),
+  configFile: z.string().default("/app/config.py"),
+  debugBundlePath: z.string().min(1).optional(),
+  timezone: z.string().default("UTC"),
+  debug: booleanFromEnv.default(false),
+
+  // Logging
+  logFormat: z.enum(["pretty", "json"]).default("pretty"),
+  logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  apiHost: z.string().min(1).optional(),
+  apiPort: z.coerce.number().int().min(1).max(65535).optional(),
+  celeryOptions: z.record(z.string(), z.unknown()).optional(),
+  demoAvailable: z.boolean().optional(),
+  uiTheme: z.enum(["light", "dark", "system"]).optional(),
+  uiHideWelcomeBanner: z.boolean().optional(),
+  uiRawEventsLimit: z.number().int().positive().optional(),
+  publicUrl: z.string().url().optional(),
+  opaDecisionUrl: z
+    .string()
+    .url()
+    .refine((value) => {
+      const url = new URL(value)
+      return (
+        ["http:", "https:"].includes(url.protocol) &&
+        !url.username &&
+        !url.password &&
+        !url.search &&
+        !url.hash &&
+        /^\/v1\/data\/[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/.test(url.pathname)
       )
-      .transform((value) => (value ? `/${value}` : "")),
-    mcpToken: z.string().min(1).optional(),
-    mcpAllowedHosts: z.string().min(1).optional(),
+    }, "Expected an HTTP(S) OPA /v1/data decision URL without credentials, query or fragment")
+    .optional(),
+  opaTimeoutMs: z.coerce.number().int().min(50).max(10000).default(1000),
+  opaBearerToken: z
+    .string()
+    .min(1)
+    .max(4096)
+    .regex(/^[\x21-\x7e]+$/)
+    .optional(),
+  authMode: z.enum(["basic", "oidc"]).default("basic"),
+  authSessionSecret: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{43}$/, "Expected a base64url-encoded 32-byte session secret")
+    .optional(),
+  authSessionSeconds: z.coerce.number().int().min(300).max(86400).default(28800),
+  oidcIssuer: z.string().url().optional(),
+  oidcClientId: z.string().min(1).optional(),
+  oidcClientSecret: z.string().min(1).optional(),
+  oidcScopes: z.string().default("openid profile"),
+  oidcRoleMappings: z
+    .array(
+      z
+        .object({
+          claim: z.string().regex(/^[A-Za-z0-9_-]+$/),
+          value: z.string().min(1),
+          roles: z.array(z.enum(["viewer", "operator", "administrator"])).min(1),
+        })
+        .strict(),
+    )
+    .max(100)
+    .default([]),
+  authAccounts: z
+    .array(
+      z
+        .object({
+          username: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/),
+          password: z
+            .string()
+            .min(1)
+            .max(4096)
+            .refine((value) => ![...value].some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)),
+          roles: z.array(z.enum(["viewer", "operator", "administrator"])).min(1),
+        })
+        .strict(),
+    )
+    .max(100)
+    .default([]),
+})
 
-    // SurrealDB
-    surrealdbUrl: z.string().url().default("ws://localhost:8557/rpc"),
-    surrealdbExternalUrl: z.string().url().optional(),
-    surrealdbRootUser: z.string().min(1).default("root"),
-    surrealdbRootPass: z.string().min(1).default("root"),
-    surrealdbIngesterPass: z.string().min(1).default("changeme"),
-    surrealdbFrontendPass: z.string().min(1).optional(),
-    surrealdbNamespace: z.string().min(1).default("celery_insights"),
-    surrealdbDatabase: z.string().min(1).default("main"),
-    surrealdbStorage: z.string().default("memory"),
-    surrealdbPort: z.coerce.number().int().positive().default(8557),
-
-    // Ingestion control
-    ingestionEnabled: booleanFromEnv.default(true),
-    ingestionLeaderElection: booleanFromEnv.default(true),
-    ingestionLockTtlSeconds: z.coerce.number().int().positive().default(30),
-    ingestionLockHeartbeatSeconds: z.coerce.number().int().positive().default(10),
-
-    // Data retention (passed to Python)
-    cleanupIntervalSeconds: z.coerce.number().int().positive().default(60),
-    taskMaxCount: z.coerce.number().int().positive().optional(),
-    taskRetentionHours: z.coerce.number().positive().optional(),
-    deadWorkerRetentionHours: z.coerce.number().positive().optional().default(24),
-
-    // Ingestion performance
-    ingestionBatchIntervalMs: z.coerce.number().int().positive().default(100),
-
-    // Celery connection (passed to Python)
-    brokerUrl: z.string().default("amqp://guest:guest@host.docker.internal/"),
-    resultBackend: z.string().default("redis://host.docker.internal:6379/0"),
-    configFile: z.string().default("/app/config.py"),
-    debugBundlePath: z.string().min(1).optional(),
-    timezone: z.string().default("UTC"),
-    debug: booleanFromEnv.default(false),
-
-    // Logging
-    logFormat: z.enum(["pretty", "json"]).default("pretty"),
-    logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
-  })
+const configSchema = flatConfigSchema
   .transform((c) => ({
     ...c,
     // When SURREALDB_EXTERNAL_URL is set and SURREALDB_URL is still the default,
@@ -80,17 +155,14 @@ const configSchema = z
 
 export type Config = z.infer<typeof configSchema>
 
-const ENV_KEY_MAP: Record<string, string> = {
+export const ENV_KEY_MAP: Record<string, string> = {
   PORT: "port",
   URL_PREFIX: "urlPrefix",
-  MCP_TOKEN: "mcpToken",
+  MCP_TOKEN: "mcpCursorSecret",
   MCP_ALLOWED_HOSTS: "mcpAllowedHosts",
-  SURREALDB_ROOT_USER: "surrealdbRootUser",
-  SURREALDB_ROOT_PASS: "surrealdbRootPass",
   SURREALDB_URL: "surrealdbUrl",
   SURREALDB_EXTERNAL_URL: "surrealdbExternalUrl",
   SURREALDB_INGESTER_PASS: "surrealdbIngesterPass",
-  SURREALDB_FRONTEND_PASS: "surrealdbFrontendPass",
   SURREALDB_NAMESPACE: "surrealdbNamespace",
   SURREALDB_DATABASE: "surrealdbDatabase",
   SURREALDB_STORAGE: "surrealdbStorage",
@@ -103,6 +175,7 @@ const ENV_KEY_MAP: Record<string, string> = {
   TASK_MAX_COUNT: "taskMaxCount",
   TASK_RETENTION_HOURS: "taskRetentionHours",
   DEAD_WORKER_RETENTION_HOURS: "deadWorkerRetentionHours",
+  SEARCH_INDEXING_ENABLED: "searchIndexingEnabled",
   INGESTION_BATCH_INTERVAL_MS: "ingestionBatchIntervalMs",
   BROKER_URL: "brokerUrl",
   RESULT_BACKEND: "resultBackend",
@@ -125,12 +198,32 @@ function envToConfig(env: Record<string, string | undefined>): Record<string, st
 }
 
 export function parseConfig(env: Record<string, string | undefined> = process.env): Config {
-  if (env.CI_CONFIG_FILE) {
-    throw new Error(
-      "CI_CONFIG_FILE requires the TOML configuration runtime from #138; use environment variables or CONFIG_FILE with this image",
-    )
-  }
-  return configSchema.parse(envToConfig(env))
+  if (env.SURREALDB_FRONTEND_PASS !== undefined)
+    throw new Error("SURREALDB_FRONTEND_PASS was replaced by authentication.accounts in TOML")
+  return validateConfig(envToConfig(env))
 }
 
-export const config = parseConfig()
+export function validateConfig(values: Record<string, unknown>): Config {
+  const result = configSchema.safeParse(values)
+  if (!result.success) {
+    throw new Error(
+      result.error.issues
+        .map(
+          (issue) =>
+            `${issue.path.join(".")}: ${issue.code === "custom" ? issue.message : "Invalid configuration value"}`,
+        )
+        .join("; "),
+    )
+  }
+  if (result.data.port > 65535 || result.data.surrealdbPort > 65535) throw new Error("Port must be between 1 and 65535")
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: result.data.timezone })
+  } catch {
+    throw new Error("celery.timezone: Invalid timezone")
+  }
+  if (result.data.opaBearerToken && !result.data.opaDecisionUrl)
+    throw new Error("authorization.opa.bearer_token requires decision_url")
+  if (result.data.opaBearerToken && new URL(result.data.opaDecisionUrl!).protocol !== "https:")
+    throw new Error("authorization.opa.bearer_token requires HTTPS")
+  return result.data
+}

@@ -26,7 +26,13 @@ const RevokedTaskListItem: React.FC<RevokedTaskListItemProps> = ({ taskId }) => 
         to={`/tasks/${taskId}` as string}
         className="flex w-full items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-accent"
       >
-        <TaskAvatar taskId={taskId} type={task?.type} status={task?.state as TaskState | undefined} disableLink />
+        <TaskAvatar
+          taskId={taskId}
+          type={task?.type}
+          status={task?.state as TaskState | undefined}
+          execution={task}
+          disableLink
+        />
         <div className="min-w-0 flex-grow">
           <p className="truncate text-sm font-medium">{task?.type || "Unknown task"}</p>
           <p className="truncate text-xs text-muted-foreground">{taskId}</p>

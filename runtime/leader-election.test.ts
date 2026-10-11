@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
 import { LeaderElection, generateInstanceId } from "./leader-election"
-import type { Config } from "./config"
+import { parseConfig, type Config } from "./config"
 
 function createMockDb() {
   const queryResult: { collect: () => Promise<unknown[]> } = {
@@ -14,16 +14,17 @@ function createMockDb() {
 
 function createConfig(overrides: Partial<Config> = {}): Config {
   return {
+    ...parseConfig({}),
     port: 8555,
     urlPrefix: "",
     surrealdbUrl: "ws://localhost:8557/rpc",
-    surrealdbRootUser: "root",
     surrealdbRootPass: "root",
     surrealdbIngesterPass: "changeme",
     surrealdbNamespace: "celery_insights",
     surrealdbDatabase: "main",
     surrealdbStorage: "memory",
     surrealdbPort: 8557,
+    searchIndexingEnabled: true,
     ingestionEnabled: true,
     ingestionLeaderElection: true,
     ingestionLockTtlSeconds: 30,

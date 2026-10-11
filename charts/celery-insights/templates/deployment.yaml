@@ -44,21 +44,30 @@ spec:
           env:
             - {name: PORT, value: "8555"}
             - {name: INGESTION_LEADER_ELECTION, value: "true"}
-            - name: SURREALDB_EXTERNAL_URL
+            - name: CELERY_INSIGHTS_DATABASE_URL
               value: {{ include "insights.databaseUrl" . | quote }}
             - name: SURREALDB_NAMESPACE
               value: {{ .Values.database.namespace | quote }}
             - name: SURREALDB_DATABASE
               value: {{ .Values.database.name | quote }}
-            {{- range $env, $key := dict "BROKER_URL" "brokerUrl" "RESULT_BACKEND" "resultBackend" "SURREALDB_ROOT_USER" "rootUser" "SURREALDB_ROOT_PASS" "rootPassword" "SURREALDB_INGESTER_PASS" "ingesterPassword" "SURREALDB_FRONTEND_PASS" "frontendPassword" }}
+            {{- range $env, $key := dict "CELERY_INSIGHTS_DATABASE_ROOT_PASSWORD" "rootPassword" "CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD" "ingesterPassword" "CELERY_INSIGHTS_SESSION_SECRET" "sessionSecret" }}
             {{- include "insights.secretEnv" (dict "root" $ "env" $env "key" $key) | nindent 12 }}
+            {{- end }}
+            {{- if not (or .Values.config.python.content .Values.config.python.existingConfigMap .Values.config.python.existingSecret) }}
+            {{- range $env, $key := dict "CELERY_INSIGHTS_BROKER_URL" "brokerUrl" "CELERY_INSIGHTS_RESULT_BACKEND" "resultBackend" }}
+            {{- include "insights.secretEnv" (dict "root" $ "env" $env "key" $key) | nindent 12 }}
+            {{- end }}{{- end }}
+            {{- if eq .Values.authentication.mode "basic" }}
+            {{- include "insights.secretEnv" (dict "root" $ "env" "INSIGHTS_ACCOUNT_PASSWORD" "key" "accountPassword") | nindent 12 }}
+            {{- else if .Values.authentication.oidc.useClientSecret }}
+            {{- include "insights.secretEnv" (dict "root" $ "env" "CELERY_INSIGHTS_OIDC_CLIENT_SECRET" "key" "oidcClientSecret") | nindent 12 }}
             {{- end }}
             {{- range $name, $value := .Values.config.env }}
             - name: {{ $name }}
               value: {{ $value | toString | quote }}
             {{- end }}
             {{- if .Values.config.toml.enabled }}
-            - {name: CI_CONFIG_FILE, value: /etc/celery-insights/config.toml}
+            - {name: CELERY_INSIGHTS_CONFIG_FILE, value: /etc/celery-insights/config.toml}
             {{- end }}
             {{- if or .Values.config.python.content .Values.config.python.existingConfigMap .Values.config.python.existingSecret }}
             - {name: CONFIG_FILE, value: /etc/celery-insights/config.py}
@@ -75,9 +84,14 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
+            {{- if or .Values.config.python.content .Values.config.python.existingConfigMap .Values.config.python.existingSecret }}
+            - name: celery-credentials
+              mountPath: /etc/celery-insights/celery
+              readOnly: true
+            {{- end }}
             {{- range $kind := list "toml" "python" }}
             {{- $file := index $.Values.config $kind }}
-            {{- if or $file.content $file.structured $file.existingConfigMap $file.existingSecret }}
+            {{- if or (eq $kind "toml") $file.content $file.structured $file.existingConfigMap $file.existingSecret }}
             - name: config-{{ $kind }}
               mountPath: /etc/celery-insights/config.{{ if eq $kind "python" }}py{{ else }}toml{{ end }}
               subPath: config.{{ if eq $kind "python" }}py{{ else }}toml{{ end }}
@@ -87,9 +101,17 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
       volumes:
+        {{- if or .Values.config.python.content .Values.config.python.existingConfigMap .Values.config.python.existingSecret }}
+        - name: celery-credentials
+          secret:
+            secretName: {{ .Values.credentials.existingSecret | quote }}
+            items:
+              - {key: {{ .Values.credentials.keys.brokerUrl | quote }}, path: broker-url}
+              - {key: {{ .Values.credentials.keys.resultBackend | quote }}, path: result-backend}
+        {{- end }}
         {{- range $kind := list "toml" "python" }}
         {{- $file := index $.Values.config $kind }}
-        {{- if or $file.content $file.structured $file.existingConfigMap $file.existingSecret }}
+        {{- if or (eq $kind "toml") $file.content $file.structured $file.existingConfigMap $file.existingSecret }}
         - name: config-{{ $kind }}
           {{- if $file.existingSecret }}
           secret:

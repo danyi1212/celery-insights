@@ -72,10 +72,6 @@
               "type": "string",
               "minLength": 1
             },
-            "rootUser": {
-              "type": "string",
-              "minLength": 1
-            },
             "rootPassword": {
               "type": "string",
               "minLength": 1
@@ -84,7 +80,15 @@
               "type": "string",
               "minLength": 1
             },
-            "frontendPassword": {
+            "accountPassword": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sessionSecret": {
+              "type": "string",
+              "minLength": 1
+            },
+            "oidcClientSecret": {
               "type": "string",
               "minLength": 1
             }
@@ -345,6 +349,67 @@
     },
     "surrealdb": {
       "type": "object"
+    },
+    "authentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "publicUrl": {
+          "type": "string",
+          "pattern": "^https://[^?#]+$"
+        },
+        "mode": {
+          "enum": [
+            "basic",
+            "oidc"
+          ]
+        },
+        "basic": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "username": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"
+            },
+            "roles": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "enum": [
+                  "viewer",
+                  "operator",
+                  "administrator"
+                ]
+              }
+            }
+          }
+        },
+        "oidc": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "issuer": {
+              "type": "string"
+            },
+            "clientId": {
+              "type": "string"
+            },
+            "useClientSecret": {
+              "type": "boolean"
+            },
+            "scopes": {
+              "type": "string"
+            },
+            "roleMappings": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "additionalProperties": false

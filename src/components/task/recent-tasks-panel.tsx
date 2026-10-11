@@ -7,6 +7,7 @@ import TaskAvatar from "@components/task/task-avatar"
 import { Button } from "@components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
 import { useLiveTasks } from "@hooks/use-live-tasks"
+import { useSurrealDB } from "@components/surrealdb-provider"
 import { TaskState, extractId } from "@/types/surreal-records"
 import type { SurrealTask } from "@/types/surreal-records"
 import { format } from "date-fns"
@@ -23,7 +24,7 @@ const RecentTaskListItem: React.FC<{ task: SurrealTask }> = ({ task }) => {
         className="flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-accent"
       >
         <div className="shrink-0">
-          <TaskAvatar taskId={taskId} type={task.type} status={task.state as TaskState} disableLink />
+          <TaskAvatar taskId={taskId} type={task.type} status={task.state as TaskState} execution={task} disableLink />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium">{task.type || "Unknown"}</p>
@@ -47,6 +48,7 @@ const RecentTaskListItem: React.FC<{ task: SurrealTask }> = ({ task }) => {
 
 const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
   const { data: tasks } = useLiveTasks(30)
+  const { appConfig } = useSurrealDB()
 
   return (
     <Panel
@@ -64,6 +66,8 @@ const RecentTasksPanel: React.FC<Omit<PanelProps, "title">> = (props) => {
             <RecentTaskListItem key={extractId(task.id)} task={task} />
           ))}
         </AnimatedList>
+      ) : appConfig?.taskVisibilityRestricted ? (
+        <p className="p-6 text-center text-sm text-muted-foreground">No recent tasks in your permitted view.</p>
       ) : (
         <div className="my-10 text-center">
           <h4 className="mb-4 text-2xl font-semibold">No recent tasks</h4>

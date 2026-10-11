@@ -4,6 +4,8 @@
  * and without ingestion_lock (no leader election in demo).
  */
 export const DEMO_SCHEMA = `
+DEFINE TABLE IF NOT EXISTS search_config SCHEMALESS PERMISSIONS FOR select FULL FOR create, update, delete NONE;
+
 DEFINE TABLE IF NOT EXISTS task SCHEMAFULL PERMISSIONS FULL;
 
 DEFINE FIELD OVERWRITE type ON task TYPE option<string>;
@@ -11,6 +13,9 @@ DEFINE FIELD OVERWRITE state ON task TYPE string;
 DEFINE FIELD OVERWRITE sent_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE received_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE started_at ON task TYPE option<datetime>;
+DEFINE FIELD OVERWRITE execution_active ON task TYPE option<bool>;
+DEFINE FIELD OVERWRITE execution_observed_at ON task TYPE option<datetime>;
+DEFINE FIELD OVERWRITE execution_active_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE succeeded_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE failed_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE retried_at ON task TYPE option<datetime>;
@@ -18,6 +23,7 @@ DEFINE FIELD OVERWRITE revoked_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE rejected_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE runtime ON task TYPE option<float>;
 DEFINE FIELD OVERWRITE last_updated ON task TYPE datetime;
+DEFINE FIELD OVERWRITE last_updated_observed ON task TYPE bool DEFAULT false;
 DEFINE FIELD OVERWRITE args ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE kwargs ON task TYPE option<string>;
 DEFINE FIELD OVERWRITE eta ON task TYPE option<string>;

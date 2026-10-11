@@ -23,6 +23,7 @@ const normalizePreview = (task: SurrealTask) => {
 
 export const useFailureInbox = (limit = 7) => {
   const result = useLiveQuery<SurrealTask>({
+    request: { operation: "list", table: "task", failure: true, limit: 100 },
     initialQuery:
       "SELECT * FROM task WHERE state = 'FAILURE' OR exception != NONE ORDER BY last_updated DESC LIMIT 100",
     liveTable: "task",

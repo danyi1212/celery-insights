@@ -10,7 +10,7 @@ export const INVOCATION_TIME = "(sent_at ?? first_observed_at ?? last_updated)"
 export const textSelector = z.string().trim().min(1).max(512)
 const cursor = z.string().min(1).max(8192).optional()
 const limit = (max: number) => z.number().int().min(1).max(max).optional()
-export const schemas = {
+const inputSchemas = {
   search_workflows: z
     .object({
       task_name: textSelector.optional(),
@@ -61,6 +61,14 @@ export const schemas = {
       cursor,
     })
     .strict(),
+}
+// Compile final server schemas once; browser validation is unaffected.
+export const schemas = {
+  search_workflows: z.compile(inputSchemas.search_workflows),
+  inspect_workflow: z.compile(inputSchemas.inspect_workflow),
+  inspect_task: z.compile(inputSchemas.inspect_task),
+  list_workers: z.compile(inputSchemas.list_workers),
+  inspect_worker: z.compile(inputSchemas.inspect_worker),
 }
 export type ToolName = keyof typeof schemas
 export type Row = Record<string, unknown>

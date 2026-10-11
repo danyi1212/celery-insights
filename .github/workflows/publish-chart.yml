@@ -13,6 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: astral-sh/setup-uv@v10.2.0
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: "1.4.2"
       - uses: actions/setup-python@v7.0.0
         with:
           python-version-file: '.python-version'
@@ -28,6 +31,8 @@ jobs:
           PY
       - name: Install pinned validation tools
         run: bash tooling/helm/install-tools.sh
+      - name: Install application configuration validator
+        run: bun install --frozen-lockfile
       - name: Validate the chart and released application image
         run: |
           helm repo add surrealdb https://helm.surrealdb.com
@@ -37,7 +42,8 @@ jobs:
           bash tooling/helm/validate-manifests.sh
           app_version=$(uv run python -c 'import yaml; print(yaml.safe_load(open("charts/celery-insights/Chart.yaml"))["appVersion"])')
           docker pull "ghcr.io/danyi1212/celery-insights:$app_version"
-          docker run --rm --entrypoint python "ghcr.io/danyi1212/celery-insights:$app_version" -c 'from pathlib import Path; assert Path("/app/server/ingestion_worker.py").exists(), "Image lacks Helm replica runtime"'
+          docker run --rm --entrypoint sh "ghcr.io/danyi1212/celery-insights:$app_version" -c 'test -f /app/bun-server.js && test -f /app/server/run.py'
+
       - name: Package and publish OCI chart
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}

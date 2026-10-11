@@ -46,6 +46,6 @@ test.describe("Task Detail", () => {
 
   test("unknown task ID shows not-found message", async ({ page }) => {
     await page.goto("/tasks/00000000-0000-0000-0000-000000000000")
-    await expect(page.getByText("Could not find this task")).toBeVisible()
+    await expect(page.getByText("Task not found or outside your permitted view")).toBeVisible()
   })
 })

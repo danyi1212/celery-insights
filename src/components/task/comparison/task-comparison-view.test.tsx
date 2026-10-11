@@ -76,6 +76,23 @@ describe("TaskComparisonView", () => {
     expect(screen.getByText("Lifetime")).toBeInTheDocument()
   })
 
+  it("passes execution evidence to the state row icons", () => {
+    const observedAt = new Date().toISOString()
+    const started = { ...leftSurrealTask, state: "STARTED", succeeded_at: undefined }
+    const observed = { ...started, execution_active: true, execution_observed_at: observedAt, last_updated: observedAt }
+    mockUseTask.mockImplementation((id: string) => ({
+      task: id === "left-id" ? observed : started,
+      data: [id === "left-id" ? observed : started],
+      isLoading: false,
+      error: null,
+    }))
+
+    render(<TaskComparisonView leftId="left-id" rightId="right-id" onChangeLeft={vi.fn()} onChangeRight={vi.fn()} />)
+
+    expect(screen.getAllByLabelText("Started; Observed running")).toHaveLength(3)
+    expect(screen.getAllByLabelText("Started; Execution unconfirmed")).toHaveLength(3)
+  })
+
   it("shows task not found when a task is missing", () => {
     mockUseTask.mockReturnValue({
       task: null,
@@ -199,4 +216,23 @@ describe("TaskComparisonView", () => {
     expect(screen.getByText(/Left:/)).toBeInTheDocument()
     expect(screen.getByText(/Right:/)).toBeInTheDocument()
   })
+})
+
+it("labels restricted payloads instead of comparing them as identical missing values", () => {
+  mockUseTask.mockReturnValue({
+    task: {
+      ...leftSurrealTask,
+      args: undefined,
+      kwargs: undefined,
+      result: undefined,
+      restricted_fields: ["task.input.read", "task.result.read"],
+    },
+    data: [],
+    isLoading: false,
+    error: null,
+  })
+  render(<TaskComparisonView leftId="left-id" rightId="right-id" onChangeLeft={vi.fn()} onChangeRight={vi.fn()} />)
+  expect(screen.getByText(/Access to task arguments is restricted/)).toBeVisible()
+  expect(screen.getByText(/Access to task outcome data is restricted/)).toBeVisible()
+  expect(screen.queryByText("Identical")).not.toBeInTheDocument()
 })

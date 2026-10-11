@@ -22,14 +22,34 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- required "database.externalUrl is required when surrealdb.enabled=false" .Values.database.externalUrl -}}
 {{- end -}}
 {{- end -}}
-{{/* TOML recursive tables: quoted keys and JSON scalar syntax are valid TOML for
-strings/numbers/booleans and homogeneous arrays. Null/maps in arrays are rejected. */}}
+{{/* TOML recursive tables and inline tables support arrays of accounts and role
+mappings. Null is rejected because TOML has no null value. */}}
 {{- define "insights.tomlScalar" -}}
 {{- if eq . nil -}}{{ fail "TOML has no null value" }}{{- end -}}
-{{- if kindIs "map" . -}}{{ fail "TOML arrays of objects require raw TOML content" }}{{- end -}}
-{{- if kindIs "slice" . -}}
+{{- if kindIs "map" . -}}
+{{- $data := . -}}{ {{ range $i, $key := keys $data | sortAlpha }}{{ if $i }}, {{ end }}{{ $key | toJson }} = {{ include "insights.tomlScalar" (index $data $key) }}{{ end }} }
+{{- else if kindIs "slice" . -}}
 [{{- range $i, $v := . -}}{{ if $i }}, {{ end }}{{ include "insights.tomlScalar" $v }}{{- end -}}]
 {{- else -}}{{ toJson . }}{{- end -}}
+{{- end -}}
+{{- define "insights.generatedConfig" -}}
+schema_version = 1
+[installation]
+public_url = {{ .Values.authentication.publicUrl | toJson }}
+[authentication]
+mode = {{ .Values.authentication.mode | toJson }}
+{{ if eq .Values.authentication.mode "basic" }}
+[[authentication.accounts]]
+username = {{ .Values.authentication.basic.username | toJson }}
+password_env = "INSIGHTS_ACCOUNT_PASSWORD"
+roles = {{ include "insights.tomlScalar" .Values.authentication.basic.roles }}
+{{ else }}
+[authentication.oidc]
+issuer = {{ .Values.authentication.oidc.issuer | toJson }}
+client_id = {{ .Values.authentication.oidc.clientId | toJson }}
+scopes = {{ .Values.authentication.oidc.scopes | toJson }}
+role_mappings = {{ include "insights.tomlScalar" .Values.authentication.oidc.roleMappings }}
+{{ end }}
 {{- end -}}
 {{- define "insights.toml" -}}
 {{- $data := .data -}}{{- $path := .path -}}

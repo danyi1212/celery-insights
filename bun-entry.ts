@@ -1,7 +1,7 @@
 /**
  * Custom Bun entry point for production.
  * Orchestrates SurrealDB subprocess, leader election, Python ingester spawning,
- * serves static SPA files and proxies API/WS requests to Python.
+ * serves the SPA and authorized observation APIs; Python supplies a private Celery bridge.
  *
  * Usage: bun run bun-entry.ts
  * (after building with `bun run build`)
@@ -11,22 +11,40 @@ import readline from "node:readline"
 import { spawn, type ChildProcess } from "node:child_process"
 import { randomBytes } from "node:crypto"
 import { Surreal } from "surrealdb"
-import { config, type Config } from "./runtime/config"
+import { publishBridgeStatus, readBridgeStatus } from "./runtime/shared-runtime-state"
+import { createCeleryBridge } from "./runtime/celery-bridge"
+import { ObservationApi } from "./runtime/observation-api"
+import { initializeAuthentication, secureApplicationRequest } from "./runtime/security/http"
+import { ObservationRpc } from "./runtime/observation/rpc"
+import { buildRead, readPermissions, readRequestSchema } from "./runtime/observation/queries"
+import { intersectScopes, scopeFingerprint, scopedDatabase, rowScoped, taskScoped } from "./runtime/security/read-scope"
+import { AuthError } from "./runtime/security/permissions"
+import { Authorization } from "./runtime/security/opa"
+import { payloadPermissions } from "./runtime/security/permissions"
+import type { Config } from "./runtime/config"
+import { databaseReaderPassword, prepareDatabaseConfig } from "./runtime/database-config"
+import { resolveConfig } from "./runtime/config-loader"
+import { pythonConfig, pythonEnvironment } from "./runtime/python-config"
 import {
   createDebugBundleArchive,
-  exportSurrealNative,
+  exportSurrealData,
   getSnapshotDetails,
   getSnapshotSummary,
   getSurrealRecordCounts,
-  importSurrealNative,
   importSurrealData,
   LineRingBuffer,
   parseDebugSnapshot,
   type DebugBundleClientInfo,
   type ParsedDebugSnapshot,
 } from "./runtime/debug-bundle"
-import { bunLogger, registerLogSink, surrealLogger } from "./runtime/logger"
+import { bunLogger, configureLogging, registerLogSink, surrealLogger } from "./runtime/logger"
 import { LeaderElection, generateInstanceId, type IngestionStatus } from "./runtime/leader-election"
+
+const resolvedConfig = resolveConfig()
+const config = resolvedConfig.config
+configureLogging(config.logFormat, config.logLevel)
+for (const warning of resolvedConfig.warnings) bunLogger.warn(warning)
+import { startSearchIndexes, type SearchIndexes } from "./runtime/search-indexes"
 import { runSchemaMigration } from "./runtime/surreal-schema"
 import { createMcpHandler } from "./runtime/mcp"
 
@@ -56,7 +74,7 @@ function printBanner(runtimeConfig: Config, replaySnapshot: ParsedDebugSnapshot 
   const logo = `${c.green}${c.bold}${LOGO}${c.reset}\n`
 
   const surrealInfo = runtimeConfig.surrealdbExternalUrl
-    ? `external (${runtimeConfig.surrealdbExternalUrl})`
+    ? "external (endpoint redacted)"
     : `managed (${runtimeConfig.surrealdbStorage}) on port ${runtimeConfig.surrealdbPort}`
 
   const ingestionInfo = replaySnapshot
@@ -77,8 +95,8 @@ function printBanner(runtimeConfig: Config, replaySnapshot: ParsedDebugSnapshot 
 
   const lines = [
     `  ${c.dim}Server${c.reset}      http://localhost:${runtimeConfig.port}${runtimeConfig.urlPrefix}/`,
-    `  ${c.dim}Broker${c.reset}      ${runtimeConfig.brokerUrl}`,
-    `  ${c.dim}Backend${c.reset}     ${runtimeConfig.resultBackend}`,
+    `  ${c.dim}Broker${c.reset}      [redacted]`,
+    `  ${c.dim}Backend${c.reset}     [redacted]`,
     `  ${c.dim}SurrealDB${c.reset}   ${surrealInfo}`,
     `  ${c.dim}Ingestion${c.reset}   ${ingestionInfo}`,
     `  ${c.dim}Log level${c.reset}   ${runtimeConfig.logLevel}`,
@@ -100,11 +118,8 @@ function printBanner(runtimeConfig: Config, replaySnapshot: ParsedDebugSnapshot 
   process.stdout.write(logo + lines.join("\n") + "\n\n")
 }
 
-const PYTHON_PORT = 8556
-const PYTHON_BACKEND = `http://localhost:${PYTHON_PORT}`
-const PYTHON_WS_BACKEND = `ws://localhost:${PYTHON_PORT}`
+const celeryBridge = createCeleryBridge()
 
-// Derive SurrealDB proxy targets from config (strip /rpc suffix, convert ws->http)
 const DIST_DIR = path.resolve(import.meta.dir, "dist")
 
 // Read index.html once at startup for SPA fallback
@@ -112,9 +127,12 @@ const indexHtml = await Bun.file(path.join(DIST_DIR, "index.html")).text()
 
 let surrealProcess: ChildProcess | null = null
 let pythonProcess: ChildProcess | null = null
-let ingestionProcess: ChildProcess | null = null
+let searchIndexes: SearchIndexes | null = null
 let leaderElection: LeaderElection | null = null
 let mcpDb: Surreal | null = null
+let authentication: Awaited<ReturnType<typeof initializeAuthentication>> | null = null
+let cleanupTimer: ReturnType<typeof setTimeout> | null = null
+let statusTimer: ReturnType<typeof setTimeout> | null = null
 let ingestionStatus: IngestionStatus = "disabled"
 let shuttingDown = false
 const instanceId = generateInstanceId()
@@ -125,35 +143,6 @@ const surrealLogBuffer = new LineRingBuffer()
 const pythonLogBuffer = new LineRingBuffer()
 registerLogSink("bun", (line) => bunLogBuffer.add(line))
 registerLogSink("surrealdb", (line) => surrealLogBuffer.add(line))
-
-const REQUEST_HOP_BY_HOP_HEADERS = new Set([
-  "connection",
-  "content-length",
-  "host",
-  "keep-alive",
-  "proxy-authenticate",
-  "proxy-authorization",
-  "te",
-  "trailer",
-  "transfer-encoding",
-  "upgrade",
-])
-
-const RESPONSE_HOP_BY_HOP_HEADERS = new Set([
-  "connection",
-  "content-encoding",
-  "content-length",
-  "keep-alive",
-  "transfer-encoding",
-])
-
-function getSurrealBases(activeConfig: Config): { httpBase: string; wsBase: string } {
-  const wsBase = activeConfig.surrealdbUrl.replace(/\/rpc$/, "")
-  return {
-    httpBase: wsBase.replace(/^ws(s?):\/\//, "http$1://"),
-    wsBase,
-  }
-}
 
 function buildSnapshotRuntimeConfig(baseConfig: Config): Config {
   return {
@@ -169,7 +158,8 @@ function buildSnapshotRuntimeConfig(baseConfig: Config): Config {
 
 async function fetchJsonFromPython<T>(pathname: string): Promise<T | null> {
   try {
-    const response = await fetch(`${PYTHON_BACKEND}${pathname}`)
+    const options: RequestInit & { unix: string } = { unix: celeryBridge.socket }
+    const response = await fetch(`http://localhost${pathname}`, options)
     if (!response.ok) return null
     return (await response.json()) as T
   } catch {
@@ -180,7 +170,7 @@ async function fetchJsonFromPython<T>(pathname: string): Promise<T | null> {
 function buildVersionsInfo(activeConfig: Config): Record<string, unknown> {
   return {
     bun: Bun.version,
-    pythonBackendPort: PYTHON_PORT,
+    pythonBridgeTransport: "private-unix-socket",
     surrealdbUrl: activeConfig.surrealdbUrl,
     appVersion: "v0.2.0",
   }
@@ -263,12 +253,13 @@ function spawnSurrealDB(): ChildProcess {
   )
   const proc = spawn(
     "surreal",
-    ["start", "--no-banner", "--bind", `0.0.0.0:${runtimeConfig.surrealdbPort}`, runtimeConfig.surrealdbStorage],
+    ["start", "--no-banner", "--bind", `127.0.0.1:${runtimeConfig.surrealdbPort}`, runtimeConfig.surrealdbStorage],
     {
       stdio: ["ignore", "pipe", "pipe"],
       env: {
-        ...process.env,
-        SURREAL_USER: runtimeConfig.surrealdbRootUser,
+        PATH: process.env.PATH,
+        LANG: process.env.LANG,
+        SURREAL_USER: "root",
         SURREAL_PASS: runtimeConfig.surrealdbRootPass,
       },
     },
@@ -300,31 +291,6 @@ function spawnSurrealDB(): ChildProcess {
   })
 
   return proc
-}
-
-function createProxyRequestHeaders(headers: Headers): Headers {
-  const proxyHeaders = new Headers()
-
-  for (const [key, value] of headers.entries()) {
-    if (!REQUEST_HOP_BY_HOP_HEADERS.has(key.toLowerCase())) {
-      proxyHeaders.set(key, value)
-    }
-  }
-
-  // Avoid forwarding compressed payload metadata that Bun/undici may rewrite while proxying.
-  proxyHeaders.set("accept-encoding", "identity")
-
-  return proxyHeaders
-}
-
-function createProxyResponseHeaders(headers: Headers): Headers {
-  const proxyHeaders = new Headers(headers)
-
-  for (const header of RESPONSE_HOP_BY_HOP_HEADERS) {
-    proxyHeaders.delete(header)
-  }
-
-  return proxyHeaders
 }
 
 /**
@@ -362,45 +328,17 @@ const PYTHON_BACKOFF_BASE_MS = 1000
 const PYTHON_BACKOFF_MAX_MS = 30000
 let pythonRestartAttempts = 0
 
-function spawnPython(role: "api" | "ingester" = "api"): ChildProcess {
-  bunLogger.info(`Spawning Python ${role} subprocess`)
-  const proc = spawn("python", [role === "api" ? "run.py" : "ingestion_worker.py"], {
+function spawnPython(): ChildProcess {
+  bunLogger.info(replaySnapshot ? "Spawning Python Celery bridge subprocess" : "Spawning Python ingester subprocess")
+  const proc = spawn("python", ["run.py"], {
     cwd: path.resolve(import.meta.dir, "server"),
-    env: {
-      ...process.env,
-      PORT: String(PYTHON_PORT),
-      HOST: "127.0.0.1",
-      PROCESS_ROLE: role,
-      SURREALDB_ROOT_USER: undefined,
-      SURREALDB_ROOT_PASS: undefined,
-      SURREALDB_URL: runtimeConfig.surrealdbUrl,
-      ...(runtimeConfig.surrealdbExternalUrl ? { SURREALDB_EXTERNAL_URL: runtimeConfig.surrealdbExternalUrl } : {}),
-      SURREALDB_INGESTER_PASS: runtimeConfig.surrealdbIngesterPass,
-      SURREALDB_NAMESPACE: runtimeConfig.surrealdbNamespace,
-      SURREALDB_DATABASE: runtimeConfig.surrealdbDatabase,
-      SURREALDB_STORAGE: runtimeConfig.surrealdbStorage,
-      BROKER_URL: runtimeConfig.brokerUrl,
-      RESULT_BACKEND: runtimeConfig.resultBackend,
-      CONFIG_FILE: runtimeConfig.configFile,
-      TIMEZONE: runtimeConfig.timezone,
-      DEBUG: String(runtimeConfig.debug),
-      CLEANUP_INTERVAL_SECONDS: String(runtimeConfig.cleanupIntervalSeconds),
-      ...(runtimeConfig.taskMaxCount !== null && runtimeConfig.taskMaxCount !== undefined
-        ? { TASK_MAX_COUNT: String(runtimeConfig.taskMaxCount) }
-        : {}),
-      ...(runtimeConfig.taskRetentionHours !== null && runtimeConfig.taskRetentionHours !== undefined
-        ? { TASK_RETENTION_HOURS: String(runtimeConfig.taskRetentionHours) }
-        : {}),
-      ...(runtimeConfig.deadWorkerRetentionHours !== null && runtimeConfig.deadWorkerRetentionHours !== undefined
-        ? { DEAD_WORKER_RETENTION_HOURS: String(runtimeConfig.deadWorkerRetentionHours) }
-        : {}),
-      INGESTION_BATCH_INTERVAL_MS: String(runtimeConfig.ingestionBatchIntervalMs),
-      LOG_FORMAT: runtimeConfig.logFormat,
-      LOG_LEVEL: runtimeConfig.logLevel,
-      DEBUG_SNAPSHOT_MODE: replaySnapshot ? "true" : "false",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
+    env: pythonEnvironment(process.env),
+    stdio: ["ignore", "pipe", "pipe", "pipe"],
   })
+  const configPipe = proc.stdio[3]
+  if (!configPipe || !("end" in configPipe)) throw new Error("Cannot open Python configuration pipe")
+  configPipe.on("error", () => bunLogger.error("Python configuration handoff failed"))
+  configPipe.end(JSON.stringify(pythonConfig(runtimeConfig, Boolean(replaySnapshot), celeryBridge)))
 
   if (proc.stdout) {
     const rl = readline.createInterface({ input: proc.stdout })
@@ -418,19 +356,20 @@ function spawnPython(role: "api" | "ingester" = "api"): ChildProcess {
   }
 
   proc.on("exit", (code) => {
-    if (role === "api" && pythonProcess === proc) pythonProcess = null
-    if (role === "ingester" && ingestionProcess === proc) ingestionProcess = null
-    if (shuttingDown) return
-    const wanted = () => role === "api" || leaderElection?.isLeader
-    if (!wanted()) return
-    bunLogger.warn(`Python ${role} exited with code ${code}; restarting`)
-    const backoffMs = Math.min(PYTHON_BACKOFF_BASE_MS * 2 ** pythonRestartAttempts, PYTHON_BACKOFF_MAX_MS)
-    pythonRestartAttempts++
-    setTimeout(() => {
-      if (shuttingDown || !wanted()) return
-      if (role === "api" && !pythonProcess) pythonProcess = spawnPython(role)
-      if (role === "ingester" && !ingestionProcess) ingestionProcess = spawnPython(role)
-    }, backoffMs)
+    if (shuttingDown || pythonProcess !== proc) return
+    bunLogger.error(`Python ingester exited with code ${code}`)
+    pythonProcess = null
+    // If we're still leader, restart Python with backoff
+    if (replaySnapshot || leaderElection?.isLeader) {
+      const backoffMs = Math.min(PYTHON_BACKOFF_BASE_MS * 2 ** pythonRestartAttempts, PYTHON_BACKOFF_MAX_MS)
+      pythonRestartAttempts++
+      bunLogger.warn(`Restarting Python subprocess in ${backoffMs}ms (attempt ${pythonRestartAttempts})`)
+      setTimeout(() => {
+        if (!shuttingDown && !pythonProcess && (replaySnapshot || leaderElection?.isLeader)) {
+          pythonProcess = spawnPython()
+        }
+      }, backoffMs)
+    }
   })
 
   return proc
@@ -438,28 +377,31 @@ function spawnPython(role: "api" | "ingester" = "api"): ChildProcess {
 
 // --- Signal handling ---
 
-async function shutdown(signal: string): Promise<void> {
+async function shutdown(signal: string, exitCode = 0): Promise<void> {
   if (shuttingDown) return
   shuttingDown = true
   bunLogger.info(`Received ${signal} — shutting down`)
 
-  // Stop the ingestion worker before handing its lease to another replica.
+  // Stop the ingester before allowing another replica to acquire the lease.
+  if (pythonProcess) {
+    const proc = pythonProcess
+    const exited = new Promise<void>((resolve) => proc.once("exit", () => resolve()))
+    proc.kill(signal === "SIGTERM" ? "SIGTERM" : "SIGINT")
+    await Promise.race([exited, Bun.sleep(10000)])
+    if (proc.exitCode === null && proc.signalCode === null) {
+      proc.kill("SIGKILL")
+      await exited
+    }
+    pythonProcess = null
+  }
+  await leaderElection?.stop()
+  await searchIndexes?.stop()
   await mcpDb?.close()
+  if (cleanupTimer) clearTimeout(cleanupTimer)
+  if (statusTimer) clearTimeout(statusTimer)
 
   // 2. Kill child processes and wait for them to exit (with timeout)
   const exitPromises: Promise<void>[] = []
-
-  if (ingestionProcess) {
-    const proc = ingestionProcess
-    exitPromises.push(new Promise<void>((resolve) => proc.on("exit", () => resolve())))
-    proc.kill("SIGTERM")
-  }
-
-  if (pythonProcess) {
-    const proc = pythonProcess
-    exitPromises.push(new Promise<void>((resolve) => proc.on("exit", () => resolve())))
-    proc.kill(signal === "SIGTERM" ? "SIGTERM" : "SIGINT")
-  }
 
   if (surrealProcess) {
     const proc = surrealProcess
@@ -472,10 +414,8 @@ async function shutdown(signal: string): Promise<void> {
     await Promise.race([Promise.all(exitPromises), Bun.sleep(10000)])
   }
 
-  // If shutdown timed out, terminate the worker before releasing the lease.
-  if (ingestionProcess && ingestionProcess.exitCode === null) ingestionProcess.kill("SIGKILL")
-  if (leaderElection) await leaderElection.stop()
-  process.exit(0)
+  celeryBridge.close()
+  process.exit(exitCode)
 }
 
 process.on("SIGTERM", () => shutdown("SIGTERM"))
@@ -488,6 +428,10 @@ if (config.debugBundlePath) {
   bunLogger.info(`Loaded debug snapshot from ${config.debugBundlePath}`)
 }
 
+runtimeConfig = prepareDatabaseConfig(
+  runtimeConfig,
+  resolvedConfig.provenance["database.observation.ingester_password"].source !== "default",
+)
 printBanner(runtimeConfig, replaySnapshot)
 
 const managingSurrealDB = !runtimeConfig.surrealdbExternalUrl
@@ -496,7 +440,7 @@ const managingSurrealDB = !runtimeConfig.surrealdbExternalUrl
 if (managingSurrealDB) {
   surrealProcess = spawnSurrealDB()
 } else {
-  bunLogger.info(`Using external SurrealDB at ${runtimeConfig.surrealdbExternalUrl}`)
+  bunLogger.info("Using external SurrealDB (endpoint redacted)")
 }
 
 // 2. Wait for SurrealDB to be ready
@@ -524,10 +468,19 @@ try {
   process.exit(1)
 }
 
+searchIndexes = await startSearchIndexes(db, runtimeConfig)
+
+try {
+  authentication = resolvedConfig.authentication
+    ? initializeAuthentication(resolvedConfig.authentication, new Authorization(runtimeConfig))
+    : null
+} catch {
+  bunLogger.error("Authentication initialization failed")
+  await shutdown("startup failure", 1)
+}
+
 if (replaySnapshot) {
-  if (replaySnapshot.sourceDataSqlPath) {
-    await importSurrealNative(runtimeConfig, db, replaySnapshot.sourceDataSqlPath)
-  } else if (replaySnapshot.sourceData) {
+  if (replaySnapshot.sourceData) {
     await importSurrealData(db, replaySnapshot.sourceData)
   } else {
     throw new Error("Debug snapshot does not contain SurrealDB export data")
@@ -536,19 +489,21 @@ if (replaySnapshot) {
   pythonProcess = spawnPython()
   ingestionStatus = "read-only"
 } else {
-  // APIs stay available on every replica; only the background worker follows leadership.
-  pythonProcess = spawnPython()
-  // 5. Run leader election
+  // 5. Run leader election (spawns Python if this instance becomes leader)
   leaderElection = new LeaderElection({
     db,
     config: runtimeConfig,
     instanceId,
     onBecomeLeader() {
       pythonRestartAttempts = 0
-      if (!ingestionProcess) ingestionProcess = spawnPython("ingester")
+      pythonProcess = spawnPython()
     },
     onLoseLeadership() {
-      ingestionProcess?.kill("SIGTERM")
+      if (pythonProcess) {
+        bunLogger.warn("Lost leadership — stopping Python ingester")
+        pythonProcess.kill("SIGTERM")
+        pythonProcess = null
+      }
     },
   })
 
@@ -564,263 +519,324 @@ await mcpDb.connect(runtimeConfig.surrealdbUrl, {
   authentication: {
     namespace: runtimeConfig.surrealdbNamespace,
     database: runtimeConfig.surrealdbDatabase,
-    username: "viewer",
-    password: "viewer",
+    username: "observation_reader",
+    password: databaseReaderPassword(runtimeConfig),
   },
 })
 const mcpCursorCredential =
-  runtimeConfig.mcpToken ??
-  runtimeConfig.surrealdbFrontendPass ??
+  runtimeConfig.mcpCursorSecret ??
   (runtimeConfig.surrealdbIngesterPass !== "changeme"
     ? runtimeConfig.surrealdbIngesterPass
     : randomBytes(32).toString("hex"))
 const handleMcp = createMcpHandler({
+  authorize: async (request, tool) => {
+    if (!authentication) throw new Error("Authentication required")
+    const decision = await authentication.authorization.check(
+      authentication.principal(request),
+      payloadPermissions,
+      { method: request.method, path: "/mcp", transport: "mcp", tool },
+      Boolean(replaySnapshot),
+    )
+    const scope = intersectScopes(authentication.scope(request), decision)
+    return {
+      db: scopedDatabase(mcpDb!, scope),
+      readScope: scope,
+      cursorSecret: `${mcpCursorCredential}:${authentication.principal(request).account_id}:${scopeFingerprint(scope)}`,
+    }
+  },
+  publicOrigin: resolvedConfig.authentication?.public_origin,
   db: mcpDb,
   cursorSecret: `${mcpCursorCredential}:${runtimeConfig.surrealdbNamespace}:${runtimeConfig.surrealdbDatabase}`,
-  token: runtimeConfig.mcpToken ?? runtimeConfig.surrealdbFrontendPass,
   allowedHosts: runtimeConfig.mcpAllowedHosts?.split(",").map((host) => host.trim()),
   mode: () => (replaySnapshot ? "snapshot" : runtimeConfig.ingestionEnabled ? "live" : "ingestion_disabled"),
 })
+const observationApi = new ObservationApi(db, runtimeConfig, () => readBridgeStatus(db))
+async function shareBridgeStatus(): Promise<void> {
+  if (shuttingDown) return
+  if (pythonProcess && (replaySnapshot || leaderElection?.isLeader)) {
+    try {
+      const status = await fetchJsonFromPython<Record<string, unknown>>("/bridge/status")
+      if (status) await publishBridgeStatus(db, status)
+    } catch {
+      bunLogger.warn("Unable to publish ingestion diagnostics")
+    }
+  }
+  if (!shuttingDown) statusTimer = setTimeout(shareBridgeStatus, 2000)
+}
+void shareBridgeStatus()
+async function periodicCleanup() {
+  if (!replaySnapshot && runtimeConfig.ingestionEnabled && (!leaderElection || leaderElection.isLeader)) {
+    try {
+      await observationApi.cleanup()
+    } catch {
+      bunLogger.error("Observation cleanup failed")
+    }
+  }
+  if (!shuttingDown) cleanupTimer = setTimeout(periodicCleanup, observationApi.cleanupInterval())
+}
+cleanupTimer = setTimeout(periodicCleanup, observationApi.cleanupInterval())
 const server = Bun.serve({
   port: runtimeConfig.port,
   async fetch(req: Request, server: any) {
-    const url = new URL(req.url)
-    const { httpBase: surrealHttpBase } = getSurrealBases(runtimeConfig)
+    return secureApplicationRequest(req, runtimeConfig.urlPrefix, authentication, Boolean(replaySnapshot), async () => {
+      const url = new URL(req.url)
 
-    const prefix = runtimeConfig.urlPrefix
-    if (prefix && url.pathname === prefix) {
-      return new Response(null, { status: 308, headers: { Location: `${prefix}/${url.search}` } })
-    }
-    if (prefix && !["/health", "/ready"].includes(url.pathname) && !url.pathname.startsWith(`${prefix}/`)) {
-      return new Response("Not Found", { status: 404 })
-    }
-    // Keep the root health endpoint available for container probes.
-    if (!["/health", "/ready"].includes(url.pathname)) url.pathname = url.pathname.slice(prefix.length)
-
-    if (url.pathname === "/mcp") return handleMcp(req)
-
-    const isUpgrade = req.headers.get("upgrade")?.toLowerCase() === "websocket"
-
-    // Handle WebSocket upgrade requests for /surreal/* paths (proxy to SurrealDB)
-    if (url.pathname.startsWith("/surreal/") && isUpgrade) {
-      const surrealPath = url.pathname.slice("/surreal".length) // strip /surreal, keep leading /
-      const success = server.upgrade(req, {
-        data: {
-          targetPath: surrealPath + url.search,
-          backend: "surreal" as const,
-          protocols: req.headers.get("sec-websocket-protocol") ?? undefined,
-        },
-      })
-      if (success) return undefined
-      return new Response("WebSocket upgrade failed", { status: 500 })
-    }
-
-    // Handle WebSocket upgrade requests for /ws/* paths (proxy to Python)
-    if (url.pathname.startsWith("/ws") && isUpgrade) {
-      const success = server.upgrade(req, {
-        data: { targetPath: url.pathname + url.search, backend: "python" as const },
-      })
-      if (success) return undefined
-      return new Response("WebSocket upgrade failed", { status: 500 })
-    }
-
-    // Bun-served endpoint: frontend configuration
-    if (url.pathname === "/api/config") {
-      const authRequired =
-        runtimeConfig.surrealdbFrontendPass !== null && runtimeConfig.surrealdbFrontendPass !== undefined
-      return Response.json({
-        authRequired,
-        surrealPath: `${runtimeConfig.urlPrefix}/surreal/rpc`,
-        ingestionStatus: leaderElection?.status ?? ingestionStatus,
-        debugSnapshot: getSnapshotSummary(replaySnapshot),
-        // When auth is not required, pass viewer credentials so the frontend
-        // can authenticate as a read-only DB user. SurrealDB requires
-        // authentication even for tables with FULL select permissions.
-        ...(authRequired
-          ? {}
-          : {
-              viewerUser: "viewer",
-              viewerPass: "viewer",
-              viewerNs: runtimeConfig.surrealdbNamespace,
-              viewerDb: runtimeConfig.surrealdbDatabase,
-            }),
-      })
-    }
-
-    if (url.pathname === "/api/settings/debug-snapshot") {
-      const details = getSnapshotDetails(replaySnapshot)
-      if (!details) {
-        return Response.json({ error: "debug snapshot is not active" }, { status: 404 })
+      const prefix = runtimeConfig.urlPrefix
+      if (prefix && url.pathname === prefix) {
+        return new Response(null, { status: 308, headers: { Location: `${prefix}/${url.search}` } })
       }
-      return Response.json(details)
-    }
+      if (prefix && !["/health", "/ready"].includes(url.pathname) && !url.pathname.startsWith(`${prefix}/`)) {
+        return new Response("Not Found", { status: 404 })
+      }
+      // Keep the root health endpoint available for container probes.
+      if (!["/health", "/ready"].includes(url.pathname)) url.pathname = url.pathname.slice(prefix.length)
 
-    if (url.pathname === "/api/settings/download-debug-bundle" && req.method === "POST") {
-      let clientInfo: DebugBundleClientInfo
-      try {
-        clientInfo = (await req.json()) as DebugBundleClientInfo
-      } catch {
-        return Response.json({ error: "invalid debug bundle request" }, { status: 400 })
+      const scope = /^\/(api|metrics|mcp)(?:\/|$)/.test(url.pathname) ? authentication!.scope(req) : null
+      if (
+        scope &&
+        rowScoped(scope) &&
+        ["/api/settings/info", "/api/settings/debug-snapshot", "/metrics/system"].includes(url.pathname)
+      )
+        throw new AuthError(403, "Operation requires unrestricted cluster visibility")
+      const scopedApi =
+        scope && (req.method === "GET" || url.pathname === "/api/exports/csv")
+          ? observationApi.withDatabase(scopedDatabase(db, scope!))
+          : observationApi
+      const applicationResponse = await scopedApi.handle(req, url.pathname, Boolean(replaySnapshot))
+      if (applicationResponse) return applicationResponse
+      if (url.pathname === "/mcp") return handleMcp(req)
+
+      const isUpgrade = req.headers.get("upgrade")?.toLowerCase() === "websocket"
+
+      if (url.pathname === "/api/observation/rpc") {
+        if (isUpgrade) {
+          const protocols = (req.headers.get("sec-websocket-protocol") ?? "").split(",").map((value) => value.trim())
+          if (!protocols.some((value) => value === "cbor" || value === "json"))
+            return new Response(null, { status: 400 })
+          const json = !protocols.includes("cbor")
+          if (
+            server.upgrade(req, {
+              data: {
+                account: authentication!.principal(req).account_id,
+                scope,
+                json,
+                authRequest: req.headers.has("cookie")
+                  ? new Request(req.url, { headers: { cookie: req.headers.get("cookie")! } })
+                  : undefined,
+              },
+              headers: { "sec-websocket-protocol": json ? "json" : "cbor" },
+            })
+          )
+            return undefined
+          return new Response("WebSocket upgrade failed", { status: 500 })
+        }
+        if (req.method !== "POST") return new Response(null, { status: 405 })
+        if (Number(req.headers.get("content-length")) > 65536) return new Response(null, { status: 413 })
+        const reader = req.body?.getReader()
+        if (!reader) return new Response(null, { status: 422 })
+        const chunks: Uint8Array[] = []
+        let size = 0
+        try {
+          for (;;) {
+            const { value, done } = await reader.read()
+            if (done) break
+            size += value.length
+            if (size > 65536) {
+              await reader.cancel()
+              return new Response(null, { status: 413 })
+            }
+            chunks.push(value)
+          }
+        } finally {
+          reader.releaseLock()
+        }
+        let value: unknown
+        try {
+          value = JSON.parse(Buffer.concat(chunks).toString("utf8"))
+        } catch {
+          return Response.json({ detail: "Invalid observation request" }, { status: 422 })
+        }
+        const parsed = readRequestSchema.safeParse(value)
+        if (!parsed.success) return Response.json({ detail: "Invalid observation request" }, { status: 422 })
+        const context = {
+          method: "POST",
+          path: url.pathname,
+          transport: "http" as const,
+          operation: parsed.data.operation,
+        }
+        const decision = await authentication!.authorization.check(
+          authentication!.principal(req),
+          readPermissions(parsed.data, authentication!.principal(req)),
+          context,
+          Boolean(replaySnapshot),
+        )
+        const read = buildRead(parsed.data)
+        const rows = await scopedDatabase(db, intersectScopes(scope!, decision)).query(read.sql, read.bindings).json()
+        const fresh = await authentication!.authorization.check(
+          authentication!.principal(req),
+          readPermissions(parsed.data, authentication!.principal(req)),
+          context,
+          Boolean(replaySnapshot),
+        )
+        if (scopeFingerprint(decision) !== scopeFingerprint(fresh)) throw new AuthError(403, "Read scope changed")
+        return Response.json(rows.slice(read.resultOffset))
       }
 
-      const [serverInfo, retentionInfo, healthInfo, recordCounts, surrealExportSql] = await Promise.all([
-        fetchJsonFromPython<Record<string, unknown>>("/api/settings/info"),
-        fetchJsonFromPython<Record<string, unknown>>("/api/settings/retention"),
-        fetchJsonFromPython<Record<string, unknown>>("/health"),
-        getSurrealRecordCounts(db),
-        exportSurrealNative(runtimeConfig),
-      ])
-      const archive = await createDebugBundleArchive({
-        config: runtimeConfig,
-        includeSecrets: clientInfo.includeSecrets === true,
-        clientInfo,
-        serverInfo,
-        retentionInfo,
-        healthInfo,
-        versionsInfo: buildVersionsInfo(runtimeConfig),
-        recordCounts,
-        surrealExportSql,
-        logs: {
-          bun: bunLogBuffer.toString(),
-          python: pythonLogBuffer.toString(),
-          surrealdb: surrealLogBuffer.toString(),
-        },
-        replaySnapshot,
-      })
-
-      return new Response(new Blob([new Uint8Array(archive)]), {
-        headers: {
-          "Content-Type": "application/zip",
-          "Content-Disposition": `attachment; filename="${buildDebugBundleFilename()}"`,
-        },
-      })
-    }
-
-    if (url.pathname === "/ready") {
-      const ready = await fetchJsonFromPython<{ status: string }>("/health")
-      return Response.json({ status: ready ? "ok" : "starting" }, { status: ready ? 200 : 503 })
-    }
-
-    // Bun-served endpoint: health check (always available)
-    if (url.pathname === "/health") {
-      return Response.json({
-        status: "ok",
-        ingestionStatus: leaderElection?.status ?? ingestionStatus,
-        surrealdb: managingSurrealDB ? (surrealProcess ? "running" : "stopped") : "external",
-        python: pythonProcess ? "running" : "not running",
-      })
-    }
-
-    // Proxy /surreal/* HTTP requests to SurrealDB (strip /surreal prefix)
-    if (url.pathname.startsWith("/surreal/")) {
-      const surrealPath = url.pathname.slice("/surreal".length)
-      const targetUrl = `${surrealHttpBase}${surrealPath}${url.search}`
-      try {
-        const proxyRes = await fetch(targetUrl, {
-          method: req.method,
-          headers: createProxyRequestHeaders(req.headers),
-          body: req.body,
+      // Bun-served endpoint: frontend configuration
+      if (url.pathname === "/api/config") {
+        return Response.json({
+          ui: {
+            demoAvailable: runtimeConfig.demoAvailable ?? true,
+            theme: runtimeConfig.uiTheme,
+            hideWelcomeBanner: runtimeConfig.uiHideWelcomeBanner,
+            rawEventsLimit: runtimeConfig.uiRawEventsLimit,
+          },
+          observationPath: `${runtimeConfig.urlPrefix}/api/observation/rpc`,
+          taskVisibilityRestricted: Boolean(scope && taskScoped(scope)),
+          ingestionStatus: leaderElection?.status ?? ingestionStatus,
+          debugSnapshot:
+            scope && rowScoped(scope) && replaySnapshot
+              ? { enabled: true, readOnly: true }
+              : getSnapshotSummary(replaySnapshot),
         })
-        return new Response(proxyRes.body, {
-          status: proxyRes.status,
-          statusText: proxyRes.statusText,
-          headers: createProxyResponseHeaders(proxyRes.headers),
-        })
-      } catch {
-        return new Response("SurrealDB unavailable", { status: 502 })
-      }
-    }
-
-    // Proxy API and metrics routes to the Python backend (only if Python is running)
-    if (url.pathname.startsWith("/api") || url.pathname.startsWith("/metrics")) {
-      if (!pythonProcess) {
-        return new Response("API process not available", { status: 503 })
       }
 
-      const targetUrl = `${PYTHON_BACKEND}${url.pathname}${url.search}`
-      try {
-        const proxyRes = await fetch(targetUrl, {
-          method: req.method,
-          headers: createProxyRequestHeaders(req.headers),
-          body: req.body,
-        })
-        return new Response(proxyRes.body, {
-          status: proxyRes.status,
-          statusText: proxyRes.statusText,
-          headers: createProxyResponseHeaders(proxyRes.headers),
-        })
-      } catch {
-        return new Response("Backend unavailable", { status: 502 })
+      if (url.pathname === "/api/settings/debug-snapshot") {
+        const details = getSnapshotDetails(replaySnapshot)
+        if (!details) {
+          return Response.json({ error: "debug snapshot is not active" }, { status: 404 })
+        }
+        return Response.json(details)
       }
-    }
 
-    // Serve static assets (JS/CSS bundles, SVGs, fonts, images)
-    if (url.pathname.startsWith("/assets/") || url.pathname.match(/\.(svg|png|ico|jpg|css|js|woff2?|ttf|map)$/)) {
-      const filePath = path.resolve(DIST_DIR, "." + url.pathname)
-      if (!filePath.startsWith(DIST_DIR + path.sep)) return new Response("Forbidden", { status: 403 })
-      const file = Bun.file(filePath)
-      if (await file.exists()) {
-        return new Response(file, {
+      if (url.pathname === "/api/settings/download-debug-bundle" && req.method === "POST") {
+        let clientInfo: DebugBundleClientInfo
+        try {
+          clientInfo = (await req.json()) as DebugBundleClientInfo
+        } catch {
+          return Response.json({ error: "invalid debug bundle request" }, { status: 400 })
+        }
+
+        const [serverInfo, retentionInfo, healthInfo, recordCounts, surrealExport] = await Promise.all([
+          observationApi
+            .handle(new Request("http://localhost/api/settings/info"), "/api/settings/info", Boolean(replaySnapshot))
+            .then((response) => response?.json()),
+          observationApi
+            .handle(
+              new Request("http://localhost/api/settings/retention"),
+              "/api/settings/retention",
+              Boolean(replaySnapshot),
+            )
+            .then((response) => response?.json()),
+          fetchJsonFromPython<Record<string, unknown>>("/health"),
+          getSurrealRecordCounts(db),
+          exportSurrealData(db),
+        ])
+        const archive = await createDebugBundleArchive({
+          config: runtimeConfig,
+          includeSecrets: false,
+          clientInfo,
+          serverInfo,
+          retentionInfo,
+          healthInfo,
+          versionsInfo: buildVersionsInfo(runtimeConfig),
+          recordCounts,
+          surrealExport,
+          logs: {
+            bun: bunLogBuffer.toString(),
+            python: pythonLogBuffer.toString(),
+            surrealdb: surrealLogBuffer.toString(),
+          },
+          replaySnapshot,
+        })
+
+        return new Response(new Blob([new Uint8Array(archive)]), {
           headers: {
-            "Cache-Control": url.pathname.startsWith("/assets/")
-              ? "public, max-age=31536000, immutable"
-              : "public, max-age=3600",
+            "Content-Type": "application/zip",
+            "Content-Disposition": `attachment; filename="${buildDebugBundleFilename()}"`,
           },
         })
       }
-      return new Response("Not Found", { status: 404 })
-    }
 
-    // SPA fallback — serve index.html for all other routes
-    return new Response(
-      indexHtml.replace(
-        '<base href="/" />',
-        `<base href="${runtimeConfig.urlPrefix}/"><meta name="url-prefix" content="${runtimeConfig.urlPrefix}">`,
-      ),
-      {
-        headers: { "Content-Type": "text/html" },
-      },
-    )
+      if (url.pathname === "/ready") {
+        try {
+          if (!authentication) throw new Error("Authentication unavailable")
+          await Promise.race([
+            db.query("RETURN true").collect(),
+            Bun.sleep(750).then(() => {
+              throw new Error("Readiness timed out")
+            }),
+          ])
+          return Response.json({ status: "ok" })
+        } catch {
+          return Response.json({ status: "unavailable" }, { status: 503 })
+        }
+      }
+      // Bun-served endpoint: health check (always available)
+      if (url.pathname === "/health") {
+        return Response.json({
+          status: "ok",
+          ingestionStatus: leaderElection?.status ?? ingestionStatus,
+          surrealdb: managingSurrealDB ? (surrealProcess ? "running" : "stopped") : "external",
+          python: pythonProcess ? "running" : "not running",
+        })
+      }
+
+      // Application APIs are owned by Bun. There is no public Python proxy.
+      if (url.pathname.startsWith("/api") || url.pathname.startsWith("/metrics"))
+        return new Response("Not Found", { status: 404 })
+
+      // Serve static assets (JS/CSS bundles, SVGs, fonts, images)
+      if (url.pathname.startsWith("/assets/") || url.pathname.match(/\.(svg|png|ico|jpg|css|js|woff2?|ttf|map)$/)) {
+        const filePath = path.resolve(DIST_DIR, "." + url.pathname)
+        if (!filePath.startsWith(DIST_DIR + path.sep)) return new Response("Forbidden", { status: 403 })
+        const file = Bun.file(filePath)
+        if (await file.exists()) {
+          return new Response(file, {
+            headers: {
+              "Cache-Control": url.pathname.startsWith("/assets/")
+                ? "public, max-age=31536000, immutable"
+                : "public, max-age=3600",
+            },
+          })
+        }
+        return new Response("Not Found", { status: 404 })
+      }
+
+      // SPA fallback — serve index.html for all other routes
+      return new Response(
+        indexHtml.replace(
+          '<base href="/" />',
+          `<base href="${runtimeConfig.urlPrefix}/"><meta name="url-prefix" content="${runtimeConfig.urlPrefix}">`,
+        ),
+        {
+          headers: { "Content-Type": "text/html" },
+        },
+      )
+    })
   },
   websocket: {
+    maxPayloadLength: 65536,
+    backpressureLimit: 16 * 1024 * 1024,
+    closeOnBackpressureLimit: true,
     open(ws: any) {
-      const data = ws.data as { targetPath: string; backend: string; protocols?: string }
-      ws._pendingMessages = [] as (string | Buffer)[]
-
-      const baseUrl = data.backend === "surreal" ? getSurrealBases(runtimeConfig).wsBase : PYTHON_WS_BACKEND
-      const protocols = data.protocols ? data.protocols.split(",").map((p) => p.trim()) : undefined
-      const backendWs = new WebSocket(`${baseUrl}${data.targetPath}`, protocols)
-      backendWs.binaryType = "arraybuffer"
-
-      backendWs.onopen = () => {
-        ws._backendWs = backendWs
-        // Flush any messages that arrived before backend connected
-        const pending = ws._pendingMessages as (string | Buffer)[]
-        for (const msg of pending) backendWs.send(typeof msg === "string" ? msg : new Uint8Array(msg))
-        pending.length = 0
-      }
-
-      backendWs.onmessage = (event) => {
-        ws.send(event.data)
-      }
-
-      backendWs.onclose = () => ws.close()
-      backendWs.onerror = () => ws.close()
+      ws.data.rpc = new ObservationRpc(
+        ws,
+        authentication!,
+        ws.data.account,
+        db,
+        ws.data.scope,
+        Boolean(replaySnapshot),
+        ws.data.json,
+        5000,
+        ws.data.authRequest,
+      )
     },
     message(ws: any, message: string | Buffer) {
-      const backendWs = ws._backendWs as WebSocket | undefined
-      if (backendWs && backendWs.readyState === WebSocket.OPEN) {
-        backendWs.send(typeof message === "string" ? message : new Uint8Array(message))
-      } else {
-        // Buffer messages until backend connects
-        ;(ws._pendingMessages as (string | Buffer)[] | undefined)?.push(message)
-      }
+      void ws.data.rpc?.receive(message)
     },
     close(ws: any) {
-      const backendWs = ws._backendWs as WebSocket | undefined
-      if (backendWs && backendWs.readyState === WebSocket.OPEN) {
-        backendWs.close()
-      }
+      ws.data.rpc?.stop()
     },
   },
 })

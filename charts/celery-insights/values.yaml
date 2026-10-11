@@ -1,4 +1,4 @@
-# The application image must include this PR's always-on API and root credential changes.
+# The application image must include this PR's shared runtime state and readiness changes.
 # Publication is gated until appVersion identifies such a released image.
 image:
   repository: ghcr.io/danyi1212/celery-insights
@@ -14,11 +14,24 @@ credentials:
   keys:
     brokerUrl: broker-url
     resultBackend: result-backend
-    rootUser: surrealdb-root-user
     rootPassword: surrealdb-root-password
     ingesterPassword: surrealdb-ingester-password
-    frontendPassword: frontend-password
-# Existing frontend password is transitional until #139 replaces browser DB authentication.
+    accountPassword: account-password
+    sessionSecret: session-secret
+    oidcClientSecret: oidc-client-secret
+# Secrets stay in Bun; all replicas use the same account and session credentials.
+authentication:
+  publicUrl: https://localhost:8555
+  mode: basic
+  basic:
+    username: admin
+    roles: [administrator]
+  oidc:
+    issuer: ""
+    clientId: ""
+    useClientSecret: true
+    scopes: openid profile
+    roleMappings: []
 database:
   externalUrl: ""
   namespace: celery_insights
@@ -28,8 +41,8 @@ config:
     LOG_FORMAT: json
     LOG_LEVEL: info
   toml:
-    # Requires the #138 configuration-capable image. Never silently ignored.
-    enabled: false
+    # Empty sources generate authentication TOML from the values above.
+    enabled: true
     structured: {}
     content: ""
     existingConfigMap: ""
@@ -127,8 +140,7 @@ surrealdb:
       type: RuntimeDefault
   podExtraEnv:
     - name: SURREAL_USER
-      valueFrom:
-        secretKeyRef: {name: celery-insights-credentials, key: surrealdb-root-user}
+      value: root
     - name: SURREAL_PASS
       valueFrom:
         secretKeyRef: {name: celery-insights-credentials, key: surrealdb-root-password}

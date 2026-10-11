@@ -6,7 +6,10 @@ vi.mock("surrealdb", () => ({}))
 const mockQuery = vi.fn()
 const mockLiveOf = vi.fn()
 const MOCK_LIVE_UUID = "mock-live-uuid"
-const mockDb = { query: mockQuery, liveOf: mockLiveOf }
+const mockDb = {
+  query: (...args: unknown[]) => ({ retry: (_options: { attempts: number }) => mockQuery(...args) }),
+  liveOf: mockLiveOf,
+}
 let mockStatus = "connected"
 
 vi.mock("@components/surrealdb-provider", () => ({

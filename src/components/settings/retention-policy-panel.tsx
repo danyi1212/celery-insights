@@ -1,3 +1,5 @@
+import { usePermissions } from "@hooks/use-permissions"
+import { authenticatedFetch } from "@lib/authenticated-fetch"
 import { appUrl } from "@lib/app-url"
 import Panel from "@components/common/panel"
 import { useSurrealDB } from "@components/surrealdb-provider"
@@ -30,7 +32,7 @@ interface RetentionInfo {
 }
 
 const fetchRetention = async (): Promise<RetentionInfo> => {
-  const res = await fetch(appUrl("/api/settings/retention"))
+  const res = await authenticatedFetch(appUrl("/api/settings/retention"))
   if (!res.ok) throw new Error(`Failed to load retention settings: ${res.status}`)
   return res.json()
 }
@@ -40,15 +42,17 @@ const FieldRow: React.FC<{
   description: string
   value: string
   onChange: (value: string) => void
+  disabled?: boolean
   placeholder?: string
   type?: string
-}> = ({ label, description, value, onChange, placeholder, type = "text" }) => (
+}> = ({ label, description, value, onChange, placeholder, disabled, type = "text" }) => (
   <div className="flex items-center gap-4">
     <div className="min-w-0 flex-1">
       <div className="text-sm font-medium">{label}</div>
       <div className="text-xs text-muted-foreground">{description}</div>
     </div>
     <Input
+      disabled={disabled}
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
@@ -59,6 +63,7 @@ const FieldRow: React.FC<{
 )
 
 export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
+  const { can } = usePermissions()
   const isDemo = useSettingsStore((state) => state.demo)
   const { appConfig } = useSurrealDB()
   const { data, refetch } = useQuery({
@@ -106,7 +111,7 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
         task_retention_hours: taskRetentionHours ? parseFloat(taskRetentionHours) : null,
         dead_worker_retention_hours: deadWorkerRetentionHours ? parseFloat(deadWorkerRetentionHours) : null,
       }
-      const res = await fetch(appUrl("/api/settings/retention"), {
+      const res = await authenticatedFetch(appUrl("/api/settings/retention"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -126,7 +131,7 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
     setIsCleaning(true)
     setStatusMessage(null)
     try {
-      const res = await fetch(appUrl("/api/settings/cleanup"), { method: "POST" })
+      const res = await authenticatedFetch(appUrl("/api/settings/cleanup"), { method: "POST" })
       if (!res.ok) throw new Error(`Cleanup failed: ${res.status}`)
       const result = await res.json()
       if (result.success) {
@@ -199,6 +204,7 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
 
             <div className="space-y-3">
               <FieldRow
+                disabled={!can("retention.update")}
                 label="Max task count"
                 description="Keep at most this many tasks (empty = unlimited)"
                 value={taskMaxCount}
@@ -207,6 +213,7 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
                 type="number"
               />
               <FieldRow
+                disabled={!can("retention.update")}
                 label="Task retention (hours)"
                 description="Delete tasks older than this (empty = no age limit)"
                 value={taskRetentionHours}
@@ -215,6 +222,7 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
                 type="number"
               />
               <FieldRow
+                disabled={!can("retention.update")}
                 label="Dead worker retention (hours)"
                 description="Delete offline workers older than this (empty = keep forever)"
                 value={deadWorkerRetentionHours}
@@ -223,6 +231,7 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
                 type="number"
               />
               <FieldRow
+                disabled={!can("retention.update")}
                 label="Cleanup interval (seconds)"
                 description="How often cleanup runs"
                 value={cleanupInterval}
@@ -236,7 +245,7 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
                 variant="default"
                 size="sm"
                 onClick={handleSave}
-                disabled={isDemo || snapshotEnabled || isSaving || !hasChanges}
+                disabled={!can("retention.update") || isDemo || snapshotEnabled || isSaving || !hasChanges}
               >
                 {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
                 Apply to running instance
@@ -247,7 +256,7 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
                     variant="outline"
                     size="sm"
                     onClick={handleCleanup}
-                    disabled={isDemo || snapshotEnabled || isCleaning}
+                    disabled={!can("cleanup.run") || isDemo || snapshotEnabled || isCleaning}
                   >
                     {isCleaning ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
                     Run cleanup now
@@ -257,6 +266,11 @@ export const RetentionPolicyPanel: React.FC<{ hideHeader?: boolean }> = ({ hideH
               </Tooltip>
             </div>
 
+            {!can("retention.update") && (
+              <p className="text-sm text-muted-foreground">
+                Your account can view cleanup rules, but cannot change them or run cleanup.
+              </p>
+            )}
             {statusMessage && <p className="text-sm text-muted-foreground">{statusMessage}</p>}
           </>
         )}

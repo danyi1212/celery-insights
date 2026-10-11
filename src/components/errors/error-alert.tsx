@@ -14,11 +14,16 @@ const ErrorAlert: React.FC<ErrorAlertProps> = (props) => {
   }
   console.error(props.error)
   const message = err instanceof Error ? err.message : "We have encountered an unknown error"
+  const denied = /Access denied|Operation requires unrestricted observation access|You don’t have permission/i.test(
+    message,
+  )
   return (
     <Alert variant="destructive">
       <AlertCircle className="size-4" />
-      <AlertTitle>Error</AlertTitle>
-      <AlertDescription>{message}</AlertDescription>
+      <AlertTitle>{denied ? "Access restricted" : "Error"}</AlertTitle>
+      <AlertDescription>
+        {denied ? "You don’t have access to this data or action. Contact your administrator." : message}
+      </AlertDescription>
     </Alert>
   )
 }

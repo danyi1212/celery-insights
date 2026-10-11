@@ -1,3 +1,6 @@
+import { usePermissions } from "@hooks/use-permissions"
+import type { ReadRequest } from "../../../runtime/observation/queries"
+import { queryObservation } from "@lib/observation-query"
 import { Button } from "@components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@components/ui/tooltip"
@@ -6,7 +9,7 @@ import type { ExplorerFilters, SortConfig } from "@hooks/use-explorer-tasks"
 import type { SurrealTask } from "@/types/surreal-records"
 import { exportTasksCsv, exportTasksJson } from "@lib/export-tasks"
 import { Download, FileJson, FileSpreadsheet, Loader2 } from "lucide-react"
-import React, { useCallback, useState } from "react"
+import React, { useCallback, useId, useState } from "react"
 
 interface ExportButtonProps {
   filters: ExplorerFilters
@@ -36,18 +39,33 @@ function buildWhereClause(filters: ExplorerFilters): { clause: string; bindings:
 }
 
 const ExportButton: React.FC<ExportButtonProps> = ({ filters, sort, total }) => {
+  const hintId = useId()
+  const { can } = usePermissions()
   const { db } = useSurrealDB()
+  const [error, setError] = useState("")
   const [isExporting, setIsExporting] = useState(false)
 
   const fetchAllFilteredTasks = useCallback(async (): Promise<SurrealTask[]> => {
     const { clause, bindings } = buildWhereClause(filters)
     const query = `SELECT * FROM task${clause} ORDER BY ${sort.field} ${sort.direction}`
-    const [result] = await db.query<[SurrealTask[]]>(query, bindings)
+    const [result] = await queryObservation<[SurrealTask[]]>(
+      db,
+      {
+        operation: "export",
+        ...filters,
+        sortField: sort.field as ReadRequest["sortField"],
+        sortDirection: sort.direction === "ASC" ? "ASC" : "DESC",
+        limit: 10000,
+      },
+      query,
+      bindings,
+    )
     return Array.isArray(result) ? result : []
   }, [db, filters, sort])
 
   const handleExport = useCallback(
     async (format: "csv" | "json") => {
+      setError("")
       setIsExporting(true)
       try {
         const tasks = await fetchAllFilteredTasks()
@@ -57,7 +75,7 @@ const ExportButton: React.FC<ExportButtonProps> = ({ filters, sort, total }) => 
           exportTasksJson(tasks)
         }
       } catch (err) {
-        console.error("Export failed:", err)
+        setError(err instanceof Error ? err.message : "Unable to export tasks. Please try again.")
       } finally {
         setIsExporting(false)
       }
@@ -66,32 +84,54 @@ const ExportButton: React.FC<ExportButtonProps> = ({ filters, sort, total }) => 
   )
 
   return (
-    <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" disabled={isExporting || total === 0}>
-              {isExporting ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Download className="size-4 text-muted-foreground" />
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>Export {total} tasks</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => handleExport("csv")}>
-          <FileSpreadsheet className="size-4" />
-          Export as CSV
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleExport("json")}>
-          <FileJson className="size-4" />
-          Export as JSON
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex">
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Export tasks"
+                  aria-describedby={!can("task.export") ? hintId : undefined}
+                  disabled={!can("task.export") || isExporting || total === 0}
+                >
+                  {isExporting ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Download className="size-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            {can("task.export") ? `Export ${total} tasks` : "Your account cannot export tasks"}
+          </TooltipContent>
+        </Tooltip>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => handleExport("csv")}>
+            <FileSpreadsheet className="size-4" />
+            Export as CSV
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleExport("json")}>
+            <FileJson className="size-4" />
+            Export as JSON
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {!can("task.export") && (
+        <span id={hintId} className="sr-only">
+          Your account cannot export tasks.
+        </span>
+      )}
+      {error && (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
+    </>
   )
 }
 

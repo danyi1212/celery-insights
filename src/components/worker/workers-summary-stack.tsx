@@ -8,7 +8,7 @@ import { Button } from "@components/ui/button"
 const WorkersSummaryStack: React.FC = () => {
   const { data: workers } = useOnlineWorkers()
   const [expanded, setExpanded] = React.useState(false)
-  const visibleWorkers = expanded ? workers : workers.slice(0, 5)
+  const visibleWorkers = expanded ? workers : workers.slice(0, workers.length === 6 ? 6 : 5)
   const remainingCount = Math.max(workers.length - visibleWorkers.length, 0)
 
   return (
@@ -29,7 +29,7 @@ const WorkersSummaryStack: React.FC = () => {
             const workerId = extractId(worker.id)
             return <WorkerSummary key={workerId} workerId={workerId} />
           })}
-          {workers.length > 5 && (
+          {workers.length > 6 && (
             <Button variant="outline" className="w-full" onClick={() => setExpanded((value) => !value)}>
               {expanded ? "Show Fewer Workers" : `Show ${remainingCount} More Workers`}
             </Button>

@@ -1,3 +1,4 @@
+import RestrictedData from "@components/common/restricted-data"
 import Panel from "@components/common/panel"
 import JsonViewThemed from "@components/common/json-view-themed"
 import { useTask } from "@hooks/use-live-tasks"
@@ -29,6 +30,8 @@ const tryParseJson = (str: string): unknown => {
 
 const CardContent: React.FC<CardContentProps> = ({ task }) => {
   if (!task) return <p>Could not find task result.</p>
+
+  if (task.restricted_fields?.includes("task.result.read")) return <RestrictedData label="Task result" />
 
   if (!task.result) return <p>No result available.</p>
 

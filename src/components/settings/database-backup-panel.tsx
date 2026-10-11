@@ -1,3 +1,5 @@
+import { usePermissions } from "@hooks/use-permissions"
+import { authenticatedFetch } from "@lib/authenticated-fetch"
 import { appUrl } from "@lib/app-url"
 import Panel from "@components/common/panel"
 import { useSurrealDB } from "@components/surrealdb-provider"
@@ -8,6 +10,7 @@ import { Database, Download, Loader2, Upload } from "lucide-react"
 import React, { useCallback, useRef, useState } from "react"
 
 export const DatabaseBackupPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
+  const { can } = usePermissions()
   const isDemo = useSettingsStore((state) => state.demo)
   const { appConfig } = useSurrealDB()
   const snapshotEnabled = appConfig?.debugSnapshot?.enabled === true
@@ -21,8 +24,8 @@ export const DatabaseBackupPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHe
     setIsExporting(true)
     setImportResult(null)
     try {
-      const response = await fetch(appUrl("/api/settings/export"))
-      if (!response.ok) return
+      const response = await authenticatedFetch(appUrl("/api/settings/export"))
+      if (!response.ok) throw new Error("Unable to export the backup. Please try again.")
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement("a")
@@ -33,7 +36,7 @@ export const DatabaseBackupPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHe
       document.body.removeChild(anchor)
       URL.revokeObjectURL(url)
     } catch (err) {
-      console.error("Export failed:", err)
+      setImportResult(err instanceof Error ? err.message : "Unable to export the backup. Please try again.")
     } finally {
       setIsExporting(false)
     }
@@ -53,7 +56,7 @@ export const DatabaseBackupPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHe
       try {
         const formData = new FormData()
         formData.append("file", file)
-        const response = await fetch(appUrl("/api/settings/import"), {
+        const response = await authenticatedFetch(appUrl("/api/settings/import"), {
           method: "POST",
           body: formData,
         })
@@ -70,7 +73,7 @@ export const DatabaseBackupPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHe
         }
       } catch (err) {
         console.error("Import failed:", err)
-        setImportResult("Import failed — check console for details")
+        setImportResult(err instanceof Error ? err.message : "Unable to import the backup. Please try again.")
       } finally {
         setIsImporting(false)
         // Reset file input so the same file can be selected again
@@ -85,11 +88,30 @@ export const DatabaseBackupPanel: React.FC<{ hideHeader?: boolean }> = ({ hideHe
       <div className="space-y-4 p-4">
         <p className="text-sm text-muted-foreground">Export the current dataset or restore one from a backup file.</p>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExport} disabled={isDemo || isExporting}>
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={
+              !can(
+                "backup.export",
+                "task.input.read",
+                "task.result.read",
+                "task.failure.read",
+                "event.raw.read",
+                "worker.inspect.read",
+              ) ||
+              isDemo ||
+              isExporting
+            }
+          >
             {isExporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
             Export Backup
           </Button>
-          <Button variant="outline" onClick={handleImportClick} disabled={isDemo || snapshotEnabled || isImporting}>
+          <Button
+            variant="outline"
+            onClick={handleImportClick}
+            disabled={!can("backup.import") || isDemo || snapshotEnabled || isImporting}
+          >
             {isImporting ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
             Import Backup
           </Button>

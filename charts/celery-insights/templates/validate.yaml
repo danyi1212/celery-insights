@@ -7,15 +7,17 @@
 {{- $path := .Values.surrealdb.surrealdb.path -}}
 {{- if and .Values.surrealdb.persistence.enabled (not (regexMatch "^(rocksdb|surrealkv):/data(/|$)" $path)) }}{{ fail "PVC persistence requires rocksdb:/data/... or surrealkv:/data/... storage" }}{{ end -}}
 {{- if and (ne $path "memory") (not (regexMatch "^(rocksdb|surrealkv):/data(/|$)" $path)) }}{{ fail "Managed SurrealDB supports only memory or local disk; use an external database for TiKV" }}{{ end -}}
-{{- $dbCredentials := dict -}}
+{{- $hasUser := false -}}{{- $hasPassword := false -}}
 {{- range $env := .Values.surrealdb.podExtraEnv -}}
-{{- if or (eq $env.name "SURREAL_USER") (eq $env.name "SURREAL_PASS") -}}
-{{- if hasKey $dbCredentials $env.name }}{{ fail "Managed database credentials must not be duplicated" }}{{ end -}}
-{{- $_ := set $dbCredentials $env.name true -}}
-{{- $key := ternary "rootUser" "rootPassword" (eq $env.name "SURREAL_USER") -}}
-{{- if or (ne (dig "valueFrom" "secretKeyRef" "name" "" $env) $.Values.credentials.existingSecret) (ne (dig "valueFrom" "secretKeyRef" "key" "" $env) (index $.Values.credentials.keys $key)) }}{{ fail "Managed database podExtraEnv credentials must match credentials.existingSecret and keys" }}{{ end -}}
+{{- if eq $env.name "SURREAL_USER" -}}
+{{- if or $hasUser (ne (default "" $env.value) "root") }}{{ fail "Managed database must use the application's root account" }}{{ end -}}
+{{- $hasUser = true -}}
+{{- end -}}
+{{- if eq $env.name "SURREAL_PASS" -}}
+{{- if or $hasPassword (ne (dig "valueFrom" "secretKeyRef" "name" "" $env) $.Values.credentials.existingSecret) (ne (dig "valueFrom" "secretKeyRef" "key" "" $env) $.Values.credentials.keys.rootPassword) }}{{ fail "Managed database password must match credentials.existingSecret and keys.rootPassword" }}{{ end -}}
+{{- $hasPassword = true -}}
 {{- end -}}{{- end -}}
-{{- if ne (len $dbCredentials) 2 }}{{ fail "Managed database requires both SURREAL_USER and SURREAL_PASS Secret references" }}{{ end -}}
+{{- if not (and $hasUser $hasPassword) }}{{ fail "Managed database requires both SURREAL_USER and SURREAL_PASS" }}{{ end -}}
 {{- if and (ne $path "memory") (not .Values.surrealdb.persistence.enabled) -}}
 {{- $mountedClaim := false -}}
 {{- range $volume := .Values.surrealdb.volumes -}}
@@ -38,10 +40,10 @@
 {{- end -}}
 {{- if gt (int $count) 1 }}{{ fail (printf "config.%s accepts exactly one source: structured, content, existingConfigMap, or existingSecret" $kind) }}{{ end -}}
 {{- if eq $kind "toml" -}}
-{{- if and (gt (int $count) 0) (not $file.enabled) }}{{ fail "Set config.toml.enabled=true and select a #138-compatible image to use TOML" }}{{ end -}}
-{{- if and $file.enabled (eq (int $count) 0) }}{{ fail "config.toml.enabled requires a configuration source" }}{{ end -}}
+{{- if and (gt (int $count) 0) (not $file.enabled) }}{{ fail "Application authentication requires config.toml.enabled=true" }}{{ end -}}
+{{- if not $file.enabled }}{{ fail "Application authentication requires config.toml.enabled=true" }}{{ end -}}
 {{- end -}}{{- end -}}
-{{- $owned := list "BROKER_URL" "RESULT_BACKEND" "PORT" "HOST" "PROCESS_ROLE" "SURREALDB_URL" "SURREALDB_EXTERNAL_URL" "SURREALDB_ROOT_USER" "SURREALDB_ROOT_PASS" "SURREALDB_INGESTER_PASS" "SURREALDB_FRONTEND_PASS" "SURREALDB_NAMESPACE" "SURREALDB_DATABASE" "CI_CONFIG_FILE" "CONFIG_FILE" "INGESTION_LEADER_ELECTION" "DEBUG_BUNDLE_PATH" -}}
+{{- $owned := list "BROKER_URL" "RESULT_BACKEND" "PORT" "HOST" "PROCESS_ROLE" "SURREALDB_URL" "SURREALDB_EXTERNAL_URL" "SURREALDB_ROOT_USER" "SURREALDB_ROOT_PASS" "SURREALDB_INGESTER_PASS" "SURREALDB_FRONTEND_PASS" "SURREALDB_NAMESPACE" "SURREALDB_DATABASE" "CI_CONFIG_FILE" "CELERY_INSIGHTS_CONFIG_FILE" "CELERY_INSIGHTS_DATABASE_URL" "CELERY_INSIGHTS_DATABASE_ROOT_PASSWORD" "CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD" "CELERY_INSIGHTS_BROKER_URL" "CELERY_INSIGHTS_RESULT_BACKEND" "CELERY_INSIGHTS_SESSION_SECRET" "CELERY_INSIGHTS_OIDC_CLIENT_SECRET" "INSIGHTS_ACCOUNT_PASSWORD" "CONFIG_FILE" "INGESTION_LEADER_ELECTION" "DEBUG_BUNDLE_PATH" -}}
 {{- range $name, $value := .Values.config.env -}}
 {{- if or (has $name $owned) (regexMatch "(?i)(password|pass$|token|secret|broker_url|result_backend)" $name) }}{{ fail (printf "%s must use chart configuration or Secret references, not config.env" $name) }}{{ end -}}
 {{- end -}}
@@ -50,3 +52,6 @@
 {{- if or (has .name $owned) (hasKey $.Values.config.env .name) (hasKey $seen .name) }}{{ fail (printf "extraEnv duplicates chart-owned variable %s" .name) }}{{ end -}}
 {{- $_ := set $seen .name true -}}
 {{- end -}}
+
+{{- $custom := or .Values.config.toml.content .Values.config.toml.structured .Values.config.toml.existingConfigMap .Values.config.toml.existingSecret -}}
+{{- if and (not $custom) (eq .Values.authentication.mode "oidc") (or (not .Values.authentication.oidc.issuer) (not .Values.authentication.oidc.clientId) (not .Values.authentication.oidc.roleMappings)) }}{{ fail "OIDC requires issuer, clientId and explicit roleMappings" }}{{ end -}}

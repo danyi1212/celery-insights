@@ -1,3 +1,5 @@
+const access = vi.hoisted(() => ({ allowed: true }))
+vi.mock("@hooks/use-permissions", () => ({ usePermissions: () => ({ can: () => access.allowed }) }))
 import { screen, waitFor } from "@/test-utils"
 import { render } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
@@ -41,6 +43,7 @@ const createWrapper = () => {
 
 describe("RetentionPolicyPanel", () => {
   beforeEach(() => {
+    access.allowed = true
     vi.restoreAllMocks()
     useSettingsStore.setState({ demo: false })
   })
@@ -284,4 +287,21 @@ describe("RetentionPolicyPanel", () => {
     expect(screen.getByText(/does not connect to a live instance/i)).toBeInTheDocument()
     expect(fetchSpy).not.toHaveBeenCalled()
   })
+})
+
+// Session/CSRF transport is exercised by authenticated-fetch.test.ts.
+vi.mock("@lib/authenticated-fetch", () => ({
+  authenticatedFetch: (url: string, options?: RequestInit) => fetch(url, options),
+}))
+
+it("lets viewers read cleanup settings without changing them", async () => {
+  access.allowed = false
+  useSettingsStore.setState({ demo: false })
+  vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify(mockRetentionInfo)))
+  render(<RetentionPolicyPanel />, { wrapper: createWrapper() })
+  await waitFor(() => expect(screen.getByText("1,500")).toBeInTheDocument())
+  expect(screen.getByRole("button", { name: "Run cleanup now" })).toBeDisabled()
+  expect(screen.getByRole("button", { name: "Apply to running instance" })).toBeDisabled()
+  for (const field of screen.getAllByRole("spinbutton")) expect(field).toBeDisabled()
+  expect(screen.getByText(/cannot change them or run cleanup/)).toBeVisible()
 })

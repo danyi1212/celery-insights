@@ -54,3 +54,33 @@ def test_adds_event_to_queue(receiver, should_stop):
 
     assert not receiver.queue.empty()
     assert receiver.queue.get_nowait() == event
+
+
+def test_receiver_bounds_pending_callbacks_and_queue(receiver):
+    for _ in range(20_000):
+        receiver.on_event({"type": "worker-heartbeat"})
+    receiver._loop.run_until_complete(asyncio.sleep(0))
+    assert receiver.queue.qsize() == receiver.queue.maxsize == 10_000
+    receiver.on_event({"type": "worker-heartbeat"})
+    receiver._loop.run_until_complete(asyncio.sleep(0))
+    assert receiver.queue.qsize() == 10_000
+
+
+def test_invalid_broker_timestamp_is_isolated_before_celery_localization(mocker: MockerFixture):
+    from events.receiver import ValidatedEventReceiver
+
+    app = Celery()
+    handler = mocker.Mock()
+    consumer = ValidatedEventReceiver(None, app=app, handlers={"*": handler})
+    consumer._receive(
+        [
+            {"type": "worker-heartbeat", "timestamp": "bad", "utcoffset": 0},
+            {"type": "worker-heartbeat", "timestamp": 1700000000, "utcoffset": "bad"},
+            {"type": "worker-heartbeat", "timestamp": 1700000000, "utcoffset": 0},
+        ],
+        None,
+    )
+    handler.assert_called_once()
+    from celery.utils.time import adjust_timestamp
+
+    assert handler.call_args.args[0]["timestamp"] == adjust_timestamp(1700000000, 0)

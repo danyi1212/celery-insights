@@ -1,6 +1,10 @@
+import { getTaskExecution } from "@utils/task-execution"
 import { TaskState, type Task } from "@/types/surreal-records"
 
+export type TaskPhaseKind = "queue" | "worker" | "running"
+
 export interface TaskPhase {
+  kind: TaskPhaseKind
   label: string
   color: string
   startMs: number
@@ -26,24 +30,44 @@ const getStartedAt = (task: Task): Date | undefined => task.started_at || task.r
 
 const getReceivedAt = (task: Task): Date | undefined => task.received_at || task.revoked_at
 
-export const getTaskEndTime = (task: Task, now: Date): Date => getFinishedAt(task) || now
+export const getTaskEndTime = (task: Task, now: Date): Date => {
+  if (isTerminalState(task.state)) return getFinishedAt(task) ?? task.last_updated
+  if (task.state === TaskState.STARTED && getTaskExecution(task, now.getTime()) !== "active") {
+    return new Date(
+      Math.min(
+        now.getTime(),
+        Math.max(
+          task.started_at?.getTime() ?? 0,
+          task.last_updated.getTime(),
+          // The last positive inspection, which outlives cleared and refreshed negative observations.
+          task.execution_active_at?.getTime() ?? 0,
+        ),
+      ),
+    )
+  }
+  return now
+}
 
 export const PHASE_COLORS = {
   queue: "var(--color-status-neutral)",
   worker: "var(--color-status-info)",
   running: "var(--color-status-success)",
+  unconfirmed: "var(--color-status-warning)",
 } as const
 
 export const computeTaskPhases = (task: Task, now: Date): TaskPhase[] => {
   const phases: TaskPhase[] = []
+  const unconfirmed = task.state === TaskState.STARTED && getTaskExecution(task, now.getTime()) !== "active"
   const sentMs = task.sent_at.getTime()
-  const receivedMs = (getReceivedAt(task) || now).getTime()
-  const startedMs = (getStartedAt(task) || now).getTime()
+  // Missing lifecycle timestamps fall back to the task's end, which is frozen once it finished or went unconfirmed.
   const finishedMs = getTaskEndTime(task, now).getTime()
+  const receivedMs = getReceivedAt(task)?.getTime() ?? finishedMs
+  const startedMs = getStartedAt(task)?.getTime() ?? finishedMs
 
   // Queue phase: sentAt -> receivedAt
   if (receivedMs > sentMs) {
     phases.push({
+      kind: "queue",
       label: "Waiting in Queue",
       color: PHASE_COLORS.queue,
       startMs: sentMs,
@@ -55,6 +79,7 @@ export const computeTaskPhases = (task: Task, now: Date): TaskPhase[] => {
   // Worker phase: receivedAt -> startedAt
   if (getReceivedAt(task) && startedMs > receivedMs) {
     phases.push({
+      kind: "worker",
       label: "Waiting in Worker",
       color: PHASE_COLORS.worker,
       startMs: receivedMs,
@@ -66,26 +91,25 @@ export const computeTaskPhases = (task: Task, now: Date): TaskPhase[] => {
   // Running phase: startedAt -> finishedAt
   if (getStartedAt(task) && finishedMs > startedMs) {
     phases.push({
-      label: "Running",
-      color: PHASE_COLORS.running,
+      kind: "running",
+      label: unconfirmed ? "Execution unconfirmed" : "Running",
+      color: unconfirmed ? PHASE_COLORS.unconfirmed : PHASE_COLORS.running,
       startMs: startedMs,
       endMs: finishedMs,
       durationMs: finishedMs - startedMs,
     })
   }
 
-  // If no phases (e.g. only sentAt exists with no further progress), show queue phase to now
-  if (phases.length === 0) {
-    const nowMs = now.getTime()
-    if (nowMs > sentMs) {
-      phases.push({
-        label: "Waiting in Queue",
-        color: PHASE_COLORS.queue,
-        startMs: sentMs,
-        endMs: nowMs,
-        durationMs: nowMs - sentMs,
-      })
-    }
+  // If no phases (e.g. only sentAt exists with no further progress), show queue phase to the end
+  if (phases.length === 0 && finishedMs > sentMs) {
+    phases.push({
+      kind: "queue",
+      label: "Waiting in Queue",
+      color: PHASE_COLORS.queue,
+      startMs: sentMs,
+      endMs: finishedMs,
+      durationMs: finishedMs - sentMs,
+    })
   }
 
   return phases

@@ -1,54 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
 import { parseConfig } from "./config"
-import { exportSurrealData, extractSurrealTableData, importSurrealData, redactConfig } from "./debug-bundle"
+import { exportSurrealData, importSurrealData, redactConfig } from "./debug-bundle"
 
 describe("debug-bundle surreal helpers", () => {
-  it("extracts only table data statements from a native surreal export", () => {
-    const sql = `-- ------------------------------
--- OPTION
--- ------------------------------
-
-OPTION IMPORT;
-
--- ------------------------------
--- USERS
--- ------------------------------
-
-DEFINE USER viewer ON DATABASE PASSWORD 'viewer';
-
--- ------------------------------
--- TABLE: event
--- ------------------------------
-
-DEFINE TABLE event TYPE ANY SCHEMALESS;
-
--- ------------------------------
--- TABLE DATA: event
--- ------------------------------
-
-INSERT [{ id: event:1, timestamp: d'2026-03-14T21:30:33.586144Z' }];
-
--- ------------------------------
--- TABLE: task
--- ------------------------------
-
-DEFINE TABLE task TYPE NORMAL SCHEMAFULL;
-
--- ------------------------------
--- TABLE DATA: task
--- ------------------------------
-
-INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
-`
-
-    expect(extractSurrealTableData(sql, ["event", "task", "worker"])).toBe(`OPTION IMPORT;
-
-INSERT [{ id: event:1, timestamp: d'2026-03-14T21:30:33.586144Z' }];
-
-INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
-`)
-  })
-
   it("exports data when query resolves to raw arrays", async () => {
     const db = {
       query: vi
@@ -97,7 +51,7 @@ INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
     })
 
     expect(db.query).toHaveBeenCalledWith(expect.stringContaining("UPSERT type::record('task', $record.id)"), {
-      tasks_0: [{ id: "1", data: { state: "SUCCESS" } }],
+      tasks_0: [{ id: 1, data: { state: "SUCCESS" } }],
     })
   })
 
@@ -148,6 +102,8 @@ INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
           state: "SUCCESS",
           failed_at: "2026-03-14T18:43:05.917351Z",
           first_observed_at: "2026-03-14T18:40:00.000000Z",
+          execution_observed_at: "2026-03-14T18:42:00.000000Z",
+          execution_active_at: "2026-03-14T18:41:00.000000Z",
         },
       ],
       events: [{ id: "event:1", timestamp: "2026-03-14T18:43:05.917351Z" }],
@@ -157,26 +113,33 @@ INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
     expect(db.query).toHaveBeenCalledWith(expect.any(String), {
       tasks_0: [
         {
-          id: "1",
+          id: 1,
           data: {
             state: "SUCCESS",
             failed_at: new Date("2026-03-14T18:43:05.917351Z"),
             first_observed_at: new Date("2026-03-14T18:40:00.000000Z"),
+            execution_observed_at: new Date("2026-03-14T18:42:00.000000Z"),
+            execution_active_at: new Date("2026-03-14T18:41:00.000000Z"),
           },
         },
       ],
-      events_0: [{ id: "1", data: { timestamp: new Date("2026-03-14T18:43:05.917351Z") } }],
-      workers_0: [{ id: "1", data: { last_updated: new Date("2026-03-14T18:43:05.917351Z") } }],
+      events_0: [{ id: 1, data: { timestamp: new Date("2026-03-14T18:43:05.917351Z") } }],
+      workers_0: [{ id: 1, data: { last_updated: new Date("2026-03-14T18:43:05.917351Z") } }],
     })
   })
 })
 
 it("redacts the MCP token in diagnostic bundles", () => {
-  expect(redactConfig(parseConfig({ MCP_TOKEN: "private-token" }), false).mcpToken).toBe("***REDACTED***")
+  expect(redactConfig(parseConfig({ MCP_TOKEN: "private-token" }), false).mcpCursorSecret).toBe("***REDACTED***")
 })
 
-it("redacts the database administrative password", () => {
-  const config = parseConfig({ SURREALDB_ROOT_PASS: "private-admin-password" })
-  expect(redactConfig(config, false).surrealdbRootPass).toBe("***REDACTED***")
-  expect(redactConfig(config, true).surrealdbRootPass).toBe("private-admin-password")
+it("restores escaped record identifiers without changing their value", async () => {
+  const { RecordId } = await import("surrealdb")
+  const query = vi.fn().mockResolvedValue([])
+  const id = new RecordId("worker", "host:abc⟩\\node")
+  await importSurrealData(
+    { query } as never,
+    JSON.parse(JSON.stringify({ version: 1, tasks: [], events: [], workers: [{ id }] })),
+  )
+  expect(query.mock.calls[0][1].workers_0[0].id).toBe("host:abc⟩\\node")
 })

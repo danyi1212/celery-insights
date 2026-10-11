@@ -1,6 +1,9 @@
-import { config } from "./config"
-
 type LogLevel = "debug" | "info" | "warn" | "error"
+
+let defaults: { format: "pretty" | "json"; level: LogLevel } = { format: "pretty", level: "info" }
+export function configureLogging(format: "pretty" | "json", level: LogLevel): void {
+  defaults = { format, level }
+}
 
 const LEVEL_PRIORITY: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, error: 3 }
 
@@ -53,12 +56,12 @@ export function registerLogSink(service: string, sink: LogSink): () => void {
 }
 
 export function createLogger(service: string, format?: "pretty" | "json", level?: LogLevel): Logger {
-  const fmt = format ?? config.logFormat
-  const minLevel = level ?? config.logLevel
   const isTTY = process.stdout.isTTY === true
-  const useColor = isTTY && fmt === "pretty"
 
   function emit(lvl: LogLevel, msg: string, extra?: Record<string, unknown>): void {
+    const fmt = format ?? defaults.format
+    const minLevel = level ?? defaults.level
+    const useColor = isTTY && fmt === "pretty"
     if (LEVEL_PRIORITY[lvl] < LEVEL_PRIORITY[minLevel]) return
 
     const ts = new Date().toISOString()

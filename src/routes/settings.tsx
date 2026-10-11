@@ -1,3 +1,4 @@
+import { usePermissions } from "@hooks/use-permissions"
 import { appHref } from "@lib/app-url"
 import { createFileRoute } from "@tanstack/react-router"
 import { DebugSnapshotPanel } from "@components/settings/debug-snapshot-panel"
@@ -40,31 +41,24 @@ const SectionBlock = ({
 )
 
 const SettingsPage = () => {
+  const { can } = usePermissions()
   const { appConfig } = useSurrealDB()
   const snapshotEnabled = appConfig?.debugSnapshot?.enabled === true
   const sections = [
     { id: "workspace", label: "Workspace" },
     ...(snapshotEnabled ? [{ id: "snapshot", label: "Snapshot overview" }] : []),
-    { id: "system", label: "System status" },
+    ...(can("diagnostics.export") ? [{ id: "system", label: "System status" }] : []),
     { id: "cleanup", label: "Cleanup" },
-    { id: "backups", label: "Backups" },
-    { id: "danger-zone", label: "Danger zone" },
+    ...(can("backup.export") || can("backup.import") ? [{ id: "backups", label: "Backups" }] : []),
+    ...(can("history.clear") ? [{ id: "danger-zone", label: "Danger zone" }] : []),
   ]
 
   return (
     <div className="mx-auto grid max-w-7xl gap-8 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_220px]">
       <div className="space-y-8">
-        <header className="space-y-3">
-          <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">Settings</p>
-          <div className="space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight">Manage your workspace and this instance.</h1>
-            <p className="max-w-3xl text-sm text-muted-foreground md:text-base">
-              Change local preferences, check system health, and handle storage tasks from one place.
-            </p>
-          </div>
+        <header>
+          <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
         </header>
-
-        <SettingsOverview />
 
         <SectionBlock id="workspace" label="Workspace" action={<SettingsPanelAction />}>
           <SettingsPanel hideHeader />
@@ -76,21 +70,28 @@ const SettingsPage = () => {
           </SectionBlock>
         )}
 
-        <SectionBlock id="system" label="System status" action={<ServerInfoPanelAction />}>
-          <ServerInfoPanel hideHeader />
-        </SectionBlock>
+        {can("diagnostics.export") && (
+          <SectionBlock id="system" label="System status" action={<ServerInfoPanelAction />}>
+            <SettingsOverview />
+            <ServerInfoPanel hideHeader />
+          </SectionBlock>
+        )}
 
         <SectionBlock id="cleanup" label="Cleanup" action={<RetentionPolicyPanelAction />}>
           <RetentionPolicyPanel hideHeader />
         </SectionBlock>
 
-        <SectionBlock id="backups" label="Backups">
-          <DatabaseBackupPanel hideHeader />
-        </SectionBlock>
+        {(can("backup.export") || can("backup.import")) && (
+          <SectionBlock id="backups" label="Backups">
+            <DatabaseBackupPanel hideHeader />
+          </SectionBlock>
+        )}
 
-        <SectionBlock id="danger-zone" label="Danger zone">
-          <DangerZonePanel hideHeader />
-        </SectionBlock>
+        {can("history.clear") && (
+          <SectionBlock id="danger-zone" label="Danger zone">
+            <DangerZonePanel hideHeader />
+          </SectionBlock>
+        )}
       </div>
 
       <aside className="hidden lg:block">
