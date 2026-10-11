@@ -53,7 +53,12 @@ const ExplorerGrid: React.FC<ExplorerGridProps> = ({ tasks, sort, setSort, page,
           const taskId = extractId(row.original.id)
           return (
             <div className="flex items-center justify-center">
-              <TaskAvatar taskId={taskId} type={row.original.type} status={row.original.state as TaskState} />
+              <TaskAvatar
+                taskId={taskId}
+                type={row.original.type}
+                status={row.original.state as TaskState}
+                execution={row.original}
+              />
             </div>
           )
         },

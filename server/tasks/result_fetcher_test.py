@@ -42,7 +42,7 @@ class TestBuildTaskMetaUpsert:
         )
         for field in ("type", "args", "kwargs", "worker", "retries", "routing_key"):
             assert params[field] is None
-            assert f"{field} = ${field} ?? $meta_previous.{field}" in query
+            assert f"THEN ${field} ?? $meta_previous.{field}" in query
         assert "task_search" not in query
 
     def test_extended_invocation_fields_are_written(self):

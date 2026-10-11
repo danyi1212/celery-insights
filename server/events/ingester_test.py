@@ -31,7 +31,7 @@ class TestBuildTaskUpsert:
         query, params = build_task_upsert(event, 0)
 
         assert "UPSERT type::record('task', $t0_id)" in query
-        assert "state = IF $t0_previous.last_updated IS NONE" in query
+        assert "state = IF $t0_apply THEN $t0_state ELSE $t0_previous.state END" in query
         assert "sent_at = IF $t0_previous.sent_at IS NONE" in query
         assert params["t0_id"] == "abc-123"
         assert params["t0_state"] == "PENDING"
@@ -86,23 +86,25 @@ class TestBuildTaskUpsert:
 
     def test_out_of_order_protection_in_state(self):
         query, _ = build_task_upsert({"type": "task-received", "uuid": "x", "timestamp": 1700000000.0}, 0)
-        expected = (
-            "state = IF $t0_previous.last_updated IS NONE OR <datetime>$t0_ts > $t0_previous.last_updated"
-            " THEN $t0_state ELSE $t0_previous.state END"
+        assert (
+            "LET $t0_apply = $t0_previous.last_updated IS NONE OR <datetime>$t0_ts > $t0_previous.last_updated; "
+            in query
         )
-        assert expected in query
+        assert "state = IF $t0_apply THEN $t0_state ELSE $t0_previous.state END" in query
+        assert "last_updated_observed" not in query.split("LET $t0_apply")[1].split(";")[0]
 
     def test_out_of_order_protection_in_last_updated(self):
         query, _ = build_task_upsert({"type": "task-received", "uuid": "x", "timestamp": 1700000000.0}, 0)
+        assert "last_updated = IF $t0_apply THEN <datetime>$t0_ts ELSE $t0_previous.last_updated END" in query
         assert (
-            "<datetime>$t0_ts > $t0_previous.last_updated THEN <datetime>$t0_ts ELSE $t0_previous.last_updated END"
+            "last_updated_observed = IF $t0_apply THEN false ELSE $t0_previous.last_updated_observed ?? false END"
             in query
         )
 
     def test_workflow_follows_root_id_freshness(self):
         query, _ = build_task_upsert({"type": "task-sent", "uuid": "x", "timestamp": 1700000000.0, "root_id": "r"}, 0)
         assert (
-            "workflow_id = IF $t0_previous.root_id IS NONE OR $t0_previous.last_updated IS NONE"
+            "workflow_id = IF $t0_previous.root_id IS NONE OR $t0_apply"
             " OR <datetime>$t0_ts >= $t0_previous.last_updated"
             " THEN $t0_workflow_id ELSE $t0_previous.workflow_id ?? $t0_workflow_id END"
         ) in query
@@ -129,7 +131,7 @@ class TestBuildTaskUpsert:
         query, params = build_task_upsert(event, 0)
         for field in ("root_id", "parent_id", "routing_key", "worker"):
             assert (
-                f"{field} = IF $t0_previous.{field} IS NONE OR $t0_previous.last_updated IS NONE"
+                f"{field} = IF $t0_previous.{field} IS NONE OR $t0_apply"
                 f" OR <datetime>$t0_ts >= $t0_previous.last_updated"
                 f" THEN $t0_{field} ELSE $t0_previous.{field} END"
             ) in query
@@ -137,6 +139,14 @@ class TestBuildTaskUpsert:
         assert params["t0_parent_id"] == "p"
         assert params["t0_routing_key"] == "reports"
         assert params["t0_worker"] == "worker-1"
+
+    def test_terminal_event_replaces_observed_non_terminal_or_same_state(self):
+        query, _ = build_task_upsert({"type": "task-succeeded", "uuid": "x", "timestamp": 1700000000.0}, 0)
+        assert (
+            "LET $t0_apply = $t0_previous.last_updated IS NONE OR <datetime>$t0_ts > $t0_previous.last_updated"
+            " OR ($t0_previous.last_updated_observed = true AND ($t0_previous.state NOT IN"
+            " ['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED'] OR $t0_previous.state = $t0_state)); "
+        ) in query
 
     def test_timestamp_field_keeps_earliest(self):
         query, _ = build_task_upsert({"type": "task-started", "uuid": "x", "timestamp": 1700000000.0}, 0)

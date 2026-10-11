@@ -134,6 +134,61 @@ describe("DemoEventGenerator", () => {
     expect(heartbeats.length).toBe(3) // 3 workers
   })
 
+  it("records execution observations for started tasks and clears them on completion", async () => {
+    await generator.start()
+
+    const taskUpserts = calls(mockDb).filter(
+      ([q]: MockCall) => typeof q === "string" && q.includes("UPSERT type::record('task'"),
+    )
+    const observed = taskUpserts.filter(([q]) => q.includes("execution_active = true"))
+    const cleared = taskUpserts.filter(([q]) => q.includes("execution_active = NONE"))
+    const untouched = taskUpserts.filter(([q]) => !q.includes("execution_active"))
+
+    expect(observed.length).toBeGreaterThan(0)
+    expect(cleared.length).toBeGreaterThan(0)
+    expect(new Set(observed.map(([, params]) => params.state))).toEqual(new Set(["STARTED"]))
+    expect(cleared.map(([, params]) => params.state)).not.toContain("STARTED")
+    expect(new Set(untouched.map(([, params]) => params.state))).toEqual(new Set(["PENDING", "RECEIVED"]))
+    for (const [q] of observed) {
+      expect(q).toContain("execution_observed_at = <datetime>$ts")
+      expect(q).toContain("execution_active_at = <datetime>$ts")
+    }
+  })
+
+  it("refreshes active-list inspections and execution observations on heartbeat", async () => {
+    mockDb.query.mockImplementation((q: string) =>
+      Promise.resolve(
+        q.startsWith("SELECT record::id(id) AS id, type, started_at FROM task")
+          ? [[{ id: "running-task", type: "myapp.tasks.send_email", started_at: "2026-10-06T12:00:00Z" }]]
+          : [],
+      ),
+    )
+    await generator.start()
+    mockDb.query.mockClear()
+
+    await vi.advanceTimersByTimeAsync(5000)
+
+    const inspections = calls(mockDb).filter(
+      ([q, params]: MockCall) =>
+        typeof q === "string" && q.includes("UPDATE type::record('worker'") && typeof params.inspect === "string",
+    )
+    expect(inspections).toHaveLength(3)
+    for (const [, params] of inspections) {
+      const inspect = JSON.parse(params.inspect as string)
+      expect(inspect._observed_at.active).toBe(params.ts)
+      expect(inspect.active).toEqual([
+        expect.objectContaining({ id: "running-task", type: "myapp.tasks.send_email", hostname: params.id }),
+      ])
+    }
+    const refreshes = calls(mockDb).filter(
+      ([q]: MockCall) =>
+        typeof q === "string" &&
+        q.startsWith("UPDATE task SET execution_active = true, execution_observed_at = <datetime>$ts"),
+    )
+    expect(refreshes).toHaveLength(3)
+    for (const [q] of refreshes) expect(q).toContain("execution_active_at = <datetime>$ts")
+  })
+
   it("generates continuous tasks over time", async () => {
     await generator.start()
 

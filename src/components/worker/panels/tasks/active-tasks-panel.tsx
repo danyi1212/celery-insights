@@ -20,7 +20,9 @@ const ActiveTasksPanel: React.FC<ActiveTasksPanelProps> = ({ workerId, ...props 
         </AnimatedList>
       ) : (
         <div className="flex items-center justify-center p-3">
-          <h4 className="text-center text-2xl font-semibold">No active tasks</h4>
+          <h4 className="text-center text-2xl font-semibold">
+            {tasks ? "No active tasks" : "Active task inspection unavailable or stale"}
+          </h4>
         </div>
       )}
     </Panel>

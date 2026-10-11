@@ -116,7 +116,14 @@ const TaskComparisonPicker: React.FC<TaskComparisonPickerProps> = ({
                       else onSelectLeft(task.id)
                     }}
                   >
-                    <TaskAvatar taskId={task.id} type={task.type} status={task.state} disableLink className="size-8" />
+                    <TaskAvatar
+                      taskId={task.id}
+                      type={task.type}
+                      status={task.state}
+                      execution={task}
+                      disableLink
+                      className="size-8"
+                    />
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate text-sm font-medium">{task.id}</span>
                       <span className="truncate text-xs text-muted-foreground">
@@ -124,7 +131,7 @@ const TaskComparisonPicker: React.FC<TaskComparisonPickerProps> = ({
                       </span>
                     </div>
                     <div className="ml-auto flex items-center gap-2">
-                      <TaskStatusIcon status={task.state} />
+                      <TaskStatusIcon status={task.state} execution={task} />
                       {isLeftSelected && (
                         <Badge variant="outline" className="text-xs">
                           Left
