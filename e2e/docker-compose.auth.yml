@@ -10,6 +10,7 @@ services:
     image: ${E2E_APP_IMAGE:-celery-insights-app:local}
     environment:
       CELERY_INSIGHTS_CONFIG_FILE: /fixture/authentication.toml
+      CELERY_INSIGHTS_DATABASE_ROOT_PASSWORD: e2e-database-root-secret
     volumes:
       - ../test_project/.e2e-auth:/fixture:ro
   reverse-proxy:

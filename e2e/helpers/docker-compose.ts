@@ -96,7 +96,7 @@ export async function privateObservationQuery(sql: string): Promise<Response> {
       "--fail-with-body",
       "-sS",
       "-u",
-      "root:root",
+      "root:e2e-database-root-secret",
       "-H",
       "Accept: application/json",
       "--data-binary",
