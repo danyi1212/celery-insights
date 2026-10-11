@@ -8,8 +8,8 @@ export function accessPage(prefix: string, destination: string, status: 403 | 50
   const title = status === 403 ? "Access restricted" : "Access verification unavailable"
   const message =
     status === 403
-      ? "Your account or organization policy does not allow access to this page. Contact your administrator, or sign in with another account."
-      : "We cannot verify your access right now. Please retry shortly, or contact your administrator if this continues."
+      ? "You don’t have access to this page. Contact your administrator or switch accounts."
+      : "We cannot verify your access right now. Retry or contact your administrator."
   return new Response(
     `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · Celery Insights</title>
     <style>:root{font-family:ui-sans-serif,system-ui,sans-serif;color-scheme:light dark;color:light-dark(#20281e,#edf1e8);background:light-dark(#fafbf7,#171c18)}body{margin:0;display:grid;min-height:100svh;place-items:center}main{max-width:28rem;padding:2rem}h1{font-size:2rem;letter-spacing:-.06rem}p{line-height:1.65;color:light-dark(#6a7364,#a0ab99)}nav{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1.5rem}a{padding:.75rem 1rem;border-radius:.6rem;text-decoration:none;color:inherit;border:1px solid light-dark(#dce1d5,#3b4437)}a:first-child{background:#a9cc54;color:#20281e;border-color:#a9cc54}a:focus-visible{outline:3px solid #a9cc54;outline-offset:3px}</style></head>

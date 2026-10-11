@@ -22,9 +22,7 @@ const ErrorAlert: React.FC<ErrorAlertProps> = (props) => {
       <AlertCircle className="size-4" />
       <AlertTitle>{denied ? "Access restricted" : "Error"}</AlertTitle>
       <AlertDescription>
-        {denied
-          ? "Your account or organization policy restricts access to this data or action. Contact your administrator."
-          : message}
+        {denied ? "You don’t have access to this data or action. Contact your administrator." : message}
       </AlertDescription>
     </Alert>
   )

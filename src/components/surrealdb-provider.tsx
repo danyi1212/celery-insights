@@ -61,7 +61,7 @@ async function fetchConfig(): Promise<AppConfig> {
 
 class AuthorizationUnavailableError extends Error {
   constructor() {
-    super("We cannot verify your access right now. Please retry, or contact your administrator if this continues.")
+    super("We cannot verify your access right now. Retry or contact your administrator.")
     this.name = "Access verification unavailable"
   }
 }
@@ -154,8 +154,7 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, [attempt])
 
-  // A revoked or unavailable policy closes the socket without an HTTP response.
-  // Probe the protected configuration endpoint to explain the failure and refresh view hints.
+  // Socket closure has no HTTP status; probe config for the denial or outage reason.
   useEffect(() => {
     if (!configLoaded || status === "connected") return
     let active = true

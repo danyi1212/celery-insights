@@ -18,11 +18,11 @@ For each account choose exactly one of `password`, `password_file`, or `password
 
 Keep Bun/database listeners private behind HTTPS ingress, and preserve Authorization/Origin. Roll out all replicas after changing credentials or roles. Browsers use a login page, encrypted HttpOnly cookies and application logout. Supply the same 32-byte base64url session secret on all replicas; generate it with `openssl rand -base64 32 | tr "+/" "-_" | tr -d "=\n"`. Session expiry defaults to eight hours. Logout clears the local cookie; copied cookies remain valid until expiry or configuration/secret rotation. OIDC discovery, PKCE and token validation use `openid-client`; configure explicit claim-to-role mappings and register the exact `/api/auth/callback` URL, including any URL prefix. See [the complete password/OIDC guide](src/content/docs/configuration.mdx#openid-connect). The IdP owns MFA, recovery and account lifecycle. Explicit Basic headers remain for programmatic clients in password mode; IdP bearer-token authentication for MCP is not supported.
 
-Roles are `viewer`, `operator`, and `administrator`. Current RPC/MCP payload access requires administrator permissions; restricted-role UI browsing awaits typed reads. Account secrets never enter Python, diagnostics, config output or observation backups.
+Roles are `viewer`, `operator`, and `administrator`. Viewers can read task/worker metadata and analytics; operators can also manage retention and cleanup. Payload access requires administrator grants. Account secrets never enter Python, diagnostics, config output or observation backups.
 
 ## Custom authorization
 
-See [OPA configuration, enforcement coverage and Rego examples](AUTHORIZATION.md) to restrict role-permitted actions using an external policy service.
+Use [OPA policies](AUTHORIZATION.md) to restrict actions, visible tasks and payload fields.
 
 # Configuration
 
@@ -490,7 +490,7 @@ scrape_configs:
 
 Bun is the public entrypoint and built-in reverse proxy:
 
-- `/surreal/rpc` provides authorized read-only database transport, including WebSockets
+- `/api/observation/rpc` serves typed, authorized reads and WebSocket refreshes; `/surreal/*` is denied
 - application `/api/*`, `/metrics` and `/mcp` run in Bun; Python handles only the private Celery bridge
 - all other routes serve the SPA
 

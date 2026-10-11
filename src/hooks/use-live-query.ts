@@ -5,8 +5,8 @@ import type { ConnectionStatus, LiveMessage, LiveSubscription, Uuid } from "surr
 import { useSurrealDB } from "@components/surrealdb-provider"
 
 export interface UseLiveQueryOptions<T> {
-  /** Local demo query; production executes the typed request above. */
   request?: ReadRequest
+  /** SQL for the local demo; production uses request. */
   initialQuery: string
   /** Table to subscribe to via LIVE SELECT (no ORDER/LIMIT/GROUP support) */
   liveTable: string
@@ -28,10 +28,7 @@ export interface UseLiveQueryResult<T> {
   error: Error | null
 }
 
-/** Initial read plus live refreshes. Production refetches authorized typed reads;
- * the embedded demo applies local database record notifications directly.
- * Reconnection reruns the read and creates a fresh subscription.
- */
+/** Production refreshes authorized reads; the demo applies local record notifications. */
 export function useLiveQuery<T extends { id: unknown }>(options: UseLiveQueryOptions<T>): UseLiveQueryResult<T> {
   const { request, initialQuery, liveTable, bindings, orderBy, limit, filter, enabled = true } = options
   const { db, status } = useSurrealDB()

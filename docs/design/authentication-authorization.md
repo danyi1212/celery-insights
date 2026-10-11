@@ -49,7 +49,11 @@ Configure issuer, client ID, optional client secret (`client_secret_post`) and e
 
 ## Restrictive OPA policies (#140)
 
-Bun asks OPA about an authenticated principal, required actions and normalized operation context after builtin permission checks. OPA can restrict builtin grants, never enlarge them. Strict boolean or bounded read-scope responses, bounded deadlines and response sizes fail closed. Policies and their deployment remain operator-owned. Queries cover APIs, typed reads, exports, individual MCP tools and live messages/delivery. See [the implemented contract](../../AUTHORIZATION.md). Exact task ID/type/worker and worker hostname selectors plus denied payload groups apply to typed reads, exports, metrics and MCP. Policy inputs identify the operation, not customer payloads.
+- Check roles first; OPA can only restrict their grants.
+- Query OPA for APIs, typed reads, exports, MCP tools and live delivery.
+- Apply exact task/worker selectors and payload projections before search, counts and exports.
+- Reject invalid decisions, errors and timeouts. Send operation context, never customer payloads.
+- Operators manage policies. See [the contract and examples](../../AUTHORIZATION.md).
 
 ## Delivery plan
 

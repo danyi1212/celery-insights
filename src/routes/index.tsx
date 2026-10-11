@@ -55,8 +55,7 @@ const HomePage = () => {
           {appConfig?.taskVisibilityRestricted ? (
             <>
               <p className="mb-3 text-sm text-muted-foreground">
-                Your view is limited by organization policy. Workflow summaries are hidden; only permitted tasks are
-                shown.
+                Your view is limited by organization policy. Showing permitted tasks; workflow summaries are hidden.
               </p>
               <RecentTasksPanel id="recent-tasks" />
             </>

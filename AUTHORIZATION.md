@@ -133,7 +133,7 @@ Insights POSTs this versioned input to the decision URL:
 ```
 
 - `actions`: every permission required for the operation. Navigation and identity checks have an empty list.
-- `account_id`: case-sensitive configured username. Each installation serves one cluster.
+- `account_id`: case-sensitive username, or `oidc:<subject>` for OIDC. Each installation serves one cluster.
 - `path`: excludes the deployment prefix and query string.
 - `transport`: `http`, `websocket` or `mcp`. Tool checks add `request.tool`; typed reads add `request.operation`.
 - No passwords, user headers, request bodies, task payloads, resource IDs or client IPs are sent. OPA decision logs can contain account IDs.

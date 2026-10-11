@@ -21,9 +21,7 @@ const ApiErrorAlert: React.FC<ApiErrorAlertProps> = (props) => {
         <Alert variant="destructive">
           <AlertCircle className="size-4" />
           <AlertTitle>Access restricted</AlertTitle>
-          <AlertDescription>
-            Your account or organization policy restricts access to this data or action. Contact your administrator.
-          </AlertDescription>
+          <AlertDescription>You don’t have access to this data or action. Contact your administrator.</AlertDescription>
         </Alert>
       )
     case 400:

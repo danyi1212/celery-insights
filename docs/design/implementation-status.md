@@ -14,9 +14,12 @@ The previous frontend database password/login/token path has been retired. Legac
 
 Session tests cover replicas, credential/configuration rotation, expiry, secure cookie attributes, constrained return paths, login/logout CSRF, bounded input and real RSA-signed OIDC tokens with invalid issuer, audience, state, nonce and unmapped roles. Browser E2E uses the login form for normal application navigation.
 
-## Restrictive OPA policies (stacked on #143)
+## OPA policies (PR #148)
 
-Bun queries an optional external OPA Data API after role checks. Decisions cover navigation/identity, registered APIs, typed reads, exports, individual MCP tools and live messages/delivery. Strict boolean or read-scope results, timeouts, bounded responses and no caching provide fail-closed behavior. Policies remain operator-owned. See [the contract and examples](../../AUTHORIZATION.md). Task ID/type/worker selectors, worker hostname selectors and denied payload groups apply before counts/search/exports. Cross-task workflows and opaque inspection blobs are conservatively unavailable for scoped reads.
+- Optional OPA decisions restrict role grants across reads, writes, exports, MCP and live delivery.
+- Row selectors and payload projections apply before search, counts and exports.
+- Invalid decisions and outages block access. Scope changes close live connections and clear browser caches.
+- Operators deploy policies; Bun enforces them. See [setup and examples](../../AUTHORIZATION.md).
 
 ## Verification
 
@@ -31,5 +34,3 @@ bun run test:security
 
 - Broader UI permission affordances for restricted roles; server-owned typed reads and payload projections are implemented.
 - Shared durable retention configuration and ingestion-leader fencing. Retention UI edits remain process-local.
-
-Green checks verify implemented behavior; Restricted roles can read task/worker metadata through typed APIs; payload-required features remain denied.
