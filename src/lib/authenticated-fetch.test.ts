@@ -22,7 +22,7 @@ it("explains session expiry and preserves the destination, but does not redirect
   vi.spyOn(globalThis, "fetch")
     .mockResolvedValueOnce(new Response(null, { status: 403 }))
     .mockResolvedValueOnce(new Response(null, { status: 401 }))
-  await authenticatedFetch("/api/settings/info")
+  await expect(authenticatedFetch("/api/settings/info")).rejects.toThrow("permission")
   expect(navigate).not.toHaveBeenCalled()
   await authenticatedFetch("/api/auth/identity")
   expect(navigate).toHaveBeenCalledWith(expect.stringContaining("/login?reason=expired&returnTo="))

@@ -1,3 +1,5 @@
+import ErrorAlert from "@components/errors/error-alert"
+import RestrictedData from "@components/common/restricted-data"
 import { createFileRoute } from "@tanstack/react-router"
 import BrokerDetailsCard from "@components/worker/panels/broker-details-card"
 import PoolDetailsCard from "@components/worker/panels/pool-details-card"
@@ -14,16 +16,23 @@ import { useTourChangeStepOnLoad } from "@stores/use-tour-store"
 
 const WorkerPage = () => {
   const { workerId } = Route.useParams()
-  const { worker, isLoading } = useWorker(workerId)
+  const { worker, isLoading, error } = useWorker(workerId)
   const notFound = !isLoading && worker === null
   useTourChangeStepOnLoad(8, !notFound)
+
+  if (error)
+    return (
+      <div className="p-4">
+        <ErrorAlert error={error} />
+      </div>
+    )
 
   if (notFound)
     return (
       <div className="flex h-full flex-col items-center justify-center">
         <div className="flex items-center">
           <AlertCircle className="size-8 text-status-warning" />
-          <h2 className="ml-2 text-2xl font-semibold">Could not find worker {workerId}</h2>
+          <h2 className="ml-2 text-2xl font-semibold">Worker not found or outside your permitted view: {workerId}</h2>
         </div>
       </div>
     )
@@ -33,30 +42,38 @@ const WorkerPage = () => {
       <div className="col-span-12 lg:col-span-6 xl:col-span-4">
         <WorkerDetailsCard workerId={workerId} id="worker-details" />
       </div>
-      <div className="col-span-12 lg:col-span-6 xl:col-span-4">
-        <BrokerDetailsCard workerId={workerId} />
-      </div>
-      <div className="col-span-12 lg:col-span-6 xl:col-span-4">
-        <PoolDetailsCard workerId={workerId} id="worker-pool" />
-      </div>
-      <div className="col-span-12">
-        <QueueDetails workerId={workerId} />
-      </div>
-      <div className="col-span-12 lg:col-span-6 xl:col-span-4">
-        <ActiveTasksPanel workerId={workerId} />
-      </div>
-      <div className="col-span-12 lg:col-span-6 xl:col-span-4">
-        <ReservedTasksPanel workerId={workerId} />
-      </div>
-      <div className="col-span-12 lg:col-span-6 xl:col-span-4">
-        <ScheduledTasksPanel workerId={workerId} />
-      </div>
-      <div className="col-span-12 xl:col-span-6">
-        <RegisteredTasksPanel workerId={workerId} id="registered-tasks" />
-      </div>
-      <div className="col-span-12 xl:col-span-6">
-        <RevokedTasksPanel workerId={workerId} />
-      </div>
+      {worker?.restricted_fields?.includes("worker.inspect.read") ? (
+        <div className="col-span-12">
+          <RestrictedData label="Worker inspection data" />
+        </div>
+      ) : (
+        <>
+          <div className="col-span-12 lg:col-span-6 xl:col-span-4">
+            <BrokerDetailsCard workerId={workerId} />
+          </div>
+          <div className="col-span-12 lg:col-span-6 xl:col-span-4">
+            <PoolDetailsCard workerId={workerId} id="worker-pool" />
+          </div>
+          <div className="col-span-12">
+            <QueueDetails workerId={workerId} />
+          </div>
+          <div className="col-span-12 lg:col-span-6 xl:col-span-4">
+            <ActiveTasksPanel workerId={workerId} />
+          </div>
+          <div className="col-span-12 lg:col-span-6 xl:col-span-4">
+            <ReservedTasksPanel workerId={workerId} />
+          </div>
+          <div className="col-span-12 lg:col-span-6 xl:col-span-4">
+            <ScheduledTasksPanel workerId={workerId} />
+          </div>
+          <div className="col-span-12 xl:col-span-6">
+            <RegisteredTasksPanel workerId={workerId} id="registered-tasks" />
+          </div>
+          <div className="col-span-12 xl:col-span-6">
+            <RevokedTasksPanel workerId={workerId} />
+          </div>
+        </>
+      )}
     </div>
   )
 }

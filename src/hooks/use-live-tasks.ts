@@ -9,6 +9,7 @@ const byLastUpdatedDesc = (a: SurrealTask, b: SurrealTask) =>
 /** Recent tasks for the homepage — ordered by last_updated descending with a limit. */
 export const useLiveTasks = (limit = 30) =>
   useLiveQuery<SurrealTask>({
+    request: { operation: "list", table: "task", limit },
     initialQuery: "SELECT * FROM task ORDER BY last_updated DESC LIMIT $limit",
     liveTable: "task",
     bindings: useMemo(() => ({ limit }), [limit]),
@@ -20,6 +21,7 @@ export const useLiveTasks = (limit = 30) =>
 export const useWorkerTasks = (workerId: string) => {
   const filter = useCallback((t: SurrealTask) => t.worker === workerId, [workerId])
   return useLiveQuery<SurrealTask>({
+    request: { operation: "list", table: "task", workerId, limit: 10000 },
     initialQuery: "SELECT * FROM task WHERE worker = $workerId ORDER BY last_updated DESC",
     liveTable: "task",
     bindings: useMemo(() => ({ workerId }), [workerId]),
@@ -35,6 +37,7 @@ export const useWorkflowTasks = (workflowId: string) => {
   const filter = useCallback((t: SurrealTask) => t.workflow_id === workflowId, [workflowId])
 
   return useLiveQuery<SurrealTask>({
+    request: { operation: "list", table: "task", workflowId, limit: 10000 },
     initialQuery: "SELECT * FROM task WHERE workflow_id = $workflowId ORDER BY last_updated DESC",
     liveTable: "task",
     bindings,
@@ -49,6 +52,7 @@ export const useTask = (taskId: string) => {
   const filter = useCallback((t: SurrealTask) => extractId(t.id) === taskId, [taskId])
 
   const result = useLiveQuery<SurrealTask>({
+    request: { operation: "list", table: "task", id: taskId },
     initialQuery: "SELECT * FROM $rid",
     liveTable: "task",
     bindings,

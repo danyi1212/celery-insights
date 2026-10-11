@@ -64,7 +64,7 @@ describe("useLiveWorkers", () => {
     renderHook(() => useLiveWorkers())
 
     await waitFor(() => {
-      expect(mockQuery).toHaveBeenCalledWith("SELECT * FROM worker ORDER BY last_updated DESC", undefined)
+      expect(mockQuery).toHaveBeenCalledWith("SELECT * FROM worker ORDER BY last_updated DESC")
     })
   })
 
@@ -165,10 +165,7 @@ describe("useOnlineWorkers", () => {
     renderHook(() => useOnlineWorkers())
 
     await waitFor(() => {
-      expect(mockQuery).toHaveBeenCalledWith(
-        "SELECT * FROM worker WHERE status = 'online' ORDER BY last_updated DESC",
-        undefined,
-      )
+      expect(mockQuery).toHaveBeenCalledWith("SELECT * FROM worker WHERE status = 'online' ORDER BY last_updated DESC")
     })
   })
 

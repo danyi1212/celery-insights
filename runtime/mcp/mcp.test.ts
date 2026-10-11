@@ -106,7 +106,7 @@ describe("MCP tools against SurrealDB", () => {
         namespace: "test",
         database: "mcp",
         authentication: {
-          username: "viewer",
+          username: "observation_reader",
           password: databaseReaderPassword(config),
           namespace: "test",
           database: "mcp",

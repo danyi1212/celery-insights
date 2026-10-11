@@ -1,3 +1,4 @@
+import RestrictedData from "@components/common/restricted-data"
 import { Badge } from "@components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card"
 import { Separator } from "@components/ui/separator"
@@ -229,6 +230,17 @@ const StateValue: React.FC<{ task: Task }> = ({ task }) => (
 )
 
 const ArgumentComparison: React.FC<{ left: Task; right: Task }> = ({ left, right }) => {
+  if ([left, right].some((task) => task.restricted_fields?.includes("task.input.read")))
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Arguments</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RestrictedData label="Task arguments" />
+        </CardContent>
+      </Card>
+    )
   const argsDiff = isDifferent(left.args, right.args)
   const kwargsDiff = isDifferent(left.kwargs, right.kwargs)
 
@@ -274,6 +286,21 @@ const ArgumentComparison: React.FC<{ left: Task; right: Task }> = ({ left, right
 }
 
 const ResultComparison: React.FC<{ left: Task; right: Task }> = ({ left, right }) => {
+  if (
+    [left, right].some((task) =>
+      task.restricted_fields?.some((field) => ["task.result.read", "task.failure.read"].includes(field)),
+    )
+  )
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Result</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RestrictedData label="Task outcome data" />
+        </CardContent>
+      </Card>
+    )
   const resultDiff = isDifferent(left.result, right.result)
   const hasException = left.exception || right.exception
   const exceptionDiff = isDifferent(left.exception, right.exception)

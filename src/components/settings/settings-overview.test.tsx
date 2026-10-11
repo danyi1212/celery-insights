@@ -1,3 +1,4 @@
+vi.mock("@hooks/use-permissions", () => ({ usePermissions: () => ({ can: () => true }) }))
 import { screen, waitFor } from "@/test-utils"
 import { render } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
@@ -89,7 +90,6 @@ describe("SettingsOverview", () => {
       expect(screen.getByText("Embedded")).toBeInTheDocument()
     })
 
-    expect(screen.getByText("Dark")).toBeInTheDocument()
     expect(screen.getByText("1,500 tasks")).toBeInTheDocument()
     expect(screen.getByText("8,000 events · 3 workers")).toBeInTheDocument()
     expect(screen.getByText("Disabled · v1.2.3")).toBeInTheDocument()

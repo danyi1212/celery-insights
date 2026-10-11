@@ -70,12 +70,8 @@ describe("SurrealDBProvider — remote mode", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
-          surrealPath: "/surreal/rpc",
+          observationPath: "/api/observation/rpc",
           ingestionStatus: "leader",
-          viewerUser: "viewer",
-          viewerPass: "viewer",
-          viewerNs: "celery_insights",
-          viewerDb: "main",
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
@@ -148,7 +144,7 @@ describe("SurrealDBProvider — remote mode", () => {
     vi.useRealTimers()
   })
 
-  it("connects as viewer user when Bun has authenticated the application", async () => {
+  it("connects to typed observations after application authentication", async () => {
     render(
       <SurrealDBProvider>
         <ConsumerComponent />
@@ -156,19 +152,7 @@ describe("SurrealDBProvider — remote mode", () => {
     )
 
     await waitFor(() => {
-      expect(mockConnect).toHaveBeenCalledWith(
-        expect.stringContaining("/surreal/rpc"),
-        expect.objectContaining({
-          namespace: "celery_insights",
-          database: "main",
-          authentication: {
-            namespace: "celery_insights",
-            database: "main",
-            username: "viewer",
-            password: "viewer",
-          },
-        }),
-      )
+      expect(mockConnect).toHaveBeenCalledWith(expect.stringContaining("/api/observation/rpc"))
     })
   })
 
@@ -211,6 +195,45 @@ describe("SurrealDBProvider — remote mode", () => {
       expect(mockSubscribe).toHaveBeenCalledWith("disconnected", expect.any(Function))
       expect(mockSubscribe).toHaveBeenCalledWith("error", expect.any(Function))
     })
+  })
+
+  it("explains live policy revocation without offering demo mode and lets users retry", async () => {
+    render(
+      <SurrealDBProvider>
+        <ConsumerComponent />
+      </SurrealDBProvider>,
+    )
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("connected"))
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 403 }))
+    vi.useFakeTimers()
+    act(() => subscribedCallbacks.get("reconnecting")?.())
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000)
+    })
+    vi.useRealTimers()
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("permission"))
+    expect(screen.queryByText("Switch to demo mode")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeEnabled()
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({ observationPath: "/api/observation/rpc", ingestionStatus: "leader" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Retry connection" }))
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("connected"))
+  })
+
+  it("explains policy outages and allows sign-out while observations are blocked", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 503 }))
+    const navigate = vi.spyOn(window.location, "assign").mockImplementation(() => {})
+    render(
+      <SurrealDBProvider>
+        <ConsumerComponent />
+      </SurrealDBProvider>,
+    )
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("cannot verify your access"))
+    expect(mockConnect).not.toHaveBeenCalled()
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }))
+    fireEvent.click(screen.getByRole("button", { name: "Sign out" }))
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith(expect.stringContaining("/login?reason=signed-out")))
   })
 
   it("closes connection on unmount", async () => {

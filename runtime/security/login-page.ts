@@ -3,6 +3,31 @@ import { loginIllustration } from "./login-illustration"
 const escape = (value: string): string =>
   value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!)
 
+/** Navigation failures remain usable even when the authenticated application cannot load. */
+export function accessPage(prefix: string, destination: string, status: 403 | 503): Response {
+  const title = status === 403 ? "Access restricted" : "Access verification unavailable"
+  const message =
+    status === 403
+      ? "You don’t have access to this page. Contact your administrator or switch accounts."
+      : "We cannot verify your access right now. Retry or contact your administrator."
+  return new Response(
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · Celery Insights</title>
+    <style>:root{font-family:ui-sans-serif,system-ui,sans-serif;color-scheme:light dark;color:light-dark(#20281e,#edf1e8);background:light-dark(#fafbf7,#171c18)}body{margin:0;display:grid;min-height:100svh;place-items:center}main{max-width:28rem;padding:2rem}h1{font-size:2rem;letter-spacing:-.06rem}p{line-height:1.65;color:light-dark(#6a7364,#a0ab99)}nav{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1.5rem}a{padding:.75rem 1rem;border-radius:.6rem;text-decoration:none;color:inherit;border:1px solid light-dark(#dce1d5,#3b4437)}a:first-child{background:#a9cc54;color:#20281e;border-color:#a9cc54}a:focus-visible{outline:3px solid #a9cc54;outline-offset:3px}</style></head>
+    <body><main><p>Celery Insights</p><h1>${title}</h1><p role="alert">${message}</p><nav aria-label="Access recovery"><a href="${escape(destination)}">Retry access</a><a href="${escape(prefix)}/login">Switch account</a></nav></main></body></html>`,
+    {
+      status,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Content-Security-Policy":
+          "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'",
+        "Referrer-Policy": "same-origin",
+        "X-Content-Type-Options": "nosniff",
+      },
+    },
+  )
+}
+
 /** A native form keeps login accessible and independent of the authenticated app bundle. */
 export function loginPage(
   prefix: string,

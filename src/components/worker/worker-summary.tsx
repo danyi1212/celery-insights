@@ -46,6 +46,7 @@ const WorkerSummary: React.FC<WorkerSummaryProps> = ({ workerId }) => {
   if (worker === null) return <></>
 
   const workerDisplayId = extractId(worker.id)
+  const workerName = worker.hostname || workerDisplayId
   const visibleTasks = taskStrip.slice(0, taskStrip.length === 9 ? 9 : 8)
   const overflowCount = taskStrip.length - visibleTasks.length
 
@@ -55,18 +56,20 @@ const WorkerSummary: React.FC<WorkerSummaryProps> = ({ workerId }) => {
         <div className="min-w-0 flex-grow">
           <Tooltip>
             <TooltipTrigger asChild>
-              <h4 className="truncate text-base font-semibold">{worker.hostname}</h4>
+              <h4 className="truncate text-base font-semibold">{workerName}</h4>
             </TooltipTrigger>
-            <TooltipContent>{worker.hostname}</TooltipContent>
+            <TooltipContent>{workerName}</TooltipContent>
           </Tooltip>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             <Badge variant="outline" className="px-2 py-0 text-[11px]">
               {receivedTasks.length} received
             </Badge>
             <Badge variant="outline" className="px-2 py-0 text-[11px]">
-              {observedRunningCount === undefined
-                ? "Running count unconfirmed"
-                : `${observedRunningCount} observed running`}
+              {worker.restricted_fields?.includes("worker.inspect.read")
+                ? "Running count restricted"
+                : observedRunningCount === undefined
+                  ? "Running count unconfirmed"
+                  : `${observedRunningCount} observed running`}
             </Badge>
           </div>
         </div>

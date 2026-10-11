@@ -404,6 +404,9 @@ How often the cleanup job evaluates and applies retention policies.
 | `authentication.oidc.client_secret` / `_file` | string; sensitive | `CELERY_INSIGHTS_OIDC_CLIENT_SECRET` / `_FILE` | — |
 | `authentication.oidc.scopes` | string | — | — |
 | `authentication.oidc.role_mappings` | object | — | — |
+| `authorization.opa.decision_url` | string | — | — |
+| `authorization.opa.timeout_ms` | number | — | — |
+| `authorization.opa.bearer_token` / `_file` | string; sensitive | `CELERY_INSIGHTS_OPA_BEARER_TOKEN` / `_FILE` | — |
 | `authentication.mode` | string | — | — |
 | `authentication.accounts` | object; sensitive | — | — |
 
@@ -477,10 +480,28 @@ Bun uses `openid-client` for discovery, authorization code exchange, PKCE, state
 
 The ingress must preserve Authorization/Origin, keep Bun and the database private, and serve HTTPS. Mutating API clients must send the configured Origin and `X-Celery-Insights-Request: 1`. WebSocket upgrades require Origin. Application account passwords are unrelated to internal database credentials.
 
-Current RPC browsing requires all payload grants and therefore administrator access. Viewer/operator browsing awaits typed reads and field enforcement. The old `SURREALDB_FRONTEND_PASS` setting and database login dialog are retired; explicitly configure accounts when upgrading.
+Viewers can browse task/worker metadata and analytics. Operators can also manage retention and cleanup. Sensitive payloads require administrator grants. The old `SURREALDB_FRONTEND_PASS` setting and database login dialog are retired; explicitly configure accounts when upgrading.
 
 ## Database credentials
 
 Memory databases receive random root and ingester credentials on each start. Root credentials stay in Bun.
 
 For persistent embedded storage, set `database.observation.root_password` or `root_password_file` to a stable deployment secret. For an external database, also configure `database.observation.ingester_password` or `ingester_password_file` consistently across replicas. Both support their catalogued environment overrides and `_FILE` sources. Existing stores must use their existing root credential during migration; rotate any previous `root` password through SurrealDB administration before using the new secret. Changing the launch configuration does not rotate an existing database user.
+
+## Custom authorization with OPA
+
+Optional OPA policies restrict permissions granted by account roles. Add a decision endpoint to TOML:
+
+```toml
+[authorization.opa]
+decision_url = "http://opa:8181/v1/data/celery_insights/allow"
+timeout_ms = 1000
+```
+
+- Roles grant access; OPA can only restrict it.
+- Return a boolean `result`, or `{ "allow": true, "scope": { ... } }` to restrict rows and payloads.
+- Denial returns 403. Errors, invalid decisions and timeouts return 503 and block the operation.
+- Checks cover APIs, typed reads, exports, metrics, MCP tools and live connections, including idle connections every five seconds.
+- Keep OPA private. Remote bearer tokens require HTTPS; use `bearer_token_file` or `CELERY_INSIGHTS_OPA_BEARER_TOKEN` / `_FILE`.
+
+See [the setup guide and copyable policies](https://github.com/danyi1212/celery-insights/blob/main/AUTHORIZATION.md).

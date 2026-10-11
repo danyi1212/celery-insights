@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest"
 import { AuthenticationHttp, secureApplicationRequest, requestHeader } from "./http"
-import { authorize } from "./permissions"
+import { authorize, AuthError } from "./permissions"
 
 const origin = "https://insights.example"
 const auth = new AuthenticationHttp({
@@ -44,7 +44,7 @@ describe("Bun configured-account gate", () => {
     expect((await response)?.status).toBe(503)
     expect(dispatch).not.toHaveBeenCalled()
   })
-  it.each(["/", "/settings", "/api/settings/info", "/metrics", "/surreal/rpc", "/mcp"])(
+  it.each(["/", "/settings", "/api/settings/info", "/metrics", "/api/observation/rpc", "/mcp"])(
     "protects navigation and API responses: %s",
     async (path) => {
       const { response } = run(request(path))
@@ -57,6 +57,7 @@ describe("Bun configured-account gate", () => {
   it("denies unregistered routes and arbitrary DB transports", async () => {
     for (const path of [
       "/api/unknown",
+      "/surreal/rpc",
       "/surreal/sql",
       "/surreal/import",
       "/surreal/export",
@@ -104,8 +105,10 @@ describe("Bun configured-account gate", () => {
       { "sec-fetch-site": "cross-site" },
       { upgrade: "websocket" },
     ])
-      expect((await run(request("/surreal/rpc", "GET", headers)).response)?.status).toBe(403)
-    expect((await run(request("/surreal/rpc", "GET", { upgrade: "websocket", origin })).response)?.status).toBe(200)
+      expect((await run(request("/api/observation/rpc", "GET", headers)).response)?.status).toBe(403)
+    expect((await run(request("/api/observation/rpc", "GET", { upgrade: "websocket", origin })).response)?.status).toBe(
+      200,
+    )
   })
   it("keeps public probes/assets available and honors the configured prefix", async () => {
     expect((await run(request("/health", "GET", { authorization: "" }), null).response)?.status).toBe(200)
@@ -124,5 +127,37 @@ describe("Bun configured-account gate", () => {
     expect(result?.status).toBe(503)
     expect(await result?.text()).not.toContain("PRIVATE-CREDENTIAL")
     expect(dispatch).not.toHaveBeenCalled()
+  })
+
+  it("renders recoverable navigation denials with prefix-aware links while APIs retain JSON errors", async () => {
+    for (const status of [403, 503]) {
+      const failing = new AuthenticationHttp({
+        public_origin: origin,
+        accounts: [{ username: "admin", password: "secret:ü", roles: ["administrator"] }],
+      })
+      vi.spyOn(failing.authorization, "check").mockRejectedValue(new AuthError(status, "PRIVATE-POLICY-DETAIL"))
+      const { response, dispatch } = run(
+        request("/tools/celery/explorer", "GET", { accept: "text/html" }),
+        failing,
+        false,
+        "/tools/celery",
+      )
+      const result = await response
+      expect(result?.status).toBe(status)
+      expect(result?.headers.get("content-type")).toContain("text/html")
+      expect(result?.headers.get("cache-control")).toBe("no-store")
+      const html = await result!.text()
+      expect(html).toContain("Retry access")
+      expect(html).toContain('href="/tools/celery/login"')
+      expect(html).not.toContain("PRIVATE-POLICY-DETAIL")
+      expect(dispatch).not.toHaveBeenCalled()
+      const api = await run(
+        request("/tools/celery/api/config", "GET", { accept: "text/html" }),
+        failing,
+        false,
+        "/tools/celery",
+      ).response
+      expect(api?.headers.get("content-type")).toContain("application/json")
+    }
   })
 })

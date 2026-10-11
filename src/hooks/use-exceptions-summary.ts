@@ -1,3 +1,4 @@
+import { queryObservation } from "@lib/observation-query"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Table, type ConnectionStatus, type LiveMessage, type LiveSubscription } from "surrealdb"
 import { useSurrealDB } from "@components/surrealdb-provider"
@@ -26,7 +27,9 @@ export const useExceptionsSummary = () => {
 
   const runAggregation = useCallback(async () => {
     try {
-      const [result] = await db.query<[ExceptionSummary[]]>(
+      const [result] = await queryObservation<[ExceptionSummary[]]>(
+        db,
+        { operation: "exceptions" },
         "SELECT exception, count() AS count FROM task WHERE exception != NONE GROUP BY exception ORDER BY count DESC",
       )
       setData(Array.isArray(result) ? result : [])

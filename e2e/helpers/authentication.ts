@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import http from "node:http"
 import https from "node:https"
 import { resolve } from "node:path"
-import { request } from "../../tooling/playwright"
+import { request, type Page } from "../../tooling/playwright"
 import { appOrigin, appPath, appURL } from "./app-url"
 
 export const fixtureDirectory = resolve("test_project/.e2e-auth")
@@ -38,6 +38,9 @@ export function prepareAuthenticationFixture() {
     `schema_version = 1
 [installation]
 public_url = "${appOrigin}${appPath("/")}"
+[authorization.opa]
+decision_url = "http://opa:8181/v1/data/celery_insights/allow"
+timeout_ms = 1000
 [authentication]
 mode = "basic"
 [authentication.session]
@@ -45,6 +48,10 @@ secret = "${Buffer.alloc(32, 9).toString("base64url")}"
 [[authentication.accounts]]
 username = "${fixtureCredentials.username}"
 password = "${fixtureCredentials.password}"
+roles = ["administrator"]
+[[authentication.accounts]]
+username = "policy-admin"
+password = "synthetic-policy-secret"
 roles = ["administrator"]
 [[authentication.accounts]]
 username = "reader"
@@ -142,4 +149,12 @@ export async function fixtureFetch(url: string, options: RequestInit = {}): Prom
     req.setTimeout(10000, () => req.destroy(new Error("Fixture request timed out")))
     req.end(options.body)
   })
+}
+
+export async function signIn(page: Page, credentials: { username: string; password: string } = fixtureCredentials) {
+  await page.goto(appURL("/login"))
+  await page.getByLabel("Username", { exact: true }).fill(credentials.username)
+  await page.getByLabel("Password", { exact: true }).fill(credentials.password)
+  await page.getByRole("button", { name: "Sign in", exact: true }).click()
+  await page.waitForURL(appURL("/"))
 }

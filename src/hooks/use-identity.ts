@@ -11,7 +11,7 @@ export interface Identity {
 }
 
 /** Shared identity polling also detects expired sessions and sign-out in another tab. */
-export function useIdentity() {
+export function useIdentity(poll = false) {
   const isDemo = useSettingsStore((state) => state.demo)
   return useQuery({
     queryKey: ["identity", isDemo ? "demo" : "live"],
@@ -22,7 +22,7 @@ export function useIdentity() {
     },
     enabled: !isDemo,
     staleTime: 30000,
-    refetchInterval: isDemo ? false : 60000,
+    refetchInterval: !isDemo && poll ? 60000 : false,
     retry: false,
   })
 }

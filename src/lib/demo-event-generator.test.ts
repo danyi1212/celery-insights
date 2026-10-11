@@ -23,6 +23,7 @@ describe("DemoEventGenerator", () => {
 
   afterEach(() => {
     generator.stop()
+    vi.restoreAllMocks()
     vi.useRealTimers()
   })
 
@@ -260,13 +261,14 @@ describe("DemoEventGenerator", () => {
   })
 
   it("generates failed tasks with exception and traceback", async () => {
+    // Force the failure branch rather than depending on a random sample containing it.
+    vi.spyOn(Math, "random").mockReturnValue(0.05)
     await generator.start()
 
     // Find failed task events
     const failedEvents = calls(mockDb).filter(
       ([q, params]: MockCall) => typeof q === "string" && q.includes("UPSERT type::record('task'") && params?.exception,
     )
-    // With ~30 tasks and 12% failure rate + 6% retry rate, we should have some failures
     expect(failedEvents.length).toBeGreaterThan(0)
 
     for (const [, params] of failedEvents) {

@@ -8,7 +8,7 @@ import useSettingsStore from "@stores/use-settings-store"
 
 export default function AccountFooter() {
   const isDemo = useSettingsStore((state) => state.demo)
-  const { data: identity, isError, refetch } = useIdentity()
+  const { data: identity, isError, refetch } = useIdentity(true)
   const [signingOut, setSigningOut] = useState(false)
   const [error, setError] = useState("")
   const pending = useRef(false)

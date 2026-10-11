@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { createRootRoute, Outlet, Link as RouterLink, type ErrorComponentProps } from "@tanstack/react-router"
 import { ReadOnlyBanner } from "@components/connection-status"
 import { AppKeyboardShortcuts } from "@components/keyboard/app-keyboard-shortcuts"
@@ -13,32 +14,42 @@ import { SidebarInset, SidebarProvider } from "@components/ui/sidebar"
 import { TooltipProvider } from "@components/ui/tooltip"
 import { NuqsAdapter } from "nuqs/adapters/react"
 
-const queryClient = new QueryClient()
+// Mounted inside the connection boundary: reconnects and scope changes discard observation caches.
+const Application = () => {
+  const [queryClient] = useState(() => new QueryClient())
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ApplicationLayout />
+    </QueryClientProvider>
+  )
+}
+
+const ApplicationLayout = () => (
+  <SidebarProvider>
+    <KeyboardShortcutsProvider>
+      <SearchBoxControllerProvider>
+        <AppKeyboardShortcuts />
+        <Menu />
+        <SidebarInset>
+          <ReadOnlyBanner />
+          <Header />
+          <div className="flex-1 p-0">
+            <Outlet />
+          </div>
+        </SidebarInset>
+        <JoyrideTour />
+      </SearchBoxControllerProvider>
+    </KeyboardShortcutsProvider>
+  </SidebarProvider>
+)
 
 const RootComponent = () => {
   useDarkMode()
   return (
     <NuqsAdapter>
-      <QueryClientProvider client={queryClient}>
-        <SurrealDBProvider>
-          <SidebarProvider>
-            <KeyboardShortcutsProvider>
-              <SearchBoxControllerProvider>
-                <AppKeyboardShortcuts />
-                <Menu />
-                <SidebarInset>
-                  <ReadOnlyBanner />
-                  <Header />
-                  <div className="flex-1 p-0">
-                    <Outlet />
-                  </div>
-                </SidebarInset>
-                <JoyrideTour />
-              </SearchBoxControllerProvider>
-            </KeyboardShortcutsProvider>
-          </SidebarProvider>
-        </SurrealDBProvider>
-      </QueryClientProvider>
+      <SurrealDBProvider>
+        <Application />
+      </SurrealDBProvider>
     </NuqsAdapter>
   )
 }

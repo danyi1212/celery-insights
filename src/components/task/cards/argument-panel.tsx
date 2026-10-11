@@ -1,3 +1,4 @@
+import RestrictedData from "@components/common/restricted-data"
 import Panel from "@components/common/panel"
 import JsonViewThemed from "@components/common/json-view-themed"
 import { useTask } from "@hooks/use-live-tasks"
@@ -12,12 +13,16 @@ const ArgumentPanel: React.FC<ArgumentPanelProps> = ({ taskId, ...props }) => {
   return (
     <Panel title="Arguments" loading={isLoading} error={error} {...props}>
       <div className="h-full">
-        <JsonViewThemed
-          value={{
-            args: task?.args || "Unknown",
-            kwargs: task?.kwargs || "Unknown",
-          }}
-        />
+        {task?.restricted_fields?.includes("task.input.read") ? (
+          <RestrictedData label="Task arguments" />
+        ) : (
+          <JsonViewThemed
+            value={{
+              args: task?.args || "Unknown",
+              kwargs: task?.kwargs || "Unknown",
+            }}
+          />
+        )}
       </div>
     </Panel>
   )

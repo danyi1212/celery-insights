@@ -16,6 +16,14 @@ interface ApiErrorAlertProps {
 
 const ApiErrorAlert: React.FC<ApiErrorAlertProps> = (props) => {
   switch (props.error.status) {
+    case 403:
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertTitle>Access restricted</AlertTitle>
+          <AlertDescription>You don’t have access to this data or action. Contact your administrator.</AlertDescription>
+        </Alert>
+      )
     case 400:
       return <BadRequestAlert error={props.error.body as string} />
     case 404:
