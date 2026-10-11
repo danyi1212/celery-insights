@@ -279,18 +279,16 @@ function spawnSurrealDB(): ChildProcess {
   )
   const proc = spawn(
     "surreal",
-    [
-      "start",
-      "--no-banner",
-      "--bind",
-      `127.0.0.1:${runtimeConfig.surrealdbPort}`,
-      "--user",
-      "root",
-      "--pass",
-      runtimeConfig.surrealdbRootPass!,
-      runtimeConfig.surrealdbStorage,
-    ],
-    { stdio: ["ignore", "pipe", "pipe"] },
+    ["start", "--no-banner", "--bind", `127.0.0.1:${runtimeConfig.surrealdbPort}`, runtimeConfig.surrealdbStorage],
+    {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        PATH: process.env.PATH,
+        LANG: process.env.LANG,
+        SURREAL_USER: "root",
+        SURREAL_PASS: runtimeConfig.surrealdbRootPass,
+      },
+    },
   )
 
   // Pipe stdout and stderr through surrealLogger with line buffering

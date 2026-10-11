@@ -28,26 +28,26 @@ const config = prepareDatabaseConfig(
 )
 try {
   for (let start = 0; start < 2; start++) {
-    const process = Bun.spawn(
+    const child = Bun.spawn(
       [
         Bun.env.SURREAL_BINARY ?? "surreal",
         "start",
         "--no-banner",
         "--bind",
         `127.0.0.1:${port}`,
-        "--user",
-        "root",
-        "--pass",
-        config.surrealdbRootPass!,
         config.surrealdbStorage,
       ],
-      { stdout: "ignore", stderr: "ignore" },
+      {
+        stdout: "ignore",
+        stderr: "ignore",
+        env: { PATH: process.env.PATH, SURREAL_USER: "root", SURREAL_PASS: config.surrealdbRootPass! },
+      },
     )
     const db = new Surreal()
     try {
       const deadline = Date.now() + 15_000
       let ready = false
-      while (Date.now() < deadline && process.exitCode === null) {
+      while (Date.now() < deadline && child.exitCode === null) {
         try {
           ready = (await fetch(config.surrealdbUrl + "/health")).ok
         } catch {
@@ -72,8 +72,8 @@ try {
       assert.equal(rows.length, 1)
     } finally {
       await db.close()
-      process.kill("SIGTERM")
-      await process.exited
+      child.kill("SIGTERM")
+      await child.exited
     }
   }
   process.stdout.write(
