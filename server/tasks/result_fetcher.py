@@ -266,32 +266,35 @@ class ResultBackendPoller:
             return
 
         prefix = backend.task_keyprefix.decode()
-        key_ids = await asyncio.to_thread(
-            lambda: [key.decode() for key in backend.client.scan_iter(match=f"{prefix}*")]
-        )
+        key_ids = await asyncio.to_thread(lambda: list(backend.client.scan_iter(match=f"{prefix}*")))
 
         for key in key_ids:
-            task_id = key.removeprefix(prefix)
-            meta = await asyncio.to_thread(backend.get_task_meta, task_id)
-            stamp = str(meta.get("date_done") or meta.get("status") or "")
-            if self._seen.get(task_id) == stamp:
-                continue
+            try:
+                task_id = key.decode().removeprefix(prefix)
+                meta = await asyncio.to_thread(backend.get_task_meta, task_id)
+                stamp = str(meta.get("date_done") or meta.get("status") or "")
+                if self._seen.get(task_id) == stamp:
+                    continue
 
-            query, params = _build_task_meta_upsert(task_id, meta, search_indexing_enabled=self.search_indexing_enabled)
-            summary_query, summary_params = build_workflow_summary_recompute(
-                {"uuid": task_id, "timestamp": datetime.now(tz=UTC).timestamp()},
-                0,
-            )
-
-            db = get_db()
-            full_query = "BEGIN TRANSACTION;\n" + ";\n".join([query, summary_query]) + ";\nCOMMIT TRANSACTION;"
-            result = await db.query(full_query, params | summary_params)
-            errors = _query_errors(result)
-            if errors:
-                logger.error(
-                    "SurrealDB rejected result-backend poll upsert for task %s: %s",
-                    task_id,
-                    "; ".join(errors),
+                query, params = _build_task_meta_upsert(
+                    task_id, meta, search_indexing_enabled=self.search_indexing_enabled
                 )
-                continue
-            self._seen[task_id] = stamp
+                summary_query, summary_params = build_workflow_summary_recompute(
+                    {"uuid": task_id, "timestamp": datetime.now(tz=UTC).timestamp()},
+                    0,
+                )
+
+                db = get_db()
+                full_query = "BEGIN TRANSACTION;\n" + ";\n".join([query, summary_query]) + ";\nCOMMIT TRANSACTION;"
+                result = await db.query(full_query, params | summary_params)
+                errors = _query_errors(result)
+                if errors:
+                    logger.error(
+                        "SurrealDB rejected result-backend poll upsert for task %s: %s",
+                        task_id,
+                        "; ".join(errors),
+                    )
+                    continue
+                self._seen[task_id] = stamp
+            except Exception:
+                logger.warning("Skipping malformed or unavailable result-backend entry", exc_info=True)

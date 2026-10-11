@@ -1,4 +1,3 @@
-import { createHash, timingSafeEqual } from "node:crypto"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
 import type { Surreal } from "surrealdb"
@@ -24,9 +23,9 @@ const descriptions: Record<ToolName, string> = {
 }
 export interface McpOptions {
   db: Pick<Surreal, "query">
+  publicOrigin?: string
   cursorSecret: string
   mode: () => Mode
-  token?: string
   allowedHosts?: string[]
   now?: () => number
 }
@@ -70,13 +69,9 @@ export const createMcpHandler = (options: McpOptions): ((request: Request) => Pr
     if (!allowedHosts.includes(url.hostname))
       return Response.json({ error: "Host is not allowed for MCP; configure MCP_ALLOWED_HOSTS." }, { status: 403 })
     const origin = request.headers.get("origin")
-    if (origin && origin !== url.origin) return Response.json({ error: "Origin is not allowed." }, { status: 403 })
-    if (options.token) {
-      const supplied = request.headers.get("authorization")?.replace(/^Bearer /, "") ?? ""
-      const digest = (value: string) => createHash("sha256").update(value).digest()
-      if (!timingSafeEqual(digest(supplied), digest(options.token)))
-        return Response.json({ error: "unauthorized" }, { status: 401, headers: { "WWW-Authenticate": "Bearer" } })
-    }
+    if (origin && origin !== (options.publicOrigin ?? url.origin))
+      return Response.json({ error: "Origin is not allowed." }, { status: 403 })
+
     if (request.method !== "POST") return new Response(null, { status: 405, headers: { Allow: "POST" } })
     const server = new McpServer({ name: "celery-insights", version: "0.2.0" })
     for (const tool of Object.keys(schemas) as ToolName[]) {

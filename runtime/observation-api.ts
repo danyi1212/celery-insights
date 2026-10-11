@@ -63,7 +63,7 @@ const idString = (value: unknown) =>
   String(value ?? "")
     .replace(/^[^:]+:/, "")
     .replace(/^[⟨<'"]|[⟩>'"]$/g, "")
-const csvCell = (value: unknown) => '"' + String(value ?? "").replaceAll('"', '""') + '"'
+const csvCell = (value: unknown) => '"' + csvText(value).replaceAll('"', '""') + '"'
 export class ObservationApi {
   private retention: z.infer<typeof retentionSchema>
   constructor(
@@ -498,3 +498,4 @@ export class ObservationApi {
     })
   }
 }
+import { csvText } from "../src/lib/csv"

@@ -1,5 +1,6 @@
 import type { SurrealTask } from "@/types/surreal-records"
 import { extractId } from "@/types/surreal-records"
+import { csvText } from "./csv"
 
 /** Fields included in CSV export, in order */
 const CSV_FIELDS = [
@@ -35,7 +36,7 @@ const CSV_FIELDS = [
 
 function escapeCsvValue(value: unknown): string {
   if (value === null || value === undefined) return ""
-  const str = String(value)
+  const str = csvText(value)
   if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
     return `"${str.replace(/"/g, '""')}"`
   }

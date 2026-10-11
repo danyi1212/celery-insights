@@ -1,3 +1,9 @@
+## Application authentication during development
+
+Bun owns configured HTTP Basic accounts and every application request. Configure a secret-backed TOML file selected by `CELERY_INSIGHTS_CONFIG_FILE`, explicit accounts/roles, and HTTPS ingress matching `installation.public_url`. See [the example](docs/configuration.example.toml). Vite application routes must pass through Bun; do not introduce direct Python or database proxies to bypass authentication. The TLS E2E fixture supplies synthetic configured accounts and an ingress automatically for tests.
+
+Python is the Celery bridge. Authentication secrets stay out of Python and browser storage. There are no password hashes, account/session tables, MFA or account lifecycle APIs to develop. OIDC is a separate maintained-library integration; OPA can restrict application permissions.
+
 # Contributing to Celery Insights
 
 This guide covers bug reports, feature requests, local development, and the project conventions contributors are expected to follow.
@@ -150,9 +156,9 @@ Or run them in separate terminals:
 
 Bun serves application APIs, metrics, CSV exports, backups and retention/cleanup. Python handles Celery ingestion and polling through a Unix socket in an owner-only temporary directory created by Bun; it no longer listens on a public TCP port. `bun run dev:all` starts the Bun supervisor and Vite, and Vite proxies application traffic through Bun. Activate the Python virtual environment before starting the supervisor.
 
-Use `bun run test:observation` for native API acceptance with SurrealDB 3.3.0. The existing frontend login and MCP credentials remain supported until the authentication PR in this stack.
+Use `bun run test:observation` for native API acceptance with SurrealDB 3.3.0. Use `bun run test:security` for configured-account verification.
 
-## MCP development
+### MCP development
 
 Bun serves MCP at `http://localhost:8555/mcp`. The Vite dev server on port 3000 does not serve
 the MCP endpoint. With SurrealDB and the Python ingester already running, start Bun against

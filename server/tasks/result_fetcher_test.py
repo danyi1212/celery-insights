@@ -234,3 +234,26 @@ class TestResultFetcher:
         assert "exception" in params
         assert "ValueError" in params["exception"]
         assert params["traceback"] == "Traceback..."
+
+
+@pytest.mark.asyncio
+async def test_backend_poller_isolates_malformed_keys_and_metadata(mocker: MockerFixture):
+    from celery.backends.redis import RedisBackend
+    from tasks.result_fetcher import ResultBackendPoller
+
+    backend = mocker.Mock(spec=RedisBackend)
+    backend.task_keyprefix = b"celery-task-meta-"
+    backend.client.scan_iter.return_value = [b"\xff", b"celery-task-meta-bad", b"celery-task-meta-good"]
+    backend.get_task_meta.side_effect = lambda task_id: {
+        "status": "SUCCESS",
+        "retries": "bad" if task_id == "bad" else 0,
+    }
+    app = mocker.Mock(backend=backend)
+    db = mocker.Mock(query=mocker.AsyncMock(return_value=[]))
+    mocker.patch("tasks.result_fetcher.get_db", return_value=db)
+    poller = ResultBackendPoller(app)
+    await poller._poll_once()
+    await poller._poll_once()
+    db.query.assert_awaited_once()
+    assert db.query.call_args.args[1]["task_id"] == "good"
+    assert "bad" not in poller._seen

@@ -4,7 +4,7 @@ import { pythonConfig, pythonEnvironment } from "./python-config"
 
 describe("scoped Python handoff", () => {
   it("projects only needed values and derives replay from the supervisor", () => {
-    const envelope = pythonConfig(parseConfig({ SURREALDB_FRONTEND_PASS: "browser-only", PORT: "9000" }), true)
+    const envelope = pythonConfig(parseConfig({ PORT: "9000" }), true)
     expect(envelope.version).toBe(1)
     expect(envelope.settings).not.toHaveProperty("port")
     expect(envelope.settings).not.toHaveProperty("task_max_count")
@@ -13,11 +13,11 @@ describe("scoped Python handoff", () => {
     expect(envelope.settings).not.toHaveProperty("surrealdb_frontend_pass")
   })
 
-  it("keeps application credentials out of the Python projection", () => {
+  it("keeps identity and policy secrets out of the Python projection", () => {
     const config = parseConfig({})
     Object.assign(config, {
-      surrealdbFrontendPass: "private-account",
-      mcpToken: "private-mcp",
+      authAccounts: [{ username: "admin", password: "private-account", roles: ["administrator"] }],
+      mcpCursorSecret: "private-mcp",
     })
     const result = pythonConfig(config, false, { socket: "/private/bridge.sock" })
     expect(result.settings).not.toHaveProperty("authentication")

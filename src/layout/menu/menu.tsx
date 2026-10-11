@@ -1,3 +1,4 @@
+import AccountFooter from "./account-footer"
 import { Sidebar, SidebarContent, SidebarHeader, SidebarRail, useSidebar } from "@components/ui/sidebar"
 import DocumentationNavigationView from "@layout/menu/documentation-navigation-view"
 import MainNavigationView from "@layout/menu/main-navigation-view"
@@ -26,6 +27,7 @@ const Menu: React.FC = () => {
           </NavigationPanel>
         </div>
       </SidebarContent>
+      <AccountFooter />
       <SidebarRail />
     </Sidebar>
   )

@@ -91,6 +91,15 @@ try {
       assert.equal((await result.text()).includes('"sample"'), matches, `${mode} export: ${query}`)
     }
   }
+  await root.query("UPDATE task:sample SET result = $result", { result: " \t=1+1" })
+  const unsafeCsv = await api.exportCsv({
+    kind: "explorer",
+    mode: "tasks",
+    from: "2000-01-01T00:00:00Z",
+    to: "2100-01-01T00:00:00Z",
+  })
+  assert((await unsafeCsv.text()).includes("' \t=1+1"))
+  await root.query("UPDATE task:sample SET result = 'private-result'")
   const backupResponse = await api.handle(
     new Request("http://localhost/api/settings/export"),
     "/api/settings/export",

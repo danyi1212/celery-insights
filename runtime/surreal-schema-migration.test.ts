@@ -41,8 +41,8 @@ describe("runSchemaMigration against SurrealDB", () => {
       SURREALDB_NAMESPACE: "migration",
       SURREALDB_DATABASE: "upgrade",
     })
-    await runSchemaMigration(config, silent)
-    await runSchemaMigration(config, silent)
+    await runSchemaMigration({ ...config, surrealdbRootPass: "root" }, silent)
+    await runSchemaMigration({ ...config, surrealdbRootPass: "root" }, silent)
 
     const [rows] = await db
       .query<[{ id: string; last_updated_observed: boolean }[]]>(
@@ -66,11 +66,14 @@ describe("runSchemaMigration against SurrealDB", () => {
       )
       .collect()
     await runSchemaMigration(
-      parseConfig({
-        SURREALDB_EXTERNAL_URL: server.endpoint,
-        SURREALDB_NAMESPACE: "migration",
-        SURREALDB_DATABASE: "upgrade",
-      }),
+      {
+        ...parseConfig({
+          SURREALDB_EXTERNAL_URL: server.endpoint,
+          SURREALDB_NAMESPACE: "migration",
+          SURREALDB_DATABASE: "upgrade",
+        }),
+        surrealdbRootPass: "root",
+      },
       silent,
     )
 
