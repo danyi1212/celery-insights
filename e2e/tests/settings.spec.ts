@@ -4,7 +4,7 @@ test.describe("Settings", () => {
   test("settings page is organized into the new sections", async ({ page }) => {
     await page.goto("/settings")
 
-    await expect(page.getByRole("heading", { name: /manage your workspace and this instance/i })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible()
     await expect(page.getByRole("heading", { name: "Workspace", exact: true })).toBeVisible()
     await expect(page.getByRole("heading", { name: "System status", exact: true })).toBeVisible()
     await expect(page.getByRole("heading", { name: "Cleanup", exact: true })).toBeVisible()
