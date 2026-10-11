@@ -25,10 +25,11 @@ assert(address && typeof address !== "string")
 const port = address.port
 await new Promise<void>((resolve, reject) => listener.close((error) => (error ? reject(error) : resolve())))
 const rootPassword = randomBytes(24).toString("base64url")
-const child = Bun.spawn(
-  [binary, "start", "--bind", `127.0.0.1:${port}`, "--user", "root", "--pass", rootPassword, "memory"],
-  { stdout: "ignore", stderr: "inherit" },
-)
+const child = Bun.spawn([binary, "start", "--bind", `127.0.0.1:${port}`, "memory"], {
+  stdout: "ignore",
+  stderr: "inherit",
+  env: { PATH: process.env.PATH, SURREAL_USER: "root", SURREAL_PASS: rootPassword },
+})
 const url = `http://127.0.0.1:${port}`
 const root = new Surreal()
 try {
