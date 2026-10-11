@@ -1,12 +1,6 @@
-## Application authentication during development
-
-Bun owns configured HTTP Basic accounts and every application request. Configure a secret-backed TOML file selected by `CELERY_INSIGHTS_CONFIG_FILE`, explicit accounts/roles, and HTTPS ingress matching `installation.public_url`. See [the example](docs/configuration.example.toml). Vite application routes must pass through Bun; do not introduce direct Python or database proxies to bypass authentication. The TLS E2E fixture supplies synthetic configured accounts and an ingress automatically for tests.
-
-Python is the Celery bridge. Authentication secrets stay out of Python and browser storage. There are no password hashes, account/session tables, MFA or account lifecycle APIs to develop. OIDC is a separate maintained-library integration; OPA can restrict application permissions.
-
 # Contributing to Celery Insights
 
-This guide covers bug reports, feature requests, local development, and the project conventions contributors are expected to follow.
+These standards apply to human and agent contributions. Read them before changing code, UI or documentation.
 
 ## Reporting Bugs
 
@@ -39,8 +33,9 @@ To contribute to the project, follow these steps:
 4. Run the project checks before you open the pull request:
    - For Python code: [ruff](https://github.com/astral-sh/ruff), [ty](https://github.com/astral-sh/ty), and `pytest`
    - For frontend code: [Oxlint](https://oxc.rs/docs/guide/usage/linter.html), [Oxfmt](https://oxc.rs/docs/guide/usage/formatter.html), TypeScript, and Vitest
-5. Open a pull request to the main branch.
-6. Check the CI workflow statuses and for comments on your pull request.
+5. Review the change through the user workflow described below.
+6. Open a pull request to `main` explaining the problem, resulting behavior, validation and remaining limitations. Link its issue when one exists.
+7. Address review feedback and failing CI checks. Keep plans, progress and run-specific results in the issue or PR, not new repository documents.
 
 ## Local development
 
@@ -66,6 +61,12 @@ bun run dev:all
 - Run `bun run dev` for Vite alone, or `bun run dev:server` for the Bun supervisor alone.
 - Python is launched through Bun with a validated settings snapshot, not a separate public server or `server/.env`.
 - Add application settings to the Bun schema/registry. Python receives only its required subset.
+
+### Authentication during development
+
+- Configure explicit password accounts or OIDC, a shared session secret and HTTPS ingress matching `installation.public_url`. See [the configuration example](docs/configuration.example.toml).
+- Route application API and WebSocket requests through Bun. The TLS E2E fixture supplies synthetic accounts and ingress for tests.
+- Keep authentication secrets out of Python and browser storage. Account lifecycle and MFA belong to the external identity provider; OPA can restrict application permissions.
 
 ### Diagnostics and replay
 
@@ -94,27 +95,30 @@ bun run test:observation
 bun run test:security
 ```
 
-## Code Styles
+## Coding standards
 
 ### General
 
-- Write short, concise functions and classes.
-- Provide detailed types and variables, including generics when needed.
-- Do not abbreviate variable and function names.
+- Keep functions focused and use names that explain their purpose.
+- Type interfaces and boundaries; use generics when they express a real relationship.
+- Keep changes in the owning process. Bun owns application configuration and requests; Python owns Celery collection.
+- Follow repository formatter/linter configuration. Use Bun for JS tooling and uv for Python tooling.
+- Use `trash` instead of shell `rm` when removing files.
 
 ### Python
 
 - Use type annotations, including generics when required. Code should be 100% type covered.
 - Avoid creating undocumented dictionaries. Use dataclasses, Pydantic models, classes, named tuples, etc.
 - Avoid blocking the main thread. Use asyncio interfaces whenever possible, or use asyncio.to_thread for blocking code.
-- Always log exceptions and errors. New package loggers should be added to `logging_config.py`.
+- Use `logging.getLogger(__name__)` for operational logs and errors. Register new package loggers in `logging_config.py`.
+- Use absolute imports from the Python package root.
 - Test files should end with `_test.py`, and not start with `test_?.py`.
 
 ### TypeScript
 
 - Use TypeScript only, avoid using vanilla JavaScript.
-- Provide detailed types and variables, including generics when needed.
-- Prefer arrow functions and one-liner expressions.
+- Prefer arrow functions where they improve readability; keep expressions readable.
+- Use `bunLogger` or `createLogger` from `runtime/logger.ts` for Bun runtime logs.
 - Avoid storing React state multiple times. Compute derived values during render; use `useMemo` when caching an expensive computation helps. Example:
 
     ```tsx
@@ -136,14 +140,26 @@ bun run test:security
 - Use [Lucide React](https://lucide.dev/) for all icons.
 - Dark mode is toggled via `.dark` class on `<html>`. Use Tailwind's `dark:` variant for dark-mode-specific styles.
 
-### Design Guidelines
+## Writing and documentation
 
-- Users are likely to be technical, so provide full information and messages.
-- Always show task avatars instead of IDs, and type colors near task types.
-- Add tooltips with description and help icons where needed.
-- Reactions should be near interactions; avoid toasters, popups, etc.
-- Add placeholders for loading or empty containers.
-- Display error inside components and provide detailed information.
+- Lead with the action, result or fact the reader needs. Use plain language and short paragraphs.
+- Use bullets for steps or parallel choices, tables for comparisons and inline code blocks for runnable examples.
+- Explain why a constraint exists when it is not obvious. Remove comments that only narrate the code.
+- Describe verified behavior and limits. Missing observations do not prove success, inactivity or an absent relationship.
+- Keep error messages specific: what failed, what is known and what the user can do next. Avoid guessed causes and promotional copy.
+- Maintain one source for each instruction; link to it instead of copying it. Update the relevant operator page when setup or behavior changes.
+- Keep issue plans, progress reports and dated test results in GitHub. Repository documentation should remain useful after the PR merges.
+
+## User-experience review
+
+Review every feature or change as the user will encounter it, not only as a code diff:
+
+- Start from the user's entry point and complete the intended task with realistic data and permissions.
+- For UI changes, use the running app. Check loading, empty, error and restricted states, plus recovery or retry where relevant.
+- Check responsive layout, keyboard use, clear labels and feedback next to the affected action.
+- Distinguish browser preferences from shared server settings. Label unavailable or restricted observations without inventing values.
+- For APIs, MCP and deployment changes, exercise the client, tool call or documented command the user will run.
+- In the PR, report what you exercised and any gaps. Use task avatars/type colors for scanning while keeping technical identifiers available when needed.
 
 ## Testing
 
