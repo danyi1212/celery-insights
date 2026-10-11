@@ -65,6 +65,7 @@ Ask an agent: “Find the `reports.render` task I spawned in the last 15 minutes
 
 ## Documentation
 
+- [Authentication & Authorization](src/content/docs/authentication.mdx) for password accounts, OIDC, roles and sessions
 - [`AUTHORIZATION.md`](AUTHORIZATION.md) for restrictive OPA decisions, deployment setup and tested policy examples
 - [`CONFIGURATION.md`](CONFIGURATION.md) for the full environment variable reference, setup patterns, metrics endpoints, and reverse-proxy behavior
 - [`Support Matrix`](CONFIGURATION.md#support-matrix) for broker, serializer, and result-backend compatibility

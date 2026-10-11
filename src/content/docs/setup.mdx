@@ -23,7 +23,7 @@ result_backend = "redis://redis:6379/0"
 - Generate a shared session secret: `openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n'`.
 - Put the account password and session secret in the referenced files.
 - Set up HTTPS ingress for the public URL. Keep port 8555 private and enable WebSocket forwarding.
-- For SSO, see [OIDC configuration](/documentation/configuration#openid-connect).
+- For SSO, see [OIDC configuration](/documentation/authentication#openid-connect).
 
 ```sh
 docker run -p 127.0.0.1:8555:8555 --name celery-insights \
@@ -49,7 +49,8 @@ The first two provide task events; the last two add started timestamps and resul
 
 ## Next steps
 
-- [Configuration](/documentation/configuration): accounts, connection settings and overrides.
+- [Authentication & Authorization](/documentation/authentication): accounts, SSO, roles and policies.
+- [Configuration](/documentation/configuration): connection settings and overrides.
 - [Celery clusters](/documentation/celery-clusters): Sentinel, TLS and custom serializers.
 - [Kubernetes](/documentation/kubernetes): shared storage, probes and replicas.
 - [Debug bundles](/documentation/debug-bundles): capture and replay an incident.

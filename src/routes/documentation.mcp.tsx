@@ -9,7 +9,7 @@ const DocumentationMcpPage = () => (
     description="Connect an authenticated agent to investigate tasks and workers."
     group="Reference"
     source={{ path: "src/content/docs/mcp.mdx", markdown: mcpMarkdown }}
-    previousPage={{ title: "Configuration", href: "/documentation/configuration" }}
+    previousPage={{ title: "Authentication & Authorization", href: "/documentation/authentication" }}
     nextPage={{ title: "Deployment Patterns", href: "/documentation/deployment-patterns" }}
   >
     <McpContent />

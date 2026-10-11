@@ -10,7 +10,7 @@ const DocumentationConfigurationPage = () => (
     group="Reference"
     source={{ path: "src/content/docs/configuration.mdx", markdown: configurationMarkdown }}
     previousPage={{ title: "Quick Start", href: "/documentation/setup" }}
-    nextPage={{ title: "MCP Interface", href: "/documentation/mcp" }}
+    nextPage={{ title: "Authentication & Authorization", href: "/documentation/authentication" }}
   >
     <ConfigurationContent />
   </DocsPage>
