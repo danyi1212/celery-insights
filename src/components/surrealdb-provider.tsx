@@ -1,5 +1,5 @@
 import { useSessionRecheck } from "@hooks/use-session-recheck"
-import { authenticatedFetch } from "@lib/authenticated-fetch"
+import { authenticatedFetch, AccessDeniedError } from "@lib/authenticated-fetch"
 import { markRemoteObservation } from "@lib/observation-query"
 import { appUrl } from "@lib/app-url"
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
@@ -13,6 +13,7 @@ import { DemoEventGenerator } from "@lib/demo-event-generator"
 export type IngestionStatus = "leader" | "standby" | "read-only" | "disabled"
 
 interface AppConfig {
+  taskVisibilityRestricted?: boolean
   ui?: Parameters<typeof applyDeploymentDefaults>[0]
   observationPath: string
   ingestionStatus: IngestionStatus
@@ -53,8 +54,16 @@ const DATABASE = "main"
 
 async function fetchConfig(): Promise<AppConfig> {
   const res = await authenticatedFetch(appUrl("/api/config"))
+  if (res.status === 503) throw new AuthorizationUnavailableError()
   if (!res.ok) throw new Error(`Failed to fetch config: ${res.status}`)
   return res.json()
+}
+
+class AuthorizationUnavailableError extends Error {
+  constructor() {
+    super("We cannot verify your access right now. Please retry, or contact your administrator if this continues.")
+    this.name = "Access verification unavailable"
+  }
 }
 
 async function connectObservations(db: Surreal, observationPath: string): Promise<void> {
@@ -99,6 +108,8 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
   const [ingestionStatus, setIngestionStatus] = useState<IngestionStatus>("disabled")
   const [error, setError] = useState<Error | null>(null)
   const [configLoaded, setConfigLoaded] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const configRef = useRef<AppConfig | null>(null)
   useSessionRecheck(status === "connected")
 
@@ -123,18 +134,63 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
 
   // Configuration and database transport both pass through Bun authentication.
   useEffect(() => {
+    let active = true
     fetchConfig()
       .then((config) => {
+        if (!active) return
         if (config.ui) applyDeploymentDefaults(config.ui)
         configRef.current = config
+        setAppConfig(config)
         setIngestionStatus(config.ingestionStatus)
         setConfigLoaded(true)
       })
       .catch((err) => {
+        if (!active) return
         setError(err instanceof Error ? err : new Error("Application configuration unavailable"))
         setConfigLoaded(true)
       })
-  }, [])
+    return () => {
+      active = false
+    }
+  }, [attempt])
+
+  // A revoked or unavailable policy closes the socket without an HTTP response.
+  // Probe the protected configuration endpoint to explain the failure and refresh view hints.
+  useEffect(() => {
+    if (!configLoaded || status === "connected") return
+    let active = true
+    let checking = false
+    const check = async () => {
+      if (checking) return
+      checking = true
+      try {
+        const config = await fetchConfig()
+        if (!active) return
+        const needsConnection = !configRef.current
+        configRef.current = config
+        setAppConfig(config)
+        setError(null)
+        if (needsConnection) await connectObservations(dbRef.current, config.observationPath)
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err : new Error("Application unavailable"))
+      } finally {
+        checking = false
+      }
+    }
+    const timer = window.setInterval(() => void check(), 5000)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [configLoaded, status])
+
+  const retryConnection = () => {
+    void dbRef.current.close()
+    configRef.current = null
+    setConfigLoaded(false)
+    setError(null)
+    setAttempt((current) => current + 1)
+  }
 
   // Application authentication is already established by browser navigation.
   useEffect(() => {
@@ -159,9 +215,9 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
       status,
       ingestionStatus,
       error,
-      appConfig: configRef.current,
+      appConfig,
     }),
-    [status, ingestionStatus, error],
+    [status, ingestionStatus, error, appConfig],
   )
 
   // Loading state while fetching config
@@ -172,7 +228,7 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
   // Block initial app render until first successful database connection.
   // This avoids route-level flicker and gives users a single clear loading state.
   if (status !== "connected") {
-    return <RemoteLoadingScreen status={status} error={error} />
+    return <RemoteLoadingScreen status={status} error={error} onRetry={retryConnection} />
   }
 
   return <SurrealDBContext.Provider value={contextValue}>{children}</SurrealDBContext.Provider>
@@ -287,9 +343,32 @@ const DemoSurrealDBProvider = ({ children }: { children: React.ReactNode }) => {
 
 // --- Loading screens ---
 
-const RemoteLoadingScreen = ({ status, error }: { status?: ConnectionStatus; error?: Error | null }) => {
+const RemoteLoadingScreen = ({
+  status,
+  error,
+  onRetry,
+}: {
+  status?: ConnectionStatus
+  error?: Error | null
+  onRetry?: () => void
+}) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const showDemoSuggestion = elapsedSeconds >= 12 && status !== "connected"
+  const [signingOut, setSigningOut] = useState(false)
+  const [logoutError, setLogoutError] = useState("")
+  const accessError = error instanceof AccessDeniedError || error instanceof AuthorizationUnavailableError
+  const showDemoSuggestion = elapsedSeconds >= 12 && status !== "connected" && !error
+  const signOut = async () => {
+    setSigningOut(true)
+    setLogoutError("")
+    try {
+      const response = await authenticatedFetch(appUrl("/api/auth/logout"), { method: "POST" })
+      if (!response.ok) throw new Error("Sign-out failed")
+      window.location.assign(appUrl("/login") + "?reason=signed-out")
+    } catch {
+      setLogoutError("Could not sign out. Please try again.")
+      setSigningOut(false)
+    }
+  }
 
   useEffect(() => {
     const timer = setInterval(() => setElapsedSeconds((prev) => prev + 1), 1000)
@@ -309,9 +388,15 @@ const RemoteLoadingScreen = ({ status, error }: { status?: ConnectionStatus; err
       className="min-h-screen flex items-center justify-center bg-background text-foreground"
     >
       <div className="w-full max-w-md text-center space-y-4 px-6">
-        <div className="text-lg font-medium">{status ? statusLabel[status] : "Starting..."}</div>
-        <div className="text-sm text-muted-foreground">Connecting to observations ({elapsedSeconds}s)</div>
-        <Progress className="h-2" value={status === "reconnecting" ? 35 : 65} />
+        <div className="text-lg font-medium">
+          {accessError ? error.name : status ? statusLabel[status] : "Starting..."}
+        </div>
+        {!accessError && (
+          <>
+            <div className="text-sm text-muted-foreground">Connecting to observations ({elapsedSeconds}s)</div>
+            <Progress className="h-2" value={status === "reconnecting" ? 35 : 65} />
+          </>
+        )}
         {elapsedSeconds >= 8 && !error && (
           <div className="text-xs text-muted-foreground">
             This is taking longer than expected. Services may still be warming up.
@@ -327,7 +412,26 @@ const RemoteLoadingScreen = ({ status, error }: { status?: ConnectionStatus; err
             </Button>
           </div>
         )}
-        {error && <div className="text-sm text-destructive">Connection error: {error.message}</div>}
+        {error && (
+          <div role="alert" className="text-sm text-destructive">
+            {accessError ? error.message : `Connection error: ${error.message}`}
+          </div>
+        )}
+        {error && (
+          <div className="flex justify-center gap-2">
+            <Button variant="outline" onClick={onRetry}>
+              Retry connection
+            </Button>
+            <Button variant="ghost" disabled={signingOut} onClick={() => void signOut()}>
+              {signingOut ? "Signing out…" : "Sign out"}
+            </Button>
+          </div>
+        )}
+        {logoutError && (
+          <p role="alert" className="text-sm text-destructive">
+            {logoutError}
+          </p>
+        )}
       </div>
     </div>
   )

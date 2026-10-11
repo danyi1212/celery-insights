@@ -16,7 +16,7 @@ import { ObservationApi } from "./runtime/observation-api"
 import { initializeAuthentication, secureApplicationRequest } from "./runtime/security/http"
 import { ObservationRpc } from "./runtime/observation/rpc"
 import { buildRead, readPermissions, readRequestSchema } from "./runtime/observation/queries"
-import { intersectScopes, scopeFingerprint, scopedDatabase, rowScoped } from "./runtime/security/read-scope"
+import { intersectScopes, scopeFingerprint, scopedDatabase, rowScoped, taskScoped } from "./runtime/security/read-scope"
 import { AuthError } from "./runtime/security/permissions"
 import { Authorization } from "./runtime/security/opa"
 import { payloadPermissions } from "./runtime/security/permissions"
@@ -673,6 +673,7 @@ const server = Bun.serve({
             rawEventsLimit: runtimeConfig.uiRawEventsLimit,
           },
           observationPath: `${runtimeConfig.urlPrefix}/api/observation/rpc`,
+          taskVisibilityRestricted: Boolean(scope && taskScoped(scope)),
           ingestionStatus: leaderElection?.status ?? ingestionStatus,
           debugSnapshot:
             scope && rowScoped(scope) && replaySnapshot

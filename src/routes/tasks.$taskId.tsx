@@ -83,8 +83,11 @@ const DeliveryPanel = ({ task }: { task: Task }) => (
     <div className="grid gap-2 p-3 md:grid-cols-2">
       <DetailItem label="Exchange" value={task.exchange || "---"} />
       <DetailItem label="Routing key" value={task.routing_key || "---"} />
-      <DetailItem label="Root task" value={task.root_id || task.workflow_id || task.id} />
-      <DetailItem label="Parent task" value={task.parent_id || "---"} />
+      <DetailItem
+        label="Root task"
+        value={task.relationships_restricted ? "Restricted" : task.root_id || task.workflow_id || task.id}
+      />
+      <DetailItem label="Parent task" value={task.relationships_restricted ? "Restricted" : task.parent_id || "---"} />
     </div>
   </Panel>
 )
@@ -99,24 +102,28 @@ const RelatedTasksPanel = ({ currentTask, members }: { currentTask: Task; member
 
   return (
     <Panel title="Related Tasks">
-      <div className="space-y-3 p-3">
-        <div>
-          <p className="mb-1 text-xs font-medium uppercase text-muted-foreground">Parent</p>
-          <div>{parent ? <TaskLink task={parent} /> : "---"}</div>
-        </div>
-        <div>
-          <p className="mb-1 text-xs font-medium uppercase text-muted-foreground">Children</p>
-          <div className="flex flex-wrap gap-2">
-            {children.length ? children.map((task) => <TaskLink key={task.id} task={task} />) : "---"}
+      {currentTask.relationships_restricted ? (
+        <RestrictedData label="Related tasks" />
+      ) : (
+        <div className="space-y-3 p-3">
+          <div>
+            <p className="mb-1 text-xs font-medium uppercase text-muted-foreground">Parent</p>
+            <div>{parent ? <TaskLink task={parent} /> : "---"}</div>
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-medium uppercase text-muted-foreground">Children</p>
+            <div className="flex flex-wrap gap-2">
+              {children.length ? children.map((task) => <TaskLink key={task.id} task={task} />) : "---"}
+            </div>
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-medium uppercase text-muted-foreground">Notable siblings</p>
+            <div className="flex flex-wrap gap-2">
+              {siblings.length ? siblings.map((task) => <TaskLink key={task.id} task={task} />) : "---"}
+            </div>
           </div>
         </div>
-        <div>
-          <p className="mb-1 text-xs font-medium uppercase text-muted-foreground">Notable siblings</p>
-          <div className="flex flex-wrap gap-2">
-            {siblings.length ? siblings.map((task) => <TaskLink key={task.id} task={task} />) : "---"}
-          </div>
-        </div>
-      </div>
+      )}
     </Panel>
   )
 }
@@ -150,18 +157,24 @@ const TaskPage = () => {
 
   return (
     <div>
-      <div className="h-[50vh] w-full" id="workflow-chart">
-        {task ? (
-          <WorkflowGraph
-            chartType={chartType}
-            workflowId={task.workflow_id || task.root_id || task.id}
-            rootTaskId={workflow?.root_task_id || task.root_id || task.id}
-            currentTaskId={task.id}
-          />
-        ) : (
-          <Skeleton className="h-[450px] w-full" />
-        )}
-      </div>
+      {task?.relationships_restricted ? (
+        <div className="border-b px-4 py-2">
+          <RestrictedData label="Workflow relationships" />
+        </div>
+      ) : (
+        <div className="h-[50vh] w-full" id="workflow-chart">
+          {task ? (
+            <WorkflowGraph
+              chartType={chartType}
+              workflowId={task.workflow_id || task.root_id || task.id}
+              rootTaskId={workflow?.root_task_id || task.root_id || task.id}
+              currentTaskId={task.id}
+            />
+          ) : (
+            <Skeleton className="h-[450px] w-full" />
+          )}
+        </div>
+      )}
       <TaskPageHeader task={task} chartType={chartType} setChartType={setChartType} />
       <div className="py-2 px-4" id="lifetime-chart">
         {task ? <TaskLifetimeChart task={task} /> : <Skeleton className="h-8 w-full rounded-md" />}

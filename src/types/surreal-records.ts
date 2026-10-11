@@ -15,6 +15,7 @@ export enum TaskState {
 
 /** Task record as stored in SurrealDB */
 export interface SurrealTask {
+  relationships_restricted?: boolean
   restricted_fields?: string[]
   id: unknown // SurrealDB RecordId — use String(id) for comparison
   type?: string | null
@@ -200,6 +201,7 @@ const isoToDate = (iso: string | null | undefined): Date | undefined => (iso ? n
 
 /** Parsed task — same shape as SurrealTask but with extracted id and Date timestamps */
 export interface Task {
+  relationships_restricted?: boolean
   restricted_fields?: string[]
   id: string
   type?: string
@@ -253,6 +255,7 @@ export interface Workflow {
 
 /** Convert a raw SurrealDB task record to a parsed Task with Date objects */
 export const parseTask = (raw: SurrealTask): Task => ({
+  relationships_restricted: raw.relationships_restricted,
   id: extractId(raw.id),
   restricted_fields: raw.restricted_fields,
   type: raw.type || undefined,

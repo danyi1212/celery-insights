@@ -152,3 +152,9 @@ URL_PREFIX=/tools/celery bun run e2e
 The sidebar displays the signed-in account. Role grants hide unavailable management sections and disable actions such as export and cleanup. These hints do not grant access: Bun checks every request against roles and the current OPA policy. A policy denial keeps the session active and explains that access is restricted.
 
 Scoped task and worker responses include server-generated `restricted_fields` metadata. Detail and comparison views label omitted inputs, results, failure details and worker inspection data as restricted, rather than treating them as empty values. A missing task or worker may be absent or outside the permitted view; the UI does not distinguish those cases.
+
+Task-scoped views also mark workflow relationships as restricted. The task page explains this instead of showing an empty graph or suggesting that omitted relationships do not exist. The dashboard uses permitted recent tasks when its configuration decision restricts task visibility, with an explanation that workflow summaries are hidden. These hints do not replace the independent checks on every read.
+
+When a policy change or outage closes a live connection, the browser discards observation views and probes the protected configuration endpoint every five seconds. Access denial and unavailable access verification receive distinct explanations, with retry and sign-out controls. The session remains active until logout or expiry; logout remains available during a policy outage. Demo mode is not suggested as a remedy for authorization errors.
+
+Direct navigation to a denied page shows an access recovery page with retry and account-switching links. API clients continue to receive the original JSON error and HTTP status; navigation does not clear the session.

@@ -188,6 +188,18 @@ try {
   assert.equal(String(visible[0].id), "task:sample")
   for (const field of ["result", "parent_id", "root_id", "workflow_id"]) assert.equal(visible[0][field], undefined)
   assert.deepEqual(visible[0].children, [])
+  assert.equal(visible[0].relationships_restricted, true)
+  assert.ok(visible[0].execution_observed_at)
+  assert.ok(visible[0].execution_active_at)
+  const [unrestricted] = await scopedDatabase(root, { deny_fields: [] }).query<[Array<Record<string, unknown>>]>(
+    "SELECT * FROM type::record('task', $taskId)",
+    { taskId: "sample" },
+  )
+  assert.equal(unrestricted[0].relationships_restricted, undefined)
+  const [payloadOnly] = await scopedDatabase(root, { deny_fields: ["task.result.read"] }).query<
+    [Array<Record<string, unknown>>]
+  >("SELECT * FROM type::record('task', $taskId)", { taskId: "sample" })
+  assert.equal(payloadOnly[0].relationships_restricted, false)
   const [hidden] = await scoped.query<[unknown[]]>("SELECT * FROM type::record('task', $taskId)", { taskId: "hidden" })
   assert.deepEqual(hidden, [])
   const [counts, events, workflows, search] = await scoped.query<[unknown[], unknown[], unknown[], unknown[]]>(

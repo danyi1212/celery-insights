@@ -1,5 +1,5 @@
 import { Sessions } from "./sessions"
-import { loginPage } from "./login-page"
+import { loginPage, accessPage } from "./login-page"
 import type { ReadScope } from "./read-scope"
 import { Authorization, type PolicyContext } from "./opa"
 import { timingSafeEqual } from "node:crypto"
@@ -85,6 +85,16 @@ export async function secureApplicationRequest(
           },
         }),
       )
+    const status = error instanceof AuthError ? error.status : 503
+    if (
+      auth &&
+      request.method === "GET" &&
+      (status === 403 || status === 503) &&
+      !/^\/(api|metrics|surreal|mcp|ws)(?:\/|$)/.test(normalized) &&
+      (request.headers.get("sec-fetch-mode") === "navigate" || request.headers.get("accept")?.includes("text/html"))
+    ) {
+      return accessPage(prefix, auth.origin + pathname + new URL(request.url).search, status)
+    }
     return authFailure(error)
   }
 }

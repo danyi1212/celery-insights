@@ -229,6 +229,7 @@ test.describe("Restrictive OPA authorization", () => {
       const rows = await read({ operation: "list" })
       expect(rows[0]).toHaveLength(1)
       expect(rows[0][0].children).toEqual([])
+      expect(rows[0][0].relationships_restricted).toBe(true)
       expect(rows[0][0]).not.toHaveProperty("result")
       expect(await read({ operation: "list", id: "scope_hidden" })).toEqual([[]])
       const explorer = await read({ operation: "explorer" })
@@ -330,11 +331,17 @@ test.describe("Restrictive OPA authorization", () => {
       })
       const page = await context.newPage()
       await signIn(page, policyCredentials)
+      await expect(page.getByText("Your view is limited by organization policy.", { exact: false })).toBeVisible()
+      await expect(page.locator("main")).toContainText("scope.visible")
+      await expect(page.getByText("Make sure you have Celery Events enabled:")).toHaveCount(0)
       await page.goto(appURL("/tasks/scope_visible"))
       await expect(page.getByTestId("header-connection-status").getByText("Connected", { exact: true })).toBeVisible()
       await expect(page.locator("main")).toContainText("scope.visible")
       await expect(page.getByText("Access to task inputs is restricted", { exact: false })).toBeVisible()
       await expect(page.getByText("Access to some outcome data is restricted", { exact: false })).toBeVisible()
+      await expect(page.getByText("Access to workflow relationships is restricted", { exact: false })).toBeVisible()
+      await expect(page.getByText("Access to related tasks is restricted", { exact: false })).toBeVisible()
+      await expect(page.locator("#workflow-chart, #workflow-selector")).toHaveCount(0)
       expect(await page.content()).not.toMatch(/secret-.*-marker|hidden-row-marker|scope.hidden/)
       updatePolicyFixture({ result: { allow: true, scope: { task_ids: [], deny_fields: [] } } })
       await expect(page.locator("main")).not.toContainText("scope.visible", { timeout: 15000 })
@@ -344,6 +351,33 @@ test.describe("Restrictive OPA authorization", () => {
       await privateObservationQuery(
         "USE NS celery_insights DB main; DELETE task:scope_visible; DELETE task:scope_hidden; DELETE event:scope_visible; DELETE event:scope_visible2; DELETE event:scope_hidden; DELETE worker:scope_worker;",
       )
+    }
+  })
+
+  test("explains live access changes, recovers without stale data and permits sign-out during an outage", async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ ignoreHTTPSErrors: true })
+    const page = await context.newPage()
+    try {
+      await signIn(page, policyCredentials)
+      await expect(page.getByTestId("header-connection-status")).toContainText("Connected")
+      updatePolicyFixture({ deny_all: true })
+      await expect(page.getByTestId("app-connection-loading")).toContainText("Access denied", { timeout: 15000 })
+      await expect(page.getByRole("button", { name: "Switch to demo mode" })).toHaveCount(0)
+      await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible()
+      updatePolicyFixture()
+      await page.getByRole("button", { name: "Retry connection" }).click()
+      await expect(page.getByTestId("header-connection-status")).toContainText("Connected")
+      updatePolicyFixture({ result: null })
+      await expect(page.getByTestId("app-connection-loading")).toContainText("cannot verify your access", {
+        timeout: 15000,
+      })
+      await page.getByRole("button", { name: "Sign out", exact: true }).click()
+      await expect(page).toHaveURL(appURL("/login?reason=signed-out"))
+      await expect(page.getByRole("status")).toContainText("You have signed out")
+    } finally {
+      await context.close()
     }
   })
 
