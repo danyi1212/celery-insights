@@ -32,7 +32,7 @@ const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setCha
         {task === undefined ? (
           <Skeleton className="size-10 rounded-full" />
         ) : (
-          <TaskAvatar taskId={task.id} type={task.type} status={task.state} />
+          <TaskAvatar taskId={task.id} type={task.type} status={task.state} execution={task} />
         )}
       </div>
       <div className="flex h-16 flex-col justify-end">

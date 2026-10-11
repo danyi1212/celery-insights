@@ -1,9 +1,38 @@
-import { render, screen, waitFor } from "@test-utils"
+import { act, render, screen, waitFor } from "@test-utils"
 import userEvent from "@testing-library/user-event"
 import { TaskState } from "@/types/surreal-records"
 import TaskStatusIcon from "./task-status-icon"
 
 describe("TaskStatusIcon", () => {
+  it("expires a positive execution observation even when ingestion stops", () => {
+    vi.useFakeTimers()
+    const now = new Date("2026-10-06T12:00:00Z")
+    vi.setSystemTime(now)
+    try {
+      render(
+        <TaskStatusIcon
+          status={TaskState.STARTED}
+          execution={{
+            execution_active: true,
+            execution_observed_at: now,
+            last_updated: new Date(now.getTime() - 1000),
+          }}
+        />,
+      )
+      expect(screen.getByLabelText("Started; Observed running")).toBeInTheDocument()
+      act(() => vi.advanceTimersByTime(130_000))
+      expect(screen.getByLabelText("Started; Execution unconfirmed")).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("annotates a started task without a fresh observation as unconfirmed", () => {
+    const { container } = render(<TaskStatusIcon status={TaskState.STARTED} execution={{}} />)
+    expect(screen.getByLabelText("Started; Execution unconfirmed")).toBeInTheDocument()
+    expect(container.querySelector("svg")?.getAttribute("class")).toContain("text-status-warning")
+  })
+
   const stateExpectations: [TaskState, string, string][] = [
     [TaskState.PENDING, "text-muted-foreground", "Pending"],
     [TaskState.RECEIVED, "text-status-info", "Received"],

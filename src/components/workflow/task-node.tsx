@@ -10,7 +10,7 @@ const TaskNode: React.FC<NodeProps<TaskNodeType>> = ({ data }) => {
     <>
       <Handle type="target" position={Position.Left} />
       <div className="animate-in zoom-in-75 fade-in duration-300">
-        <TaskAvatar taskId={data.id} type={data.type} status={data.state} className="size-[60px]" />
+        <TaskAvatar taskId={data.id} type={data.type} status={data.state} execution={data} className="size-[60px]" />
       </div>
       <Handle type="source" position={Position.Right} />
     </>

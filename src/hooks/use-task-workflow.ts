@@ -14,6 +14,9 @@ interface UseTaskWorkflowResult extends TaskWorkflowSnapshot {
   isLoading: boolean
 }
 
+// One observation refresh notifies every STARTED member at once; read the workflow once per burst.
+const REFRESH_COALESCE_MS = 250
+
 const EMPTY_RESULT: TaskWorkflowSnapshot = {
   task: null,
   workflow: null,
@@ -74,6 +77,7 @@ export function useTaskWorkflow(taskId: string): UseTaskWorkflowResult {
 
     let cancelled = false
     let unsubscribe: (() => void) | undefined
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined
 
     const start = async () => {
       setIsLoading(true)
@@ -88,8 +92,11 @@ export function useTaskWorkflow(taskId: string): UseTaskWorkflowResult {
         const recordId = extractId(record.id)
         const workflowId = workflowIdRef.current
         const matchesWorkflow = !!workflowId && (record.workflow_id || record.root_id || recordId) === workflowId
-        if (recordId === taskId || matchesWorkflow) {
-          void fetchSnapshot()
+        if ((recordId === taskId || matchesWorkflow) && !refreshTimer) {
+          refreshTimer = setTimeout(() => {
+            refreshTimer = undefined
+            void fetchSnapshot()
+          }, REFRESH_COALESCE_MS)
         }
       })
     }
@@ -101,6 +108,7 @@ export function useTaskWorkflow(taskId: string): UseTaskWorkflowResult {
 
     return () => {
       cancelled = true
+      clearTimeout(refreshTimer)
       unsubscribe?.()
       if (subscriptionRef.current) {
         subscriptionRef.current.kill().catch(() => {})

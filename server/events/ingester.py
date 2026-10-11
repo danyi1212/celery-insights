@@ -11,6 +11,8 @@ from surrealdb_client import get_db
 logger = logging.getLogger(__name__)
 
 TERMINAL_EVENT_TYPES = frozenset({"task-succeeded", "task-failed", "task-revoked", "task-rejected"})
+TERMINAL_TASK_STATES = ("SUCCESS", "FAILURE", "REVOKED", "REJECTED", "IGNORED")
+TERMINAL_TASK_STATES_SQL = "[" + ", ".join(f"'{state}'" for state in TERMINAL_TASK_STATES) + "]"
 
 EVENT_STATE_MAP: dict[str, str] = {
     "task-sent": "PENDING",
@@ -288,18 +290,26 @@ def build_task_upsert(event: dict, idx: int, *, search_indexing_enabled: bool = 
         f"{p}_workflow_id": workflow_id,
     }
 
+    apply_state = f"${p}_previous.last_updated IS NONE OR <datetime>${p}_ts > ${p}_previous.last_updated"
+    if event_type in TERMINAL_EVENT_TYPES:
+        # An observed last_updated is monitor time, not task evidence: terminal events replace it even when older,
+        # unless it already holds a different terminal state.
+        apply_state += (
+            f" OR (${p}_previous.last_updated_observed = true"
+            f" AND (${p}_previous.state NOT IN {TERMINAL_TASK_STATES_SQL} OR ${p}_previous.state = ${p}_state))"
+        )
+
     set_clauses = [
-        f"state = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts > ${p}_previous.last_updated"
-        f" THEN ${p}_state ELSE ${p}_previous.state END",
-        f"last_updated = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts > ${p}_previous.last_updated"
-        f" THEN <datetime>${p}_ts ELSE ${p}_previous.last_updated END",
+        f"state = IF ${p}_apply THEN ${p}_state ELSE ${p}_previous.state END",
+        f"last_updated = IF ${p}_apply THEN <datetime>${p}_ts ELSE ${p}_previous.last_updated END",
+        f"last_updated_observed = IF ${p}_apply THEN false ELSE ${p}_previous.last_updated_observed ?? false END",
         f"{ts_field} = IF ${p}_previous.{ts_field} IS NONE OR <datetime>${p}_ts < ${p}_previous.{ts_field}"
         f" THEN <datetime>${p}_ts ELSE ${p}_previous.{ts_field} END",
         f"first_observed_at = IF ${p}_previous.first_observed_at IS NONE"
         f" OR <datetime>${p}_ts < ${p}_previous.first_observed_at"
         f" THEN <datetime>${p}_ts ELSE ${p}_previous.first_observed_at END",
         # The workflow follows root_id, so an older event can't regroup a task whose root is already known.
-        f"workflow_id = IF ${p}_previous.root_id IS NONE OR ${p}_previous.last_updated IS NONE"
+        f"workflow_id = IF ${p}_previous.root_id IS NONE OR ${p}_apply"
         f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
         f" THEN ${p}_workflow_id ELSE ${p}_previous.workflow_id ?? ${p}_workflow_id END"
         if event.get("root_id")
@@ -309,6 +319,9 @@ def build_task_upsert(event: dict, idx: int, *, search_indexing_enabled: bool = 
     if event_type == "task-failed" or event.get("exception") or event.get("traceback"):
         set_clauses.append("had_error = true")
 
+    # Fields follow an applied state even when it is older than an observed last_updated; `>=` lets
+    # an event with the same timestamp still fill them.
+    apply_fields = f"${p}_apply OR <datetime>${p}_ts >= ${p}_previous.last_updated"
     for event_field, db_field in TASK_FIELD_MAP.items():
         value = event.get(event_field)
         if value is not None:
@@ -316,8 +329,7 @@ def build_task_upsert(event: dict, idx: int, *, search_indexing_enabled: bool = 
             params[pname] = value if isinstance(value, int | float) else str(value)
             # Result polling can observe a newer state before send/receive metadata arrives.
             set_clauses.append(
-                f"{db_field} = IF ${p}_previous.{db_field} IS NONE OR ${p}_previous.last_updated IS NONE"
-                f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
+                f"{db_field} = IF ${p}_previous.{db_field} IS NONE OR {apply_fields}"
                 f" THEN ${pname} ELSE ${p}_previous.{db_field} END"
             )
 
@@ -325,30 +337,29 @@ def build_task_upsert(event: dict, idx: int, *, search_indexing_enabled: bool = 
     if hostname:
         params[f"{p}_worker"] = hostname
         set_clauses.append(
-            f"worker = IF ${p}_previous.worker IS NONE OR ${p}_previous.last_updated IS NONE"
-            f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
-            f" THEN ${p}_worker ELSE ${p}_previous.worker END"
+            f"worker = IF ${p}_previous.worker IS NONE OR {apply_fields} THEN ${p}_worker ELSE ${p}_previous.worker END"
         )
 
     if event.get("kwargs") is not None:
         set_clauses.append(
-            f"kwargs_search_source = IF ${p}_previous.kwargs IS NONE OR ${p}_previous.last_updated IS NONE "
-            f"OR <datetime>${p}_ts >= ${p}_previous.last_updated "
+            f"kwargs_search_source = IF ${p}_previous.kwargs IS NONE OR {apply_fields} "
             f"THEN 'saferepr' ELSE ${p}_previous.kwargs_search_source END"
         )
     target = f"type::record('task', ${p}_id)"
     assignments = ", ".join(set_clauses)
     # Read persisted values explicitly: UPSERT can evaluate against a creation
     # candidate, including multiple updates to the same task in one transaction.
-    query = f"LET ${p}_previous = (SELECT * FROM {target})[0] ?? {{}}; UPSERT {target} SET {assignments}"
+    query = (
+        f"LET ${p}_previous = (SELECT * FROM {target})[0] ?? {{}}; "
+        f"LET ${p}_apply = {apply_state}; "
+        f"UPSERT {target} SET {assignments}"
+    )
     if search_indexing_enabled and event.get("kwargs") is not None:
         terms = kwargs_search_terms(str(event["kwargs"]), "saferepr")
         params[f"{p}_search_terms"] = terms.terms
         params[f"{p}_search_fallback"] = terms.fallback
         query += (
-            f"; IF ${p}_previous.kwargs != ${p}_kwargs AND (${p}_previous.kwargs IS NONE "
-            f"OR ${p}_previous.last_updated IS NONE "
-            f"OR <datetime>${p}_ts >= ${p}_previous.last_updated) "
+            f"; IF ${p}_previous.kwargs != ${p}_kwargs AND (${p}_previous.kwargs IS NONE OR {apply_fields}) "
             "AND (SELECT VALUE enabled FROM search_config:current)[0] = true { "
             f"UPDATE type::record('task_search', ${p}_id) SET kwargs_terms = ${p}_search_terms, "
             f"kwargs_fallback = ${p}_search_fallback; }}"
@@ -547,6 +558,12 @@ def build_worker_upsert(event: dict, idx: int) -> tuple[str, dict]:
             )
 
     query = f"UPSERT type::record('worker', ${p}_id) SET " + ", ".join(set_clauses)
+    if status == "offline":
+        # Polls skip offline workers, so observations made before the worker left would otherwise outlive it.
+        query += (
+            f"; UPDATE task SET execution_active = NONE WHERE worker = ${p}_id AND state = 'STARTED'"
+            f" AND execution_active != NONE AND execution_observed_at <= <datetime>${p}_ts"
+        )
     return query, params
 
 

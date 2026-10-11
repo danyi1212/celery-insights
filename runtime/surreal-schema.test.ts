@@ -181,6 +181,8 @@ describe("runSchemaMigration", () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
+      // The task backfill runs before the workflow backfill reads tasks.
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         [
           {
@@ -220,6 +222,14 @@ describe("runSchemaMigration", () => {
     expect(
       queries.some((query) => query.includes("UPSERT type::record('task', $taskId) SET workflow_id = $workflowId")),
     ).toBe(true)
+  })
+
+  it("backfills the observation flag for rows written before it existed", async () => {
+    await runSchemaMigration(createConfig())
+    const queries = mockDb.query.mock.calls.map(([query]) => String(query))
+    const backfill = queries.find((query) => query.includes("last_updated_observed = last_updated_observed ??"))
+    expect(backfill).toContain("started_at = NONE AND received_at = NONE AND retried_at = NONE")
+    expect(backfill).toContain("state NOT IN ['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED']")
   })
 
   it("sets correct table permissions", async () => {
