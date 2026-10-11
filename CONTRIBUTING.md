@@ -171,6 +171,14 @@ the tests clear data in its `test/mcp` database.
 The Python ingestion integration test also starts an isolated SurrealDB process; it skips when
 the CLI is unavailable locally, and CI installs the CLI to run it.
 
+To compare search indexing workloads locally, run the same integration test with an output path:
+
+```sh
+SEARCH_BENCHMARK_OUTPUT=/tmp/search-index-workloads.jsonl uv run pytest server/events/search_indexing_integration_test.py --log-cli-level=INFO
+```
+
+The report measures the local test workload, not production throughput. Keep run-specific results in the relevant issue or PR.
+
 ```shell
 bun run test          # all tests (single run)
 bun run test:watch    # watch mode
