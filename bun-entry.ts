@@ -16,15 +16,15 @@ import { ObservationApi } from "./runtime/observation-api"
 import { initializeAuthentication, secureApplicationRequest } from "./runtime/security/http"
 import { authorize, payloadPermissions } from "./runtime/security/permissions"
 import type { Config } from "./runtime/config"
+import { databaseReaderPassword, prepareDatabaseConfig } from "./runtime/database-config"
 import { resolveConfig } from "./runtime/config-loader"
 import { pythonConfig, pythonEnvironment } from "./runtime/python-config"
 import {
   createDebugBundleArchive,
-  exportSurrealNative,
+  exportSurrealData,
   getSnapshotDetails,
   getSnapshotSummary,
   getSurrealRecordCounts,
-  importSurrealNative,
   importSurrealData,
   LineRingBuffer,
   parseDebugSnapshot,
@@ -287,7 +287,7 @@ function spawnSurrealDB(): ChildProcess {
       "--user",
       "root",
       "--pass",
-      "root",
+      runtimeConfig.surrealdbRootPass!,
       runtimeConfig.surrealdbStorage,
     ],
     { stdio: ["ignore", "pipe", "pipe"] },
@@ -477,6 +477,10 @@ if (config.debugBundlePath) {
   bunLogger.info(`Loaded debug snapshot from ${config.debugBundlePath}`)
 }
 
+runtimeConfig = prepareDatabaseConfig(
+  runtimeConfig,
+  resolvedConfig.provenance["database.observation.ingester_password"].source !== "default",
+)
 printBanner(runtimeConfig, replaySnapshot)
 
 const managingSurrealDB = !runtimeConfig.surrealdbExternalUrl
@@ -523,9 +527,7 @@ try {
 }
 
 if (replaySnapshot) {
-  if (replaySnapshot.sourceDataSqlPath) {
-    await importSurrealNative(runtimeConfig, db, replaySnapshot.sourceDataSqlPath)
-  } else if (replaySnapshot.sourceData) {
+  if (replaySnapshot.sourceData) {
     await importSurrealData(db, replaySnapshot.sourceData)
   } else {
     throw new Error("Debug snapshot does not contain SurrealDB export data")
@@ -565,7 +567,7 @@ await mcpDb.connect(runtimeConfig.surrealdbUrl, {
     namespace: runtimeConfig.surrealdbNamespace,
     database: runtimeConfig.surrealdbDatabase,
     username: "viewer",
-    password: "viewer",
+    password: databaseReaderPassword(runtimeConfig),
   },
 })
 const mcpCursorCredential =
@@ -661,7 +663,7 @@ const server = Bun.serve({
           debugSnapshot: getSnapshotSummary(replaySnapshot),
           // Temporary read-only database transport behind the Bun gate.
           viewerUser: "viewer",
-          viewerPass: "viewer",
+          viewerPass: databaseReaderPassword(runtimeConfig),
           viewerNs: runtimeConfig.surrealdbNamespace,
           viewerDb: runtimeConfig.surrealdbDatabase,
         })
@@ -683,7 +685,7 @@ const server = Bun.serve({
           return Response.json({ error: "invalid debug bundle request" }, { status: 400 })
         }
 
-        const [serverInfo, retentionInfo, healthInfo, recordCounts, surrealExportSql] = await Promise.all([
+        const [serverInfo, retentionInfo, healthInfo, recordCounts, surrealExport] = await Promise.all([
           observationApi
             .handle(new Request("http://localhost/api/settings/info"), "/api/settings/info", Boolean(replaySnapshot))
             .then((response) => response?.json()),
@@ -696,7 +698,7 @@ const server = Bun.serve({
             .then((response) => response?.json()),
           fetchJsonFromPython<Record<string, unknown>>("/health"),
           getSurrealRecordCounts(db),
-          exportSurrealNative(runtimeConfig),
+          exportSurrealData(db),
         ])
         const archive = await createDebugBundleArchive({
           config: runtimeConfig,
@@ -707,7 +709,7 @@ const server = Bun.serve({
           healthInfo,
           versionsInfo: buildVersionsInfo(runtimeConfig),
           recordCounts,
-          surrealExportSql,
+          surrealExport,
           logs: {
             bun: bunLogBuffer.toString(),
             python: pythonLogBuffer.toString(),

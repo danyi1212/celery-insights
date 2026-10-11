@@ -36,6 +36,7 @@ timezone = "UTC"
 
 [database.observation]
 mode = "embedded"
+root_password_file = "/run/secrets/insights/database-root-password"
 
 [database.observation.embedded]
 storage = "rocksdb:///data/surreal"

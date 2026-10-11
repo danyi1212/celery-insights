@@ -1,9 +1,28 @@
 import path from "node:path"
 import os from "node:os"
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile, cp } from "node:fs/promises"
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import type { Config } from "./config"
 import { SETTINGS } from "./config-registry"
-import type { Surreal } from "surrealdb"
+import { TextCodec, type RecordIdValue, type Surreal } from "surrealdb"
+import { z } from "zod"
+
+const exportSchema = z
+  .object({
+    version: z.literal(1),
+    tasks: z.array(z.record(z.string(), z.unknown())),
+    events: z.array(z.record(z.string(), z.unknown())),
+    workers: z.array(z.record(z.string(), z.unknown())),
+  })
+  .strict()
+
+function redactImportedConfig(config: Record<string, unknown>): Record<string, unknown> {
+  // Historical bundles may contain additional secrets. Keep only recognized nonsensitive settings.
+  return Object.fromEntries(
+    SETTINGS.filter((setting) => !setting.secret && setting.key !== "configFile")
+      .filter((setting) => Object.hasOwn(config, setting.key))
+      .map((setting) => [setting.key, config[setting.key]]),
+  )
+}
 
 export interface DebugBundleClientInfo {
   includeSecrets?: boolean
@@ -43,7 +62,6 @@ export interface SurrealExport {
 
 export interface ParsedDebugSnapshot {
   bundlePath: string
-  extractedDir: string
   manifest: DebugBundleManifest
   sourceConfig: Record<string, unknown>
   sourceRuntime: Record<string, unknown>
@@ -52,7 +70,6 @@ export interface ParsedDebugSnapshot {
   sourceHealth: Record<string, unknown> | null
   sourceUi: Record<string, unknown>
   sourceData: SurrealExport | null
-  sourceDataSqlPath: string | null
   sourceLogs: {
     bun: string
     python: string
@@ -234,103 +251,19 @@ export async function getSurrealRecordCounts(db: Surreal): Promise<DebugBundleMa
   }
 }
 
-function getSurrealHttpEndpoint(config: Config): string {
-  return config.surrealdbUrl.replace(/\/rpc$/, "").replace(/^ws(s?):\/\//, "http$1://")
-}
-
-export async function exportSurrealNative(config: Config): Promise<string> {
-  const fullExport = await runCommand([
-    "surreal",
-    "export",
-    "--log",
-    "none",
-    "--endpoint",
-    getSurrealHttpEndpoint(config),
-    "--username",
-    "root",
-    "--password",
-    "root",
-    "--auth-level",
-    "root",
-    "--namespace",
-    config.surrealdbNamespace,
-    "--database",
-    config.surrealdbDatabase,
-    "--only",
-    "--records",
-    "true",
-    "--tables",
-    "task,event,worker",
-    "-",
-  ])
-  return extractSurrealTableData(fullExport, ["event", "task", "worker"])
-}
-
-export function extractSurrealTableData(sql: string, tables: readonly string[]): string {
-  const statements: string[] = ["OPTION IMPORT;"]
-
-  for (const table of tables) {
-    const header = `-- ------------------------------\n-- TABLE DATA: ${table}\n-- ------------------------------\n\n`
-    const start = sql.indexOf(header)
-    if (start === -1) continue
-    const bodyStart = start + header.length
-    const nextSection = sql.indexOf("\n-- ------------------------------\n-- TABLE:", bodyStart)
-    const body = (nextSection === -1 ? sql.slice(bodyStart) : sql.slice(bodyStart, nextSection)).trim()
-    if (!body) continue
-    statements.push(body)
-  }
-
-  return `${statements.join("\n\n")}\n`
-}
-
-export async function importSurrealNative(config: Config, db: Surreal, sourcePath: string): Promise<void> {
-  await resolveQueryResult(
-    db.query("DELETE FROM task; DELETE FROM event; DELETE FROM worker; DELETE FROM ingestion_lock;"),
-  )
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "celery-insights-surreal-import-"))
-  const importPath = path.join(tempRoot, "surreal-import.surql")
-
+function toSurrealRecordId(table: string, rawId: unknown): RecordIdValue | null {
+  if (typeof rawId !== "string" || !rawId) return null
+  if (!rawId.includes(":")) return rawId
   try {
-    await cp(sourcePath, importPath)
-    await runCommand([
-      "surreal",
-      "import",
-      "--log",
-      "none",
-      "--endpoint",
-      getSurrealHttpEndpoint(config),
-      "--username",
-      "root",
-      "--password",
-      "root",
-      "--auth-level",
-      "root",
-      "--namespace",
-      config.surrealdbNamespace,
-      "--database",
-      config.surrealdbDatabase,
-      importPath,
-    ])
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    throw new Error(`Failed to import native SurrealDB snapshot: ${message}`)
-  } finally {
-    await rm(tempRoot, { recursive: true, force: true })
+    const record = TextCodec.parseRecordId(rawId)
+    return record.table.name === table ? record.id : null
+  } catch {
+    return null
   }
-}
-
-function toSurrealRecordId(table: string, rawId: unknown): string | null {
-  if (rawId === null || rawId === undefined) return null
-  let id = String(rawId)
-  if (id.includes(":")) {
-    id = id.split(":", 2)[1] ?? id
-  }
-  id = id.replace(/^⟨|⟩$/g, "")
-  return id || null
 }
 
 interface ImportRecord {
-  id: string
+  id: RecordIdValue
   data: Record<string, unknown>
 }
 
@@ -375,6 +308,7 @@ function chunkRecords(records: ImportRecord[], chunkSize: number): ImportRecord[
 }
 
 export async function importSurrealData(db: Surreal, data: SurrealExport): Promise<void> {
+  data = exportSchema.parse(data)
   if (data.version !== 1) {
     throw new Error(`Unsupported SurrealDB export version: ${data.version}`)
   }
@@ -392,7 +326,7 @@ export async function importSurrealData(db: Surreal, data: SurrealExport): Promi
   ] as const) {
     records.forEach((record, index) => {
       const id = toSurrealRecordId(table, record.id)
-      if (!id) {
+      if (id === null || id === "") {
         throw new Error(`Invalid ${table} record without id at index ${index}`)
       }
       const copy = { ...record }
@@ -443,12 +377,9 @@ export async function importSurrealData(db: Surreal, data: SurrealExport): Promi
 
 async function listEntries(bundlePath: string): Promise<Set<string>> {
   const output = await runCommand(["unzip", "-Z1", bundlePath])
-  return new Set(
-    output
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean),
-  )
+  const names = output.split("\n").filter(Boolean)
+  if (new Set(names).size !== names.length) throw new Error("Invalid debug bundle: duplicate entries")
+  return new Set(output.split("\n").filter(Boolean))
 }
 
 export async function parseDebugSnapshot(bundlePath: string): Promise<ParsedDebugSnapshot> {
@@ -471,18 +402,16 @@ export async function parseDebugSnapshot(bundlePath: string): Promise<ParsedDebu
       throw new Error(`Invalid debug bundle: missing ${required}`)
     }
   }
-  if (!entries.has("source/data/surrealdb-export.surql") && !entries.has("source/data/surrealdb-export.json")) {
-    throw new Error("Invalid debug bundle: missing source/data/surrealdb-export.surql")
+  if (!entries.has("source/data/surrealdb-export.json")) {
+    throw new Error("SQL-only debug bundles are unsupported; capture a new structured-data bundle")
   }
-
-  const extractedDir = await mkdtemp(path.join(os.tmpdir(), "celery-insights-snapshot-"))
-  await runCommand(["unzip", "-q", bundlePath, "-d", extractedDir])
 
   return {
     bundlePath,
-    extractedDir,
     manifest,
-    sourceConfig: await readJsonFromZip<Record<string, unknown>>(bundlePath, "source/config/effective-config.json"),
+    sourceConfig: redactImportedConfig(
+      await readJsonFromZip<Record<string, unknown>>(bundlePath, "source/config/effective-config.json"),
+    ),
     sourceRuntime: await readJsonFromZip<Record<string, unknown>>(bundlePath, "source/runtime/server-info.json"),
     sourceRetention: entries.has("source/runtime/retention.json")
       ? await readJsonFromZip<Record<string, unknown>>(bundlePath, "source/runtime/retention.json")
@@ -495,10 +424,7 @@ export async function parseDebugSnapshot(bundlePath: string): Promise<ParsedDebu
       : null,
     sourceUi: await readJsonFromZip<Record<string, unknown>>(bundlePath, "source/ui/client.json"),
     sourceData: entries.has("source/data/surrealdb-export.json")
-      ? await readJsonFromZip<SurrealExport>(bundlePath, "source/data/surrealdb-export.json")
-      : null,
-    sourceDataSqlPath: entries.has("source/data/surrealdb-export.surql")
-      ? path.join(extractedDir, "source/data/surrealdb-export.surql")
+      ? exportSchema.parse(await readJsonFromZip<SurrealExport>(bundlePath, "source/data/surrealdb-export.json"))
       : null,
     sourceLogs: {
       bun: entries.has("source/logs/bun.log") ? await readTextFromZip(bundlePath, "source/logs/bun.log") : "",
@@ -541,17 +467,6 @@ export function getSnapshotDetails(snapshot: ParsedDebugSnapshot | null): Snapsh
   }
 }
 
-async function copyTreeContents(sourceDir: string, destinationDir: string): Promise<void> {
-  try {
-    const entries = await readdir(sourceDir)
-    if (entries.length === 0) return
-    await ensureDir(destinationDir)
-    await cp(sourceDir, destinationDir, { recursive: true })
-  } catch {
-    // Missing source dir is acceptable.
-  }
-}
-
 export async function createDebugBundleArchive(options: {
   config: Config
   includeSecrets: boolean
@@ -561,7 +476,7 @@ export async function createDebugBundleArchive(options: {
   healthInfo: Record<string, unknown> | null
   versionsInfo: Record<string, unknown>
   recordCounts: DebugBundleManifestSection["recordCounts"]
-  surrealExportSql: string
+  surrealExport: SurrealExport
   logs: { bun: string; python: string; surrealdb: string }
   replaySnapshot?: ParsedDebugSnapshot | null
 }): Promise<Uint8Array> {
@@ -569,9 +484,10 @@ export async function createDebugBundleArchive(options: {
   const stagingDir = path.join(tempRoot, "bundle")
   const zipPath = path.join(tempRoot, "debug-bundle-v2.zip")
   const createdAt = new Date().toISOString()
-  const sourceSection = options.replaySnapshot?.manifest.source ?? {
-    createdAt,
-    redacted: !options.includeSecrets,
+  const sourceSection = {
+    ...options.replaySnapshot?.manifest.source,
+    createdAt: options.replaySnapshot?.manifest.source.createdAt ?? createdAt,
+    redacted: true,
     recordCounts: options.recordCounts,
   }
 
@@ -579,7 +495,18 @@ export async function createDebugBundleArchive(options: {
     await ensureDir(stagingDir)
 
     if (options.replaySnapshot) {
-      await copyTreeContents(path.join(options.replaySnapshot.extractedDir, "source"), path.join(stagingDir, "source"))
+      const snapshot = options.replaySnapshot
+      await writeJson(
+        path.join(stagingDir, "source/config/effective-config.json"),
+        redactImportedConfig(snapshot.sourceConfig),
+      )
+      await writeJson(path.join(stagingDir, "source/runtime/server-info.json"), snapshot.sourceRuntime)
+      await writeJson(path.join(stagingDir, "source/runtime/retention.json"), snapshot.sourceRetention ?? {})
+      await writeJson(path.join(stagingDir, "source/runtime/health.json"), snapshot.sourceHealth ?? {})
+      await writeJson(path.join(stagingDir, "source/runtime/versions.json"), snapshot.sourceVersions ?? {})
+      await writeJson(path.join(stagingDir, "source/ui/client.json"), snapshot.sourceUi)
+      await writeJson(path.join(stagingDir, "source/data/surrealdb-export.json"), options.surrealExport)
+      // Imported logs may contain secrets from historical exports; never re-export them.
     } else {
       await writeJson(
         path.join(stagingDir, "source/config/effective-config.json"),
@@ -589,7 +516,7 @@ export async function createDebugBundleArchive(options: {
       await writeJson(path.join(stagingDir, "source/runtime/retention.json"), options.retentionInfo ?? {})
       await writeJson(path.join(stagingDir, "source/runtime/health.json"), options.healthInfo ?? {})
       await writeJson(path.join(stagingDir, "source/runtime/versions.json"), options.versionsInfo)
-      await writeText(path.join(stagingDir, "source/data/surrealdb-export.surql"), options.surrealExportSql)
+      await writeJson(path.join(stagingDir, "source/data/surrealdb-export.json"), options.surrealExport)
       await writeJson(path.join(stagingDir, "source/ui/client.json"), options.clientInfo)
       await writeText(path.join(stagingDir, "source/logs/bun.log"), options.logs.bun)
       await writeText(path.join(stagingDir, "source/logs/python.log"), options.logs.python)

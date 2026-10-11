@@ -23,7 +23,7 @@ describe("parseConfig", () => {
     const config = parseConfig({})
     expect(config.port).toBe(8555)
     expect(config.surrealdbUrl).toBe("ws://localhost:8557/rpc")
-    expect(config.surrealdbIngesterPass).toBe("changeme")
+    expect(config.surrealdbIngesterPass).toMatch(/^[A-Za-z0-9_-]{43}$/)
     expect(config.surrealdbNamespace).toBe("celery_insights")
     expect(config.surrealdbDatabase).toBe("main")
     expect(config.surrealdbStorage).toBe("memory")

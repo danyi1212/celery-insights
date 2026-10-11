@@ -220,11 +220,11 @@ Database name inside the configured SurrealDB namespace.
 
 #### SURREALDB_INGESTER_PASS
 
-Default: `changeme`
+Default: randomly generated per process
 
 Password for the `ingester` database user. The Python ingester uses this credential to write task, worker, and event data.
 
-Change this in every non-local deployment.
+Configure a stable `database.observation.ingester_password` for external databases shared by replicas. Persistent embedded and external databases also require `database.observation.root_password` or its `_file` source. Root credentials stay in Bun; they are excluded from Python and diagnostics. Existing stores require their current root credential; rotate the previous `root` password through SurrealDB administration before updating this secret.
 
 #### SURREALDB_FRONTEND_PASS (retired)
 
@@ -234,14 +234,16 @@ This frontend-only password setting is rejected. Configure explicit accounts in 
 
 Default: _(not set)_
 
-Absolute path to a `debug bundle v2` zip file mounted into the container at startup.
+Absolute path to a structured-data `debug bundle v2` zip file mounted into the container at startup.
 
 When set, Celery Insights boots into an offline, read-only replay of that captured system:
 
 - live Celery ingestion is disabled
 - leader election is disabled
-- external SurrealDB is ignored in favor of the embedded database
+- replay uses an embedded database; canonical configuration rejects an external database URL
 - the bundled `task`, `event`, and `worker` export is restored transactionally before traffic is served
+
+SQL-only historical bundles are rejected; capture a new bundle with this version before replaying it. Archive SQL is never executed.
 
 `SURREALDB_STORAGE` still applies in replay mode. Leave it unset for in-memory replay, or point it at a local embedded path if you want the replay database to persist across container restarts.
 

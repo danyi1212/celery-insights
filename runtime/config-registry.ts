@@ -43,6 +43,13 @@ export const SETTINGS: readonly Setting[] = [
     secret: true,
   },
   {
+    path: "database.observation.root_password",
+    key: "surrealdbRootPass",
+    type: "string",
+    env: "CELERY_INSIGHTS_DATABASE_ROOT_PASSWORD",
+    secret: true,
+  },
+  {
     path: "database.observation.ingester_password",
     key: "surrealdbIngesterPass",
     type: "string",

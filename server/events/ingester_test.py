@@ -485,6 +485,26 @@ class TestSurrealDBIngester:
         callback.assert_not_called()
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            {"type": []},
+            {"type": "task-succeeded", "uuid": "bad", "timestamp": 1e100},
+            {"type": "task-succeeded", "uuid": "bad", "timestamp": float("nan")},
+            {"type": "task-succeeded", "uuid": "bad", "timestamp": 1700000000, "runtime": "bad"},
+        ],
+    )
+    async def test_malformed_event_does_not_block_valid_event(self, mock_db, queue, bad):
+        ingester = SurrealDBIngester(queue)
+        ingester._buffer = [bad, {"type": "task-succeeded", "uuid": "good", "timestamp": 1700000000}]
+        await ingester._flush()
+        mock_db.query_raw.assert_awaited_once()
+        params = mock_db.query_raw.call_args.args[1]
+        assert params["t1_id"] == "good"
+        assert "t0_id" not in params
+        assert ingester._buffer == []
+
+    @pytest.mark.asyncio
     async def test_empty_flush_is_noop(self, mock_db, queue):
         ingester = SurrealDBIngester(queue)
         await ingester._flush()

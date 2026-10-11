@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { randomBytes } from "node:crypto"
 
 /**
  * Coerces string/boolean values to boolean.
@@ -31,7 +32,11 @@ export const flatConfigSchema = z.object({
   // SurrealDB
   surrealdbUrl: z.string().url().default("ws://localhost:8557/rpc"),
   surrealdbExternalUrl: z.string().url().optional(),
-  surrealdbIngesterPass: z.string().min(1).default("changeme"),
+  surrealdbRootPass: z.string().min(1).optional(),
+  surrealdbIngesterPass: z
+    .string()
+    .min(1)
+    .default(() => randomBytes(32).toString("base64url")),
   surrealdbNamespace: z.string().min(1).default("celery_insights"),
   surrealdbDatabase: z.string().min(1).default("main"),
   surrealdbStorage: z.string().default("memory"),

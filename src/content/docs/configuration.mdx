@@ -227,11 +227,11 @@ Database name inside the configured SurrealDB namespace.
 
 #### SURREALDB_INGESTER_PASS
 
-Default: `changeme`
+Default: randomly generated per process
 
 Password for the `ingester` database user. The Python ingester uses this credential to write task, worker, and event data.
 
-Change this in every non-local deployment.
+Configure a stable ingester credential for external databases shared by replicas. See Database credentials below.
 
 #### SURREALDB_FRONTEND_PASS (retired)
 
@@ -367,6 +367,7 @@ How often the cleanup job evaluates and applies retention policies.
 | `mcp.cursor_secret` / `_file` | string; sensitive | `CELERY_INSIGHTS_MCP_CURSOR_SECRET` / `_FILE` | `MCP_TOKEN` |
 | `mcp.allowed_hosts` | string | — | `MCP_ALLOWED_HOSTS` |
 | `database.observation.url` / `_file` | string; sensitive | `CELERY_INSIGHTS_DATABASE_URL` / `_FILE` | `SURREALDB_URL` |
+| `database.observation.root_password` / `_file` | string; sensitive | `CELERY_INSIGHTS_DATABASE_ROOT_PASSWORD` / `_FILE` | — |
 | `database.observation.ingester_password` / `_file` | string; sensitive | `CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD` / `_FILE` | `SURREALDB_INGESTER_PASS` |
 | `database.observation.namespace` | string | — | `SURREALDB_NAMESPACE` |
 | `database.observation.database` | string | — | `SURREALDB_DATABASE` |
@@ -477,3 +478,9 @@ Bun uses `openid-client` for discovery, authorization code exchange, PKCE, state
 The ingress must preserve Authorization/Origin, keep Bun and the database private, and serve HTTPS. Mutating API clients must send the configured Origin and `X-Celery-Insights-Request: 1`. WebSocket upgrades require Origin. Application account passwords are unrelated to internal database credentials.
 
 Current RPC browsing requires all payload grants and therefore administrator access. Viewer/operator browsing awaits typed reads and field enforcement. The old `SURREALDB_FRONTEND_PASS` setting and database login dialog are retired; explicitly configure accounts when upgrading.
+
+## Database credentials
+
+Memory databases receive random root and ingester credentials on each start. Root credentials stay in Bun.
+
+For persistent embedded storage, set `database.observation.root_password` or `root_password_file` to a stable deployment secret. For an external database, also configure `database.observation.ingester_password` or `ingester_password_file` consistently across replicas. Both support their catalogued environment overrides and `_FILE` sources. Existing stores must use their existing root credential during migration; rotate any previous `root` password through SurrealDB administration before using the new secret. Changing the launch configuration does not rotate an existing database user.

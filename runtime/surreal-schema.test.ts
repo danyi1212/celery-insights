@@ -32,6 +32,7 @@ function createConfig(overrides: Partial<Config> = {}): Config {
     port: 8555,
     urlPrefix: "",
     surrealdbUrl: "ws://localhost:8557/rpc",
+    surrealdbRootPass: "root",
     surrealdbIngesterPass: "test-pass",
     surrealdbNamespace: "celery_insights",
     surrealdbDatabase: "main",
@@ -240,7 +241,7 @@ describe("runSchemaMigration", () => {
     const viewerQuery = queries.find((q) => q.includes("DEFINE USER OVERWRITE viewer"))
     expect(viewerQuery).toBeDefined()
     expect(viewerQuery).toContain("ROLES VIEWER")
-    expect(viewerQuery).toContain("PASSWORD 'viewer'")
+    expect(viewerQuery).toContain("PASSWORD")
   })
 
   describe("frontend auth disabled", () => {

@@ -1,3 +1,4 @@
+import { databaseReaderPassword } from "../database-config"
 import { parseConfig } from "../config"
 // @vitest-environment node
 import { spawn, type ChildProcess } from "node:child_process"
@@ -129,8 +130,8 @@ describe("MCP tools against SurrealDB", () => {
       SURREALDB_NAMESPACE: "test",
       SURREALDB_DATABASE: "mcp",
     })
-    await runSchemaMigration(config)
-    await runSchemaMigration(config)
+    await runSchemaMigration({ ...config, surrealdbRootPass: "root" })
+    await runSchemaMigration({ ...config, surrealdbRootPass: "root" })
     const [edges] = await db.query<Row[]>("SELECT * FROM workflow_task").collect()
     expect(edges).toHaveLength(2)
     const viewer = new Surreal()
@@ -138,7 +139,12 @@ describe("MCP tools against SurrealDB", () => {
       await viewer.connect(databaseEndpoint, {
         namespace: "test",
         database: "mcp",
-        authentication: { username: "viewer", password: "viewer", namespace: "test", database: "mcp" },
+        authentication: {
+          username: "viewer",
+          password: databaseReaderPassword(config),
+          namespace: "test",
+          database: "mcp",
+        },
       })
       const readOnly = new McpTools({ db: viewer, cursorSecret: "secret", mode: () => "live", now: () => NOW })
       const result = await readOnly.call("search_workflows", { has_errors: true })

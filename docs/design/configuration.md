@@ -48,7 +48,7 @@ This table covers all 26 current Bun environment mappings. Defaults listed here 
 | `PORT` | 8555 | `server.port` | `CELERY_INSIGHTS_PORT` |
 | `SURREALDB_URL` | `ws://localhost:8557/rpc` | `database.observation.url` | `CELERY_INSIGHTS_DATABASE_URL`; unify with external URL |
 | `SURREALDB_EXTERNAL_URL` | unset | `database.observation.mode` + `.url` | External mode inferred from `CELERY_INSIGHTS_DATABASE_URL` if mode omitted |
-| `SURREALDB_INGESTER_PASS` | `changeme` | `database.observation.ingester_password` | `CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD`, `_FILE`; remove default with security migration |
+| `SURREALDB_INGESTER_PASS` | random per process | `database.observation.ingester_password` | `CELERY_INSIGHTS_DATABASE_INGESTER_PASSWORD`, `_FILE`; explicit stable credential required for external databases |
 | `SURREALDB_FRONTEND_PASS` | retired | `authentication.accounts` | Configure explicit accounts in TOML |
 | `SURREALDB_NAMESPACE` | `celery_insights` | `database.observation.namespace` | File |
 | `SURREALDB_DATABASE` | `main` | `database.observation.database` | File |

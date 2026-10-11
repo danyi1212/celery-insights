@@ -93,6 +93,14 @@
               "type": "string",
               "minLength": 1
             },
+            "root_password": {
+              "type": "string",
+              "minLength": 1
+            },
+            "root_password_file": {
+              "type": "string",
+              "minLength": 1
+            },
             "ingester_password": {
               "type": "string",
               "minLength": 1

@@ -1,3 +1,4 @@
+import { databaseReaderPassword } from "./database-config"
 import { Surreal } from "surrealdb"
 import type { Config } from "./config"
 import type { Logger } from "./logger"
@@ -313,6 +314,8 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
   const ns = assertIdent(config.surrealdbNamespace, "namespace")
   const dbName = assertIdent(config.surrealdbDatabase, "database")
 
+  const rootPassword = config.surrealdbRootPass
+  if (!rootPassword) throw new Error("Database root password is required")
   const db = new Surreal()
 
   try {
@@ -320,7 +323,7 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
     await db.connect(config.surrealdbUrl, {
       authentication: {
         username: "root",
-        password: "root",
+        password: rootPassword,
       },
     })
 
@@ -358,7 +361,11 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
     // Always create a read-only viewer user for the frontend.
     // SurrealDB requires authentication even for tables with FULL select permissions —
     // anonymous (unauthenticated) connections cannot query anything.
-    await db.query(`DEFINE USER OVERWRITE viewer ON DATABASE PASSWORD 'viewer' ROLES VIEWER`).collect()
+    await db
+      .query(
+        `DEFINE USER OVERWRITE viewer ON DATABASE PASSWORD ${toSurrealStrand(databaseReaderPassword(config))} ROLES VIEWER`,
+      )
+      .collect()
 
     // Retire the old database-level application login records.
     await db.query(`REMOVE ACCESS IF EXISTS frontend ON DATABASE`).collect()

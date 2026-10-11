@@ -132,7 +132,10 @@ jobs:
       - name: Bun observation API acceptance
         run: bun run test:observation
       - name: Bun configured-account acceptance
-        run: bun run test:security
+        run: |
+          bun run test:security
+          bun run tooling/verify-snapshot-security.ts
+          bun run tooling/verify-database-credentials.ts
 
   e2e:
     name: E2E tests (${{ matrix.deployment.name }})

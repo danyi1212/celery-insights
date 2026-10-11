@@ -64,6 +64,26 @@ def _epoch_to_iso(ts: float) -> str:
     return datetime.fromtimestamp(ts, tz=UTC).isoformat()
 
 
+def validate_event(event: dict) -> None:
+    if not isinstance(event, dict) or not isinstance(event.get("type", ""), str):
+        raise ValueError("Invalid event type")
+    for field in ("timestamp", "local_received"):
+        value = event.get(field)
+        if value is not None:
+            if isinstance(value, bool) or not isinstance(value, int | float):
+                raise ValueError("Invalid event timestamp")
+            _epoch_to_iso(value)
+    for field in ("uuid", "hostname", "root_id", "parent_id"):
+        if event.get(field) is not None and not isinstance(event[field], str):
+            raise ValueError("Invalid event identifier")
+    for field in ("runtime", "retries"):
+        if event.get(field) is not None and (
+            isinstance(event[field], bool) or not isinstance(event[field], int | float)
+        ):
+            raise ValueError("Invalid numeric event field")
+    json.dumps(event, allow_nan=False)
+
+
 def _workflow_id_for_event(event: dict) -> str | None:
     task_id = event.get("uuid")
     if not task_id:
@@ -134,6 +154,12 @@ class SurrealDBIngester:
                     )
                 continue
 
+            try:
+                validate_event(event)
+            except ValueError, TypeError, OverflowError, OSError, RecursionError:
+                self._dropped_count += 1
+                logger.warning("Discarding malformed Celery event")
+                continue
             self._buffer.append(event)
 
             event_type = event.get("type", "")
@@ -166,46 +192,61 @@ class SurrealDBIngester:
         queries: list[str] = []
         params: dict = {}
 
+        valid_events: list[dict] = []
         for i, event in enumerate(events):
-            event_type = event.get("type", "")
-            category = event_type.split("-", 1)[0] if "-" in event_type else ""
+            try:
+                validate_event(event)
+                event_queries: list[str] = []
+                event_params: dict = {}
+                event_terminal_ids: list[str] = []
+                event_type = event.get("type", "")
+                category = event_type.split("-", 1)[0] if "-" in event_type else ""
 
-            if category == "task":
-                q, p = build_task_upsert(event, i, search_indexing_enabled=self.search_indexing_enabled)
-                if q:
-                    queries.append(q)
-                    params.update(p)
+                if category == "task":
+                    q, p = build_task_upsert(event, i, search_indexing_enabled=self.search_indexing_enabled)
+                    if q:
+                        event_queries.append(q)
+                        event_params.update(p)
 
-                wq, wp = build_workflow_membership_upsert(event, i)
-                if wq:
-                    queries.append(wq)
-                    params.update(wp)
+                    wq, wp = build_workflow_membership_upsert(event, i)
+                    if wq:
+                        event_queries.append(wq)
+                        event_params.update(wp)
 
-                cq, cp = build_children_update(event, i)
-                if cq:
-                    queries.append(cq)
-                    params.update(cp)
+                    cq, cp = build_children_update(event, i)
+                    if cq:
+                        event_queries.append(cq)
+                        event_params.update(cp)
 
-                sq, sp = build_workflow_summary_recompute(event, i)
-                if sq:
-                    queries.append(sq)
-                    params.update(sp)
+                    sq, sp = build_workflow_summary_recompute(event, i)
+                    if sq:
+                        event_queries.append(sq)
+                        event_params.update(sp)
 
-                if event_type in TERMINAL_EVENT_TYPES:
-                    task_id = event.get("uuid")
-                    if task_id:
-                        terminal_task_ids.append(task_id)
+                    if event_type in TERMINAL_EVENT_TYPES:
+                        task_id = event.get("uuid")
+                        if task_id:
+                            event_terminal_ids.append(task_id)
 
-            elif category == "worker":
-                q, p = build_worker_upsert(event, i)
-                if q:
-                    queries.append(q)
-                    params.update(p)
+                elif category == "worker":
+                    q, p = build_worker_upsert(event, i)
+                    if q:
+                        event_queries.append(q)
+                        event_params.update(p)
 
-            rq, rp = build_raw_event(event, i)
-            if rq:
-                queries.append(rq)
-                params.update(rp)
+                rq, rp = build_raw_event(event, i)
+                if rq:
+                    event_queries.append(rq)
+                    event_params.update(rp)
+            except Exception:
+                self._dropped_count += 1
+                logger.warning("Discarding malformed Celery event", exc_info=True)
+                continue
+            queries.extend(event_queries)
+            params.update(event_params)
+            terminal_task_ids.extend(event_terminal_ids)
+            valid_events.append(event)
+        events = valid_events
 
         if queries:
             try:
