@@ -17,7 +17,7 @@ docker run -p 127.0.0.1:8555:8555 --name celery-insights \
   --env-file deployment.env ghcr.io/danyi1212/celery-insights:latest
 ```
 
-Open the HTTPS public URL configured in `installation.public_url`. The browser prompts for a configured username and password. Built-in operator docs are available under `/documentation` at the same URL.
+Open the HTTPS public URL configured in `installation.public_url`. Sign in with a configured account or your OIDC provider. Built-in operator docs are available under `/documentation` at the same URL.
 
 ## Required Celery Event Settings
 

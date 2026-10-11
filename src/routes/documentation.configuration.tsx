@@ -6,7 +6,7 @@ import { createFileRoute } from "@tanstack/react-router"
 const DocumentationConfigurationPage = () => (
   <DocsPage
     title="Configuration"
-    description="Environment variables and operational defaults exposed by the container entrypoint."
+    description="TOML settings, environment overrides and secret sources."
     group="Reference"
     source={{ path: "src/content/docs/configuration.mdx", markdown: configurationMarkdown }}
     previousPage={{ title: "Quick Start", href: "/documentation/setup" }}

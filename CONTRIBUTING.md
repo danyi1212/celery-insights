@@ -19,7 +19,7 @@ If you have found a bug, we would like to know. Before you file a bug report, ma
 
 To report a bug, create a new GitHub issue with the `bug` label and include a minimal reproduction plus any steps needed to reproduce it.
 
-When the issue depends on real task history, logs, or runtime config, also attach a redacted `debug bundle v2` from **Settings** -> **Download diagnostics**. Keep secrets redacted unless someone investigating the issue explicitly asks for the unredacted bundle.
+When the issue depends on real task history, logs, or runtime config, also attach a redacted `debug bundle v2` from **Settings** -> **Download diagnostics**. Configuration credentials are always redacted; review task payloads and logs before sharing.
 
 If you are not sure whether it is a bug, start with GitHub Discussions. Other users may have seen the same behavior and can help narrow it down.
 
@@ -44,147 +44,55 @@ To contribute to the project, follow these steps:
 
 ## Local development
 
-### Prerequisites
+Requirements: Bun, uv, Python 3.14+, Docker for E2E, and SurrealDB 3.3.0 for native database tests. Pinned runtime versions live in `Dockerfile`, `package.json` and `.python-version`.
 
-- Python 3.14+
-- [Bun](https://bun.sh/)
-- [SurrealDB](https://surrealdb.com/install) (v3.3+, production and CI use v3.3.0)
-- An IDE (we suggest PyCharm, but you can use your preferred IDE)
+```sh
+git clone https://github.com/<your_username>/celery-insights.git
+cd celery-insights
+bun install
+uv sync
+uv run pre-commit install
+```
 
-### Create dev environment
+Configure accounts, a session secret and `installation.public_url` using [the setup example](src/content/docs/setup.mdx). Keep secrets out of Git. Select your TOML file with `CELERY_INSIGHTS_CONFIG_FILE`.
 
-1. Clone your fork of the Celery Insights repository.
-
-    ```shell
-    git clone https://github.com/<your_username>/celery-insights.git
-    ```
-
-2. Navigate to the root folder of the repository.
-
-    ```shell
-    cd celery-insights/
-    ```
-
-3. Install the Python dependencies using [uv](https://docs.astral.sh/uv/).
-
-    ```shell
-    uv sync
-    ```
-
-4. Install pre-commit hooks
-
-   ```shell
-   pre-commit install
-   ```
-
-5. Install the frontend dependencies using Bun.
-
-    ```shell
-    bun install
-    ```
-
-6. Create `.env` file
-
-    ```shell
-    cd server/
-    cp .env.example .env
-    ```
-
-### Run the development stack
-
-The quickest way to start all services at once is:
-
-```shell
+```sh
+export CELERY_INSIGHTS_CONFIG_FILE=/absolute/path/to/config.toml
 bun run dev:all
 ```
 
-If you use `just`, the repo also includes `just dev`, `just lint`, `just typecheck`, and related helper recipes.
+- Bun supervises SurrealDB and the private Python Celery bridge; Vite serves the frontend on port 3000.
+- Authentication requires HTTPS ingress matching `installation.public_url`. Route frontend traffic to Vite and API/WebSocket traffic to Bun on port 8555.
+- Run `bun run dev` for Vite alone, or `bun run dev:server` for the Bun supervisor alone.
+- Python is launched through Bun with a validated settings snapshot, not a separate public server or `server/.env`.
+- Add application settings to the Bun schema/registry. Python receives only its required subset.
 
-### Debug bundles and snapshot replay
+### Diagnostics and replay
 
-Use this workflow when you need to reproduce a real incident locally without reconnecting to the original broker or result backend.
+Download diagnostics from **Settings** while the problem is visible. Configuration credentials are always redacted, but task data and logs may still contain sensitive information.
 
-Capture:
-
-```shell
-# From the running app UI:
-# Settings -> Download diagnostics
+```sh
+just start                                     # local test cluster
+just reload                                    # rebuild the app service
+just start-debug /absolute/path/to/bundle.zip   # offline, read-only replay
 ```
 
-Replay with the local test compose stack:
+These helpers use `test_project/docker-compose.yml`; supply your authentication TOML and secret inputs for manual deployments. E2E creates its own authenticated fixture.
 
-```shell
-just start
-just start-reload
-just start-debug /absolute/path/to/debug-bundle-v2.zip
+### Runtime and MCP
+
+- Bun owns APIs, metrics, exports, backups, retention and authorization.
+- Python collects Celery observations through a private Unix socket created by Bun.
+- Production browsers use typed observation reads; the demo uses local WASM queries.
+- MCP is served by Bun at `/mcp`, with the same configured accounts. See [client setup](CONFIGURATION.md#mcp-access-for-agents) and [tool contracts](MCP_DESIGN.md).
+- `runtime/mcp/` owns validation, queries, cursors and response budgets. Tools read stored observations without controlling Celery.
+
+Native acceptance:
+
+```sh
+bun run test:observation
+bun run test:security
 ```
-
-What these recipes do:
-
-- `just start` starts `test_project/docker-compose.yml` in detached mode
-- `just start-reload` rebuilds and recreates only the `celery-insights` service
-- `just start-debug ...` starts the test stack with `DEBUG_BUNDLE_PATH` set on the `celery-insights` service
-
-Replay mode is offline and read-only by design. It restores the bundled `task`, `event`, and `worker` data into embedded SurrealDB and disables mutating settings actions.
-
-Or run them in separate terminals:
-
-1. Start SurrealDB
-
-    ```shell
-   bun run dev:surreal
-   ```
-
-2. Start the Python ingester (provided PyCharm run configuration `run server`)
-
-    ```shell
-   cd server/
-   python run.py
-   ```
-
-3. Start the frontend dev server (provided PyCharm run configuration `dev`)
-
-    ```shell
-   bun dev
-   ```
-
-4. Open browser to <http://localhost:3000>
-
-> **Note:** All application settings are owned by Bun (`runtime/config.ts`) and passed to Python via environment variables. The Bun package root is the repository root, but the application source now lives at the repository root under `src/`, `runtime/`, and `e2e/`. When adding new configuration, define it in the Bun config schema first.
-
-### Runtime ownership
-
-Bun serves application APIs, metrics, CSV exports, backups and retention/cleanup. Python handles Celery ingestion and polling through a Unix socket in an owner-only temporary directory created by Bun; it no longer listens on a public TCP port. `bun run dev:all` starts the Bun supervisor and Vite, and Vite proxies application traffic through Bun. Activate the Python virtual environment before starting the supervisor.
-
-Use `bun run test:observation` for native API acceptance with SurrealDB 3.3.0. Use `bun run test:security` for configured-account verification.
-
-### MCP development
-
-Bun serves MCP at `http://localhost:8555/mcp`. The Vite dev server on port 3000 does not serve
-the MCP endpoint. With SurrealDB and the Python ingester already running, start Bun against
-that database in another terminal:
-
-```shell
-bun run build
-SURREALDB_EXTERNAL_URL=ws://localhost:8557/rpc INGESTION_ENABLED=false bun run start
-```
-
-This Bun process reads the existing database while the separate ingester keeps collecting events.
-Use the same namespace, database, and credentials as your development services.
-
-Tool contracts live in [`MCP_DESIGN.md`](MCP_DESIGN.md); connection settings and client examples
-live in [`CONFIGURATION.md`](CONFIGURATION.md#mcp-access-for-agents). Operator documentation is
-in `src/content/docs/mcp.mdx`, served at `/documentation/mcp` with navigation and Copy as Markdown.
-
-`runtime/mcp/` owns argument validation, read queries, cursor handling, response budgets, and the
-protocol adapter. MCP calls must read stored observations without changing or polling Celery.
-Keep selectors simple and counts scoped correctly; distinguish unavailable data from empty data,
-and response truncation from source truncation. Update the tool contract and in-app docs when
-changing public behavior.
-
-Run the focused MCP integration tests with `bunx vitest run runtime/mcp/mcp.test.ts`, and the
-ingestion regression with `uv run pytest server/events/ingester_integration_test.py`.
-Both use isolated native SurrealDB instances; the CLI must be on PATH.
 
 ## Code Styles
 
@@ -207,20 +115,12 @@ Both use isolated native SurrealDB instances; the CLI must be on PATH.
 - Use TypeScript only, avoid using vanilla JavaScript.
 - Provide detailed types and variables, including generics when needed.
 - Prefer arrow functions and one-liner expressions.
-- Avoid storing React state multiple times. Use `useMemo` for derived states. Example:
+- Avoid storing React state multiple times. Compute derived values during render; use `useMemo` when caching an expensive computation helps. Example:
 
     ```tsx
-    const MyComponent: React.FC<{items: string[]}> = ({items}) => {
-        // Dont
-        const [lengthBad, setLength] = useState(items.length)
-        useEffect(() => setLength(items.length), [items])
-
-        // Do
-        const lengthGood = useMemo(() => items.length, [items])
-    }
+    const TaskCount = ({ items }: { items: string[] }) => <span>{items.length}</span>
     ```
 
-- Avoid unnecessary React re-renders. Performance is important.
 - Bun commands and tooling run from the repository root.
 - Keep the frontend split by responsibility:
   - `src/` for the browser application
@@ -247,7 +147,7 @@ Both use isolated native SurrealDB instances; the CLI must be on PATH.
 
 ## Testing
 
-Code should be test-covered as much as possible.
+Test changed behavior and failure cases. Keep fixtures deterministic.
 
 Unit tests should be written close to the module they are testing, with the same module name.
 For example, tests for `models.py` should be at `models_test.py` in the same folder.
@@ -289,26 +189,25 @@ E2E tests run against the full docker-compose stack (celery-insights + Celery wo
 bun run e2e
 ```
 
-**With the stack already running** (faster iteration):
+**With previously built images** (faster iteration):
 
 ```shell
-cd test_project && docker compose --profile interactive up --build -d
-E2E_SKIP_COMPOSE=1 bun run e2e
+E2E_SKIP_BUILD=1 bun run e2e  # reuse existing images, still create the authenticated fixture
 ```
 
 **Headed mode** (opens a browser so you can watch the tests run):
 
 ```shell
-E2E_SKIP_COMPOSE=1 bun run e2e:headed
+bun run e2e:headed
 ```
 
 **Playwright UI mode** (interactive test runner with time-travel debugging):
 
 ```shell
-E2E_SKIP_COMPOSE=1 bun run e2e:ui
+bun run e2e:ui
 ```
 
-> **Tip:** When iterating locally, keep the docker-compose stack running and use `E2E_SKIP_COMPOSE=1` to skip the slow build step. Use `--headed` to see what the tests are doing, or `--ui` for the full Playwright inspector.
+`E2E_SKIP_COMPOSE=1` skips startup and teardown; use it only with an existing authenticated E2E stack.
 
 ### Reverse proxy E2E coverage
 

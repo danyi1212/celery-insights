@@ -22,7 +22,7 @@ check:
 
 # ─── Development ──────────────────────────────────────────────
 
-# Start all dev services (SurrealDB + Python ingester + Vite)
+# Start the Vite frontend (port 3000)
 dev:
     cd {{project}} && bun run dev
 
@@ -30,13 +30,13 @@ dev:
 dev-surreal:
     cd {{project}} && bun run dev:surreal
 
-# Start only the Vite dev server (port 3000)
+# Start the Bun supervisor and Vite frontend
 dev-all:
     cd {{project}} && bun dev:all
 
-# Start only the Python ingester (port 8556)
+# Start the Bun supervisor and private Celery bridge
 dev-backend:
-    cd {{server}} && python run.py
+    cd {{project}} && bun run dev:server
 
 # ─── Build ────────────────────────────────────────────────────
 

@@ -1,5 +1,7 @@
 # TOML configuration prerequisite
 
+Historical design for #142. For current settings and runnable setup, use [CONFIGURATION.md](../../CONFIGURATION.md) and [the operator configuration page](../../src/content/docs/configuration.mdx).
+
 Status: prerequisite implemented in merged PR #142; this document records the design and follow-up constraints. Updated 2026-10-03. Prerequisite for [authentication and authorization](authentication-authorization.md); urgent security containment can proceed independently.
 
 Tracking: [configuration #138](https://github.com/danyi1212/celery-insights/issues/138) → [authentication #139](https://github.com/danyi1212/celery-insights/issues/139) → [OPA authorization #140](https://github.com/danyi1212/celery-insights/issues/140).

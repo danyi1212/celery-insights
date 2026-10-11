@@ -1,11 +1,11 @@
-These are the operational behaviors most likely to matter once the app is behind a real load balancer, scrape target, or SRE handoff.
+Configure storage, access and monitoring before running the app in production.
 
 ## Production checklist
 
 - Prefer external SurrealDB before introducing multiple replicas, HPA, or rolling updates.
 - Keep the app and workers on a network path that can reach the broker and result backend directly.
 - Enable Celery task events on every worker pool you want represented in the UI.
-- Change the default ingester password, configure explicit application accounts, and terminate HTTPS at private ingress.
+- Configure stable database credentials, explicit application accounts and HTTPS ingress.
 
 ## Health, metrics, and scrape targets
 
@@ -16,21 +16,21 @@ These are the operational behaviors most likely to matter once the app is behind
 
 ## Reverse proxy and TLS
 
-- Bun is the single entrypoint: it serves the SPA and proxies `/api`, `/metrics`, and `/surreal/*` internally.
+- Bun serves the SPA, APIs, metrics and authorized observation reads. Direct `/surreal/*` access is denied.
 - Set [`URL_PREFIX`](/documentation/configuration#url_prefix) for a shared path such as `/tools/celery/`; preserve that prefix in proxy forwarding and enable WebSocket upgrades.
 - The built-in proxy is HTTP-only. Terminate TLS in your ingress, load balancer, or edge proxy.
 - Configure explicit application accounts, serve HTTPS, and keep Bun and SurrealDB endpoints private behind ingress.
 
 ## Security defaults to override
 
-- Change `SURREALDB_INGESTER_PASS` in every non-local deployment.
+- Use stable root credentials for persistent storage, and stable ingester credentials for external databases. See [database credentials](/documentation/configuration#database-credentials).
 - Configure password accounts or OIDC with explicit role mappings in TOML, and a shared `authentication.session.secret` on every replica. Keep Bun/database listeners inaccessible outside the ingress; roll out every replica when credentials change.
 - Store `BROKER_URL`, `RESULT_BACKEND`, and any config-file secrets in your secret manager rather than baking them into images.
 
 ## Incident capture and replay
 
 - Use **Settings** -> **Download diagnostics** to capture a `debug bundle v2` while the issue is visible.
-- Keep secrets redacted unless the investigation explicitly requires exact credentials.
+- Configuration credentials are always redacted. Task payloads and logs can still contain sensitive data.
 - Replay the captured bundle with `DEBUG_BUNDLE_PATH` when you need an offline, read-only copy of the incident.
 - If you work from this repository, `just start-debug /absolute/path/to/debug-bundle-v2.zip` is the quickest local replay path.
 - Attach the redacted bundle to bug reports when possible, or share it privately if the issue requires sensitive context.
