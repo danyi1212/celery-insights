@@ -237,7 +237,9 @@ bun run e2e:ui
 
 For new frontend features, use `appUrl` from `src/lib/app-url.ts` for same-origin endpoints and public assets, and `appHref` for plain anchor links. TanStack Router links apply the mount path automatically.
 
-CI runs the complete Playwright suite at the origin root and behind nginx at `/tools/celery/`. Run the proxy deployment locally with:
+CI runs the application suite at the origin root. With a URL prefix, Playwright runs only `reverse-proxy.spec.ts`: login redirects and cookie scope, assets, deep links, WebSockets, documentation links, downloads, MCP and sibling-route isolation. The separate OIDC browser acceptance checks callbacks at both paths.
+
+Run the focused proxy suite locally with:
 
 ```shell
 URL_PREFIX=/tools/celery bun run e2e

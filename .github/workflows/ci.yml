@@ -145,8 +145,10 @@ jobs:
         deployment:
           - name: root
             prefix: ""
+            suite: application suite
           - name: shared-proxy
             prefix: /tools/celery
+            suite: mount-path contracts
     env:
       URL_PREFIX: ${{ matrix.deployment.prefix }}
     runs-on: ubuntu-latest
@@ -177,7 +179,7 @@ jobs:
           files: ./docker-bake.hcl
           targets: e2e
           load: true
-      - name: Run E2E tests
+      - name: Run ${{ matrix.deployment.suite }}
         run: bun run e2e
         env:
           CI: "true"

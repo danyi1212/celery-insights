@@ -1,7 +1,31 @@
-import { appOrigin, appPath, appURL, urlPrefix } from "../helpers/app-url"
+import { appOrigin, appPath, appURL } from "../helpers/app-url"
+import { fixtureCredentials } from "../helpers/authentication"
 import { test, expect } from "../fixtures/base"
 
 test.describe("Public mount path", () => {
+  test("login redirects, session cookies and logout stay within the mount", async ({ browser }) => {
+    const context = await browser.newContext({ ignoreHTTPSErrors: true })
+    const page = await context.newPage()
+    try {
+      await page.goto(appURL("/documentation/authentication"))
+      await expect(page).toHaveURL(
+        appURL("/login") + "?returnTo=" + encodeURIComponent(appPath("/documentation/authentication")),
+      )
+      await page.getByLabel("Username", { exact: true }).fill(fixtureCredentials.username)
+      await page.getByLabel("Password", { exact: true }).fill(fixtureCredentials.password)
+      await page.getByRole("button", { name: "Sign in", exact: true }).click()
+      await expect(page).toHaveURL(appURL("/documentation/authentication"))
+      await expect(page.getByRole("heading", { name: "Authentication & Authorization", exact: true })).toBeVisible()
+      const session = (await context.cookies()).find((cookie) => cookie.name.startsWith("__Secure-insights-"))
+      expect(session).toMatchObject({ path: appPath("/"), httpOnly: true, secure: true })
+      await page.getByRole("button", { name: "Sign out", exact: true }).click()
+      await expect(page).toHaveURL(appURL("/login") + "?reason=signed-out")
+      expect((await context.request.get(appURL("/api/auth/identity"))).status()).toBe(401)
+    } finally {
+      await context.close()
+    }
+  })
+
   test("config, health and static assets use the public prefix", async ({ request, page }) => {
     const config = await request.get(appURL("/api/config"))
     expect(config.status()).toBe(200)
@@ -84,7 +108,6 @@ test.describe("Public mount path", () => {
   })
 
   test("shared proxy leaves sibling paths alone and redirects the bare prefix", async ({ request }) => {
-    test.skip(!urlPrefix, "Only applies to the shared reverse proxy deployment")
     const root = await request.get(`${appOrigin}/`)
     expect(await root.text()).toBe("Shared application root")
     for (const path of ["/api/config", "/mcp", "/assets/missing.js", `${appPath("")}-other/`]) {
