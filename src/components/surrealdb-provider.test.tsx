@@ -1,5 +1,4 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
 import useSettingsStore from "@stores/use-settings-store"
 import SurrealDBProvider, { useSurrealDB } from "./surrealdb-provider"
 
@@ -67,17 +66,12 @@ describe("SurrealDBProvider — remote mode", () => {
     sessionStorage.clear()
     // Ensure demo mode is off
     useSettingsStore.setState({ demo: false })
-    // Default: anonymous config response with viewer credentials
+    // Default: Bun-authorized config response with viewer transport
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
-          authRequired: false,
-          surrealPath: "/surreal/rpc",
+          observationPath: "/api/observation/rpc",
           ingestionStatus: "leader",
-          viewerUser: "viewer",
-          viewerPass: "viewer",
-          viewerNs: "celery_insights",
-          viewerDb: "main",
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
@@ -150,7 +144,7 @@ describe("SurrealDBProvider — remote mode", () => {
     vi.useRealTimers()
   })
 
-  it("connects as viewer user when auth is not required", async () => {
+  it("connects to typed observations after application authentication", async () => {
     render(
       <SurrealDBProvider>
         <ConsumerComponent />
@@ -158,19 +152,7 @@ describe("SurrealDBProvider — remote mode", () => {
     )
 
     await waitFor(() => {
-      expect(mockConnect).toHaveBeenCalledWith(
-        expect.stringContaining("/surreal/rpc"),
-        expect.objectContaining({
-          namespace: "celery_insights",
-          database: "main",
-          authentication: {
-            namespace: "celery_insights",
-            database: "main",
-            username: "viewer",
-            password: "viewer",
-          },
-        }),
-      )
+      expect(mockConnect).toHaveBeenCalledWith(expect.stringContaining("/api/observation/rpc"))
     })
   })
 
@@ -188,155 +170,15 @@ describe("SurrealDBProvider — remote mode", () => {
     expect(screen.getByTestId("error")).toHaveTextContent("none")
   })
 
-  it("shows login dialog when auth is required and no token exists", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          authRequired: true,
-          surrealPath: "/surreal/rpc",
-          ingestionStatus: "leader",
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    )
-
+  it("fails closed when deployment configuration cannot be loaded", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("denied", { status: 401 }))
     render(
       <SurrealDBProvider>
         <ConsumerComponent />
       </SurrealDBProvider>,
     )
-
-    await waitFor(() => {
-      expect(screen.getByText("Celery Insights")).toBeInTheDocument()
-      expect(screen.getByPlaceholderText("Password")).toBeInTheDocument()
-    })
-  })
-
-  it("handles login submission", async () => {
-    const user = userEvent.setup()
-
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          authRequired: true,
-          surrealPath: "/surreal/rpc",
-          ingestionStatus: "leader",
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    )
-
-    render(
-      <SurrealDBProvider>
-        <ConsumerComponent />
-      </SurrealDBProvider>,
-    )
-
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText("Password")).toBeInTheDocument()
-    })
-
-    const input = screen.getByPlaceholderText("Password")
-    await user.type(input, "secret")
-    await user.click(screen.getByText("Sign in"))
-
-    await waitFor(() => {
-      expect(mockSignin).toHaveBeenCalledWith(
-        expect.objectContaining({
-          access: "frontend",
-          variables: { name: "frontend", pass: "secret" },
-        }),
-      )
-    })
-
-    expect(sessionStorage.getItem("surrealdb_token")).toBe("test-token")
-  })
-
-  it("shows login error on failed signin", async () => {
-    const user = userEvent.setup()
-    mockSignin.mockRejectedValueOnce(new Error("Invalid credentials"))
-
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          authRequired: true,
-          surrealPath: "/surreal/rpc",
-          ingestionStatus: "leader",
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    )
-
-    render(
-      <SurrealDBProvider>
-        <ConsumerComponent />
-      </SurrealDBProvider>,
-    )
-
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText("Password")).toBeInTheDocument()
-    })
-
-    const input = screen.getByPlaceholderText("Password")
-    await user.type(input, "wrong")
-    await user.click(screen.getByText("Sign in"))
-
-    await waitFor(() => {
-      expect(screen.getByText("Invalid password")).toBeInTheDocument()
-    })
-  })
-
-  it("attempts to use existing session token when auth is required", async () => {
-    sessionStorage.setItem("surrealdb_token", "existing-token")
-
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          authRequired: true,
-          surrealPath: "/surreal/rpc",
-          ingestionStatus: "standby",
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    )
-
-    render(
-      <SurrealDBProvider>
-        <ConsumerComponent />
-      </SurrealDBProvider>,
-    )
-
-    await waitFor(() => {
-      expect(mockAuthenticate).toHaveBeenCalledWith("existing-token")
-    })
-  })
-
-  it("falls back to login dialog when existing token is invalid", async () => {
-    sessionStorage.setItem("surrealdb_token", "expired-token")
-    mockAuthenticate.mockRejectedValueOnce(new Error("Token expired"))
-
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          authRequired: true,
-          surrealPath: "/surreal/rpc",
-          ingestionStatus: "leader",
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    )
-
-    render(
-      <SurrealDBProvider>
-        <ConsumerComponent />
-      </SurrealDBProvider>,
-    )
-
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText("Password")).toBeInTheDocument()
-    })
-
-    expect(sessionStorage.getItem("surrealdb_token")).toBeNull()
+    await waitFor(() => expect(screen.getByText("Connection error: Failed to fetch config: 401")).toBeInTheDocument())
+    expect(mockConnect).not.toHaveBeenCalled()
   })
 
   it("subscribes to connection status events", async () => {
@@ -353,6 +195,45 @@ describe("SurrealDBProvider — remote mode", () => {
       expect(mockSubscribe).toHaveBeenCalledWith("disconnected", expect.any(Function))
       expect(mockSubscribe).toHaveBeenCalledWith("error", expect.any(Function))
     })
+  })
+
+  it("explains live policy revocation without offering demo mode and lets users retry", async () => {
+    render(
+      <SurrealDBProvider>
+        <ConsumerComponent />
+      </SurrealDBProvider>,
+    )
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("connected"))
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 403 }))
+    vi.useFakeTimers()
+    act(() => subscribedCallbacks.get("reconnecting")?.())
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000)
+    })
+    vi.useRealTimers()
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("permission"))
+    expect(screen.queryByText("Switch to demo mode")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeEnabled()
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({ observationPath: "/api/observation/rpc", ingestionStatus: "leader" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Retry connection" }))
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("connected"))
+  })
+
+  it("explains policy outages and allows sign-out while observations are blocked", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 503 }))
+    const navigate = vi.spyOn(window.location, "assign").mockImplementation(() => {})
+    render(
+      <SurrealDBProvider>
+        <ConsumerComponent />
+      </SurrealDBProvider>,
+    )
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("cannot verify your access"))
+    expect(mockConnect).not.toHaveBeenCalled()
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }))
+    fireEvent.click(screen.getByRole("button", { name: "Sign out" }))
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith(expect.stringContaining("/login?reason=signed-out")))
   })
 
   it("closes connection on unmount", async () => {
@@ -474,7 +355,7 @@ describe("SurrealDBProvider — demo mode", () => {
       expect(screen.getByTestId("ingestion")).toHaveTextContent("disabled")
     })
 
-    expect(fetchSpy).toHaveBeenCalledWith("/api/config")
+    expect(fetchSpy).toHaveBeenCalledWith("/api/config", expect.objectContaining({ credentials: "same-origin" }))
     expect(mockConnect).toHaveBeenCalledWith("mem://")
   })
 

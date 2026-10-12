@@ -17,8 +17,9 @@ if (process.argv[2] === "replay") {
     image = args[args.indexOf("--image") + 1]
   if (!args.includes("--output") || !args.includes("--image")) throw new Error("replay requires --output and --image")
   const sourceImage = args.includes("--source-image") ? args[args.indexOf("--source-image") + 1] : image
-  const format = args.includes("--format") ? args[args.indexOf("--format") + 1] : "native"
-  if (format !== "native" && format !== "legacy-json") throw new Error("Invalid replay format")
+  const format = args.includes("--format") ? args[args.indexOf("--format") + 1] : "scoped-json"
+  if (format !== "native" && format !== "scoped-json" && format !== "legacy-json")
+    throw new Error("Invalid replay format")
   const result = await benchmarkReplay(image, output, sourceImage, format)
   process.stdout.write(JSON.stringify({ output, status: result.status }) + "\n")
   process.exitCode = result.status === "passed" ? 0 : 1

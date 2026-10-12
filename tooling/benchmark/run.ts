@@ -4,6 +4,7 @@ import { createHash } from "node:crypto"
 import { dirname, resolve } from "node:path"
 import { hostname, platform, arch, cpus } from "node:os"
 import { promisify } from "node:util"
+import { benchmarkIngress, benchmarkFetch } from "./ingress"
 import { benchmarkBrowser, benchmarkLiveBrowser } from "./browser"
 import { benchmarkRequests, benchmarkConcurrentRequests } from "./requests"
 import { artifactInspectionScript } from "./artifacts"
@@ -161,6 +162,7 @@ const required = async (promise: ReturnType<typeof command>) => {
   return result.stdout
 }
 const jsonFile = (name: string, data: unknown) => writeFile(resolve(output, name), JSON.stringify(data, null, 2))
+let ingress: Awaited<ReturnType<typeof benchmarkIngress>> | undefined
 const lifecycleStarted = performance.now()
 const report: Record<string, unknown> = {
   schemaVersion: 3,
@@ -210,6 +212,7 @@ let phase = "ingestion"
 let sampler: Promise<void> | undefined
 const telemetry: unknown[] = []
 try {
+  ingress = await benchmarkIngress(output)
   const harnessFiles = [
     "run.ts",
     "requests.ts",
@@ -222,9 +225,11 @@ try {
     "history.py",
     "pipeline.py",
     "compose.yml",
+    "observation.ts",
+    "ingress.ts",
   ].map((file) => `tooling/benchmark/${file}`)
   harnessFiles.push(
-    "src/lib/explorer-query.ts",
+    "runtime/observation/queries.ts",
     "src/lib/task-search.ts",
     "src/lib/indexed-search.ts",
     "src/types/surreal-records.ts",
@@ -293,7 +298,7 @@ try {
   let url = `http://${address}`
   for (let attempt = 0; ; attempt++) {
     try {
-      const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(1000) })
+      const response = await benchmarkFetch(`${url}/health`, { signal: AbortSignal.timeout(1000) })
       if (response.ok) break
     } catch {
       /* Startup is measured until the readiness deadline. */
@@ -417,6 +422,12 @@ try {
     report.history = JSON.parse(seed.stdout.trim().split("\n").at(-1) ?? "null")
     report.storageAfterSeed = await storage()
   }
+  ingress.setBackend(url)
+  report.transport = {
+    browser: "local-https-proxy",
+    programmatic: "internal-http-ws-basic",
+    accountRole: "administrator",
+  }
   phase = "ingestion"
   const producerArgs = [
     "--tasks",
@@ -465,7 +476,7 @@ try {
     }
     if (!args.includes("--browser-live")) return produce()
     const live = await benchmarkLiveBrowser(
-      url,
+      ingress!.url,
       tasks,
       produce,
       Math.max(60_000, Math.ceil((tasks * 4) / rate + 60) * 1000),
@@ -498,7 +509,7 @@ try {
   }
   if (args.includes("--browser")) {
     phase = "browser"
-    report.browser = await measureResources("browser-journey", () => benchmarkBrowser(url, browserProfile))
+    report.browser = await measureResources("browser-journey", () => benchmarkBrowser(ingress!.url, browserProfile))
   }
   sampling = false
   await sampler
@@ -584,6 +595,8 @@ try {
   report.status = (report.history as { status?: string } | undefined)?.status === "incomplete" ? "incomplete" : "failed"
   report.error = error instanceof Error ? error.message : String(error)
 } finally {
+  await ingress?.close()
+
   sampling = false
   await sampler
   if (resourceIntervalSeconds) {

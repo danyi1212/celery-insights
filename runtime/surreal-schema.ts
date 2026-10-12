@@ -1,3 +1,4 @@
+import { databaseReaderPassword } from "./database-config"
 import { Surreal } from "surrealdb"
 import type { Config } from "./config"
 import type { Logger } from "./logger"
@@ -37,6 +38,9 @@ DEFINE FIELD OVERWRITE state ON task TYPE string;
 DEFINE FIELD OVERWRITE sent_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE received_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE started_at ON task TYPE option<datetime>;
+DEFINE FIELD OVERWRITE execution_active ON task TYPE option<bool>;
+DEFINE FIELD OVERWRITE execution_observed_at ON task TYPE option<datetime>;
+DEFINE FIELD OVERWRITE execution_active_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE succeeded_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE failed_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE retried_at ON task TYPE option<datetime>;
@@ -44,6 +48,7 @@ DEFINE FIELD OVERWRITE revoked_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE rejected_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE runtime ON task TYPE option<float>;
 DEFINE FIELD OVERWRITE last_updated ON task TYPE datetime;
+DEFINE FIELD OVERWRITE last_updated_observed ON task TYPE bool DEFAULT false;
 DEFINE FIELD OVERWRITE first_observed_at ON task TYPE option<datetime>;
 DEFINE FIELD OVERWRITE had_error ON task TYPE bool DEFAULT false;
 DEFINE FIELD OVERWRITE args ON task TYPE option<string>;
@@ -129,24 +134,6 @@ DEFINE FIELD OVERWRITE holder ON ingestion_lock TYPE option<string>;
 DEFINE FIELD OVERWRITE acquired_at ON ingestion_lock TYPE datetime;
 DEFINE FIELD OVERWRITE heartbeat ON ingestion_lock TYPE datetime;
 DEFINE FIELD OVERWRITE ttl_seconds ON ingestion_lock TYPE int DEFAULT 30;
-`
-
-/**
- * Frontend authentication schema — viewer table and record access method.
- * Only applied when SURREALDB_FRONTEND_PASS is configured.
- */
-export const FRONTEND_AUTH_SCHEMA = `
-DEFINE TABLE IF NOT EXISTS viewer SCHEMAFULL
-  PERMISSIONS NONE;
-
-DEFINE FIELD OVERWRITE name ON viewer TYPE string;
-DEFINE FIELD OVERWRITE pass ON viewer TYPE string;
-
-DEFINE ACCESS OVERWRITE frontend ON DATABASE TYPE RECORD
-  SIGNUP NONE
-  SIGNIN (
-    SELECT * FROM viewer WHERE name = $name AND crypto::argon2::compare(pass, $pass)
-  );
 `
 
 interface BackfillTaskRecord {
@@ -331,6 +318,8 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
   const ns = assertIdent(config.surrealdbNamespace, "namespace")
   const dbName = assertIdent(config.surrealdbDatabase, "database")
 
+  const rootPassword = config.surrealdbRootPass
+  if (!rootPassword) throw new Error("Database root password is required")
   const db = new Surreal()
 
   try {
@@ -338,7 +327,7 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
     await db.connect(config.surrealdbUrl, {
       authentication: {
         username: "root",
-        password: "root",
+        password: rootPassword,
       },
     })
 
@@ -357,13 +346,15 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
 
     // Apply core schema (tables, fields, indexes, permissions)
     await db.query(CORE_SCHEMA).collect()
-    await backfillWorkflows(db, log)
-
-    // Preserve evidence independently of the task's latest state. Historical events
-    // are used once at migration time, rather than scanned by every MCP search.
+    // Runs before any other write: rows written before `last_updated_observed` existed fail bool
+    // coercion on update until the flag is set. Preserve evidence independently of the task's latest
+    // state; historical events are used once at migration time, rather than scanned by every MCP search.
     await db
       .query(`UPDATE task SET
       first_observed_at = first_observed_at ?? sent_at ?? received_at ?? started_at ?? last_updated,
+      execution_active_at = execution_active_at ?? (IF execution_active = true THEN execution_observed_at ELSE NONE END),
+      last_updated_observed = last_updated_observed ?? (state NOT IN ['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED']
+        AND started_at = NONE AND received_at = NONE AND retried_at = NONE),
       had_error = had_error OR state = 'FAILURE' OR failed_at != NONE
         OR (exception ?? '') != '' OR (traceback ?? '') != '';
       LET $errors = SELECT task_id FROM event WHERE task_id != NONE AND
@@ -372,27 +363,20 @@ export async function runSchemaMigration(config: Config, logger?: Logger): Promi
         UPDATE type::record('task', $error.task_id) SET had_error = true;
       };`)
       .collect()
+    await backfillWorkflows(db, log)
 
-    // Always create a read-only viewer user for the frontend.
-    // SurrealDB requires authentication even for tables with FULL select permissions —
-    // anonymous (unauthenticated) connections cannot query anything.
-    await db.query(`DEFINE USER OVERWRITE viewer ON DATABASE PASSWORD 'viewer' ROLES VIEWER`).collect()
+    // Server-only read connection; no fixed browser credential remains.
+    await db
+      .query(
+        `DEFINE USER OVERWRITE observation_reader ON DATABASE PASSWORD ${toSurrealStrand(databaseReaderPassword(config))} ROLES VIEWER`,
+      )
+      .collect()
+    await db.query(`REMOVE USER IF EXISTS viewer ON DATABASE`).collect()
 
-    // Conditional frontend auth setup (password-protected access)
-    if (config.surrealdbFrontendPass) {
-      await db.query(FRONTEND_AUTH_SCHEMA).collect()
-      await db
-        .query(`UPSERT viewer:frontend SET name = 'frontend', pass = crypto::argon2::generate($pass)`, {
-          pass: config.surrealdbFrontendPass,
-        })
-        .collect()
-      log.info("Schema migration completed (frontend auth enabled)")
-    } else {
-      // Clean up frontend auth if previously configured
-      await db.query(`REMOVE ACCESS IF EXISTS frontend ON DATABASE`).collect()
-      await db.query(`REMOVE TABLE IF EXISTS viewer`).collect()
-      log.info("Schema migration completed (anonymous access via viewer user)")
-    }
+    // Retire the old database-level application login records.
+    await db.query(`REMOVE ACCESS IF EXISTS frontend ON DATABASE`).collect()
+    await db.query(`REMOVE TABLE IF EXISTS viewer`).collect()
+    log.info("Schema migration completed (Bun-owned observation reads)")
   } finally {
     await db.close()
   }

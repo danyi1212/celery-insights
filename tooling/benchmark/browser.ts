@@ -1,5 +1,14 @@
 import { chromium } from "../playwright"
+import { benchmarkAccount } from "./ingress"
 import { CborCodec } from "surrealdb"
+
+async function signInBenchmark(page: import("../playwright").Page, url: string) {
+  await page.goto(`${url}/login`)
+  await page.getByLabel("Username", { exact: true }).fill(benchmarkAccount.username)
+  await page.getByLabel("Password", { exact: true }).fill(benchmarkAccount.password)
+  await page.getByRole("button", { name: "Sign in", exact: true }).click()
+  await page.waitForURL(`${url}/`)
+}
 
 type Entry = {
   name: string
@@ -59,7 +68,8 @@ export async function benchmarkLiveBrowser<T>(
     ],
   }
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, ignoreHTTPSErrors: true })
+    await signInBenchmark(page, url)
     page.on("pageerror", (error) => errors.push(error.message))
     await page.goto(`${url}/explorer`, { waitUntil: "domcontentloaded" })
     await page.getByPlaceholder("Search tasks, workers, errors…").fill("bench-")
@@ -132,7 +142,10 @@ export async function benchmarkLiveBrowser<T>(
 export async function benchmarkBrowser(url: string, profile: "desktop" | "constrained" = "desktop") {
   const browser = await chromium.launch()
   try {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+    const context = await browser.newContext({
+      ignoreHTTPSErrors: true,
+      viewport: { width: 1440, height: 900 },
+    })
     await context.addInitScript(() => {
       const metrics = {
         entries: [],
@@ -162,6 +175,7 @@ export async function benchmarkBrowser(url: string, profile: "desktop" | "constr
       ;(window as unknown as { __benchmarkMetrics: BrowserMetrics }).__benchmarkMetrics = metrics
     })
     const page = await context.newPage()
+    await signInBenchmark(page, url)
     const session = await context.newCDPSession(page)
     await session.send("Network.enable")
     let phase = "initial-navigation"
@@ -296,7 +310,9 @@ export async function benchmarkBrowser(url: string, profile: "desktop" | "constr
         return {
           phase,
           method: request.method ?? null,
-          explorerQuery: typeof sql === "string" && sql.includes("bucketDuration") && sql.includes("rowLimit"),
+          explorerQuery:
+            sql === "observation:read" &&
+            (request.params?.[1] as { request?: { operation?: string } })?.request?.operation === "explorer",
           bindings: request.method === "query" ? request.params?.[1] : null,
           decodeError: null,
         }

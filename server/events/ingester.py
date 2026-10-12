@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import random
 import re
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
@@ -11,6 +12,20 @@ from surrealdb_client import get_db
 logger = logging.getLogger(__name__)
 
 TERMINAL_EVENT_TYPES = frozenset({"task-succeeded", "task-failed", "task-revoked", "task-rejected"})
+TERMINAL_TASK_STATES = ("SUCCESS", "FAILURE", "REVOKED", "REJECTED", "IGNORED")
+TERMINAL_TASK_STATES_SQL = "[" + ", ".join(f"'{state}'" for state in TERMINAL_TASK_STATES) + "]"
+
+# SurrealDB rejects a commit whose rows another transaction is writing, and marks the error
+# as retryable. The batch is retried in place a few times before it goes back to the buffer.
+# Matched against the message text, as observed with SurrealDB 3.3.0: "... This transaction can be retried".
+RETRYABLE_CONFLICT_MARKER = "can be retried"
+CONFLICT_RETRIES = 3
+CONFLICT_BACKOFF_SECONDS = 0.05
+
+
+class TransactionConflictError(RuntimeError):
+    """A SurrealDB commit kept conflicting with concurrent writes after its retries."""
+
 
 EVENT_STATE_MAP: dict[str, str] = {
     "task-sent": "PENDING",
@@ -64,6 +79,26 @@ def _epoch_to_iso(ts: float) -> str:
     return datetime.fromtimestamp(ts, tz=UTC).isoformat()
 
 
+def validate_event(event: dict) -> None:
+    if not isinstance(event, dict) or not isinstance(event.get("type", ""), str):
+        raise ValueError("Invalid event type")
+    for field in ("timestamp", "local_received"):
+        value = event.get(field)
+        if value is not None:
+            if isinstance(value, bool) or not isinstance(value, int | float):
+                raise ValueError("Invalid event timestamp")
+            _epoch_to_iso(value)
+    for field in ("uuid", "hostname", "root_id", "parent_id"):
+        if event.get(field) is not None and not isinstance(event[field], str):
+            raise ValueError("Invalid event identifier")
+    for field in ("runtime", "retries"):
+        if event.get(field) is not None and (
+            isinstance(event[field], bool) or not isinstance(event[field], int | float)
+        ):
+            raise ValueError("Invalid numeric event field")
+    json.dumps(event, allow_nan=False)
+
+
 def _workflow_id_for_event(event: dict) -> str | None:
     task_id = event.get("uuid")
     if not task_id:
@@ -102,6 +137,9 @@ class SurrealDBIngester:
         self._dropped_count = 0
         self._stats_events_total = 0
         self._stats_flushes_total = 0
+        # The consume loop and the flush timer both flush; two transactions in flight
+        # conflict on the same task and workflow rows.
+        self._flush_lock = asyncio.Lock()
 
     def start(self) -> None:
         self._consume_task = asyncio.create_task(self._consume_loop())
@@ -134,6 +172,12 @@ class SurrealDBIngester:
                     )
                 continue
 
+            try:
+                validate_event(event)
+            except ValueError, TypeError, OverflowError, OSError, RecursionError:
+                self._dropped_count += 1
+                logger.warning("Discarding malformed Celery event")
+                continue
             self._buffer.append(event)
 
             event_type = event.get("type", "")
@@ -155,8 +199,19 @@ class SurrealDBIngester:
                 await self._flush()
 
     async def _flush(self) -> None:
+        async with self._flush_lock:
+            terminal_task_ids = await self._flush_buffer()
+        # The result fetch can block on the result backend; only the transaction needs the lock.
+        if terminal_task_ids and self.on_terminal:
+            try:
+                await self.on_terminal(terminal_task_ids)
+            except Exception:
+                logger.exception("Terminal event callback failed for %d tasks", len(terminal_task_ids))
+
+    async def _flush_buffer(self) -> list[str]:
+        """Commit the buffered events and return the terminal task ids that were written."""
         if not self._buffer:
-            return
+            return []
 
         events = self._buffer
         self._buffer = []
@@ -166,71 +221,79 @@ class SurrealDBIngester:
         queries: list[str] = []
         params: dict = {}
 
+        valid_events: list[dict] = []
         for i, event in enumerate(events):
-            event_type = event.get("type", "")
-            category = event_type.split("-", 1)[0] if "-" in event_type else ""
+            try:
+                validate_event(event)
+                event_queries: list[str] = []
+                event_params: dict = {}
+                event_terminal_ids: list[str] = []
+                event_type = event.get("type", "")
+                category = event_type.split("-", 1)[0] if "-" in event_type else ""
 
-            if category == "task":
-                q, p = build_task_upsert(event, i, search_indexing_enabled=self.search_indexing_enabled)
-                if q:
-                    queries.append(q)
-                    params.update(p)
+                if category == "task":
+                    q, p = build_task_upsert(event, i, search_indexing_enabled=self.search_indexing_enabled)
+                    if q:
+                        event_queries.append(q)
+                        event_params.update(p)
 
-                wq, wp = build_workflow_membership_upsert(event, i)
-                if wq:
-                    queries.append(wq)
-                    params.update(wp)
+                    wq, wp = build_workflow_membership_upsert(event, i)
+                    if wq:
+                        event_queries.append(wq)
+                        event_params.update(wp)
 
-                cq, cp = build_children_update(event, i)
-                if cq:
-                    queries.append(cq)
-                    params.update(cp)
+                    cq, cp = build_children_update(event, i)
+                    if cq:
+                        event_queries.append(cq)
+                        event_params.update(cp)
 
-                sq, sp = build_workflow_summary_recompute(event, i)
-                if sq:
-                    queries.append(sq)
-                    params.update(sp)
+                    sq, sp = build_workflow_summary_recompute(event, i)
+                    if sq:
+                        event_queries.append(sq)
+                        event_params.update(sp)
 
-                if event_type in TERMINAL_EVENT_TYPES:
-                    task_id = event.get("uuid")
-                    if task_id:
-                        terminal_task_ids.append(task_id)
+                    if event_type in TERMINAL_EVENT_TYPES:
+                        task_id = event.get("uuid")
+                        if task_id:
+                            event_terminal_ids.append(task_id)
 
-            elif category == "worker":
-                q, p = build_worker_upsert(event, i)
-                if q:
-                    queries.append(q)
-                    params.update(p)
+                elif category == "worker":
+                    q, p = build_worker_upsert(event, i)
+                    if q:
+                        event_queries.append(q)
+                        event_params.update(p)
 
-            rq, rp = build_raw_event(event, i)
-            if rq:
-                queries.append(rq)
-                params.update(rp)
+                rq, rp = build_raw_event(event, i)
+                if rq:
+                    event_queries.append(rq)
+                    event_params.update(rp)
+            except Exception:
+                self._dropped_count += 1
+                logger.warning("Discarding malformed Celery event", exc_info=True)
+                continue
+            queries.extend(event_queries)
+            params.update(event_params)
+            terminal_task_ids.extend(event_terminal_ids)
+            valid_events.append(event)
+        events = valid_events
 
         if queries:
             try:
-                db = get_db()
                 full_query = "BEGIN TRANSACTION;\n" + ";\n".join(queries) + ";\nCOMMIT TRANSACTION;"
-                response = await db.query_raw(full_query, params)
-                if "error" in response:
-                    raise RuntimeError(f"SurrealDB transaction failed: {response['error']}")
-                results = response.get("result", [])
-                errors = [result.get("result") for result in results if result.get("status") == "ERR"]
-                if errors:
-                    raise RuntimeError(f"SurrealDB transaction failed: {errors}")
+                await _commit(full_query, params)
                 self._stats_events_total += len(events)
                 self._stats_flushes_total += 1
                 logger.debug("Flushed %d events (%d queries) to SurrealDB", len(events), len(queries))
+            except TransactionConflictError as exc:
+                logger.warning("Keeping %d events for the next flush: %s", len(events), exc)
+                self._buffer = events + self._buffer
+                return []
             except Exception:
                 logger.exception("Failed to flush %d events to SurrealDB", len(events))
                 self._buffer = events + self._buffer
-                return
+                return []
 
-        if terminal_task_ids and self.on_terminal:
-            try:
-                await self.on_terminal(terminal_task_ids)
-            except Exception:
-                logger.exception("Terminal event callback failed for %d tasks", len(terminal_task_ids))
+        return terminal_task_ids
 
     async def _stats_loop(self) -> None:
         prev_events = 0
@@ -266,6 +329,28 @@ class SurrealDBIngester:
         logger.info("SurrealDB ingester stopped")
 
 
+async def _commit(query: str, params: dict) -> None:
+    """Run one transaction, retrying it while SurrealDB reports a retryable conflict."""
+    db = get_db()
+    for attempt in range(CONFLICT_RETRIES + 1):
+        response = await db.query_raw(query, params)
+        if "error" in response:
+            errors = [response["error"]]
+        else:
+            results = response.get("result", [])
+            errors = [result.get("result") for result in results if result.get("status") == "ERR"]
+        if not errors:
+            return
+        if not any(RETRYABLE_CONFLICT_MARKER in str(error) for error in errors):
+            raise RuntimeError(f"SurrealDB transaction failed: {errors}")
+        if attempt == CONFLICT_RETRIES:
+            raise TransactionConflictError(
+                f"SurrealDB transaction still conflicted after {CONFLICT_RETRIES} retries: {errors[-1]}"
+            )
+        logger.debug("SurrealDB transaction conflict, retrying (attempt %d)", attempt + 1)
+        await asyncio.sleep(CONFLICT_BACKOFF_SECONDS * 2**attempt * random.uniform(0.5, 1.0))
+
+
 def build_task_upsert(event: dict, idx: int, *, search_indexing_enabled: bool = False) -> tuple[str, dict]:
     """Build a conditional UPSERT for a task event with out-of-order protection."""
     task_id = event.get("uuid")
@@ -288,18 +373,26 @@ def build_task_upsert(event: dict, idx: int, *, search_indexing_enabled: bool = 
         f"{p}_workflow_id": workflow_id,
     }
 
+    apply_state = f"${p}_previous.last_updated IS NONE OR <datetime>${p}_ts > ${p}_previous.last_updated"
+    if event_type in TERMINAL_EVENT_TYPES:
+        # An observed last_updated is monitor time, not task evidence: terminal events replace it even when older,
+        # unless it already holds a different terminal state.
+        apply_state += (
+            f" OR (${p}_previous.last_updated_observed = true"
+            f" AND (${p}_previous.state NOT IN {TERMINAL_TASK_STATES_SQL} OR ${p}_previous.state = ${p}_state))"
+        )
+
     set_clauses = [
-        f"state = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts > ${p}_previous.last_updated"
-        f" THEN ${p}_state ELSE ${p}_previous.state END",
-        f"last_updated = IF ${p}_previous.last_updated IS NONE OR <datetime>${p}_ts > ${p}_previous.last_updated"
-        f" THEN <datetime>${p}_ts ELSE ${p}_previous.last_updated END",
+        f"state = IF ${p}_apply THEN ${p}_state ELSE ${p}_previous.state END",
+        f"last_updated = IF ${p}_apply THEN <datetime>${p}_ts ELSE ${p}_previous.last_updated END",
+        f"last_updated_observed = IF ${p}_apply THEN false ELSE ${p}_previous.last_updated_observed ?? false END",
         f"{ts_field} = IF ${p}_previous.{ts_field} IS NONE OR <datetime>${p}_ts < ${p}_previous.{ts_field}"
         f" THEN <datetime>${p}_ts ELSE ${p}_previous.{ts_field} END",
         f"first_observed_at = IF ${p}_previous.first_observed_at IS NONE"
         f" OR <datetime>${p}_ts < ${p}_previous.first_observed_at"
         f" THEN <datetime>${p}_ts ELSE ${p}_previous.first_observed_at END",
         # The workflow follows root_id, so an older event can't regroup a task whose root is already known.
-        f"workflow_id = IF ${p}_previous.root_id IS NONE OR ${p}_previous.last_updated IS NONE"
+        f"workflow_id = IF ${p}_previous.root_id IS NONE OR ${p}_apply"
         f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
         f" THEN ${p}_workflow_id ELSE ${p}_previous.workflow_id ?? ${p}_workflow_id END"
         if event.get("root_id")
@@ -309,6 +402,9 @@ def build_task_upsert(event: dict, idx: int, *, search_indexing_enabled: bool = 
     if event_type == "task-failed" or event.get("exception") or event.get("traceback"):
         set_clauses.append("had_error = true")
 
+    # Fields follow an applied state even when it is older than an observed last_updated; `>=` lets
+    # an event with the same timestamp still fill them.
+    apply_fields = f"${p}_apply OR <datetime>${p}_ts >= ${p}_previous.last_updated"
     for event_field, db_field in TASK_FIELD_MAP.items():
         value = event.get(event_field)
         if value is not None:
@@ -316,8 +412,7 @@ def build_task_upsert(event: dict, idx: int, *, search_indexing_enabled: bool = 
             params[pname] = value if isinstance(value, int | float) else str(value)
             # Result polling can observe a newer state before send/receive metadata arrives.
             set_clauses.append(
-                f"{db_field} = IF ${p}_previous.{db_field} IS NONE OR ${p}_previous.last_updated IS NONE"
-                f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
+                f"{db_field} = IF ${p}_previous.{db_field} IS NONE OR {apply_fields}"
                 f" THEN ${pname} ELSE ${p}_previous.{db_field} END"
             )
 
@@ -325,30 +420,29 @@ def build_task_upsert(event: dict, idx: int, *, search_indexing_enabled: bool = 
     if hostname:
         params[f"{p}_worker"] = hostname
         set_clauses.append(
-            f"worker = IF ${p}_previous.worker IS NONE OR ${p}_previous.last_updated IS NONE"
-            f" OR <datetime>${p}_ts >= ${p}_previous.last_updated"
-            f" THEN ${p}_worker ELSE ${p}_previous.worker END"
+            f"worker = IF ${p}_previous.worker IS NONE OR {apply_fields} THEN ${p}_worker ELSE ${p}_previous.worker END"
         )
 
     if event.get("kwargs") is not None:
         set_clauses.append(
-            f"kwargs_search_source = IF ${p}_previous.kwargs IS NONE OR ${p}_previous.last_updated IS NONE "
-            f"OR <datetime>${p}_ts >= ${p}_previous.last_updated "
+            f"kwargs_search_source = IF ${p}_previous.kwargs IS NONE OR {apply_fields} "
             f"THEN 'saferepr' ELSE ${p}_previous.kwargs_search_source END"
         )
     target = f"type::record('task', ${p}_id)"
     assignments = ", ".join(set_clauses)
     # Read persisted values explicitly: UPSERT can evaluate against a creation
     # candidate, including multiple updates to the same task in one transaction.
-    query = f"LET ${p}_previous = (SELECT * FROM {target})[0] ?? {{}}; UPSERT {target} SET {assignments}"
+    query = (
+        f"LET ${p}_previous = (SELECT * FROM {target})[0] ?? {{}}; "
+        f"LET ${p}_apply = {apply_state}; "
+        f"UPSERT {target} SET {assignments}"
+    )
     if search_indexing_enabled and event.get("kwargs") is not None:
         terms = kwargs_search_terms(str(event["kwargs"]), "saferepr")
         params[f"{p}_search_terms"] = terms.terms
         params[f"{p}_search_fallback"] = terms.fallback
         query += (
-            f"; IF ${p}_previous.kwargs != ${p}_kwargs AND (${p}_previous.kwargs IS NONE "
-            f"OR ${p}_previous.last_updated IS NONE "
-            f"OR <datetime>${p}_ts >= ${p}_previous.last_updated) "
+            f"; IF ${p}_previous.kwargs != ${p}_kwargs AND (${p}_previous.kwargs IS NONE OR {apply_fields}) "
             "AND (SELECT VALUE enabled FROM search_config:current)[0] = true { "
             f"UPDATE type::record('task_search', ${p}_id) SET kwargs_terms = ${p}_search_terms, "
             f"kwargs_fallback = ${p}_search_fallback; }}"
@@ -552,6 +646,12 @@ def build_worker_upsert(event: dict, idx: int) -> tuple[str, dict]:
             )
 
     query = f"UPSERT type::record('worker', ${p}_id) SET " + ", ".join(set_clauses)
+    if status == "offline":
+        # Polls skip offline workers, so observations made before the worker left would otherwise outlive it.
+        query += (
+            f"; UPDATE task SET execution_active = NONE WHERE worker = ${p}_id AND state = 'STARTED'"
+            f" AND execution_active != NONE AND execution_observed_at <= <datetime>${p}_ts"
+        )
     return query, params
 
 

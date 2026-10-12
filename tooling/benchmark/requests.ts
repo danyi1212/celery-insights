@@ -1,3 +1,4 @@
+import { benchmarkFetch } from "./ingress"
 import assert from "node:assert/strict"
 
 export function distribution(values: number[]) {
@@ -128,7 +129,7 @@ export async function benchmarkRequests(
   let nextId = 0
   const request = async (path: string, options: RequestInit, validate: (text: string) => void) => {
     const start = performance.now()
-    const response = await fetch(url + path, { ...options, signal: AbortSignal.timeout(10_000) })
+    const response = await benchmarkFetch(url + path, { ...options, signal: AbortSignal.timeout(10_000) })
     const headersMs = performance.now() - start
     const bytes = await response.arrayBuffer()
     const text = new TextDecoder().decode(bytes)
@@ -152,7 +153,9 @@ export async function benchmarkRequests(
     {
       name: "http.config",
       request: () =>
-        request("/api/config", {}, (text) => assert.equal(object(JSON.parse(text)).surrealPath, "/surreal/rpc")),
+        request("/api/config", {}, (text) =>
+          assert.equal(object(JSON.parse(text)).observationPath, "/api/observation/rpc"),
+        ),
     },
     {
       name: "http.settings-info",
@@ -304,7 +307,7 @@ export async function benchmarkConcurrentRequests<T>(
     nextId = 0
   const request = async (path: string, init: RequestInit, validate: (text: string) => void) => {
     const start = performance.now()
-    const response = await fetch(url + path, { ...init, signal: AbortSignal.timeout(10_000) })
+    const response = await benchmarkFetch(url + path, { ...init, signal: AbortSignal.timeout(10_000) })
     const headersMs = performance.now() - start
     const body = await response.arrayBuffer()
     assert(response.ok, `HTTP ${response.status}`)
@@ -315,7 +318,9 @@ export async function benchmarkConcurrentRequests<T>(
     {
       name: "http.config",
       request: () =>
-        request("/api/config", {}, (text) => assert.equal(object(JSON.parse(text)).surrealPath, "/surreal/rpc")),
+        request("/api/config", {}, (text) =>
+          assert.equal(object(JSON.parse(text)).observationPath, "/api/observation/rpc"),
+        ),
     },
     {
       name: "http.settings-info",

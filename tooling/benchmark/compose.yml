@@ -25,14 +25,16 @@ services:
     mem_limit: ${BENCH_MEMORY:-2g}
     ports: ["127.0.0.1::8555"]
     environment:
+      CELERY_INSIGHTS_CONFIG_FILE: /benchmark-auth/authentication.toml
       BROKER_URL: amqp://benchmark:benchmark@broker/
       RESULT_BACKEND: redis://results:6379/0
       SURREALDB_STORAGE: ${BENCH_STORAGE:-rocksdb:///data/store}
       SEARCH_INDEXING_ENABLED: ${BENCH_INDEXING:-false}
       SURREAL_WEBSOCKET_RESPONSE_CHANNEL_SIZE: ${BENCH_NOTIFICATION_BUFFER:-100}
       LOG_FORMAT: json
+      CELERY_INSIGHTS_DATABASE_ROOT_PASSWORD: benchmark-root
       SURREALDB_INGESTER_PASS: benchmark-ingester
-    volumes: ["data:/data"]
+    volumes: ["data:/data", "${BENCH_AUTH_DIR:?Benchmark authentication fixture required}:/benchmark-auth:ro"]
     depends_on:
       broker:
         condition: service_healthy
@@ -41,10 +43,13 @@ services:
   producer:
     image: ${BENCH_IMAGE:-celery-insights-benchmark:local}
     entrypoint: [python, /benchmark/pipeline.py]
+    network_mode: service:app
     environment:
       BROKER_URL: amqp://benchmark:benchmark@broker/
       RESULT_BACKEND: redis://results:6379/0
-      BENCH_DB_URL: ws://app:8555/surreal/rpc
+      BENCH_DB_URL: ws://127.0.0.1:8557/rpc
+      BENCH_AUTH_ORIGIN: ${BENCH_AUTH_ORIGIN:?Benchmark public origin required}
+      BENCH_PUBLIC_URL: ws://127.0.0.1:8555/api/observation/rpc
       BENCH_WRITER_PASSWORD: benchmark-ingester
     volumes: ["./:/benchmark:ro"]
     depends_on: [app]

@@ -281,7 +281,9 @@ type WorkflowTask = {
 
 Do not include every child ID in a row. Count distinct observed children consistently from available parent/child references; `parent_task_id` may refer outside the returned page. `parent_record_available=false` means the record is missing, not that the task is a root. Conflicting lineage produces a warning rather than an invented graph edge.
 
-For a running task, elapsed time is time since `started_at`; for a finished task, use recorded runtime or timestamps when available. It is not automatically a duration for an entire workflow.
+Task rows include `execution_status` (`active`, `not_active`, or `unknown` for a reported `STARTED` task; otherwise `null`), `execution_observed_at`, and `execution_active_at`, the last inspection that saw the task running. Later negative or missing inspections keep `execution_active_at`. Execution observations come from successful worker active-list inspections and expire after two minutes. `running_tasks` includes only fresh positive observations. Workflow `status="running"` continues to mean unfinished observed membership, as defined above. Observation timestamps come from the monitor's clock and are compared with worker event timestamps and the reader's clock, so the feature assumes roughly synchronised clocks. The two-minute window applies in both directions: an observation up to two minutes ahead of the reader's clock still counts, and larger skew makes a running task read `unknown` until it passes, never `active`.
+
+For an unfinished task, elapsed time is time since `started_at`; for a finished task, use recorded runtime or timestamps when available. It is not automatically a duration for an entire workflow.
 
 ### Example calls
 
@@ -449,9 +451,7 @@ Bun owns the MCP endpoint and queries SurrealDB directly. Put matching, aggregat
 
 Transport: stateless Streamable HTTP at `/mcp`, with schema-defined structured results and read-only tool annotations, implemented with the official TypeScript MCP SDK. Each request returns JSON; GET/SSE and persistent sessions are not supported.
 
-Queries use the read-only database viewer connection. Requests use Bearer authentication with
-`MCP_TOKEN`, falling back to `SURREALDB_FRONTEND_PASS`; unprotected local deployments can omit
-the credential. Hosts are explicitly allowlisted and an Origin, if supplied, must match the request.
+Queries use a read-only database viewer connection behind the Bun application gate. Requests use configured HTTP Basic accounts with payload permissions, exact configured Origin and `X-Celery-Insights-Request: 1`. There is no separate MCP token authentication. `mcp.cursor_secret` signs pagination only; configure it consistently across replicas. Future OIDC and restrictive OPA decisions must cross the same gate.
 
 Current code informs several prerequisites and limitations:
 
@@ -477,7 +477,7 @@ Aggregates must describe their full stated scope, not just the rows sampled for 
 5. **Workflow overview:** Do agents need more failure rows, running rows, or structural context by default? Is the grouped-name view useful enough to keep?
 6. **Payload exposure:** Should task overview include input/output previews by default, or require explicit section retrieval?
 7. **Consistency:** Is live pagination with explicit limits sufficient, or do some investigations require a frozen membership snapshot?
-8. **Authentication:** Is Bearer access with a separate MCP token sufficient, or do deployments need OAuth-based credential discovery?
+8. **Authentication:** Add maintained OIDC integration and document client credential discovery without introducing an account or token-management platform.
 
 ## Scenarios for evaluating the design
 

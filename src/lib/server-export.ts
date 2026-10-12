@@ -1,3 +1,4 @@
+import { authenticatedFetch } from "@lib/authenticated-fetch"
 import { appUrl } from "@lib/app-url"
 import { downloadFile } from "@lib/export-tasks"
 
@@ -28,7 +29,7 @@ export async function downloadServerCsvExport(
   payload: ExplorerExportPayload | RawEventsExportPayload,
   filename: string,
 ) {
-  const response = await fetch(appUrl("/api/exports/csv"), {
+  const response = await authenticatedFetch(appUrl("/api/exports/csv"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

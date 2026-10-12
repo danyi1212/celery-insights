@@ -1,7 +1,7 @@
 /**
  * Custom Bun entry point for production.
  * Orchestrates SurrealDB subprocess, leader election, Python ingester spawning,
- * serves static SPA files and proxies API/WS requests to Python.
+ * serves the SPA and authorized observation APIs; Python supplies a private Celery bridge.
  *
  * Usage: bun run bun-entry.ts
  * (after building with `bun run build`)
@@ -13,18 +13,23 @@ import { randomBytes } from "node:crypto"
 import { Surreal } from "surrealdb"
 import { createCeleryBridge } from "./runtime/celery-bridge"
 import { ObservationApi } from "./runtime/observation-api"
-import { HttpError } from "./runtime/http-error"
-import { forwardBackendClosure } from "./runtime/websocket-close"
+import { initializeAuthentication, secureApplicationRequest } from "./runtime/security/http"
+import { ObservationRpc } from "./runtime/observation/rpc"
+import { buildRead, readPermissions, readRequestSchema } from "./runtime/observation/queries"
+import { intersectScopes, scopeFingerprint, scopedDatabase, rowScoped, taskScoped } from "./runtime/security/read-scope"
+import { AuthError } from "./runtime/security/permissions"
+import { Authorization } from "./runtime/security/opa"
+import { payloadPermissions } from "./runtime/security/permissions"
 import type { Config } from "./runtime/config"
+import { databaseReaderPassword, prepareDatabaseConfig } from "./runtime/database-config"
 import { resolveConfig } from "./runtime/config-loader"
 import { pythonConfig, pythonEnvironment } from "./runtime/python-config"
 import {
   createDebugBundleArchive,
-  exportSurrealNative,
+  exportSurrealData,
   getSnapshotDetails,
   getSnapshotSummary,
   getSurrealRecordCounts,
-  importSurrealNative,
   importSurrealData,
   LineRingBuffer,
   parseDebugSnapshot,
@@ -114,7 +119,6 @@ function printBanner(runtimeConfig: Config, replaySnapshot: ParsedDebugSnapshot 
 
 const celeryBridge = createCeleryBridge()
 
-// Derive SurrealDB proxy targets from config (strip /rpc suffix, convert ws->http)
 const DIST_DIR = path.resolve(import.meta.dir, "dist")
 
 // Read index.html once at startup for SPA fallback
@@ -125,6 +129,7 @@ let pythonProcess: ChildProcess | null = null
 let searchIndexes: SearchIndexes | null = null
 let leaderElection: LeaderElection | null = null
 let mcpDb: Surreal | null = null
+let authentication: Awaited<ReturnType<typeof initializeAuthentication>> | null = null
 let cleanupTimer: ReturnType<typeof setTimeout> | null = null
 let ingestionStatus: IngestionStatus = "disabled"
 let shuttingDown = false
@@ -136,35 +141,6 @@ const surrealLogBuffer = new LineRingBuffer()
 const pythonLogBuffer = new LineRingBuffer()
 registerLogSink("bun", (line) => bunLogBuffer.add(line))
 registerLogSink("surrealdb", (line) => surrealLogBuffer.add(line))
-
-const REQUEST_HOP_BY_HOP_HEADERS = new Set([
-  "connection",
-  "content-length",
-  "host",
-  "keep-alive",
-  "proxy-authenticate",
-  "proxy-authorization",
-  "te",
-  "trailer",
-  "transfer-encoding",
-  "upgrade",
-])
-
-const RESPONSE_HOP_BY_HOP_HEADERS = new Set([
-  "connection",
-  "content-encoding",
-  "content-length",
-  "keep-alive",
-  "transfer-encoding",
-])
-
-function getSurrealBases(activeConfig: Config): { httpBase: string; wsBase: string } {
-  const wsBase = activeConfig.surrealdbUrl.replace(/\/rpc$/, "")
-  return {
-    httpBase: wsBase.replace(/^ws(s?):\/\//, "http$1://"),
-    wsBase,
-  }
-}
 
 function buildSnapshotRuntimeConfig(baseConfig: Config): Config {
   return {
@@ -275,18 +251,16 @@ function spawnSurrealDB(): ChildProcess {
   )
   const proc = spawn(
     "surreal",
-    [
-      "start",
-      "--no-banner",
-      "--bind",
-      `127.0.0.1:${runtimeConfig.surrealdbPort}`,
-      "--user",
-      "root",
-      "--pass",
-      "root",
-      runtimeConfig.surrealdbStorage,
-    ],
-    { stdio: ["ignore", "pipe", "pipe"] },
+    ["start", "--no-banner", "--bind", `127.0.0.1:${runtimeConfig.surrealdbPort}`, runtimeConfig.surrealdbStorage],
+    {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        PATH: process.env.PATH,
+        LANG: process.env.LANG,
+        SURREAL_USER: "root",
+        SURREAL_PASS: runtimeConfig.surrealdbRootPass,
+      },
+    },
   )
 
   // Pipe stdout and stderr through surrealLogger with line buffering
@@ -315,31 +289,6 @@ function spawnSurrealDB(): ChildProcess {
   })
 
   return proc
-}
-
-function createProxyRequestHeaders(headers: Headers): Headers {
-  const proxyHeaders = new Headers()
-
-  for (const [key, value] of headers.entries()) {
-    if (!REQUEST_HOP_BY_HOP_HEADERS.has(key.toLowerCase())) {
-      proxyHeaders.set(key, value)
-    }
-  }
-
-  // Avoid forwarding compressed payload metadata that Bun/undici may rewrite while proxying.
-  proxyHeaders.set("accept-encoding", "identity")
-
-  return proxyHeaders
-}
-
-function createProxyResponseHeaders(headers: Headers): Headers {
-  const proxyHeaders = new Headers(headers)
-
-  for (const header of RESPONSE_HOP_BY_HOP_HEADERS) {
-    proxyHeaders.delete(header)
-  }
-
-  return proxyHeaders
 }
 
 /**
@@ -473,6 +422,10 @@ if (config.debugBundlePath) {
   bunLogger.info(`Loaded debug snapshot from ${config.debugBundlePath}`)
 }
 
+runtimeConfig = prepareDatabaseConfig(
+  runtimeConfig,
+  resolvedConfig.provenance["database.observation.ingester_password"].source !== "default",
+)
 printBanner(runtimeConfig, replaySnapshot)
 
 const managingSurrealDB = !runtimeConfig.surrealdbExternalUrl
@@ -511,10 +464,17 @@ try {
 
 searchIndexes = await startSearchIndexes(db, runtimeConfig)
 
+try {
+  authentication = resolvedConfig.authentication
+    ? initializeAuthentication(resolvedConfig.authentication, new Authorization(runtimeConfig))
+    : null
+} catch {
+  bunLogger.error("Authentication initialization failed")
+  await shutdown("startup failure", 1)
+}
+
 if (replaySnapshot) {
-  if (replaySnapshot.sourceDataSqlPath) {
-    await importSurrealNative(runtimeConfig, db, replaySnapshot.sourceDataSqlPath)
-  } else if (replaySnapshot.sourceData) {
+  if (replaySnapshot.sourceData) {
     await importSurrealData(db, replaySnapshot.sourceData)
   } else {
     throw new Error("Debug snapshot does not contain SurrealDB export data")
@@ -559,20 +519,34 @@ await mcpDb.connect(runtimeConfig.surrealdbUrl, {
   authentication: {
     namespace: runtimeConfig.surrealdbNamespace,
     database: runtimeConfig.surrealdbDatabase,
-    username: "viewer",
-    password: "viewer",
+    username: "observation_reader",
+    password: databaseReaderPassword(runtimeConfig),
   },
 })
 const mcpCursorCredential =
-  runtimeConfig.mcpToken ??
-  runtimeConfig.surrealdbFrontendPass ??
+  runtimeConfig.mcpCursorSecret ??
   (runtimeConfig.surrealdbIngesterPass !== "changeme"
     ? runtimeConfig.surrealdbIngesterPass
     : randomBytes(32).toString("hex"))
 const handleMcp = createMcpHandler({
+  authorize: async (request, tool) => {
+    if (!authentication) throw new Error("Authentication required")
+    const decision = await authentication.authorization.check(
+      authentication.principal(request),
+      payloadPermissions,
+      { method: request.method, path: "/mcp", transport: "mcp", tool },
+      Boolean(replaySnapshot),
+    )
+    const scope = intersectScopes(authentication.scope(request), decision)
+    return {
+      db: scopedDatabase(mcpDb!, scope),
+      readScope: scope,
+      cursorSecret: `${mcpCursorCredential}:${authentication.principal(request).account_id}:${scopeFingerprint(scope)}`,
+    }
+  },
+  publicOrigin: resolvedConfig.authentication?.public_origin,
   db: mcpDb,
   cursorSecret: `${mcpCursorCredential}:${runtimeConfig.surrealdbNamespace}:${runtimeConfig.surrealdbDatabase}`,
-  token: runtimeConfig.mcpToken ?? runtimeConfig.surrealdbFrontendPass,
   allowedHosts: runtimeConfig.mcpAllowedHosts?.split(",").map((host) => host.trim()),
   mode: () => (replaySnapshot ? "snapshot" : runtimeConfig.ingestionEnabled ? "live" : "ingestion_disabled"),
 })
@@ -591,9 +565,8 @@ cleanupTimer = setTimeout(periodicCleanup, observationApi.cleanupInterval())
 const server = Bun.serve({
   port: runtimeConfig.port,
   async fetch(req: Request, server: any) {
-    try {
+    return secureApplicationRequest(req, runtimeConfig.urlPrefix, authentication, Boolean(replaySnapshot), async () => {
       const url = new URL(req.url)
-      const { httpBase: surrealHttpBase } = getSurrealBases(runtimeConfig)
 
       const prefix = runtimeConfig.urlPrefix
       if (prefix && url.pathname === prefix) {
@@ -605,52 +578,113 @@ const server = Bun.serve({
       // Keep the root health endpoint available for container probes.
       if (url.pathname !== "/health") url.pathname = url.pathname.slice(prefix.length)
 
-      const applicationResponse = await observationApi.handle(req, url.pathname, Boolean(replaySnapshot))
+      const scope = /^\/(api|metrics|mcp)(?:\/|$)/.test(url.pathname) ? authentication!.scope(req) : null
+      if (
+        scope &&
+        rowScoped(scope) &&
+        ["/api/settings/info", "/api/settings/debug-snapshot", "/metrics/system"].includes(url.pathname)
+      )
+        throw new AuthError(403, "Operation requires unrestricted cluster visibility")
+      const scopedApi =
+        scope && (req.method === "GET" || url.pathname === "/api/exports/csv")
+          ? observationApi.withDatabase(scopedDatabase(db, scope!))
+          : observationApi
+      const applicationResponse = await scopedApi.handle(req, url.pathname, Boolean(replaySnapshot))
       if (applicationResponse) return applicationResponse
       if (url.pathname === "/mcp") return handleMcp(req)
 
       const isUpgrade = req.headers.get("upgrade")?.toLowerCase() === "websocket"
 
-      // Handle WebSocket upgrade requests for /surreal/* paths (proxy to SurrealDB)
-      if (url.pathname.startsWith("/surreal/") && isUpgrade) {
-        const surrealPath = url.pathname.slice("/surreal".length) // strip /surreal, keep leading /
-        const success = server.upgrade(req, {
-          data: {
-            targetPath: surrealPath + url.search,
-            backend: "surreal" as const,
-            protocols: req.headers.get("sec-websocket-protocol") ?? undefined,
-          },
-        })
-        if (success) return undefined
-        return new Response("WebSocket upgrade failed", { status: 500 })
+      if (url.pathname === "/api/observation/rpc") {
+        if (isUpgrade) {
+          const protocols = (req.headers.get("sec-websocket-protocol") ?? "").split(",").map((value) => value.trim())
+          if (!protocols.some((value) => value === "cbor" || value === "json"))
+            return new Response(null, { status: 400 })
+          const json = !protocols.includes("cbor")
+          if (
+            server.upgrade(req, {
+              data: {
+                account: authentication!.principal(req).account_id,
+                scope,
+                json,
+                authRequest: req.headers.has("cookie")
+                  ? new Request(req.url, { headers: { cookie: req.headers.get("cookie")! } })
+                  : undefined,
+              },
+              headers: { "sec-websocket-protocol": json ? "json" : "cbor" },
+            })
+          )
+            return undefined
+          return new Response("WebSocket upgrade failed", { status: 500 })
+        }
+        if (req.method !== "POST") return new Response(null, { status: 405 })
+        if (Number(req.headers.get("content-length")) > 65536) return new Response(null, { status: 413 })
+        const reader = req.body?.getReader()
+        if (!reader) return new Response(null, { status: 422 })
+        const chunks: Uint8Array[] = []
+        let size = 0
+        try {
+          for (;;) {
+            const { value, done } = await reader.read()
+            if (done) break
+            size += value.length
+            if (size > 65536) {
+              await reader.cancel()
+              return new Response(null, { status: 413 })
+            }
+            chunks.push(value)
+          }
+        } finally {
+          reader.releaseLock()
+        }
+        let value: unknown
+        try {
+          value = JSON.parse(Buffer.concat(chunks).toString("utf8"))
+        } catch {
+          return Response.json({ detail: "Invalid observation request" }, { status: 422 })
+        }
+        const parsed = readRequestSchema.safeParse(value)
+        if (!parsed.success) return Response.json({ detail: "Invalid observation request" }, { status: 422 })
+        const context = {
+          method: "POST",
+          path: url.pathname,
+          transport: "http" as const,
+          operation: parsed.data.operation,
+        }
+        const decision = await authentication!.authorization.check(
+          authentication!.principal(req),
+          readPermissions(parsed.data, authentication!.principal(req)),
+          context,
+          Boolean(replaySnapshot),
+        )
+        const read = buildRead(parsed.data)
+        const rows = await scopedDatabase(db, intersectScopes(scope!, decision)).query(read.sql, read.bindings).json()
+        const fresh = await authentication!.authorization.check(
+          authentication!.principal(req),
+          readPermissions(parsed.data, authentication!.principal(req)),
+          context,
+          Boolean(replaySnapshot),
+        )
+        if (scopeFingerprint(decision) !== scopeFingerprint(fresh)) throw new AuthError(403, "Read scope changed")
+        return Response.json(rows.slice(read.resultOffset))
       }
 
       // Bun-served endpoint: frontend configuration
       if (url.pathname === "/api/config") {
-        const authRequired =
-          runtimeConfig.surrealdbFrontendPass !== null && runtimeConfig.surrealdbFrontendPass !== undefined
         return Response.json({
-          authRequired,
           ui: {
             demoAvailable: runtimeConfig.demoAvailable ?? true,
             theme: runtimeConfig.uiTheme,
             hideWelcomeBanner: runtimeConfig.uiHideWelcomeBanner,
             rawEventsLimit: runtimeConfig.uiRawEventsLimit,
           },
-          surrealPath: `${runtimeConfig.urlPrefix}/surreal/rpc`,
+          observationPath: `${runtimeConfig.urlPrefix}/api/observation/rpc`,
+          taskVisibilityRestricted: Boolean(scope && taskScoped(scope)),
           ingestionStatus: leaderElection?.status ?? ingestionStatus,
-          debugSnapshot: getSnapshotSummary(replaySnapshot),
-          // When auth is not required, pass viewer credentials so the frontend
-          // can authenticate as a read-only DB user. SurrealDB requires
-          // authentication even for tables with FULL select permissions.
-          ...(authRequired
-            ? {}
-            : {
-                viewerUser: "viewer",
-                viewerPass: "viewer",
-                viewerNs: runtimeConfig.surrealdbNamespace,
-                viewerDb: runtimeConfig.surrealdbDatabase,
-              }),
+          debugSnapshot:
+            scope && rowScoped(scope) && replaySnapshot
+              ? { enabled: true, readOnly: true }
+              : getSnapshotSummary(replaySnapshot),
         })
       }
 
@@ -670,7 +704,7 @@ const server = Bun.serve({
           return Response.json({ error: "invalid debug bundle request" }, { status: 400 })
         }
 
-        const [serverInfo, retentionInfo, healthInfo, recordCounts, surrealExportSql] = await Promise.all([
+        const [serverInfo, retentionInfo, healthInfo, recordCounts, surrealExport] = await Promise.all([
           observationApi
             .handle(new Request("http://localhost/api/settings/info"), "/api/settings/info", Boolean(replaySnapshot))
             .then((response) => response?.json()),
@@ -683,18 +717,18 @@ const server = Bun.serve({
             .then((response) => response?.json()),
           fetchJsonFromPython<Record<string, unknown>>("/health"),
           getSurrealRecordCounts(db),
-          exportSurrealNative(runtimeConfig),
+          exportSurrealData(db),
         ])
         const archive = await createDebugBundleArchive({
           config: runtimeConfig,
-          includeSecrets: clientInfo.includeSecrets === true,
+          includeSecrets: false,
           clientInfo,
           serverInfo,
           retentionInfo,
           healthInfo,
           versionsInfo: buildVersionsInfo(runtimeConfig),
           recordCounts,
-          surrealExportSql,
+          surrealExport,
           logs: {
             bun: bunLogBuffer.toString(),
             python: pythonLogBuffer.toString(),
@@ -719,26 +753,6 @@ const server = Bun.serve({
           surrealdb: managingSurrealDB ? (surrealProcess ? "running" : "stopped") : "external",
           python: pythonProcess ? "running" : "not running",
         })
-      }
-
-      // Proxy /surreal/* HTTP requests to SurrealDB (strip /surreal prefix)
-      if (url.pathname.startsWith("/surreal/")) {
-        const surrealPath = url.pathname.slice("/surreal".length)
-        const targetUrl = `${surrealHttpBase}${surrealPath}${url.search}`
-        try {
-          const proxyRes = await fetch(targetUrl, {
-            method: req.method,
-            headers: createProxyRequestHeaders(req.headers),
-            body: req.body,
-          })
-          return new Response(proxyRes.body, {
-            status: proxyRes.status,
-            statusText: proxyRes.statusText,
-            headers: createProxyResponseHeaders(proxyRes.headers),
-          })
-        } catch {
-          return new Response("SurrealDB unavailable", { status: 502 })
-        }
       }
 
       // Application APIs are owned by Bun. There is no public Python proxy.
@@ -772,50 +786,30 @@ const server = Bun.serve({
           headers: { "Content-Type": "text/html" },
         },
       )
-    } catch (error) {
-      if (error instanceof HttpError) return Response.json({ error: error.message }, { status: error.status })
-      bunLogger.error("Application request failed")
-      return Response.json({ error: "Internal server error" }, { status: 500 })
-    }
+    })
   },
   websocket: {
+    maxPayloadLength: 65536,
+    backpressureLimit: 16 * 1024 * 1024,
+    closeOnBackpressureLimit: true,
     open(ws: any) {
-      const data = ws.data as { targetPath: string; backend: string; protocols?: string }
-      ws._pendingMessages = [] as (string | Buffer)[]
-
-      const baseUrl = getSurrealBases(runtimeConfig).wsBase
-      const protocols = data.protocols ? data.protocols.split(",").map((p) => p.trim()) : undefined
-      const backendWs = new WebSocket(`${baseUrl}${data.targetPath}`, protocols)
-      backendWs.binaryType = "arraybuffer"
-
-      backendWs.onopen = () => {
-        ws._backendWs = backendWs
-        // Flush any messages that arrived before backend connected
-        const pending = ws._pendingMessages as (string | Buffer)[]
-        for (const msg of pending) backendWs.send(typeof msg === "string" ? msg : new Uint8Array(msg))
-        pending.length = 0
-      }
-
-      backendWs.onmessage = (event) => {
-        ws.send(event.data)
-      }
-
-      forwardBackendClosure(backendWs, ws)
+      ws.data.rpc = new ObservationRpc(
+        ws,
+        authentication!,
+        ws.data.account,
+        db,
+        ws.data.scope,
+        Boolean(replaySnapshot),
+        ws.data.json,
+        5000,
+        ws.data.authRequest,
+      )
     },
     message(ws: any, message: string | Buffer) {
-      const backendWs = ws._backendWs as WebSocket | undefined
-      if (backendWs && backendWs.readyState === WebSocket.OPEN) {
-        backendWs.send(typeof message === "string" ? message : new Uint8Array(message))
-      } else {
-        // Buffer messages until backend connects
-        ;(ws._pendingMessages as (string | Buffer)[] | undefined)?.push(message)
-      }
+      void ws.data.rpc?.receive(message)
     },
     close(ws: any) {
-      const backendWs = ws._backendWs as WebSocket | undefined
-      if (backendWs && backendWs.readyState === WebSocket.OPEN) {
-        backendWs.close()
-      }
+      ws.data.rpc?.stop()
     },
   },
 })

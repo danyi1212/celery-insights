@@ -9,8 +9,8 @@ vi.mock("surrealdb", async (original) => ({
     connect = calls.connect
     async signin() {}
     async use() {}
-    query(sql: string) {
-      return { collect: () => calls.collect(sql) }
+    query(sql: string, bindings: unknown) {
+      return { collect: () => calls.collect(sql, bindings) }
     }
     close = calls.close
   },
@@ -22,13 +22,16 @@ beforeEach(() => {
 
 test("a query failure retains completed samples and identifies the failed operation", async () => {
   let explorerRequests = 0
-  calls.collect.mockImplementation(async (sql: string) => {
-    if (sql.startsWith("SELECT VALUE record::id") || sql.startsWith("SELECT state,count")) return [[]]
-    explorerRequests++
-    // One validated warmup, one successful trial, then a failed trial.
-    if (explorerRequests === 3) throw new Error("native query disconnected")
-    return [[], [{ count: 0 }], [], [], [], []]
-  })
+  calls.collect.mockImplementation(
+    async (_sql: string, bindings: { request: { operation: string; query?: string } }) => {
+      if (bindings.request.operation === "list") return [[]]
+      if (bindings.request.query === "history-") return [[], [{ count: 0 }], []]
+      explorerRequests++
+      // One validated warmup, one successful trial, then a failed trial.
+      if (explorerRequests === 3) throw new Error("native query disconnected")
+      return [[], [{ count: 0 }], [], [], [], []]
+    },
+  )
   const result = await benchmarkQueries("http://localhost:1", 0, 0, "2026-10-10T10:00:00Z", 3)
   expect(result).toMatchObject({
     status: "failed",

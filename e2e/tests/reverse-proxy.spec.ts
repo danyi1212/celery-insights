@@ -5,7 +5,7 @@ test.describe("Public mount path", () => {
   test("config, health and static assets use the public prefix", async ({ request, page }) => {
     const config = await request.get(appURL("/api/config"))
     expect(config.status()).toBe(200)
-    expect((await config.json()).surrealPath).toBe(appPath("/surreal/rpc"))
+    expect((await config.json()).observationPath).toBe(appPath("/api/observation/rpc"))
     expect((await request.get(appURL("/health"))).status()).toBe(200)
     const logo = await request.get(appURL("/LogoGreen.svg"))
     expect(logo.status()).toBe(200)
@@ -29,7 +29,7 @@ test.describe("Public mount path", () => {
     await waitForTask(task_id, ["SUCCESS"])
     const link = page.locator(`#recent-tasks a[href="${appPath(`/tasks/${task_id}`)}"]`).first()
     await expect(link).toBeVisible({ timeout: 15_000 })
-    expect(sockets.some((url) => new URL(url).pathname === appPath("/surreal/rpc"))).toBe(true)
+    expect(sockets.some((url) => new URL(url).pathname === appPath("/api/observation/rpc"))).toBe(true)
     await link.click()
     await expect(page.locator("#task-header")).toContainText(task_id)
     await page.reload()
@@ -57,7 +57,13 @@ test.describe("Public mount path", () => {
   })
 
   test("MCP exposes tools through the mount path and retains origin checks", async ({ request }) => {
-    const headers = { Accept: "application/json, text/event-stream" }
+    const session = await request.get(appURL("/api/auth/identity"))
+    expect(session.status()).toBe(200)
+    const headers = {
+      Accept: "application/json, text/event-stream",
+      Origin: appOrigin,
+      "X-Celery-Insights-Request": "1",
+    }
     const data = { jsonrpc: "2.0", id: 1, method: "tools/list" }
     const response = await request.post(appURL("/mcp"), { headers, data })
     expect(response.status()).toBe(200)

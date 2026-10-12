@@ -1,3 +1,4 @@
+import { usePermissions } from "@hooks/use-permissions"
 import { useSurrealDB } from "@components/surrealdb-provider"
 import {
   describeDurability,
@@ -10,14 +11,8 @@ import {
 import { useDemoRecordCounts } from "@components/settings/use-demo-record-counts"
 import { useSettingsDiagnostics } from "@components/settings/use-settings-diagnostics"
 import { Badge } from "@components/ui/badge"
-import useSettingsStore, { PreferredTheme } from "@stores/use-settings-store"
-import { Database, Gauge, HardDrive, SlidersHorizontal } from "lucide-react"
-
-const themeLabels: Record<PreferredTheme, string> = {
-  [PreferredTheme.SYSTEM]: "System",
-  [PreferredTheme.DARK]: "Dark",
-  [PreferredTheme.LIGHT]: "Light",
-}
+import useSettingsStore from "@stores/use-settings-store"
+import { Database, Gauge, HardDrive } from "lucide-react"
 
 const SummaryCard = ({
   icon,
@@ -46,12 +41,11 @@ const SummaryCard = ({
 )
 
 const SettingsOverview = () => {
-  const theme = useSettingsStore((state) => state.theme)
-  const hideWelcomeBanner = useSettingsStore((state) => state.hideWelcomeBanner)
+  const { can } = usePermissions()
+  const canReadDiagnostics = can("diagnostics.export")
   const isDemo = useSettingsStore((state) => state.demo)
-  const rawEventsLimit = useSettingsStore((state) => state.rawEventsLimit)
   const { status, ingestionStatus, appConfig } = useSurrealDB()
-  const { data, error } = useSettingsDiagnostics({ enabled: !isDemo })
+  const { data, error } = useSettingsDiagnostics({ enabled: !isDemo && canReadDiagnostics })
   const { data: demoCounts, isLoading: isLoadingDemoCounts } = useDemoRecordCounts({ enabled: isDemo })
   const snapshotEnabled = appConfig?.debugSnapshot?.enabled === true
 
@@ -79,15 +73,10 @@ const SettingsOverview = () => {
         ? "Record counts could not be loaded."
         : "Counting records in SurrealDB."
 
+  if (!canReadDiagnostics && !isDemo) return null
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <SummaryCard
-        icon={<SlidersHorizontal className="size-4" />}
-        title="This browser"
-        value={themeLabels[theme]}
-        hint={`${hideWelcomeBanner ? "Banner hidden" : "Banner visible"} · ${isDemo ? "Sample data" : "Live data"} · ${rawEventsLimit} events`}
-        badge={<Badge variant="outline">Local</Badge>}
-      />
+    <div className="grid gap-4 md:grid-cols-3">
       <SummaryCard
         icon={<HardDrive className="size-4" />}
         title="Database"

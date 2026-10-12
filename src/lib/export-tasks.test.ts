@@ -119,3 +119,10 @@ describe("downloadFile", () => {
     removeSpy.mockRestore()
   })
 })
+
+it("neutralizes formulas in every string field while preserving JSON", () => {
+  const task = { id: "task:formula", type: "=1+1", worker: "\t@SUM(1)", result: "+1", exception: "-1" } as SurrealTask
+  const csv = tasksToCsv([task])
+  for (const text of ["'=1+1", "'\t@SUM(1)", "'+1", "'-1"]) expect(csv).toContain(text)
+  expect(tasksToJson([task])).toContain('"=1+1"')
+})

@@ -3,6 +3,7 @@ import DashboardWelcomeBanner from "@components/home/dashboard-welcome-banner"
 import FailureInbox from "@components/home/failure-inbox"
 import TaskCountChartPanel from "@components/home/task-count-chart-panel"
 import WorkflowActivityFeed from "@components/task/workflow-activity-feed"
+import RecentTasksPanel from "@components/task/recent-tasks-panel"
 import WorkersSummaryStack from "@components/worker/workers-summary-stack"
 import useSettingsStore from "@stores/use-settings-store"
 import { useSurrealDB } from "@components/surrealdb-provider"
@@ -13,7 +14,7 @@ import { AlertCircle, Loader2 } from "lucide-react"
 const HomePage = () => {
   const hideWelcomeBanner = useSettingsStore((state) => state.hideWelcomeBanner)
   const isDemo = useSettingsStore((state) => state.demo)
-  const { status, error } = useSurrealDB()
+  const { status, error, appConfig } = useSurrealDB()
   const { data: summary } = useHomepageSummary()
   const { data: workers } = useOnlineWorkers()
   if (status !== "connected") {
@@ -51,7 +52,16 @@ const HomePage = () => {
       )}
       <div className="grid grid-cols-12 items-start gap-3 px-5 pt-4">
         <div className="col-span-12 xl:col-span-8">
-          <WorkflowActivityFeed id="recent-tasks" />
+          {appConfig?.taskVisibilityRestricted ? (
+            <>
+              <p className="mb-3 text-sm text-muted-foreground">
+                Your view is limited by organization policy. Showing permitted tasks; workflow summaries are hidden.
+              </p>
+              <RecentTasksPanel id="recent-tasks" />
+            </>
+          ) : (
+            <WorkflowActivityFeed id="recent-tasks" />
+          )}
         </div>
         <div className="col-span-12 space-y-3 xl:col-span-4">
           <TaskCountChartPanel />

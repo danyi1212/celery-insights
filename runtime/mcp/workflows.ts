@@ -1,3 +1,4 @@
+import { EXECUTION_OBSERVATION_MAX_AGE_MS, getTaskExecution } from "../../src/utils/task-execution"
 import {
   ERROR_EVIDENCE,
   INVOCATION_TIME,
@@ -17,7 +18,7 @@ import {
 
 export const TASK_FIELDS = `id, record::id(id) AS task_id, type AS name, state, worker,
   workflow_id, parent_id AS parent_task_id, sent_at, first_observed_at, last_updated,
-  started_at, succeeded_at, failed_at, revoked_at, rejected_at, runtime, retries,
+  started_at, execution_active, execution_observed_at, execution_active_at, succeeded_at, failed_at, revoked_at, rejected_at, runtime, retries,
   string::slice(exception ?? '', 0, 512) AS exception_preview,
   (SELECT count() AS total FROM task WHERE parent_id = $parent.task_id OR id IN
     array::map($parent.children ?? [], |$child| type::record('task', $child)) GROUP ALL)[0].total ?? 0 AS observed_child_count,
@@ -42,6 +43,19 @@ export const taskRow = (raw: Row, now: number): Row => {
     invoked_at: invoked,
     invocation_time_basis: raw.sent_at ? "sent_at" : raw.first_observed_at ? "first_observed_at" : null,
     started_at: started,
+    execution_status:
+      raw.state === "STARTED"
+        ? getTaskExecution(
+            {
+              execution_active: typeof raw.execution_active === "boolean" ? raw.execution_active : undefined,
+              execution_observed_at: iso(raw.execution_observed_at),
+              last_updated: iso(raw.last_updated),
+            },
+            now,
+          )
+        : null,
+    execution_observed_at: iso(raw.execution_observed_at),
+    execution_active_at: iso(raw.execution_active_at),
     finished_at: terminal ? finished : null,
     elapsed_seconds:
       terminal && typeof raw.runtime === "number"
@@ -270,11 +284,20 @@ export class WorkflowTools {
         `SELECT ${taskFields}, IF state = 'FAILURE' THEN 0 ELSE IF state NOT IN $terminal THEN 1 ELSE 2 END AS priority FROM task WHERE workflow_id = $workflowId AND ${ERROR_EVIDENCE} ORDER BY priority, last_updated DESC, id LIMIT 3`,
         bindings,
       )
+      const runningWhere =
+        "workflow_id = $workflowId AND state = 'STARTED' AND execution_active = true " +
+        "AND execution_observed_at >= <datetime>$executionCutoff AND execution_observed_at <= <datetime>$executionCeiling " +
+        "AND execution_observed_at >= last_updated"
+      const runningBindings = {
+        ...bindings,
+        executionCutoff: new Date(this.now - EXECUTION_OBSERVATION_MAX_AGE_MS).toISOString(),
+        executionCeiling: new Date(this.now + EXECUTION_OBSERVATION_MAX_AGE_MS).toISOString(),
+      }
       const running = await this.q.rows(
-        `SELECT ${taskFields} FROM task WHERE workflow_id = $workflowId AND state = 'STARTED' ORDER BY started_at, id LIMIT 3`,
-        bindings,
+        `SELECT ${taskFields} FROM task WHERE ${runningWhere} ORDER BY started_at, id LIMIT 3`,
+        runningBindings,
       )
-      const runningCount = await this.q.count("task", "workflow_id = $workflowId AND state = 'STARTED'", bindings)
+      const runningCount = await this.q.count("task", runningWhere, runningBindings)
       const tasks =
         number(counts.total) <= 25
           ? (

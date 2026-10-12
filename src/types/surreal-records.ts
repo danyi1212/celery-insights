@@ -15,12 +15,17 @@ export enum TaskState {
 
 /** Task record as stored in SurrealDB */
 export interface SurrealTask {
+  relationships_restricted?: boolean
+  restricted_fields?: string[]
   id: unknown // SurrealDB RecordId — use String(id) for comparison
   type?: string | null
   state: string
   sent_at?: string | null
   received_at?: string | null
   started_at?: string | null
+  execution_active?: boolean | null
+  execution_observed_at?: string | null
+  execution_active_at?: string | null
   succeeded_at?: string | null
   failed_at?: string | null
   retried_at?: string | null
@@ -64,6 +69,7 @@ export interface SurrealWorkflow {
 
 /** Worker record as stored in SurrealDB */
 export interface SurrealWorker {
+  restricted_fields?: string[]
   id: unknown
   hostname?: string
   pid?: number
@@ -170,6 +176,7 @@ export interface ScheduledTask {
 
 /** Parsed worker inspect data from the worker poller */
 export interface WorkerInspectData {
+  _observed_at?: Partial<Record<"stats" | "active" | "registered" | "scheduled" | "reserved" | "active_queues", string>>
   stats?: Record<string, unknown>
   active?: TaskRequest[]
   registered?: string[]
@@ -194,12 +201,17 @@ const isoToDate = (iso: string | null | undefined): Date | undefined => (iso ? n
 
 /** Parsed task — same shape as SurrealTask but with extracted id and Date timestamps */
 export interface Task {
+  relationships_restricted?: boolean
+  restricted_fields?: string[]
   id: string
   type?: string
   state: TaskState
   sent_at: Date
   received_at?: Date
   started_at?: Date
+  execution_active?: boolean
+  execution_observed_at?: Date
+  execution_active_at?: Date
   succeeded_at?: Date
   failed_at?: Date
   retried_at?: Date
@@ -243,12 +255,17 @@ export interface Workflow {
 
 /** Convert a raw SurrealDB task record to a parsed Task with Date objects */
 export const parseTask = (raw: SurrealTask): Task => ({
+  relationships_restricted: raw.relationships_restricted,
   id: extractId(raw.id),
+  restricted_fields: raw.restricted_fields,
   type: raw.type || undefined,
   state: (raw.state as TaskState) || TaskState.PENDING,
   sent_at: isoToDate(raw.sent_at) || isoToDate(raw.last_updated) || new Date(0),
   received_at: isoToDate(raw.received_at),
   started_at: isoToDate(raw.started_at),
+  execution_active: raw.execution_active ?? undefined,
+  execution_observed_at: isoToDate(raw.execution_observed_at),
+  execution_active_at: isoToDate(raw.execution_active_at),
   succeeded_at: isoToDate(raw.succeeded_at),
   failed_at: isoToDate(raw.failed_at),
   retried_at: isoToDate(raw.retried_at),

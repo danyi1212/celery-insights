@@ -50,6 +50,8 @@ function contract(run: unknown) {
     imageArchitecture: get(run, "image", "architecture"),
     controllerBun: get(run, "harness", "bunVersion"),
     applicationConfiguration: get(run, "applicationConfiguration"),
+    transport: get(run, "transport"),
+    observationContract: get(run, "pipeline", "measurement_contract"),
     pipelineFixtureVersion: get(run, "pipeline", "fixture", "version"),
   }
   for (const file of [
@@ -64,6 +66,8 @@ function contract(run: unknown) {
     "history.py",
     "pipeline.py",
     "compose.yml",
+    "observation.ts",
+    "ingress.ts",
   ])
     fields[`harness.${file}`] = get(run, "harness", "files", `tooling/benchmark/${file}`)
   for (const key of ["NanoCpus", "Memory", "MemorySwap", "CpuQuota", "CpuPeriod", "CpusetCpus"])
@@ -198,11 +202,20 @@ export function extractMetrics(run: unknown) {
       "navigationToFinalResultMs",
     ])
       add(`liveBrowser.${key}`, get(run, "liveBrowser", key), "ms")
+  for (const key of ["publication_to_raw_event_ms", "terminal_to_result_ms"]) {
+    const latency = get(run, "pipeline", "public_refresh", key)
+    for (const percentile of ["p50", "p95", "p99"])
+      add(`pipeline.public_refresh.${key}.${percentile}`, get(latency, percentile), "ms", get(latency, "samples"))
+  }
   for (const key of ["publication_to_raw_event_live_ms", "terminal_to_result_live_ms", "viewer_query_ms"])
     for (const percentile of ["p50", "p95", "p99"])
       add(
         `pipeline.${key}.${percentile}`,
-        get(run, "pipeline", key, percentile),
+        get(run, "pipeline", "measurement_contract") === "typed-refresh-v1" &&
+          key !== "viewer_query_ms" &&
+          get(run, "pipeline", "private_live", "complete") !== true
+          ? null
+          : get(run, "pipeline", key, percentile),
         "ms",
         get(run, "pipeline", key, "samples"),
       )

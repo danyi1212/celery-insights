@@ -6,6 +6,7 @@ from pytest_mock import MockerFixture
 
 from events.ingester import (
     BACKPRESSURE_THRESHOLD,
+    CONFLICT_RETRIES,
     SurrealDBIngester,
     build_children_update,
     build_raw_event,
@@ -31,7 +32,7 @@ class TestBuildTaskUpsert:
         query, params = build_task_upsert(event, 0)
 
         assert "UPSERT type::record('task', $t0_id)" in query
-        assert "state = IF $t0_previous.last_updated IS NONE" in query
+        assert "state = IF $t0_apply THEN $t0_state ELSE $t0_previous.state END" in query
         assert "sent_at = IF $t0_previous.sent_at IS NONE" in query
         assert params["t0_id"] == "abc-123"
         assert params["t0_state"] == "PENDING"
@@ -86,23 +87,25 @@ class TestBuildTaskUpsert:
 
     def test_out_of_order_protection_in_state(self):
         query, _ = build_task_upsert({"type": "task-received", "uuid": "x", "timestamp": 1700000000.0}, 0)
-        expected = (
-            "state = IF $t0_previous.last_updated IS NONE OR <datetime>$t0_ts > $t0_previous.last_updated"
-            " THEN $t0_state ELSE $t0_previous.state END"
+        assert (
+            "LET $t0_apply = $t0_previous.last_updated IS NONE OR <datetime>$t0_ts > $t0_previous.last_updated; "
+            in query
         )
-        assert expected in query
+        assert "state = IF $t0_apply THEN $t0_state ELSE $t0_previous.state END" in query
+        assert "last_updated_observed" not in query.split("LET $t0_apply")[1].split(";")[0]
 
     def test_out_of_order_protection_in_last_updated(self):
         query, _ = build_task_upsert({"type": "task-received", "uuid": "x", "timestamp": 1700000000.0}, 0)
+        assert "last_updated = IF $t0_apply THEN <datetime>$t0_ts ELSE $t0_previous.last_updated END" in query
         assert (
-            "<datetime>$t0_ts > $t0_previous.last_updated THEN <datetime>$t0_ts ELSE $t0_previous.last_updated END"
+            "last_updated_observed = IF $t0_apply THEN false ELSE $t0_previous.last_updated_observed ?? false END"
             in query
         )
 
     def test_workflow_follows_root_id_freshness(self):
         query, _ = build_task_upsert({"type": "task-sent", "uuid": "x", "timestamp": 1700000000.0, "root_id": "r"}, 0)
         assert (
-            "workflow_id = IF $t0_previous.root_id IS NONE OR $t0_previous.last_updated IS NONE"
+            "workflow_id = IF $t0_previous.root_id IS NONE OR $t0_apply"
             " OR <datetime>$t0_ts >= $t0_previous.last_updated"
             " THEN $t0_workflow_id ELSE $t0_previous.workflow_id ?? $t0_workflow_id END"
         ) in query
@@ -129,7 +132,7 @@ class TestBuildTaskUpsert:
         query, params = build_task_upsert(event, 0)
         for field in ("root_id", "parent_id", "routing_key", "worker"):
             assert (
-                f"{field} = IF $t0_previous.{field} IS NONE OR $t0_previous.last_updated IS NONE"
+                f"{field} = IF $t0_previous.{field} IS NONE OR $t0_apply"
                 f" OR <datetime>$t0_ts >= $t0_previous.last_updated"
                 f" THEN $t0_{field} ELSE $t0_previous.{field} END"
             ) in query
@@ -137,6 +140,14 @@ class TestBuildTaskUpsert:
         assert params["t0_parent_id"] == "p"
         assert params["t0_routing_key"] == "reports"
         assert params["t0_worker"] == "worker-1"
+
+    def test_terminal_event_replaces_observed_non_terminal_or_same_state(self):
+        query, _ = build_task_upsert({"type": "task-succeeded", "uuid": "x", "timestamp": 1700000000.0}, 0)
+        assert (
+            "LET $t0_apply = $t0_previous.last_updated IS NONE OR <datetime>$t0_ts > $t0_previous.last_updated"
+            " OR ($t0_previous.last_updated_observed = true AND ($t0_previous.state NOT IN"
+            " ['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED'] OR $t0_previous.state = $t0_state)); "
+        ) in query
 
     def test_timestamp_field_keeps_earliest(self):
         query, _ = build_task_upsert({"type": "task-started", "uuid": "x", "timestamp": 1700000000.0}, 0)
@@ -454,6 +465,125 @@ class TestSurrealDBIngester:
         assert ingester._has_terminal is False
 
     @pytest.mark.asyncio
+    async def test_retryable_conflict_is_retried_without_an_error_log(
+        self, mock_db, queue, mocker: MockerFixture, caplog
+    ):
+        mocker.patch("events.ingester.CONFLICT_BACKOFF_SECONDS", 0)
+        conflict = {
+            "result": [
+                {"status": "ERR", "result": "The query was not executed due to a failed transaction"},
+                {
+                    "status": "ERR",
+                    "result": "Cannot COMMIT: Transaction conflict: Resource busy. This transaction can be retried",
+                },
+            ]
+        }
+        mock_db.query_raw.side_effect = [conflict, {"result": [{"status": "OK", "result": []}]}]
+        ingester = SurrealDBIngester(queue)
+        ingester._buffer = [{"type": "task-sent", "uuid": "abc", "timestamp": 1700000000.0}]
+
+        with caplog.at_level("DEBUG", logger="events.ingester"):
+            await ingester._flush()
+
+        assert mock_db.query_raw.call_count == 2
+        assert ingester._buffer == []
+        assert ingester._stats_flushes_total == 1
+        assert not [record for record in caplog.records if record.levelname == "ERROR"]
+
+    @pytest.mark.asyncio
+    async def test_persistent_conflict_keeps_events_with_a_warning(self, mock_db, queue, mocker: MockerFixture, caplog):
+        mocker.patch("events.ingester.CONFLICT_BACKOFF_SECONDS", 0)
+        mock_db.query_raw.return_value = {
+            "result": [
+                {"status": "ERR", "result": "Transaction conflict: Resource busy. This transaction can be retried"}
+            ]
+        }
+        ingester = SurrealDBIngester(queue)
+        events = [{"type": "task-sent", "uuid": "abc", "timestamp": 1700000000.0}]
+        ingester._buffer = list(events)
+
+        await ingester._flush()
+
+        assert mock_db.query_raw.call_count == CONFLICT_RETRIES + 1
+        assert ingester._buffer == events
+        levels = {record.levelname for record in caplog.records if record.name == "events.ingester"}
+        assert "WARNING" in levels
+        assert "ERROR" not in levels
+
+    @pytest.mark.asyncio
+    async def test_concurrent_flushes_never_overlap(self, mock_db, queue):
+        in_flight = 0
+        overlapped = False
+
+        async def slow_query(*_args, **_kwargs):
+            nonlocal in_flight, overlapped
+            in_flight += 1
+            overlapped = overlapped or in_flight > 1
+            await asyncio.sleep(0.01)
+            in_flight -= 1
+            return {"result": [{"status": "OK", "result": []}]}
+
+        mock_db.query_raw.side_effect = slow_query
+        ingester = SurrealDBIngester(queue)
+
+        async def flush_one(uuid: str) -> None:
+            ingester._buffer.append({"type": "task-sent", "uuid": uuid, "timestamp": 1700000000.0})
+            await ingester._flush()
+
+        await asyncio.gather(flush_one("a"), flush_one("b"))
+
+        assert not overlapped
+        assert mock_db.query_raw.call_count == 2
+        assert ingester._buffer == []
+
+    @pytest.mark.asyncio
+    async def test_persistent_conflict_skips_callback_and_waits_for_the_timer(
+        self, mock_db, queue, mocker: MockerFixture
+    ):
+        mocker.patch("events.ingester.CONFLICT_BACKOFF_SECONDS", 0)
+        mock_db.query_raw.return_value = {
+            "result": [{"status": "ERR", "result": "Transaction conflict. This transaction can be retried"}]
+        }
+        callback = mocker.AsyncMock()
+        ingester = SurrealDBIngester(queue, on_terminal=callback)
+        ingester._buffer = [{"type": "task-succeeded", "uuid": "abc", "timestamp": 1700000000.0}]
+
+        await ingester._flush()
+
+        callback.assert_not_called()
+        # Re-arming would make the consume loop retry the busy rows on every incoming event; the timer retries.
+        assert ingester._has_terminal is False
+
+    @pytest.mark.asyncio
+    async def test_terminal_callback_runs_after_commit_outside_the_lock(self, mock_db, queue):
+        calls: list[str] = []
+        callback_started = asyncio.Event()
+        release_callback = asyncio.Event()
+
+        async def query(*_args, **_kwargs):
+            calls.append("commit")
+            return {"result": [{"status": "OK", "result": []}]}
+
+        async def on_terminal(task_ids: list[str]) -> None:
+            calls.append(f"callback:{task_ids}")
+            callback_started.set()
+            await release_callback.wait()
+
+        mock_db.query_raw.side_effect = query
+        ingester = SurrealDBIngester(queue, on_terminal=on_terminal)
+        ingester._buffer = [{"type": "task-succeeded", "uuid": "abc", "timestamp": 1700000000.0}]
+
+        first = asyncio.create_task(ingester._flush())
+        await callback_started.wait()
+        # A slow callback must not hold up the next flush.
+        ingester._buffer = [{"type": "task-sent", "uuid": "def", "timestamp": 1700000001.0}]
+        await asyncio.wait_for(ingester._flush(), timeout=1)
+        release_callback.set()
+        await first
+
+        assert calls == ["commit", "callback:['abc']", "commit"]
+
+    @pytest.mark.asyncio
     async def test_flush_handles_db_error_gracefully(self, mock_db, queue):
         mock_db.query_raw.side_effect = Exception("Connection lost")
         ingester = SurrealDBIngester(queue)
@@ -466,6 +596,17 @@ class TestSurrealDBIngester:
 
         # Events are re-queued for retry on failure
         assert ingester._buffer == events
+
+    @pytest.mark.asyncio
+    async def test_failed_terminal_flush_waits_for_the_timer(self, mock_db, queue):
+        mock_db.query_raw.side_effect = Exception("Connection lost")
+        ingester = SurrealDBIngester(queue)
+        ingester._buffer = [{"type": "task-succeeded", "uuid": "abc", "timestamp": 1700000000.0}]
+
+        await ingester._flush()
+
+        # Re-arming here would retry the whole buffer on every incoming event during an outage.
+        assert ingester._has_terminal is False
 
     @pytest.mark.asyncio
     async def test_later_statement_failure_requeues_events(self, mock_db, queue, mocker: MockerFixture):
@@ -483,6 +624,26 @@ class TestSurrealDBIngester:
         assert ingester._buffer == events
         assert ingester._stats_events_total == 0
         callback.assert_not_called()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            {"type": []},
+            {"type": "task-succeeded", "uuid": "bad", "timestamp": 1e100},
+            {"type": "task-succeeded", "uuid": "bad", "timestamp": float("nan")},
+            {"type": "task-succeeded", "uuid": "bad", "timestamp": 1700000000, "runtime": "bad"},
+        ],
+    )
+    async def test_malformed_event_does_not_block_valid_event(self, mock_db, queue, bad):
+        ingester = SurrealDBIngester(queue)
+        ingester._buffer = [bad, {"type": "task-succeeded", "uuid": "good", "timestamp": 1700000000}]
+        await ingester._flush()
+        mock_db.query_raw.assert_awaited_once()
+        params = mock_db.query_raw.call_args.args[1]
+        assert params["t1_id"] == "good"
+        assert "t0_id" not in params
+        assert ingester._buffer == []
 
     @pytest.mark.asyncio
     async def test_empty_flush_is_noop(self, mock_db, queue):

@@ -63,7 +63,7 @@ const idString = (value: unknown) =>
   String(value ?? "")
     .replace(/^[^:]+:/, "")
     .replace(/^[⟨<'"]|[⟩>'"]$/g, "")
-const csvCell = (value: unknown) => '"' + String(value ?? "").replaceAll('"', '""') + '"'
+const csvCell = (value: unknown) => '"' + csvText(value).replaceAll('"', '""') + '"'
 export class ObservationApi {
   private retention: z.infer<typeof retentionSchema>
   constructor(
@@ -77,6 +77,11 @@ export class ObservationApi {
       task_retention_hours: config.taskRetentionHours ?? null,
       dead_worker_retention_hours: config.deadWorkerRetentionHours ?? null,
     }
+  }
+  withDatabase(db: Pick<Surreal, "query">): ObservationApi {
+    const view = new ObservationApi(db, this.config, this.bridgeStatus)
+    view.retention = this.retention
+    return view
   }
   async rows(sql: string, bindings: Record<string, unknown> = {}): Promise<Row[]> {
     const results = await this.db.query<[Row[]]>(sql, bindings).json().collect()
@@ -247,6 +252,8 @@ export class ObservationApi {
                 "rejected_at",
                 "last_updated",
                 "first_observed_at",
+                "execution_observed_at",
+                "execution_active_at",
               ]
             : table === "event"
               ? ["timestamp"]
@@ -500,3 +507,4 @@ export class ObservationApi {
     })
   }
 }
+import { csvText } from "../src/lib/csv"

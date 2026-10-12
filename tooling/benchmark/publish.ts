@@ -136,7 +136,7 @@ export async function publishHistory(sourceDirectory: string, input: string, con
       sourceSha: (await git(sourceDirectory, ["rev-parse", "HEAD"])).stdout,
       files: Object.fromEntries(
         await Promise.all(
-          ["compare.ts", "history.ts", "publish.ts", "trends.ts"].map(async (file) => [
+          ["compare.ts", "history.ts", "publish.ts", "trends.ts", "git.ts"].map(async (file) => [
             file,
             checksum(await readFile(new URL(file, import.meta.url), "utf8")),
           ]),

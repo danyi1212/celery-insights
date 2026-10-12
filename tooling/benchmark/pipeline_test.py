@@ -55,6 +55,7 @@ def test_restart_requires_raw_history_not_only_final_results(monkeypatch, missin
 
     database.query_raw.side_effect = response
     monkeypatch.setenv("BENCH_DB_URL", "ws://unused/rpc")
+    monkeypatch.setenv("BENCH_WRITER_PASSWORD", "private-fixture")
     monkeypatch.setattr("tooling.benchmark.pipeline.AsyncSurreal", lambda _: database)
     report = asyncio.run(validate_existing(Namespace(tasks=1, result_bytes=0, drain_seconds=0.005)))
     assert report["status"] == ("failed" if missing_history else "passed")

@@ -1,3 +1,4 @@
+import { benchmarkIngress } from "./ingress"
 import { execFile, spawn } from "node:child_process"
 import { promisify } from "node:util"
 import { randomUUID, createHash } from "node:crypto"
@@ -8,17 +9,14 @@ import { benchmarkBrowser } from "./browser"
 
 const execute = promisify(execFile)
 const nodeImage = "kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5"
-const readiness = `import asyncio
-from surrealdb import AsyncSurreal
+const readiness = `import asyncio, json, urllib.request, os, base64
 async def check():
-    db=AsyncSurreal('ws://127.0.0.1:8555/surreal/rpc')
-    try:
-        await db.signin({'namespace':'celery_insights','database':'main','username':'viewer','password':'viewer'})
-        await db.use('celery_insights','main')
-        result=await db.query_raw('RETURN true')
-        assert result['result'][0]['status']=='OK' and result['result'][0]['result'] is True
-    finally:
-        await db.close()
+    headers={'Content-Type':'application/json', 'Origin':os.environ['BENCH_AUTH_ORIGIN'],
+      'X-Celery-Insights-Request':'1', 'Authorization':'Basic '+base64.b64encode(b'benchmark:synthetic-benchmark-password').decode()}
+    request=urllib.request.Request('http://127.0.0.1:8555/api/observation/rpc',
+      data=json.dumps({'operation':'counts'}).encode(), headers=headers)
+    result=json.load(urllib.request.urlopen(request, timeout=3))
+    assert len(result)==3
 asyncio.run(check())`
 const namespace = "benchmark"
 const env = (values: Record<string, string>) => Object.entries(values).map(([name, value]) => ({ name, value }))
@@ -38,7 +36,10 @@ export function applicationPod(name: string, image: string, architecture: string
           imagePullPolicy,
           command: ["sh", "-c", "chown myuser:myuser /data"],
           securityContext: { runAsUser: 0 },
-          volumeMounts: [{ name: "data", mountPath: "/data" }],
+          volumeMounts: [
+            { name: "data", mountPath: "/data" },
+            { name: "script", mountPath: "/benchmark", readOnly: true },
+          ],
         },
       ],
       containers: [
@@ -49,9 +50,12 @@ export function applicationPod(name: string, image: string, architecture: string
           ports: [{ containerPort: 8555 }],
           resources: { requests: { cpu: "1", memory: "1Gi" }, limits: { cpu: "1", memory: "1Gi" } },
           env: env({
+            CELERY_INSIGHTS_CONFIG_FILE: "/benchmark/authentication.toml",
+            BENCH_AUTH_ORIGIN: process.env.BENCH_AUTH_ORIGIN ?? "https://benchmark.invalid",
             BROKER_URL: "amqp://benchmark:benchmark@broker/",
             RESULT_BACKEND: "redis://results:6379/0",
             SURREALDB_STORAGE: "rocksdb:///data/store",
+            CELERY_INSIGHTS_DATABASE_ROOT_PASSWORD: "benchmark-root",
             SURREALDB_INGESTER_PASS: "benchmark-ingester",
             SEARCH_INDEXING_ENABLED: "false",
             LOG_FORMAT: "json",
@@ -62,10 +66,30 @@ export function applicationPod(name: string, image: string, architecture: string
             timeoutSeconds: 5,
             failureThreshold: 120,
           },
-          volumeMounts: [{ name: "data", mountPath: "/data" }],
+          volumeMounts: [
+            { name: "data", mountPath: "/data" },
+            { name: "script", mountPath: "/benchmark", readOnly: true },
+          ],
+        },
+        {
+          name: "oracle",
+          image,
+          imagePullPolicy,
+          command: ["python", "-c", "import time; time.sleep(86400)"],
+          resources: { requests: { cpu: "100m", memory: "128Mi" }, limits: { cpu: "1", memory: "512Mi" } },
+          env: env({
+            BROKER_URL: "amqp://benchmark:benchmark@broker/",
+            RESULT_BACKEND: "redis://results:6379/0",
+            BENCH_AUTH_ORIGIN: process.env.BENCH_AUTH_ORIGIN ?? "https://benchmark.invalid",
+            BENCH_DB_URL: "ws://127.0.0.1:8557/rpc",
+            BENCH_PUBLIC_URL: "ws://127.0.0.1:8555/api/observation/rpc",
+            BENCH_WRITER_PASSWORD: "benchmark-ingester",
+          }),
+          volumeMounts: [{ name: "script", mountPath: "/benchmark", readOnly: true }],
         },
       ],
       volumes: [
+        { name: "script", configMap: { name: "producer" } },
         { name: "data", hostPath: { path: "/var/local/celery-insights-benchmark", type: "DirectoryOrCreate" } },
       ],
     },
@@ -104,6 +128,7 @@ export async function benchmarkPods(
 ) {
   await mkdir(dirname(resolve(output)), { recursive: true })
   await mkdir(output)
+  const ingress = await benchmarkIngress(output)
   const temporary = await mkdtemp(resolve(tmpdir(), "benchmark-kubernetes-"))
   const kubeconfig = resolve(temporary, "config")
   const cluster = `ci-bench-${randomUUID().slice(0, 8)}`
@@ -120,7 +145,7 @@ export async function benchmarkPods(
       imageCache === "cached"
         ? "App images are imported from the host. Import time is separate; pod cases use cached images, with empty and retained stores."
         : "The initial app image is absent from the fresh node and pulled from a disposable local registry. This measures local transfer/unpack, not Internet/cloud registry latency. Retained-store replacement uses its resulting cache.",
-      "Readiness performs a real viewer query through Bun. Cold ingestion and warm persisted-data correctness use an independent producer/validator.",
+      "Readiness performs an authorized typed count request through Bun. A separately limited oracle sidecar shares only the pod network namespace to reach the private database. Cold ingestion and warm persisted-data correctness use an independent producer/validator.",
       "Kubernetes timestamps have limited resolution; readiness is observed by a one-second probe. Controller timing includes kubectl and producer scheduling.",
     ],
   }
@@ -314,7 +339,10 @@ export async function benchmarkPods(
         apiVersion: "v1",
         kind: "ConfigMap",
         metadata: { name: "producer", namespace },
-        data: { "pipeline.py": pipeline },
+        data: {
+          "pipeline.py": pipeline,
+          "authentication.toml": await readFile(resolve(ingress.directory, "authentication.toml"), "utf8"),
+        },
       },
     ])
     await kubectl(
@@ -327,50 +355,25 @@ export async function benchmarkPods(
       "--timeout=120s",
     )
     const produce = async (name: string, validateOnly: boolean) => {
-      await apply(name, [
-        {
-          apiVersion: "v1",
-          kind: "Pod",
-          metadata: { name, namespace },
-          spec: {
-            restartPolicy: "Never",
-            containers: [
-              {
-                name: "producer",
-                image: podImage,
-                imagePullPolicy: imageCache === "cached" ? "Never" : "IfNotPresent",
-                command: [
-                  "python",
-                  "/benchmark/pipeline.py",
-                  "--tasks",
-                  "32",
-                  "--rate",
-                  "100",
-                  ...(validateOnly ? ["--validate-only"] : []),
-                ],
-                env: env({
-                  BROKER_URL: "amqp://benchmark:benchmark@broker/",
-                  RESULT_BACKEND: "redis://results:6379/0",
-                  BENCH_DB_URL: "ws://app:8555/surreal/rpc",
-                }),
-                volumeMounts: [{ name: "script", mountPath: "/benchmark", readOnly: true }],
-              },
-            ],
-            volumes: [{ name: "script", configMap: { name: "producer" } }],
-          },
-        },
-      ])
-      const deadline = performance.now() + 90_000
-      while (true) {
-        const state = JSON.parse(await kubectl("get", "pod", name, "--namespace", namespace, "-o", "json"))
-        if (["Succeeded", "Failed"].includes(state.status?.phase)) {
-          const logs = await kubectl("logs", name, "--namespace", namespace)
-          await writeFile(resolve(output, `${name}.log`), logs)
-          return JSON.parse(logs.trim().split("\n").at(-1) ?? "null")
-        }
-        if (performance.now() > deadline) throw new Error("Producer/validator pod deadline exceeded")
-        await new Promise((done) => setTimeout(done, 500))
-      }
+      const podName = validateOnly ? "app-warm" : "app-cold"
+      const logs = await kubectl(
+        "exec",
+        "--namespace",
+        namespace,
+        podName,
+        "-c",
+        "oracle",
+        "--",
+        "python",
+        "/benchmark/pipeline.py",
+        "--tasks",
+        "32",
+        "--rate",
+        "100",
+        ...(validateOnly ? ["--validate-only"] : []),
+      )
+      await writeFile(resolve(output, `${name}.log`), logs)
+      return JSON.parse(logs.trim().split("\n").at(-1) ?? "null")
     }
     for (const name of ["cold", "warm"]) {
       const start = performance.now()
@@ -432,7 +435,8 @@ export async function benchmarkPods(
         }
       })
     })
-    report.browser = await benchmarkBrowser(address)
+    ingress.setBackend(address)
+    report.browser = await benchmarkBrowser(ingress.url)
     report.status =
       (report.cases as { validation: { status: string } }[]).every((item) => item.validation.status === "passed") &&
       (report.browser as { status: string }).status === "passed"
@@ -442,6 +446,7 @@ export async function benchmarkPods(
     report.status = "incomplete"
     report.error = String(error)
   } finally {
+    await ingress.close()
     forward?.kill()
     if (created) {
       for (const name of ["app-cold", "app-warm", "producer-cold", "producer-warm"]) {

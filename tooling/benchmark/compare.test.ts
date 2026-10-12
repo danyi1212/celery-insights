@@ -12,7 +12,7 @@ test("a deliberate slowdown is flagged as report-only; application changes remai
   candidate.image.id = "sha256:candidate"
   candidate.scenario.history.referenceTime = "2026-10-11T10:00:00Z"
   Object.assign(candidate.harness.files, {
-    "src/lib/explorer-query.ts": "changed-app-query",
+    "runtime/observation/queries.ts": "changed-app-query",
     "bun.lock": "changed-app-dependencies",
   })
   candidate.pipeline.publication_to_raw_event_live_ms.p95 = 150
@@ -188,4 +188,18 @@ test("fan-out timing cannot pass when one subscriber lost events", () => {
   expect(compareRuns(baseline, candidate).status).not.toBe("candidate-failed")
   Reflect.get(candidate.pipeline, "fanout").observations[1].raw_events = 127
   expect(compareRuns(baseline, candidate).status).toBe("candidate-failed")
+})
+
+test("partial private LIVE diagnostics cannot look faster when public refresh converges", () => {
+  const baseline = fixture(),
+    candidate = fixture()
+  candidate.runId = "candidate"
+  candidate.pipeline.private_live.complete = false
+  candidate.pipeline.publication_to_raw_event_live_ms.p95 = 1
+  const report = compareRuns(baseline, candidate)
+  expect(report.status).toBe("report-only")
+  expect(report.rows.find((row) => row.name === "pipeline.publication_to_raw_event_live_ms.p95")).toMatchObject({
+    status: "unavailable",
+    delta: null,
+  })
 })

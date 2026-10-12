@@ -1,6 +1,8 @@
 # Measured resource guidance
 
-For a small installation, **start with 1 CPU and 1 GiB for the Celery Insights app**,
+The earlier application architecture passed the bounded workload below at **1 CPU and 1 GiB for the Celery Insights app**.
+The current authorized read/refresh architecture requires a fresh sizing run before this becomes a current recommendation.
+For that earlier workload, start with this allocation,
 then run the benchmark against your payloads and retention settings. This is a preliminary
 starting allocation supported by the bounded workload below. Broker, result backend,
 Kubernetes node and benchmark generator resources are additional.
@@ -42,7 +44,7 @@ many browsers/workers, high API traffic and larger retained datasets need their 
 The 100-events/s mixed profile on 10,000 historical tasks failed LIVE delivery at 2 CPU / 2 GiB;
 adding resources alone is not an established remedy. See [calibration findings](benchmark-calibration.md).
 
-Reproduce the bounded run with a current source-built image:
+Run the same workload against a current source-built image to establish updated guidance:
 
 ```shell
 bun run bench suite --manifest tooling/benchmark/suites/soak.json --image <image> --output <new-directory>

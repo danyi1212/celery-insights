@@ -1,4 +1,4 @@
-"""Real broker -> production ingester -> viewer proxy workload. Runs outside the app container."""
+"""Real broker ingestion with independent private database oracles and public typed refresh reads."""
 
 import argparse
 import asyncio
@@ -11,6 +11,10 @@ import resource
 import sys
 import threading
 import time
+import base64
+
+import websockets
+from surrealdb.connections.async_ws import AsyncWsSurrealConnection
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -18,6 +22,7 @@ from typing import Any
 from celery import Celery
 from surrealdb import AsyncSurreal
 from websockets.exceptions import ConnectionClosed
+from websockets.typing import Origin, Subprotocol
 
 
 def distribution(values: list[float]) -> dict[str, Any]:
@@ -54,6 +59,52 @@ async def query(db: Any, sql: str, bindings: dict | None = None) -> Any:
     if errors:
         raise RuntimeError(str(errors))
     return rows[-1]["result"] if rows else []
+
+
+class PublicObservation(AsyncWsSurrealConnection):
+    async def connect(self, url=None):
+        if url is not None and url != self.raw_url:
+            raise ValueError("Public endpoint is fixed for this connection")
+        if self.socket is not None:
+            return
+        self.socket = await websockets.connect(
+            self.raw_url,
+            subprotocols=[Subprotocol("cbor")],
+            max_size=16 * 1024 * 1024,
+            origin=Origin(os.environ["BENCH_AUTH_ORIGIN"]),
+            additional_headers={
+                "Authorization": "Basic " + base64.b64encode(b"benchmark:synthetic-benchmark-password").decode()
+            },
+        )
+        self.loop = asyncio.get_running_loop()
+        self.recv_task = asyncio.create_task(self._recv_task())
+
+
+async def public_subscription(db: Any, table: str):
+    subscription = await query(db, f"LIVE SELECT * FROM {table}")
+    return await db.subscribe_live(subscription)
+
+
+async def public_rows(db: Any, table: str, search: str = "bench-") -> list[dict]:
+    """Use the public request contract, without SQL, namespace or database credentials."""
+    rows = []
+    while True:
+        page = await query(
+            db,
+            "observation:read",
+            {
+                "request": {
+                    "operation": "list",
+                    "table": table,
+                    "query": search,
+                    "limit": 1000,
+                    "offset": len(rows),
+                }
+            },
+        )
+        rows.extend(page)
+        if len(page) < 1000:
+            return rows
 
 
 def record_name(value: Any) -> str:
@@ -102,7 +153,12 @@ async def validate_existing(args: argparse.Namespace) -> dict:
 
             async def inspect(db=db):
                 await db.signin(
-                    {"namespace": "celery_insights", "database": "main", "username": "viewer", "password": "viewer"}
+                    {
+                        "namespace": "celery_insights",
+                        "database": "main",
+                        "username": "ingester",
+                        "password": os.environ["BENCH_WRITER_PASSWORD"],
+                    }
                 )
                 await db.use("celery_insights", "main")
                 tasks = await query(db, "SELECT * FROM task WHERE string::starts_with(record::id(id), 'bench-')")
@@ -141,20 +197,32 @@ async def run(args: argparse.Namespace) -> dict:
     await asyncio.to_thread(app.backend.client.ping)
     db = AsyncSurreal(os.environ["BENCH_DB_URL"])
     task_ids = [f"bench-{index}" for index in range(args.tasks)]
-    await db.signin({"namespace": "celery_insights", "database": "main", "username": "viewer", "password": "viewer"})
+    await db.signin(
+        {
+            "namespace": "celery_insights",
+            "database": "main",
+            "username": "ingester",
+            "password": os.environ["BENCH_WRITER_PASSWORD"],
+        }
+    )
     await db.use("celery_insights", "main")
     validation_db = AsyncSurreal(os.environ["BENCH_DB_URL"])
     await validation_db.signin(
-        {"namespace": "celery_insights", "database": "main", "username": "viewer", "password": "viewer"}
+        {
+            "namespace": "celery_insights",
+            "database": "main",
+            "username": "ingester",
+            "password": os.environ["BENCH_WRITER_PASSWORD"],
+        }
     )
     await validation_db.use("celery_insights", "main")
-    reader_db = db
+    public_db = PublicObservation(os.environ["BENCH_PUBLIC_URL"])
+    public_stream = await public_subscription(public_db, "task")
+    public_event_seen: dict[int, float] = {}
+    public_result_seen: dict[str, float] = {}
+    reader_db = public_db
     if args.reader_mode == "separate":
-        reader_db = AsyncSurreal(os.environ["BENCH_DB_URL"])
-        await reader_db.signin(
-            {"namespace": "celery_insights", "database": "main", "username": "viewer", "password": "viewer"}
-        )
-        await reader_db.use("celery_insights", "main")
+        reader_db = PublicObservation(os.environ["BENCH_PUBLIC_URL"])
     emitted: dict[str, float] = {}
     event_emitted: dict[int, float] = {}
     event_seen: dict[int, float] = {}
@@ -176,27 +244,35 @@ async def run(args: argparse.Namespace) -> dict:
     fanout_streams = []
     fanout_seen: list[dict[int, float]] = []
     for _ in range(args.live_clients - 1):
-        client = AsyncSurreal(os.environ["BENCH_DB_URL"])
-        await client.signin(
-            {"namespace": "celery_insights", "database": "main", "username": "viewer", "password": "viewer"}
-        )
-        await client.use("celery_insights", "main")
-        subscription = await client.live("event")
-        fanout_streams.append(await client.subscribe_live(subscription))
+        client = PublicObservation(os.environ["BENCH_PUBLIC_URL"])
+        fanout_streams.append(await public_subscription(client, "event"))
         fanout_connections.append(client)
         fanout_seen.append({})
 
     async def observe_fanout(index: int) -> None:
         delay_ms = args.slow_client_delay_ms if index == len(fanout_streams) - 1 else 0
-        async for row in fanout_streams[index]:
-            data = row.get("data")
-            if not isinstance(data, str):
-                raise RuntimeError("Fan-out raw-event notification has no JSON data string")
-            sequence = json.loads(data).get("bench_sequence")
-            if sequence in event_emitted:
-                fanout_seen[index].setdefault(sequence, (time.perf_counter() - event_emitted[sequence]) * 1000)
-                if delay_ms:
-                    await asyncio.sleep(delay_ms / 1000)
+        async for refresh in fanout_streams[index]:
+            if not refresh.get("__observation_refresh"):
+                raise RuntimeError("Public subscription did not emit a refresh marker")
+            if delay_ms:
+                await asyncio.sleep(delay_ms / 1000)
+            for row in await public_rows(fanout_connections[index], "event"):
+                sequence = json.loads(row["data"]).get("bench_sequence")
+                if sequence in event_emitted:
+                    fanout_seen[index].setdefault(sequence, (time.perf_counter() - event_emitted[sequence]) * 1000)
+
+    async def observe_public() -> None:
+        async for refresh in public_stream:
+            if not refresh.get("__observation_refresh"):
+                raise RuntimeError("Public subscription did not emit a refresh marker")
+            for row in await public_rows(public_db, "task"):
+                task_id = record_name(row["id"])
+                if task_id in emitted and row.get("state") == "SUCCESS" and row.get("result") is not None:
+                    public_result_seen.setdefault(task_id, (time.perf_counter() - emitted[task_id]) * 1000)
+            for row in await public_rows(public_db, "event"):
+                sequence = json.loads(row["data"]).get("bench_sequence")
+                if sequence in event_emitted:
+                    public_event_seen.setdefault(sequence, (time.perf_counter() - event_emitted[sequence]) * 1000)
 
     async def observe_events() -> None:
         async for row in event_stream:
@@ -221,7 +297,7 @@ async def run(args: argparse.Namespace) -> dict:
     async def read() -> None:
         while True:
             started = time.perf_counter()
-            await query(reader_db, "SELECT id, state FROM task ORDER BY last_updated DESC LIMIT 50")
+            await query(reader_db, "observation:read", {"request": {"operation": "list", "table": "task", "limit": 50}})
             query_times.append((time.perf_counter() - started) * 1000)
             await asyncio.sleep(0.1)
 
@@ -237,7 +313,9 @@ async def run(args: argparse.Namespace) -> dict:
         else:
             raise RuntimeError("Receiver never committed readiness probe")
 
-    workers = [asyncio.create_task(observe()), asyncio.create_task(observe_events())]
+    private_workers = [asyncio.create_task(observe()), asyncio.create_task(observe_events())]
+    private_errors: list[str] = []
+    workers = [asyncio.create_task(observe_public())]
     workers.extend(asyncio.create_task(observe_fanout(index)) for index in range(len(fanout_streams)))
     if args.reader_mode != "none":
         workers.append(asyncio.create_task(read()))
@@ -296,6 +374,13 @@ async def run(args: argparse.Namespace) -> dict:
     deadline = start + planned_seconds + args.drain_seconds
     try:
         while time.perf_counter() < deadline:
+            for worker in private_workers:
+                if worker.done() and not worker.cancelled():
+                    failure = worker.exception()
+                    private_errors.append(
+                        f"{type(failure).__name__}: {failure}" if failure else "Native observer stopped"
+                    )
+            private_workers = [worker for worker in private_workers if not worker.done()]
             if not observer_failed:
                 for worker in workers:
                     if worker.done():
@@ -309,8 +394,8 @@ async def run(args: argparse.Namespace) -> dict:
                         worker.cancel()
                     await asyncio.gather(*workers, return_exceptions=True)
             live_complete = (
-                len(result_seen) == args.tasks
-                and len(event_seen) == published
+                len(public_result_seen) == args.tasks
+                and len(public_event_seen) == published
                 and all(len(seen) == published for seen in fanout_seen)
             )
             if finished.is_set() and (live_complete or observer_failed):
@@ -333,12 +418,12 @@ async def run(args: argparse.Namespace) -> dict:
             # SDK LIVE iterators may wait forever after transport closure. An end-of-window
             # probe classifies that failure without adding traffic to the measured interval.
             try:
-                await asyncio.wait_for(query(db, "RETURN true"), timeout=2)
+                await asyncio.wait_for(public_rows(public_db, "task"), timeout=2)
             except (ConnectionClosed, TimeoutError, RuntimeError, KeyError) as failure:
                 errors.append(f"Observer connection probe: {type(failure).__name__}: {failure}")
             errors.append(
-                f"LIVE delivery incomplete: {len(event_seen)}/{published} events and "
-                f"{len(result_seen)}/{args.tasks} expected results observed"
+                f"LIVE delivery incomplete: {len(public_event_seen)}/{published} events and "
+                f"{len(public_result_seen)}/{args.tasks} expected results observed"
             )
             for index, seen in enumerate(fanout_seen):
                 if len(seen) != published:
@@ -390,13 +475,29 @@ async def run(args: argparse.Namespace) -> dict:
             "publication_to_raw_event_live_ms": distribution(list(event_seen.values())),
             "terminal_to_result_live_ms": distribution(list(result_seen.values())),
             "viewer_query_ms": distribution(query_times),
+            "measurement_contract": "typed-refresh-v1",
+            "private_live": {
+                "complete": len(event_seen) == published and len(result_seen) == args.tasks and not private_errors,
+                "diagnostic_only": True,
+                "events": len(event_seen),
+                "results": len(result_seen),
+                "errors": private_errors,
+            },
+            "public_refresh": {
+                "cadence_ms": 5000,
+                "publication_to_raw_event_ms": distribution(list(public_event_seen.values())),
+                "terminal_to_result_ms": distribution(list(public_result_seen.values())),
+                "events": len(public_event_seen),
+                "results": len(public_result_seen),
+                "complete": live_complete,
+            },
             "live_notifications": len(notification_bytes),
             "live_bytes": sum(notification_bytes),
             "fanout": {
                 "clients": args.live_clients,
                 "slow_client_delay_ms": args.slow_client_delay_ms,
                 "observations": [
-                    {"client": 1, "raw_events": len(event_seen), "delay_ms": 0},
+                    {"client": 1, "raw_events": len(public_event_seen), "delay_ms": 0},
                     *[
                         {
                             "client": index + 2,
@@ -408,15 +509,17 @@ async def run(args: argparse.Namespace) -> dict:
                     ],
                 ],
                 "limitations": [
-                    "Additional clients subscribe to raw events only; the primary client also observes task results.",
+                    "Public refresh clients refetch raw events; the primary client also refetches task results.",
                     "Slow-client delay paces iterator consumption; SDK/socket buffers may continue reading.",
                     "Protocol clients share the generator process; this is not multiple rendered browsers.",
                 ],
             },
             "generator_healthy": generator_healthy,
             "limitations": [
-                "Terminal freshness may include Redis backfill; raw-event LIVE measures actual ingestion delivery.",
-                "Generator readiness excludes probe events from task-event validation.",
+                "Public freshness includes the 5-second refresh cadence and authorized typed reads.",
+                "Unprefixed LIVE latency metrics observe the private native database, not the public API. "
+                "Native LIVE completeness is diagnostic; public refresh and exact persisted oracles "
+                "determine correctness.",
                 "Fixed 100ms query pacing is a background reader, not a query capacity measurement.",
                 "Raw-event drain uses a count query at 50ms intervals after publication; it is an upper bound.",
                 "On delivery failure, latency distributions describe successful partial observations only; "
@@ -426,12 +529,13 @@ async def run(args: argparse.Namespace) -> dict:
     finally:
         stop.set()
         await asyncio.to_thread(producer.join, 10)
-        for worker in workers:
+        for worker in workers + private_workers:
             worker.cancel()
-        await asyncio.gather(*workers, return_exceptions=True)
+        await asyncio.gather(*workers, *private_workers, return_exceptions=True)
         await db.close()
-        if reader_db is not db:
+        if reader_db is not public_db:
             await reader_db.close()
+        await public_db.close()
         await validation_db.close()
         for client in fanout_connections:
             await client.close()

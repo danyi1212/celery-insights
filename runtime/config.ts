@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { randomBytes } from "node:crypto"
 
 /**
  * Coerces string/boolean values to boolean.
@@ -25,14 +26,17 @@ export const flatConfigSchema = z.object({
       { message: "URL_PREFIX must be a URL path with no query, fragment, or dot segments" },
     )
     .transform((value) => (value ? `/${value}` : "")),
-  mcpToken: z.string().min(1).optional(),
+  mcpCursorSecret: z.string().min(1).optional(),
   mcpAllowedHosts: z.string().min(1).optional(),
 
   // SurrealDB
   surrealdbUrl: z.string().url().default("ws://localhost:8557/rpc"),
   surrealdbExternalUrl: z.string().url().optional(),
-  surrealdbIngesterPass: z.string().min(1).default("changeme"),
-  surrealdbFrontendPass: z.string().min(1).optional(),
+  surrealdbRootPass: z.string().min(1).optional(),
+  surrealdbIngesterPass: z
+    .string()
+    .min(1)
+    .default(() => randomBytes(32).toString("base64url")),
   surrealdbNamespace: z.string().min(1).default("celery_insights"),
   surrealdbDatabase: z.string().min(1).default("main"),
   surrealdbStorage: z.string().default("memory"),
@@ -75,6 +79,66 @@ export const flatConfigSchema = z.object({
   uiHideWelcomeBanner: z.boolean().optional(),
   uiRawEventsLimit: z.number().int().positive().optional(),
   publicUrl: z.string().url().optional(),
+  opaDecisionUrl: z
+    .string()
+    .url()
+    .refine((value) => {
+      const url = new URL(value)
+      return (
+        ["http:", "https:"].includes(url.protocol) &&
+        !url.username &&
+        !url.password &&
+        !url.search &&
+        !url.hash &&
+        /^\/v1\/data\/[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/.test(url.pathname)
+      )
+    }, "Expected an HTTP(S) OPA /v1/data decision URL without credentials, query or fragment")
+    .optional(),
+  opaTimeoutMs: z.coerce.number().int().min(50).max(10000).default(1000),
+  opaBearerToken: z
+    .string()
+    .min(1)
+    .max(4096)
+    .regex(/^[\x21-\x7e]+$/)
+    .optional(),
+  authMode: z.enum(["basic", "oidc"]).default("basic"),
+  authSessionSecret: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{43}$/, "Expected a base64url-encoded 32-byte session secret")
+    .optional(),
+  authSessionSeconds: z.coerce.number().int().min(300).max(86400).default(28800),
+  oidcIssuer: z.string().url().optional(),
+  oidcClientId: z.string().min(1).optional(),
+  oidcClientSecret: z.string().min(1).optional(),
+  oidcScopes: z.string().default("openid profile"),
+  oidcRoleMappings: z
+    .array(
+      z
+        .object({
+          claim: z.string().regex(/^[A-Za-z0-9_-]+$/),
+          value: z.string().min(1),
+          roles: z.array(z.enum(["viewer", "operator", "administrator"])).min(1),
+        })
+        .strict(),
+    )
+    .max(100)
+    .default([]),
+  authAccounts: z
+    .array(
+      z
+        .object({
+          username: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/),
+          password: z
+            .string()
+            .min(1)
+            .max(4096)
+            .refine((value) => ![...value].some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)),
+          roles: z.array(z.enum(["viewer", "operator", "administrator"])).min(1),
+        })
+        .strict(),
+    )
+    .max(100)
+    .default([]),
 })
 
 const configSchema = flatConfigSchema
@@ -94,12 +158,11 @@ export type Config = z.infer<typeof configSchema>
 export const ENV_KEY_MAP: Record<string, string> = {
   PORT: "port",
   URL_PREFIX: "urlPrefix",
-  MCP_TOKEN: "mcpToken",
+  MCP_TOKEN: "mcpCursorSecret",
   MCP_ALLOWED_HOSTS: "mcpAllowedHosts",
   SURREALDB_URL: "surrealdbUrl",
   SURREALDB_EXTERNAL_URL: "surrealdbExternalUrl",
   SURREALDB_INGESTER_PASS: "surrealdbIngesterPass",
-  SURREALDB_FRONTEND_PASS: "surrealdbFrontendPass",
   SURREALDB_NAMESPACE: "surrealdbNamespace",
   SURREALDB_DATABASE: "surrealdbDatabase",
   SURREALDB_STORAGE: "surrealdbStorage",
@@ -135,6 +198,8 @@ function envToConfig(env: Record<string, string | undefined>): Record<string, st
 }
 
 export function parseConfig(env: Record<string, string | undefined> = process.env): Config {
+  if (env.SURREALDB_FRONTEND_PASS !== undefined)
+    throw new Error("SURREALDB_FRONTEND_PASS was replaced by authentication.accounts in TOML")
   return validateConfig(envToConfig(env))
 }
 
@@ -156,5 +221,9 @@ export function validateConfig(values: Record<string, unknown>): Config {
   } catch {
     throw new Error("celery.timezone: Invalid timezone")
   }
+  if (result.data.opaBearerToken && !result.data.opaDecisionUrl)
+    throw new Error("authorization.opa.bearer_token requires decision_url")
+  if (result.data.opaBearerToken && new URL(result.data.opaDecisionUrl!).protocol !== "https:")
+    throw new Error("authorization.opa.bearer_token requires HTTPS")
   return result.data
 }

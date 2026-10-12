@@ -1,7 +1,7 @@
 # Benchmark tool (in development)
 
 This first slice exercises real RabbitMQ delivery, the normal production ingestion loops,
-Redis result fetching/polling, workflow writes, viewer queries, and LIVE delivery through Bun's proxy.
+Redis result fetching/polling, workflow writes, authorized typed reads, and public refresh-driven convergence.
 Optional Chromium journeys measure Explorer's first useful rows and navigation to task details.
 They also validate search/reset and the rendered task result, collect laboratory paint/interaction
 metrics, and record fetched asset bytes. `--api` adds fixed-arrival HTTP/MCP contract workloads;
@@ -117,22 +117,36 @@ and 2 for an unusable baseline/incompatible series. Reports are written for thes
 arguments/budget files fail before reporting. Run and comparison output directories must be new;
 existing artifacts are never overwritten. Publishing must keep nonzero/incomplete outcomes visible.
 
-`--queries` runs the shared production Explorer query builder as an authenticated viewer: rows,
-counts, facets, and histograms together. It validates fixture ID fingerprints, state totals, selected
+`--queries` sends the production typed Explorer request to the authorized observation API: rows,
+counts, facets, and histograms together. It validates paginated fixture IDs, state totals, selected
 rows, and aggregate counts outside timing. One validated warmup precedes `--query-repetitions`
 (default three) sequential samples per case. Report median/range, not query throughput or p99.
-Untimed row-query plans are retained for diagnosis. Storage profiles record allocated blocks and
-logical filesystem bytes before/after seeding, after workload, and after orderly app shutdown.
-Shutdown is a checkpoint observation, not proof of compaction or long-term retention space reuse.
+Query plans are unavailable through this API. Private relation record IDs are checked by the history
+seed oracle; public maintenance/replay checks validate task membership and workflow summaries.
+
+Every run configures a synthetic administrator account and explicit database passwords in its
+private fixture. The browser signs in through a local Bun HTTPS relay with a generated certificate;
+programmatic API/SDK clients use explicit Basic authentication and the configured origin over the
+internal HTTP/WebSocket path. TLS relay cost belongs to the controller, outside app quotas. Browser
+measurements include that relay; public read/API measurements include application authentication.
+These transport and authorization profiles are not interchangeable with production OPA/OIDC or
+remote ingress profiles. No database credentials or arbitrary SQL travel through the public API.
 
 ## Current measurement limits
 
-`--reader-mode shared` (default) runs the paced task-list query on the same viewer connection
-as task/raw-event LIVE subscriptions. `separate` keeps identical query pacing on a second viewer
-connection; `none` removes the background list query. These are explicitly different diagnostic
-scenarios, and the comparator rejects comparisons across modes. Keep event rate, history, image
-and resources fixed when using them to attribute notification loss. Removing a reader does not
-prove improved capacity for the original mixed workload.
+`--reader-mode shared` (default) paces typed task-list requests on the public refresh observer's
+connection. `separate` uses another public connection; `none` removes background list traffic.
+Public subscriptions send refresh markers every five seconds, then clients refetch authorized
+records. `pipeline.public_refresh` reports publication-to-raw-event and terminal-to-result freshness
+including that cadence. Completeness is required alongside the independent persisted-data oracle.
+Additional clients exercise the same public refresh/refetch contract. Slow delay paces refetching;
+it does not simulate a bandwidth-constrained network or prove reconnect recovery.
+
+Unprefixed `publication_to_raw_event_live_ms` and `terminal_to_result_live_ms` retain separate private
+native database notification diagnostics. They are not public freshness measurements. The oracle
+runs outside the app cgroup and shares only its network namespace, using the private database port.
+The measurement contract and harness hashes start a new comparison series after this migration;
+earlier proxy-based reports remain historical evidence.
 
 `BENCH_NOTIFICATION_BUFFER=1024` changes SurrealDB's per-connection response/notification channel
 size for a diagnostic run (default 100). The selected native environment value is recorded and
@@ -151,8 +165,8 @@ Image fetch duration is not native pod cold-start latency.
 - The viewer reader is paced every 100 ms. Its latency is observed under ingestion; its rate is not query capacity.
 - Publication-to-raw-event-LIVE and terminal-to-result-LIVE use one generator/observer monotonic clock.
   Result polling can supply terminal state before ingestion drains; they are separate metrics.
-- Persisted correctness uses a separate viewer connection. A disconnected LIVE client still fails
-  the run, while retained-history correctness can be checked after bounded drain. Partial successful
+- Persisted correctness uses a separate private database connection. Public refresh delivery must
+  complete, while retained-history correctness is checked after bounded drain. Partial successful
   delivery samples cannot establish tail latency for that failed run.
 - The provisional 100 ms maximum publisher-lag rule marks timing results inconclusive when the generator falls behind.
 - Raw samples are retained for the small workload; larger-scale suites will need bounded distributions.
@@ -388,13 +402,13 @@ bun run bench replay --image <image> --format legacy-json --output <new-director
 ```
 
 This creates a synthetic source with 128 historical tasks and 32 broker-driven tasks, exports a
-redacted debug bundle v2 with native SQL data, and starts a separate read-only replay container.
-It validates exact task/event payloads, workflow summaries and all membership edges, rejects a
-mutation, and runs the production-browser journey. The optional older source image checks legacy
-bundle compatibility. `--format legacy-json` generates an older JSON-format fixture from the independently
-captured source backup, keeping its original native archive; conversion cost is separate from export.
+redacted debug bundle v2 with scoped JSON data, and starts a separate read-only replay container.
+It validates exact task/event payloads, workflow summaries and all public task memberships, rejects a
+mutation, and runs the production-browser journey. The optional source image must support the current authenticated public protocol and scoped JSON
+bundles. Old native SQL source images are unsupported; their older results remain historical evidence. `--format legacy-json` generates an older JSON-format fixture from the independently
+captured source backup, keeping its original source archive; conversion cost is separate from export.
 Export bytes/hash, export time and replay-to-validated-data time are distinct.
-New native bundles preserve workflow tables; older core-only bundles reconstruct derived workflows
-from stored task state. Source/replay images are recorded separately. Private source and replay
+Scoped JSON bundles reconstruct derived workflows from stored task state after import. Native SQL
+bundles are intentionally unsupported by the current application and remain historical evidence. Source/replay images are recorded separately. Private source and replay
 stores are removed; the synthetic bundle, reports and logs remain. This is a bounded fixture and
 separate schema-1 diagnostic, not large-incident-bundle replay capacity.

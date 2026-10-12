@@ -6,7 +6,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 test("unchanged counts cannot establish API/write overlap even with successful responses", async () => {
   vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
-    if (url.endsWith("/api/config")) return Response.json({ surrealPath: "/surreal/rpc" })
+    if (url.endsWith("/api/config")) return Response.json({ observationPath: "/api/observation/rpc" })
     if (url.endsWith("/api/settings/info")) return Response.json({ task_count: 4, event_count: 16 })
     const request = JSON.parse(String(init.body))
     return Response.json({

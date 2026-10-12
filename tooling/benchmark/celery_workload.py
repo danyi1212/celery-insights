@@ -48,7 +48,12 @@ async def measure(tasks: int, rate: int, iterations: int) -> dict:
     if monitored:
         db = AsyncSurreal(os.environ["BENCH_DB_URL"])
         await db.signin(
-            {"namespace": "celery_insights", "database": "main", "username": "viewer", "password": "viewer"}
+            {
+                "namespace": "celery_insights",
+                "database": "main",
+                "username": "ingester",
+                "password": os.environ["BENCH_WRITER_PASSWORD"],
+            }
         )
         await db.use("celery_insights", "main")
         # Worker polling must actually observe this worker before starting the workload.

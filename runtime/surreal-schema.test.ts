@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest"
-import type { Config } from "./config"
+import { parseConfig, type Config } from "./config"
 import { assertIdent } from "./surreal-schema"
 
 function createMockDb() {
@@ -28,9 +28,11 @@ const { runSchemaMigration } = await import("./surreal-schema")
 
 function createConfig(overrides: Partial<Config> = {}): Config {
   return {
+    ...parseConfig({}),
     port: 8555,
     urlPrefix: "",
     surrealdbUrl: "ws://localhost:8557/rpc",
+    surrealdbRootPass: "root",
     surrealdbIngesterPass: "test-pass",
     surrealdbNamespace: "celery_insights",
     surrealdbDatabase: "main",
@@ -181,6 +183,8 @@ describe("runSchemaMigration", () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
+      // The task backfill runs before the workflow backfill reads tasks.
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         [
           {
@@ -222,6 +226,14 @@ describe("runSchemaMigration", () => {
     ).toBe(true)
   })
 
+  it("backfills the observation flag for rows written before it existed", async () => {
+    await runSchemaMigration(createConfig())
+    const queries = mockDb.query.mock.calls.map(([query]) => String(query))
+    const backfill = queries.find((query) => query.includes("last_updated_observed = last_updated_observed ??"))
+    expect(backfill).toContain("started_at = NONE AND received_at = NONE AND retried_at = NONE")
+    expect(backfill).toContain("state NOT IN ['SUCCESS', 'FAILURE', 'REVOKED', 'REJECTED', 'IGNORED']")
+  })
+
   it("sets correct table permissions", async () => {
     await runSchemaMigration(createConfig())
 
@@ -232,45 +244,16 @@ describe("runSchemaMigration", () => {
     expect(coreSchema).toContain("FOR create, update, delete NONE")
   })
 
-  describe("frontend auth enabled", () => {
-    it("creates viewer table and access when frontendPass is set", async () => {
-      await runSchemaMigration(createConfig({ surrealdbFrontendPass: "secret123" }))
-
-      const queries = mockDb.query.mock.calls.map((c) => c[0] as string)
-      const authSchema = queries.find((q) => q.includes("DEFINE ACCESS OVERWRITE frontend"))!
-
-      expect(authSchema).toBeDefined()
-      expect(authSchema).toContain("DEFINE TABLE IF NOT EXISTS viewer SCHEMAFULL")
-      expect(authSchema).toContain("PERMISSIONS NONE")
-      expect(authSchema).toContain("DEFINE FIELD OVERWRITE name ON viewer TYPE string")
-      expect(authSchema).toContain("DEFINE FIELD OVERWRITE pass ON viewer TYPE string")
-      expect(authSchema).toContain("DEFINE ACCESS OVERWRITE frontend ON DATABASE TYPE RECORD")
-      expect(authSchema).toContain("SIGNUP NONE")
-      expect(authSchema).toContain("crypto::argon2::compare(pass, $pass)")
-    })
-
-    it("upserts viewer record with hashed password", async () => {
-      await runSchemaMigration(createConfig({ surrealdbFrontendPass: "secret123" }))
-
-      expect(mockDb.query).toHaveBeenCalledWith(expect.stringContaining("UPSERT viewer:frontend"), {
-        pass: "secret123",
-      })
-
-      const upsertCall = mockDb.query.mock.calls.find(
-        (c) => typeof c[0] === "string" && c[0].includes("UPSERT viewer:frontend"),
-      )!
-      expect(upsertCall[0]).toContain("crypto::argon2::generate($pass)")
-    })
-  })
-
-  it("creates viewer DB user with VIEWER role and fixed password", async () => {
+  it("creates a private read-only DB user and removes the fixed browser credential", async () => {
     await runSchemaMigration(createConfig())
 
     const queries = mockDb.query.mock.calls.map((c) => c[0] as string)
-    const viewerQuery = queries.find((q) => q.includes("DEFINE USER OVERWRITE viewer"))
+    const viewerQuery = queries.find((q) => q.includes("DEFINE USER OVERWRITE observation_reader"))
     expect(viewerQuery).toBeDefined()
     expect(viewerQuery).toContain("ROLES VIEWER")
-    expect(viewerQuery).toContain("PASSWORD 'viewer'")
+    expect(viewerQuery).toContain("PASSWORD")
+    expect(viewerQuery).not.toContain("PASSWORD 'viewer'")
+    expect(queries).toContain("REMOVE USER IF EXISTS viewer ON DATABASE")
   })
 
   describe("frontend auth disabled", () => {

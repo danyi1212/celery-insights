@@ -24,10 +24,14 @@ describe("native pod measurement", () => {
   it("uses a real database readiness probe and prepares the private non-root store", () => {
     const pod = applicationPod("app-cold", "fixture:immutable", "arm64")
     expect(pod.spec.containers[0].imagePullPolicy).toBe("Never")
-    expect(pod.spec.containers[0].readinessProbe.exec.command.join(" ")).toContain("query_raw('RETURN true')")
+    expect(pod.spec.containers[0].readinessProbe!.exec.command.join(" ")).toContain("{'operation':'counts'}")
+    expect(pod.spec.containers[0].readinessProbe!.exec.command.join(" ")).not.toContain("signin")
+    expect(pod.spec.containers.find((container) => container.name === "oracle")!.resources.limits.cpu).toBe("1")
     expect(pod.spec.initContainers[0].securityContext.runAsUser).toBe(0)
     expect(pod.spec.initContainers[0].command).toEqual(["sh", "-c", "chown myuser:myuser /data"])
-    expect(pod.spec.volumes[0].hostPath.path).toBe("/var/local/celery-insights-benchmark")
+    expect(pod.spec.volumes.find((volume) => volume.name === "data")!.hostPath!.path).toBe(
+      "/var/local/celery-insights-benchmark",
+    )
   })
 
   it("a registry-cold app can pull both the store initializer and the app from its pinned registry reference", () => {

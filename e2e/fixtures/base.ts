@@ -1,8 +1,7 @@
-import { appURL, appPath, appOrigin, urlPrefix } from "../helpers/app-url"
+import { privateObservationQuery } from "../helpers/docker-compose"
+import { appPath, appOrigin, appURL, urlPrefix } from "../helpers/app-url"
 import { expect, test as base } from "../../tooling/playwright"
 import { ScenarioClient } from "../helpers/scenario-client"
-
-const SURREAL_API = appURL("/surreal")
 
 type TaskState = "PENDING" | "RECEIVED" | "STARTED" | "SUCCESS" | "FAILURE" | "RETRY" | "REVOKED"
 type SurrealStateResult = { result?: Array<{ state?: TaskState }> }
@@ -13,7 +12,29 @@ export const test = base.extend<{
   waitForTask: (taskId: string, states: TaskState[], opts?: { timeout?: number; interval?: number }) => Promise<void>
   waitForTaskVisible: (taskId: string, opts?: { timeout?: number; interval?: number }) => Promise<void>
 }>({
+  request: async ({ playwright }, use) => {
+    const request = await playwright.request.newContext({
+      ignoreHTTPSErrors: true,
+      httpCredentials: {
+        username: "admin",
+        password: "synthetic-ci-configured-password",
+        origin: appOrigin,
+        send: "always",
+      },
+    })
+    try {
+      await use(request)
+    } finally {
+      await request.dispose()
+    }
+  },
   page: async ({ page }, use) => {
+    // Establish the real browser session, rather than relying on a Basic credential cache.
+    await page.goto(appURL("/login"))
+    await page.getByLabel("Username", { exact: true }).fill("admin")
+    await page.getByLabel("Password", { exact: true }).fill("synthetic-ci-configured-password")
+    await page.getByRole("button", { name: "Sign in", exact: true }).click()
+    await page.waitForURL(appURL("/"))
     // Test destinations are app-relative; product requests still use real URLs.
     const goto = page.goto.bind(page)
     page.goto = (url, options) => goto(url.startsWith("/") ? appPath(url) : url, options)
@@ -44,14 +65,7 @@ export const test = base.extend<{
 
       while (Date.now() < deadline) {
         try {
-          const res = await fetch(`${SURREAL_API}/sql`, {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              Authorization: "Basic " + btoa("root:root"),
-            },
-            body: query,
-          })
+          const res = await privateObservationQuery(query)
           if (res.ok) {
             const data = (await res.json()) as SurrealStateResult[]
             const state = data?.[1]?.result?.[0]?.state
@@ -75,14 +89,7 @@ export const test = base.extend<{
 
       while (Date.now() < deadline) {
         try {
-          const res = await fetch(`${SURREAL_API}/sql`, {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              Authorization: "Basic " + btoa("root:root"),
-            },
-            body: query,
-          })
+          const res = await privateObservationQuery(query)
           if (res.ok) {
             const data = (await res.json()) as SurrealTaskResult[]
             const resultCount = data?.[1]?.result?.length ?? 0

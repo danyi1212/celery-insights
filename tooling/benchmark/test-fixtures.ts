@@ -1,5 +1,6 @@
 export const comparisonFixture = () => ({
   schemaVersion: 3,
+  transport: { browser: "local-https-proxy", programmatic: "internal-http-ws-basic", accountRole: "administrator" },
   executionContractVersion: 1,
   cleanup: { status: "passed", durationMs: 10, commandCode: 0 },
   runId: "baseline",
@@ -57,6 +58,8 @@ export const comparisonFixture = () => ({
         "history.py",
         "pipeline.py",
         "compose.yml",
+        "observation.ts",
+        "ingress.ts",
       ].map((name) => [`tooling/benchmark/${name}`, "unchanged"]),
     ),
   },
@@ -67,6 +70,8 @@ export const comparisonFixture = () => ({
   },
   containerConfiguration: { NanoCpus: 2e9, Memory: 2e9, MemorySwap: 4e9, CpuQuota: 0, CpuPeriod: 0, CpusetCpus: "" },
   pipeline: {
+    measurement_contract: "typed-refresh-v1",
+    private_live: { complete: true },
     status: "passed",
     generator_healthy: true,
     persisted_correctness: { passed: true },

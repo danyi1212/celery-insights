@@ -1,12 +1,14 @@
+import { benchmarkIngress, benchmarkFetch } from "./ingress"
 import { execFile } from "node:child_process"
 import { promisify } from "node:util"
 import { randomUUID, createHash } from "node:crypto"
-import { mkdir, readFile, writeFile, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, writeFile, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
 import { dirname, resolve } from "node:path"
 import { parseDebugSnapshot } from "../../runtime/debug-bundle"
 import { benchmarkBrowser } from "./browser"
 import { maintenanceDeadline, validateBackup, validateRestoredPayloads } from "./maintenance"
-import { Surreal } from "surrealdb"
+import { observationClient, connectObservation, readPublicWorkflowMembership } from "./observation"
 import { extractId } from "../../src/types/surreal-records"
 import { idFingerprint, validateReturnedRows } from "./queries"
 
@@ -15,21 +17,22 @@ export async function benchmarkReplay(
   image: string,
   output: string,
   sourceImage = image,
-  format: "native" | "legacy-json" = "native",
+  format: "native" | "scoped-json" | "legacy-json" = "scoped-json",
 ) {
   await mkdir(dirname(resolve(output)), { recursive: true })
   await mkdir(output)
+  const ingress = await benchmarkIngress(output)
   const project = `ci-replay-${randomUUID().slice(0, 8)}`
   const report: Record<string, unknown> = {
     schemaVersion: 1,
     status: "incomplete",
     project,
-    bundleFormat: format,
+    bundleFormat: format === "native" ? "scoped-json" : format,
     startedAt: new Date().toISOString(),
     cases: [],
     limitations: [
-      "Synthetic 128-task history and 32 real-broker tasks. Debug-bundle v2 native export/replay is distinct from JSON backup/import.",
-      "Cached production image; replay controller timing includes startup, native import, probe observation and validation. Not large-bundle replay capacity.",
+      "Synthetic 128-task history and 32 real-broker tasks. Debug-bundle v2 scoped JSON export/replay uses the authorized export contract.",
+      "Cached production image; replay controller timing includes startup, JSON import, probe observation and validation. Not large-bundle replay capacity.",
       "Background polling stays active during source export; synthetic readiness-worker heartbeats can vary independently of task history.",
     ],
   }
@@ -82,7 +85,7 @@ export async function benchmarkReplay(
     }
   }
   const request = async (url: string, path: string, init: RequestInit = {}) => {
-    const response = await fetch(url + path, { ...init, signal: AbortSignal.timeout(120000) })
+    const response = await benchmarkFetch(url + path, { ...init, signal: AbortSignal.timeout(120000) })
     if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`)
     return response
   }
@@ -91,20 +94,37 @@ export async function benchmarkReplay(
     JSON.stringify(
       {
         services: {
+          "replay-validator": {
+            extends: { file: resolve("tooling/benchmark/compose.yml"), service: "producer" },
+            image,
+            network_mode: "service:replay",
+            depends_on: ["replay"],
+            environment: {
+              BENCH_DB_URL: "ws://127.0.0.1:8557/rpc",
+              BENCH_PUBLIC_URL: "ws://127.0.0.1:8555/api/observation/rpc",
+              BENCH_WRITER_PASSWORD: "benchmark-ingester",
+            },
+          },
           replay: {
             image,
             cpus: 2,
             mem_limit: "2g",
             ports: ["127.0.0.1::8555"],
             environment: {
-              DEBUG_BUNDLE_PATH: format === "native" ? "/snapshot/source.zip" : "/snapshot/legacy-source.zip",
+              CELERY_INSIGHTS_CONFIG_FILE: "/benchmark-auth/authentication.toml",
+              DEBUG_BUNDLE_PATH: format === "legacy-json" ? "/snapshot/legacy-source.zip" : "/snapshot/source.zip",
               SURREALDB_STORAGE: "rocksdb:///data/store",
               INGESTION_ENABLED: "false",
               SEARCH_INDEXING_ENABLED: "false",
+              CELERY_INSIGHTS_DATABASE_ROOT_PASSWORD: "benchmark-root",
               SURREALDB_INGESTER_PASS: "benchmark-ingester",
               LOG_FORMAT: "json",
             },
-            volumes: [`${resolve(output)}:/snapshot:ro`, "replay-data:/data"],
+            volumes: [
+              `${resolve(output)}:/snapshot:ro`,
+              "replay-data:/data",
+              `${ingress.directory}:/benchmark-auth:ro`,
+            ],
           },
         },
         volumes: { "replay-data": {} },
@@ -191,20 +211,19 @@ export async function benchmarkReplay(
     await writeFile(bundle, archive, { flag: "wx" })
     report.bundle = { bytes: archive.byteLength, sha256: createHash("sha256").update(archive).digest("hex") }
     const parsed = await maintenanceDeadline(parseDebugSnapshot(bundle), 15000, "Debug bundle parse")
-    extracted = parsed.extractedDir
     if (
       parsed.manifest.version !== 2 ||
       !parsed.manifest.source.redacted ||
       parsed.manifest.source.recordCounts.tasks !== 160 ||
-      !parsed.sourceDataSqlPath
+      !parsed.sourceData
     )
-      throw new Error("Debug bundle source manifest/native export differs from fixture")
+      throw new Error("Debug bundle source manifest/scoped JSON export differs from fixture")
     report.manifest = parsed.manifest
     if (format === "legacy-json") {
-      // Generate an old-format fixture from independently captured source data,
-      // keeping the original native archive unchanged as export evidence.
+      // Preserve the source archive and create a JSON fixture from the independent backup.
+      extracted = await mkdtemp(resolve(tmpdir(), "ci-bench-replay-json-"))
+      await run("unzip", ["-q", bundle, "-d", extracted])
       await writeFile(resolve(extracted, "source/data/surrealdb-export.json"), JSON.stringify(original))
-      await rm(parsed.sourceDataSqlPath!)
       const legacy = resolve(output, "legacy-source.zip")
       await measured("fixture.convert-legacy-json", () =>
         run("zip", ["-q", "-r", legacy, "manifest.json", "source"], extracted),
@@ -220,30 +239,13 @@ export async function benchmarkReplay(
       const restored = await (await request(url, "/api/settings/export")).json()
       validateBackup(restored, 128, 32)
       validateRestoredPayloads(original, restored)
-      const graph = new Surreal()
+      const graph = observationClient()
       try {
-        await maintenanceDeadline(
-          graph.connect(`${url.replace(/^http/, "ws")}/surreal/rpc`, {
-            namespace: "celery_insights",
-            database: "main",
-            reconnect: false,
-          }),
+        await maintenanceDeadline(connectObservation(graph, url), 10000, "Replay public connection")
+        const { workflows, edges } = await maintenanceDeadline(
+          readPublicWorkflowMembership(graph),
           10000,
-          "Replay graph connection",
-        )
-        await maintenanceDeadline(
-          graph.signin({ namespace: "celery_insights", database: "main", username: "viewer", password: "viewer" }),
-          10000,
-          "Replay graph authentication",
-        )
-        const [workflows, edges] = await maintenanceDeadline(
-          graph
-            .query<[Record<string, unknown>[], { in: unknown; out: unknown }[]]>(
-              "SELECT * FROM workflow; SELECT `in`, out FROM workflow_task;",
-            )
-            .collect(),
-          10000,
-          "Replay graph query",
+          "Replay public workflow membership",
         )
         validateReturnedRows(workflows, "workflows.all", 128, 32)
         const expected = [
@@ -264,9 +266,7 @@ export async function benchmarkReplay(
           "run",
           "--rm",
           "-T",
-          "-e",
-          "BENCH_DB_URL=ws://replay:8555/surreal/rpc",
-          "producer",
+          "replay-validator",
           "--tasks",
           "32",
           "--validate-only",
@@ -281,9 +281,13 @@ export async function benchmarkReplay(
       report.replayValidation = JSON.parse(validator.trim().split("\n").at(-1) ?? "null")
       if ((report.replayValidation as { status?: string }).status !== "passed")
         throw new Error("Replayed task/event/workflow oracle failed")
-      const denied = await fetch(url + "/api/settings/cleanup", { method: "POST", signal: AbortSignal.timeout(10000) })
+      const denied = await benchmarkFetch(url + "/api/settings/cleanup", {
+        method: "POST",
+        signal: AbortSignal.timeout(10000),
+      })
       if (denied.status !== 403) throw new Error(`Snapshot replay allowed mutation: HTTP ${denied.status}`)
-      report.browser = await benchmarkBrowser(url)
+      ingress.setBackend(url)
+      report.browser = await benchmarkBrowser(ingress.url)
       if ((report.browser as { status?: string }).status !== "passed")
         throw new Error("Replayed production browser did not pass")
     })
@@ -292,6 +296,7 @@ export async function benchmarkReplay(
     report.error = String(error)
     report.status = "failed"
   } finally {
+    await ingress.close()
     for (const service of ["app", "replay", "broker", "results"]) {
       try {
         await writeFile(resolve(output, `${service}.log`), await compose("logs", "--no-color", service))

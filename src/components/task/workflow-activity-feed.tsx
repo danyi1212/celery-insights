@@ -59,7 +59,7 @@ const WorkflowActivityFeed = (props: Omit<PanelProps, "title">) => {
             {workflows.map((rawWorkflow) => {
               const workflow = parseWorkflow(rawWorkflow)
               const workflowTasks = (tasksByWorkflow.get(workflow.id) ?? []).sort(sortNotableTasks)
-              const visibleTasks = workflowTasks.slice(0, 5)
+              const visibleTasks = workflowTasks.slice(0, workflowTasks.length === 6 ? 6 : 5)
               const remainingTaskCount = Math.max(workflowTasks.length - visibleTasks.length, 0)
               const supportingStats = [
                 `${workflow.task_count} task${workflow.task_count === 1 ? "" : "s"}`,
@@ -72,7 +72,7 @@ const WorkflowActivityFeed = (props: Omit<PanelProps, "title">) => {
               const stateDetails = [
                 workflow.failure_count > 0 ? `${workflow.failure_count} failed` : null,
                 workflow.retry_count > 0 ? `${workflow.retry_count} retrying` : null,
-                workflow.active_count > 0 ? `${workflow.active_count} active` : null,
+                workflow.active_count > 0 ? `${workflow.active_count} unfinished` : null,
                 workflow.completed_count > 0 ? `${workflow.completed_count} done` : null,
               ].filter(Boolean)
 
@@ -105,6 +105,7 @@ const WorkflowActivityFeed = (props: Omit<PanelProps, "title">) => {
                               taskId={taskId}
                               type={task.type}
                               status={task.state as TaskState}
+                              execution={task}
                               tooltipSide="top"
                               statusReveal={index < visibleTasks.length - 1 ? "hover" : "always"}
                               className="size-7"

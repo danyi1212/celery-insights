@@ -3,11 +3,13 @@ import { readFileSync, existsSync } from "node:fs"
 import { parse as parseToml } from "smol-toml"
 import { validateConfig, type Config } from "./config"
 import { SETTINGS, type Setting } from "./config-registry"
+import { authenticationConfig, resolveAccounts, type AuthenticationSnapshot } from "./authentication-config"
 
 type Env = Record<string, string | undefined>
 type Source = { source: string; secret: boolean }
 export interface ResolvedConfig {
   config: Config
+  authentication: AuthenticationSnapshot | null
   provenance: Record<string, Source>
   warnings: string[]
 }
@@ -108,6 +110,8 @@ function convert(setting: Setting, value: unknown, fromEnv: boolean): unknown {
 
 export function resolveConfig(inputs: ConfigInputs = {}): ResolvedConfig {
   const env = inputs.env ?? process.env
+  if (env.SURREALDB_FRONTEND_PASS !== undefined)
+    throw new Error("SURREALDB_FRONTEND_PASS was replaced by authentication.accounts in TOML")
   const cwd = inputs.cwd ?? process.cwd()
   const read = inputs.readFile ?? ((file: string) => readFileSync(file, "utf8"))
   const exists = inputs.exists ?? existsSync
@@ -145,7 +149,9 @@ export function resolveConfig(inputs: ConfigInputs = {}): ResolvedConfig {
     "retention.tasks.max_age_hours.enabled",
     "retention.workers.max_age_hours.enabled",
   ])
-  const allowed = new Set(SETTINGS.flatMap((s) => (s.secret ? [s.path, `${s.path}_file`] : [s.path])))
+  const allowed = new Set(
+    SETTINGS.flatMap((s) => (s.secret && s.type === "string" ? [s.path, `${s.path}_file`] : [s.path])),
+  )
   function validateTables(table: Record<string, unknown>, prefix = ""): void {
     for (const [name, value] of Object.entries(table)) {
       const key = prefix ? `${prefix}.${name}` : name
@@ -163,9 +169,14 @@ export function resolveConfig(inputs: ConfigInputs = {}): ResolvedConfig {
   for (const key of Object.keys(flat))
     if (!allowed.has(key) && !special.has(key) && !key.startsWith("celery.options."))
       throw new Error(`Unknown configuration key: ${key}`)
+  if (flat["authentication.accounts"] !== undefined && !Array.isArray(flat["authentication.accounts"]))
+    throw new Error("authentication.accounts: Expected an array of tables")
   const allowedEnv = new Set([
     "CELERY_INSIGHTS_CONFIG_FILE",
     ...SETTINGS.flatMap((s) => (s.env ? (s.secret ? [s.env, `${s.env}_FILE`] : [s.env]) : [])),
+    ...((flat["authentication.accounts"] as Array<{ password_env?: string }> | undefined) ?? []).flatMap((account) =>
+      typeof account?.password_env === "string" ? [account.password_env] : [],
+    ),
   ])
   for (const key of Object.keys(env))
     if (key.startsWith("CELERY_INSIGHTS_") && !allowedEnv.has(key) && env[key] !== undefined)
@@ -217,8 +228,9 @@ export function resolveConfig(inputs: ConfigInputs = {}): ResolvedConfig {
       value = value.replace(/\r?\n$/, "")
     }
     if (value !== undefined) {
-      if (setting.secret && (value === "" || String(value).includes("\0")))
+      if (setting.secret && setting.type === "string" && (value === "" || String(value).includes("\0")))
         throw new Error(`${setting.path}: Invalid empty or NUL-containing secret`)
+      if (setting.key === "authAccounts") value = resolveAccounts(value, env, read, path.dirname(file))
       value = convert(setting, value, fromEnv)
       if (setting.filePath) value = path.resolve(fromEnv ? cwd : path.dirname(file), String(value))
       values[setting.key] = value
@@ -286,7 +298,11 @@ export function resolveConfig(inputs: ConfigInputs = {}): ResolvedConfig {
     values.celeryOptions = options
     provenance["celery.options"] = { source: "toml:celery.options", secret: true }
   }
-  return { config: validateConfig(values), provenance, warnings }
+  const config = validateConfig(values)
+  const hasAuthentication = SETTINGS.some(
+    (setting) => setting.path.startsWith("authentication.") && values[setting.key] !== undefined,
+  )
+  return { config, authentication: hasAuthentication ? authenticationConfig(config) : null, provenance, warnings }
 }
 
 export function describeConfig(resolved: ResolvedConfig): Record<string, unknown> {

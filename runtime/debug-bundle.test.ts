@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
-import { parseConfig } from "./config"
 import { DateTime } from "surrealdb"
-import { exportSurrealData, extractSurrealTableData, importSurrealData, redactConfig } from "./debug-bundle"
+import { parseConfig } from "./config"
+import { exportSurrealData, importSurrealData, redactConfig } from "./debug-bundle"
 
 describe("debug-bundle surreal helpers", () => {
   it("preserves sub-millisecond task/event/worker timestamps in legacy JSON imports", async () => {
@@ -16,63 +16,6 @@ describe("debug-bundle surreal helpers", () => {
     expect(bindings.tasks_0[0].data.last_updated.toISOString()).toBe("2026-10-12T07:00:00.123456789Z")
     expect(bindings.events_0[0].data.timestamp.toISOString()).toBe("2026-10-12T07:00:00.234567891Z")
     expect(bindings.workers_0[0].data.last_updated.toISOString()).toBe("2026-10-12T07:00:00.345678912Z")
-  })
-  it("keeps native workflow summaries and membership without exporting database users", () => {
-    const section = (table: string, body: string) =>
-      `-- ------------------------------\n-- TABLE: ${table}\n-- ------------------------------\n\n-- ------------------------------\n-- TABLE DATA: ${table}\n-- ------------------------------\n\n${body}\n`
-    const sql =
-      "DEFINE USER owner ON DATABASE PASSWORD 'private';\n" +
-      section("workflow", "INSERT [{ id: workflow:root, task_count: 2, retry_count: 3 }];") +
-      section("workflow_task", "INSERT RELATION [{ id: workflow_task:edge, in: workflow:root, out: task:child }];")
-    const extracted = extractSurrealTableData(sql, ["task", "event", "worker", "workflow", "workflow_task"])
-    expect(extracted).toContain("task_count: 2, retry_count: 3")
-    expect(extracted).toContain("in: workflow:root, out: task:child")
-    expect(extracted).not.toContain("DEFINE USER")
-  })
-  it("extracts only table data statements from a native surreal export", () => {
-    const sql = `-- ------------------------------
--- OPTION
--- ------------------------------
-
-OPTION IMPORT;
-
--- ------------------------------
--- USERS
--- ------------------------------
-
-DEFINE USER viewer ON DATABASE PASSWORD 'viewer';
-
--- ------------------------------
--- TABLE: event
--- ------------------------------
-
-DEFINE TABLE event TYPE ANY SCHEMALESS;
-
--- ------------------------------
--- TABLE DATA: event
--- ------------------------------
-
-INSERT [{ id: event:1, timestamp: d'2026-03-14T21:30:33.586144Z' }];
-
--- ------------------------------
--- TABLE: task
--- ------------------------------
-
-DEFINE TABLE task TYPE NORMAL SCHEMAFULL;
-
--- ------------------------------
--- TABLE DATA: task
--- ------------------------------
-
-INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
-`
-
-    expect(extractSurrealTableData(sql, ["event", "task", "worker"])).toBe(`OPTION IMPORT;
-
-INSERT [{ id: event:1, timestamp: d'2026-03-14T21:30:33.586144Z' }];
-
-INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
-`)
   })
 
   it("exports data when query resolves to raw arrays", async () => {
@@ -123,7 +66,7 @@ INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
     })
 
     expect(db.query).toHaveBeenCalledWith(expect.stringContaining("UPSERT type::record('task', $record.id)"), {
-      tasks_0: [{ id: "1", data: { state: "SUCCESS" } }],
+      tasks_0: [{ id: 1, data: { state: "SUCCESS" } }],
     })
   })
 
@@ -174,6 +117,8 @@ INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
           state: "SUCCESS",
           failed_at: "2026-03-14T18:43:05.917351Z",
           first_observed_at: "2026-03-14T18:40:00.000000Z",
+          execution_observed_at: "2026-03-14T18:42:00.000000Z",
+          execution_active_at: "2026-03-14T18:41:00.000000Z",
         },
       ],
       events: [{ id: "event:1", timestamp: "2026-03-14T18:43:05.917351Z" }],
@@ -183,20 +128,33 @@ INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
     expect(db.query).toHaveBeenCalledWith(expect.any(String), {
       tasks_0: [
         {
-          id: "1",
+          id: 1,
           data: {
             state: "SUCCESS",
             failed_at: new DateTime("2026-03-14T18:43:05.917351Z"),
             first_observed_at: new DateTime("2026-03-14T18:40:00.000000Z"),
+            execution_observed_at: new DateTime("2026-03-14T18:42:00.000000Z"),
+            execution_active_at: new DateTime("2026-03-14T18:41:00.000000Z"),
           },
         },
       ],
-      events_0: [{ id: "1", data: { timestamp: new DateTime("2026-03-14T18:43:05.917351Z") } }],
-      workers_0: [{ id: "1", data: { last_updated: new DateTime("2026-03-14T18:43:05.917351Z") } }],
+      events_0: [{ id: 1, data: { timestamp: new DateTime("2026-03-14T18:43:05.917351Z") } }],
+      workers_0: [{ id: 1, data: { last_updated: new DateTime("2026-03-14T18:43:05.917351Z") } }],
     })
   })
 })
 
 it("redacts the MCP token in diagnostic bundles", () => {
-  expect(redactConfig(parseConfig({ MCP_TOKEN: "private-token" }), false).mcpToken).toBe("***REDACTED***")
+  expect(redactConfig(parseConfig({ MCP_TOKEN: "private-token" }), false).mcpCursorSecret).toBe("***REDACTED***")
+})
+
+it("restores escaped record identifiers without changing their value", async () => {
+  const { RecordId } = await import("surrealdb")
+  const query = vi.fn().mockResolvedValue([])
+  const id = new RecordId("worker", "host:abc⟩\\node")
+  await importSurrealData(
+    { query } as never,
+    JSON.parse(JSON.stringify({ version: 1, tasks: [], events: [], workers: [{ id }] })),
+  )
+  expect(query.mock.calls[0][1].workers_0[0].id).toBe("host:abc⟩\\node")
 })

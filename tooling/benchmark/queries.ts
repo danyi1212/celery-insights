@@ -1,7 +1,9 @@
 import assert from "node:assert/strict"
 import { createHash } from "node:crypto"
-import { Surreal } from "surrealdb"
-import { buildExplorerQuery, type ExplorerFilters } from "../../src/lib/explorer-query"
+import type { ExplorerQueryState } from "../../src/hooks/use-explorer-data"
+type ExplorerFilters = Omit<ExplorerQueryState, "range" | "rangeKey" | "pageCount">
+import { observationClient, connectObservation, readAllObservation, readObservation } from "./observation"
+import { buildRead, type ReadRequest } from "../../runtime/observation/queries"
 import { distribution } from "./requests"
 import { extractId } from "../../src/types/surreal-records"
 
@@ -103,43 +105,35 @@ export async function benchmarkQueries(
   referenceTime: string,
   repetitions: number,
 ) {
-  const db = new Surreal()
+  const db = observationClient()
   const manifest = expectedHistoryCounts(history)
   const validations: Record<string, unknown> = {}
   const cases: Record<string, unknown>[] = []
   let stage = "connect"
   let activeCase: Record<string, unknown> | null = null
   try {
-    await db.connect(url.replace(/^http/, "ws") + "/surreal/rpc")
-    await db.signin({ namespace: "celery_insights", database: "main", username: "viewer", password: "viewer" })
-    await db.use({ namespace: "celery_insights", database: "main" })
+    await connectObservation(db, url)
     stage = "fixture-validation"
-    const ids = async (table: string) => {
-      const [rows] = await db
-        .query<[string[]]>(
-          `SELECT VALUE record::id(id) FROM ${table} WHERE string::starts_with(record::id(id), 'history-')`,
-        )
-        .collect()
-      return rows
-    }
+    const ids = async (table: "task" | "event" | "workflow") =>
+      (await readAllObservation(db, table, "history-")).map((row) => extractId(row.id))
     const expected = {
       task: Array.from({ length: history }, (_, index) => `history-${index}`),
       event: Array.from({ length: history * 4 }, (_, index) => `history-${Math.floor(index / 4)}-${index % 4}`),
       workflow: Array.from({ length: Math.ceil(history / 4) }, (_, index) => `history-${index * 4}`),
-      workflow_task: Array.from({ length: history }, (_, index) => `history-${index - (index % 4)}:history-${index}`),
     }
     const validationStart = performance.now()
     for (const [table, names] of Object.entries(expected)) {
-      const actual = await ids(table)
+      const actual = await ids(table as "task" | "event" | "workflow")
       assert.equal(actual.length, names.length, `${table} record count differs`)
       assert.equal(idFingerprint(actual), idFingerprint(names), `${table} record IDs differ`)
       validations[table] = { records: actual.length, idSha256: idFingerprint(actual) }
     }
-    const [states] = await db
-      .query<[Rows]>(
-        "SELECT state,count() AS count FROM task WHERE string::starts_with(record::id(id),'history-') GROUP BY state",
-      )
-      .collect()
+    const [, , states] = await readObservation<[Rows, Rows, Rows]>(db, {
+      operation: "explorer",
+      table: "task",
+      query: "history-",
+      limit: 1,
+    })
     const stateCounts = Object.fromEntries(states.map((row) => [row.state, row.count]))
     assert.equal(stateCounts.FAILURE ?? 0, manifest.failures)
     assert.equal(stateCounts.SUCCESS ?? 0, history - manifest.failures)
@@ -184,7 +178,16 @@ export async function benchmarkQueries(
     ]
     for (const [name, filters, total, limit] of definitions) {
       const state = { ...base, ...filters }
-      const built = buildExplorerQuery(state, time, limit)
+      const { mode, ...filtersRequest } = state
+      const request: ReadRequest = {
+        ...filtersRequest,
+        ...time,
+        operation: "explorer",
+        table: mode === "tasks" ? "task" : "workflow",
+        limit,
+        sortField: state.sortField as ReadRequest["sortField"],
+      }
+      const built = buildRead(request)
       const samples: number[] = []
       let responseBytes = 0
       activeCase = {
@@ -193,27 +196,26 @@ export async function benchmarkQueries(
         expectedMatches: total,
         rowLimit: limit,
         samplesMs: samples,
-        query: { sql: built.sql, bindings: built.bindings },
+        query: { request, serverSql: built.sql, serverBindings: built.bindings },
       }
       cases.push(activeCase)
       stage = "query-warmup"
       // Warmup validates the full production request, not just the row SELECT.
-      const warmup = await db.query(built.sql, built.bindings).collect()
-      validateExplorerResponse(warmup, built.preludeCount, state.mode, total, limit)
-      const verifyRows = (result: unknown[]) =>
-        validateReturnedRows(result[built.preludeCount] as Rows, name, history, liveTasks)
+      const warmup = await readObservation(db, request)
+      validateExplorerResponse(warmup, 0, state.mode, total, limit)
+      const verifyRows = (result: unknown[]) => validateReturnedRows(result[0] as Rows, name, history, liveTasks)
       verifyRows(warmup)
       for (let attempt = 0; attempt < repetitions; attempt++) {
         stage = `query-trial-${attempt}`
         const started = performance.now()
-        const result = await db.query(built.sql, built.bindings).collect()
+        const result = await readObservation(db, request)
         samples.push(performance.now() - started)
         responseBytes = Buffer.byteLength(JSON.stringify(result))
-        validateExplorerResponse(result, built.preludeCount, state.mode, total, limit)
+        validateExplorerResponse(result, 0, state.mode, total, limit)
         verifyRows(result)
       }
       stage = "query-plan"
-      const plan = await db.query(built.rowPlanSql, built.bindings).collect()
+      const plan = null // Query plans are not exposed by the authorized public API.
       Object.assign(activeCase, {
         status: "passed",
         medianMs: distribution(samples).p50,
@@ -233,8 +235,8 @@ export async function benchmarkQueries(
       referenceTime,
       limitations: [
         "Warm-cache sequential read latency, not offered query throughput or cold-cache performance.",
-        "Initial ID/state validation touches retained records outside timing; read fixture bypasses ingestion.",
-        "Median/range across few repetitions; no tail percentile or resource-sizing gate.",
+        "Public paginated ID/state validation runs outside timing; private history seeding independently validates relation record IDs.",
+        "Median/range across few repetitions; no tail percentile or resource-sizing gate. Query plans are unsupported by the public API.",
       ],
     }
   } catch (error) {

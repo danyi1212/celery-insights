@@ -1,3 +1,4 @@
+import { benchmarkIngress, benchmarkFetch } from "./ingress"
 import { execFile } from "node:child_process"
 import { promisify } from "node:util"
 import { randomUUID, createHash } from "node:crypto"
@@ -28,6 +29,7 @@ export async function benchmarkFailover(
 ) {
   await mkdir(dirname(resolve(output)), { recursive: true })
   await mkdir(output)
+  const ingress = await benchmarkIngress(output)
   const project = `ci-failover-${randomUUID().slice(0, 8)}`
   const pipeline = await readFile(new URL("pipeline.py", import.meta.url), "utf8")
   await writeFile(resolve(output, "pipeline.py"), pipeline)
@@ -36,10 +38,13 @@ export async function benchmarkFailover(
     cpus: 1,
     mem_limit: "1g",
     ports: ["127.0.0.1::8555"],
+    volumes: [`${ingress.directory}:/benchmark-auth:ro`],
     environment: {
+      CELERY_INSIGHTS_CONFIG_FILE: "/benchmark-auth/authentication.toml",
       BROKER_URL: "amqp://benchmark:benchmark@broker/",
       RESULT_BACKEND: "redis://results:6379/0",
       SURREALDB_EXTERNAL_URL: "ws://database:8557/rpc",
+      CELERY_INSIGHTS_DATABASE_ROOT_PASSWORD: "root",
       SURREALDB_INGESTER_PASS: "benchmark-ingester",
       SEARCH_INDEXING_ENABLED: "false",
       INGESTION_LOCK_TTL_SECONDS: "30",
@@ -88,7 +93,10 @@ export async function benchmarkFailover(
         environment: {
           BROKER_URL: "amqp://benchmark:benchmark@broker/",
           RESULT_BACKEND: "redis://results:6379/0",
-          BENCH_DB_URL: "ws://app-b:8555/surreal/rpc",
+          BENCH_DB_URL: "ws://database:8557/rpc",
+          BENCH_AUTH_ORIGIN: ingress.url,
+          BENCH_PUBLIC_URL: "ws://app-b:8555/api/observation/rpc",
+          BENCH_WRITER_PASSWORD: "benchmark-ingester",
         },
       },
     },
@@ -149,7 +157,7 @@ export async function benchmarkFailover(
     const databaseDeadline = performance.now() + 30_000
     while (true) {
       try {
-        if ((await fetch(databaseUrl + "/health", { signal: AbortSignal.timeout(1000) })).ok) break
+        if ((await benchmarkFetch(databaseUrl + "/health", { signal: AbortSignal.timeout(1000) })).ok) break
       } catch {
         /* The private native database may not yet be listening. */
       }
@@ -168,7 +176,7 @@ export async function benchmarkFailover(
       while (true) {
         let status: unknown = null
         try {
-          status = (await (await fetch(url + "/api/config", { signal: AbortSignal.timeout(1000) })).json())
+          status = (await (await benchmarkFetch(url + "/api/config", { signal: AbortSignal.timeout(1000) })).json())
             .ingestionStatus
         } catch {
           /* Preserve readiness progress rather than treating transport errors as ready. */
@@ -243,7 +251,8 @@ export async function benchmarkFailover(
     )
     report.persistedSentinel =
       rows[0].length === 1 && rows[0][0].state === "SUCCESS" && rows[0][0].result === "sentinel-result"
-    report.browser = await benchmarkBrowser(takeover.url || standby.url)
+    ingress.setBackend(takeover.url || standby.url)
+    report.browser = await benchmarkBrowser(ingress.url)
     report.status =
       (report.pipeline as { status: string }).status === "passed" &&
       report.persistedSentinel &&
@@ -254,6 +263,7 @@ export async function benchmarkFailover(
     report.error = String(error)
     report.status = "incomplete"
   } finally {
+    await ingress.close()
     if (producer) {
       try {
         await producer

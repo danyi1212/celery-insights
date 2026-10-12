@@ -32,7 +32,7 @@ const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setCha
         {task === undefined ? (
           <Skeleton className="size-10 rounded-full" />
         ) : (
-          <TaskAvatar taskId={task.id} type={task.type} status={task.state} />
+          <TaskAvatar taskId={task.id} type={task.type} status={task.state} execution={task} />
         )}
       </div>
       <div className="flex h-16 flex-col justify-end">
@@ -74,31 +74,33 @@ const TaskPageHeader: React.FC<TaskPageHeaderProps> = ({ task, chartType, setCha
           <ArrowLeftRight className="mr-1 size-3.5" />
           Compare
         </Button>
-        <ToggleGroup
-          type="single"
-          value={chartType}
-          onValueChange={(value) => value && setChartType(value as WorkflowChartType)}
-          size="sm"
-          variant="outline"
-          id="workflow-selector"
-        >
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <ToggleGroupItem value={WorkflowChartType.FLOWCHART}>
-                <GitBranch className="size-4" />
-              </ToggleGroupItem>
-            </TooltipTrigger>
-            <TooltipContent>Flowchart</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <ToggleGroupItem value={WorkflowChartType.TIMELINE}>
-                <GanttChart className="size-4" />
-              </ToggleGroupItem>
-            </TooltipTrigger>
-            <TooltipContent>Timeline</TooltipContent>
-          </Tooltip>
-        </ToggleGroup>
+        {!task?.relationships_restricted && (
+          <ToggleGroup
+            type="single"
+            value={chartType}
+            onValueChange={(value) => value && setChartType(value as WorkflowChartType)}
+            size="sm"
+            variant="outline"
+            id="workflow-selector"
+          >
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ToggleGroupItem value={WorkflowChartType.FLOWCHART}>
+                  <GitBranch className="size-4" />
+                </ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent>Flowchart</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ToggleGroupItem value={WorkflowChartType.TIMELINE}>
+                  <GanttChart className="size-4" />
+                </ToggleGroupItem>
+              </TooltipTrigger>
+              <TooltipContent>Timeline</TooltipContent>
+            </Tooltip>
+          </ToggleGroup>
+        )}
       </div>
     </div>
   )

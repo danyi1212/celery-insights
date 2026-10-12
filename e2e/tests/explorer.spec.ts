@@ -1,36 +1,23 @@
+import { privateObservationQuery } from "../helpers/docker-compose"
 import { appURL } from "../helpers/app-url"
 import type { Page } from "@playwright/test"
 import { test, expect } from "../fixtures/base"
 
-const SURREAL_API = appURL("/surreal")
-
 async function queryRecentTaskCount(): Promise<number> {
-  const response = await fetch(`${SURREAL_API}/sql`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      Authorization: "Basic " + Buffer.from("root:root").toString("base64"),
-    },
-    body:
-      "USE NS celery_insights DB main;" +
+  const response = await privateObservationQuery(
+    "USE NS celery_insights DB main;" +
       "SELECT count() AS count FROM task WHERE last_updated >= time::now() - <duration>'24h' GROUP ALL;",
-  })
+  )
 
   const payload = (await response.json()) as Array<{ result?: Array<{ count?: number }> }>
   return payload?.[1]?.result?.[0]?.count ?? 0
 }
 
 async function queryRecentWorkflowCount(): Promise<number> {
-  const response = await fetch(`${SURREAL_API}/sql`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      Authorization: "Basic " + Buffer.from("root:root").toString("base64"),
-    },
-    body:
-      "USE NS celery_insights DB main;" +
+  const response = await privateObservationQuery(
+    "USE NS celery_insights DB main;" +
       "SELECT count() AS count FROM workflow WHERE last_updated >= time::now() - <duration>'24h' GROUP ALL;",
-  })
+  )
 
   const payload = (await response.json()) as Array<{ result?: Array<{ count?: number }> }>
   return payload?.[1]?.result?.[0]?.count ?? 0

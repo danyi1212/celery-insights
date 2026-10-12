@@ -1,5 +1,8 @@
+import { useSessionRecheck } from "@hooks/use-session-recheck"
+import { authenticatedFetch, AccessDeniedError } from "@lib/authenticated-fetch"
+import { markRemoteObservation } from "@lib/observation-query"
 import { appUrl } from "@lib/app-url"
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { Surreal, type ConnectionStatus } from "surrealdb"
 import useSettingsStore, { applyDeploymentDefaults } from "@stores/use-settings-store"
 import { Progress } from "@components/ui/progress"
@@ -10,9 +13,9 @@ import { DemoEventGenerator } from "@lib/demo-event-generator"
 export type IngestionStatus = "leader" | "standby" | "read-only" | "disabled"
 
 interface AppConfig {
+  taskVisibilityRestricted?: boolean
   ui?: Parameters<typeof applyDeploymentDefaults>[0]
-  authRequired: boolean
-  surrealPath: string
+  observationPath: string
   ingestionStatus: IngestionStatus
   debugSnapshot: {
     enabled: boolean
@@ -28,11 +31,6 @@ interface AppConfig {
       workers: number
     }
   } | null
-  /** Viewer credentials for anonymous mode (SurrealDB requires authentication) */
-  viewerUser?: string
-  viewerPass?: string
-  viewerNs?: string
-  viewerDb?: string
 }
 
 interface SurrealDBContextValue {
@@ -51,73 +49,27 @@ export const useSurrealDB = (): SurrealDBContextValue => {
   return ctx
 }
 
-const SESSION_TOKEN_KEY = "surrealdb_token"
 const NAMESPACE = "celery_insights"
 const DATABASE = "main"
 
 async function fetchConfig(): Promise<AppConfig> {
-  const res = await fetch(appUrl("/api/config"))
+  const res = await authenticatedFetch(appUrl("/api/config"))
+  if (res.status === 503) throw new AuthorizationUnavailableError()
   if (!res.ok) throw new Error(`Failed to fetch config: ${res.status}`)
   return res.json()
 }
 
-async function connectAsViewer(
-  db: Surreal,
-  surrealPath: string,
-  ns: string,
-  database: string,
-  viewerUser?: string,
-  viewerPass?: string,
-): Promise<void> {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-  const url = `${protocol}//${window.location.host}${surrealPath}`
-
-  if (!viewerUser || !viewerPass) {
-    console.warn("No viewer credentials provided — SurrealDB requires authentication for all queries")
+class AuthorizationUnavailableError extends Error {
+  constructor() {
+    super("We cannot verify your access right now. Retry or contact your administrator.")
+    this.name = "Access verification unavailable"
   }
-
-  await db.connect(url, {
-    namespace: ns,
-    database,
-    // SurrealDB requires authentication — anonymous connections cannot query anything.
-    // Authenticate as the read-only viewer DB user when credentials are provided.
-    ...(viewerUser && viewerPass
-      ? {
-          authentication: {
-            namespace: ns,
-            database,
-            username: viewerUser,
-            password: viewerPass,
-          },
-        }
-      : {}),
-  })
 }
 
-async function connectWithToken(
-  db: Surreal,
-  surrealPath: string,
-  ns: string,
-  database: string,
-  token: string,
-): Promise<void> {
+async function connectObservations(db: Surreal, observationPath: string): Promise<void> {
+  markRemoteObservation(db)
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-  const url = `${protocol}//${window.location.host}${surrealPath}`
-  await db.connect(url, { namespace: ns, database })
-  await db.authenticate(token)
-}
-
-async function signIn(db: Surreal, surrealPath: string, ns: string, database: string, password: string) {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-  const url = `${protocol}//${window.location.host}${surrealPath}`
-  await db.connect(url, { namespace: ns, database })
-  const tokens = await db.signin({
-    namespace: ns,
-    database,
-    access: "frontend",
-    variables: { name: "frontend", pass: password },
-  })
-  sessionStorage.setItem(SESSION_TOKEN_KEY, tokens.access)
+  await db.connect(`${protocol}//${window.location.host}${observationPath}`)
 }
 
 interface SurrealDBProviderProps {
@@ -153,15 +105,13 @@ const SurrealDBProvider = ({ children }: SurrealDBProviderProps) => {
 const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) => {
   const dbRef = useRef<Surreal>(new Surreal())
   const [status, setStatus] = useState<ConnectionStatus>("disconnected")
-  const [hasConnectedOnce, setHasConnectedOnce] = useState(false)
   const [ingestionStatus, setIngestionStatus] = useState<IngestionStatus>("disabled")
   const [error, setError] = useState<Error | null>(null)
-  const [authRequired, setAuthRequired] = useState<boolean | null>(null)
-  const [authenticated, setAuthenticated] = useState(false)
-  const [loginError, setLoginError] = useState<string | null>(null)
-  const [loginLoading, setLoginLoading] = useState(false)
   const [configLoaded, setConfigLoaded] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const configRef = useRef<AppConfig | null>(null)
+  useSessionRecheck(status === "connected")
 
   // Subscribe to connection status events
   useEffect(() => {
@@ -170,7 +120,6 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
       db.subscribe("connecting", () => setStatus("connecting")),
       db.subscribe("connected", () => {
         setStatus("connected")
-        setHasConnectedOnce(true)
         setError(null)
       }),
       db.subscribe("reconnecting", () => setStatus("reconnecting")),
@@ -183,91 +132,73 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, [])
 
-  // Fetch config on mount. In dev mode (Vite dev server without Bun entry),
-  // /api/config may not exist — fall back to anonymous mode with default surreal path.
+  // Configuration and database transport both pass through Bun authentication.
   useEffect(() => {
+    let active = true
     fetchConfig()
       .then((config) => {
+        if (!active) return
         if (config.ui) applyDeploymentDefaults(config.ui)
         configRef.current = config
+        setAppConfig(config)
         setIngestionStatus(config.ingestionStatus)
-        setAuthRequired(config.authRequired)
         setConfigLoaded(true)
       })
-      .catch(() => {
-        const fallback: AppConfig = {
-          authRequired: false,
-          surrealPath: "/surreal/rpc",
-          ingestionStatus: "disabled",
-          debugSnapshot: null,
-          // Dev mode fallback: use default viewer credentials matching the schema migration defaults
-          viewerUser: "viewer",
-          viewerPass: "viewer",
-          viewerNs: NAMESPACE,
-          viewerDb: DATABASE,
-        }
-        configRef.current = fallback
-        setIngestionStatus(fallback.ingestionStatus)
+      .catch((err) => {
+        if (!active) return
+        setError(err instanceof Error ? err : new Error("Application configuration unavailable"))
         setConfigLoaded(true)
       })
-  }, [])
+    return () => {
+      active = false
+    }
+  }, [attempt])
 
-  // Auto-connect once config is loaded (anonymous or with existing token)
+  // Socket closure has no HTTP status; probe config for the denial or outage reason.
+  useEffect(() => {
+    if (!configLoaded || status === "connected") return
+    let active = true
+    let checking = false
+    const check = async () => {
+      if (checking) return
+      checking = true
+      try {
+        const config = await fetchConfig()
+        if (!active) return
+        const needsConnection = !configRef.current
+        configRef.current = config
+        setAppConfig(config)
+        setError(null)
+        if (needsConnection) await connectObservations(dbRef.current, config.observationPath)
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err : new Error("Application unavailable"))
+      } finally {
+        checking = false
+      }
+    }
+    const timer = window.setInterval(() => void check(), 5000)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [configLoaded, status])
+
+  const retryConnection = () => {
+    void dbRef.current.close()
+    configRef.current = null
+    setConfigLoaded(false)
+    setError(null)
+    setAttempt((current) => current + 1)
+  }
+
+  // Application authentication is already established by browser navigation.
   useEffect(() => {
     if (!configLoaded || !configRef.current) return
     const config = configRef.current
-
-    if (!config.authRequired) {
-      // Anonymous mode — connect as read-only viewer user
-      connectAsViewer(
-        dbRef.current,
-        config.surrealPath,
-        config.viewerNs ?? NAMESPACE,
-        config.viewerDb ?? DATABASE,
-        config.viewerUser,
-        config.viewerPass,
-      )
-        .then(() => setAuthenticated(true))
-        .catch((err) => setError(err instanceof Error ? err : new Error(String(err))))
-    } else {
-      // Auth required — check for existing token in sessionStorage
-      const token = sessionStorage.getItem(SESSION_TOKEN_KEY)
-      if (token) {
-        connectWithToken(dbRef.current, config.surrealPath, NAMESPACE, DATABASE, token)
-          .then(() => setAuthenticated(true))
-          .catch(() => {
-            // Token expired or invalid — show login dialog
-            sessionStorage.removeItem(SESSION_TOKEN_KEY)
-            dbRef.current.close()
-          })
-      }
-      // If no token, the login dialog will be shown
-    }
+    connectObservations(dbRef.current, config.observationPath).catch((err) =>
+      setError(err instanceof Error ? err : new Error(String(err))),
+    )
   }, [configLoaded])
-
-  // Login handler for the login dialog
-  const handleLogin = useCallback(async (password: string) => {
-    if (!configRef.current) return
-    setLoginLoading(true)
-    setLoginError(null)
-    try {
-      // Close any existing connection before signing in
-      if (dbRef.current.isConnected) {
-        await dbRef.current.close()
-      }
-      await signIn(dbRef.current, configRef.current.surrealPath, NAMESPACE, DATABASE, password)
-      setAuthenticated(true)
-    } catch {
-      setLoginError("Invalid password")
-      try {
-        await dbRef.current.close()
-      } catch {
-        // ignore close errors
-      }
-    } finally {
-      setLoginLoading(false)
-    }
-  }, [])
 
   // Clean up on unmount
   useEffect(() => {
@@ -283,9 +214,9 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
       status,
       ingestionStatus,
       error,
-      appConfig: configRef.current,
+      appConfig,
     }),
-    [status, ingestionStatus, error],
+    [status, ingestionStatus, error, appConfig],
   )
 
   // Loading state while fetching config
@@ -293,15 +224,10 @@ const RemoteSurrealDBProvider = ({ children }: { children: React.ReactNode }) =>
     return <RemoteLoadingScreen />
   }
 
-  // Auth required and not authenticated — show login dialog
-  if (authRequired && !authenticated) {
-    return <LoginDialog onLogin={handleLogin} error={loginError} loading={loginLoading} />
-  }
-
   // Block initial app render until first successful database connection.
   // This avoids route-level flicker and gives users a single clear loading state.
-  if (!hasConnectedOnce) {
-    return <RemoteLoadingScreen status={status} error={error} />
+  if (status !== "connected") {
+    return <RemoteLoadingScreen status={status} error={error} onRetry={retryConnection} />
   }
 
   return <SurrealDBContext.Provider value={contextValue}>{children}</SurrealDBContext.Provider>
@@ -416,9 +342,32 @@ const DemoSurrealDBProvider = ({ children }: { children: React.ReactNode }) => {
 
 // --- Loading screens ---
 
-const RemoteLoadingScreen = ({ status, error }: { status?: ConnectionStatus; error?: Error | null }) => {
+const RemoteLoadingScreen = ({
+  status,
+  error,
+  onRetry,
+}: {
+  status?: ConnectionStatus
+  error?: Error | null
+  onRetry?: () => void
+}) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const showDemoSuggestion = elapsedSeconds >= 12 && status !== "connected"
+  const [signingOut, setSigningOut] = useState(false)
+  const [logoutError, setLogoutError] = useState("")
+  const accessError = error instanceof AccessDeniedError || error instanceof AuthorizationUnavailableError
+  const showDemoSuggestion = elapsedSeconds >= 12 && status !== "connected" && !error
+  const signOut = async () => {
+    setSigningOut(true)
+    setLogoutError("")
+    try {
+      const response = await authenticatedFetch(appUrl("/api/auth/logout"), { method: "POST" })
+      if (!response.ok) throw new Error("Sign-out failed")
+      window.location.assign(appUrl("/login") + "?reason=signed-out")
+    } catch {
+      setLogoutError("Could not sign out. Please try again.")
+      setSigningOut(false)
+    }
+  }
 
   useEffect(() => {
     const timer = setInterval(() => setElapsedSeconds((prev) => prev + 1), 1000)
@@ -438,9 +387,15 @@ const RemoteLoadingScreen = ({ status, error }: { status?: ConnectionStatus; err
       className="min-h-screen flex items-center justify-center bg-background text-foreground"
     >
       <div className="w-full max-w-md text-center space-y-4 px-6">
-        <div className="text-lg font-medium">{status ? statusLabel[status] : "Starting..."}</div>
-        <div className="text-sm text-muted-foreground">Initializing SurrealDB connection ({elapsedSeconds}s)</div>
-        <Progress className="h-2" value={status === "reconnecting" ? 35 : 65} />
+        <div className="text-lg font-medium">
+          {accessError ? error.name : status ? statusLabel[status] : "Starting..."}
+        </div>
+        {!accessError && (
+          <>
+            <div className="text-sm text-muted-foreground">Connecting to observations ({elapsedSeconds}s)</div>
+            <Progress className="h-2" value={status === "reconnecting" ? 35 : 65} />
+          </>
+        )}
         {elapsedSeconds >= 8 && !error && (
           <div className="text-xs text-muted-foreground">
             This is taking longer than expected. Services may still be warming up.
@@ -456,7 +411,26 @@ const RemoteLoadingScreen = ({ status, error }: { status?: ConnectionStatus; err
             </Button>
           </div>
         )}
-        {error && <div className="text-sm text-destructive">Connection error: {error.message}</div>}
+        {error && (
+          <div role="alert" className="text-sm text-destructive">
+            {accessError ? error.message : `Connection error: ${error.message}`}
+          </div>
+        )}
+        {error && (
+          <div className="flex justify-center gap-2">
+            <Button variant="outline" onClick={onRetry}>
+              Retry connection
+            </Button>
+            <Button variant="ghost" disabled={signingOut} onClick={() => void signOut()}>
+              {signingOut ? "Signing out…" : "Sign out"}
+            </Button>
+          </div>
+        )}
+        {logoutError && (
+          <p role="alert" className="text-sm text-destructive">
+            {logoutError}
+          </p>
+        )}
       </div>
     </div>
   )
@@ -486,57 +460,5 @@ const DemoLoadingScreen = ({ stage, error }: { stage: DemoLoadingStage; error: E
     </div>
   </div>
 )
-
-// --- Login dialog ---
-
-interface LoginDialogProps {
-  onLogin: (password: string) => void
-  error: string | null
-  loading: boolean
-}
-
-const LoginDialog = ({ onLogin, error, loading }: LoginDialogProps) => {
-  const [password, setPassword] = useState("")
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (password.trim()) {
-      onLogin(password)
-    }
-  }
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
-      <div className="w-full max-w-sm p-6 border rounded-lg shadow-lg bg-card">
-        <div className="text-center mb-6">
-          <h1 className="text-xl font-semibold">Celery Insights</h1>
-          <p className="text-sm text-muted-foreground mt-1">Enter password to continue</p>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              // eslint-disable-next-line jsx-a11y/no-autofocus
-              autoFocus
-              disabled={loading}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-            />
-          </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading || !password.trim()}
-            className="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
-          >
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
-      </div>
-    </div>
-  )
-}
 
 export default SurrealDBProvider

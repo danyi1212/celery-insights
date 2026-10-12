@@ -1,6 +1,7 @@
+import { benchmarkFetch } from "./ingress"
 import assert from "node:assert/strict"
 import { createHash } from "node:crypto"
-import { Surreal } from "surrealdb"
+import { observationClient, connectObservation, readPublicWorkflowMembership } from "./observation"
 import { writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { isDeepStrictEqual } from "node:util"
@@ -111,9 +112,9 @@ export async function benchmarkMaintenance(
 ) {
   const cases: Record<string, unknown>[] = []
   const errors: string[] = []
-  const db = new Surreal()
+  const db = observationClient()
   const request = async (path: string, init: RequestInit = {}) => {
-    const response = await fetch(url + path, { ...init, signal: AbortSignal.timeout(120_000) })
+    const response = await benchmarkFetch(url + path, { ...init, signal: AbortSignal.timeout(120_000) })
     assert(response.ok, `${path}: HTTP ${response.status}`)
     return response
   }
@@ -134,14 +135,10 @@ export async function benchmarkMaintenance(
     afterCleanup: unknown = null,
     afterRestore: unknown = null
   const relations = async (retainedHistory: number) => {
-    const [workflows, edges] = await maintenanceDeadline(
-      db
-        .query<[Record<string, unknown>[], Record<string, unknown>[]]>(
-          "SELECT * FROM workflow; SELECT `in`, out FROM workflow_task;",
-        )
-        .collect(),
+    const { workflows, edges } = await maintenanceDeadline(
+      readPublicWorkflowMembership(db),
       120_000,
-      "Maintenance workflow query",
+      "Maintenance public workflow membership",
     )
     assert.equal(workflows.length, Math.ceil(retainedHistory / 4) + Math.ceil(live / 4), "Unexpected workflow count")
     validateReturnedRows(workflows, "workflows.all", retainedHistory, live)
@@ -168,20 +165,7 @@ export async function benchmarkMaintenance(
     }
   }
   try {
-    await maintenanceDeadline(
-      db.connect(`${url.replace(/^http/, "ws")}/surreal/rpc`, {
-        namespace: "celery_insights",
-        database: "main",
-        reconnect: false,
-      }),
-      15_000,
-      "Maintenance connection",
-    )
-    await maintenanceDeadline(
-      db.signin({ namespace: "celery_insights", database: "main", username: "viewer", password: "viewer" }),
-      15_000,
-      "Maintenance authentication",
-    )
+    await maintenanceDeadline(connectObservation(db, url), 15_000, "Maintenance public connection")
     before = await storage()
     const raw = await measured("backup.export", async () => (await request("/api/settings/export")).text())
     exportBytes = Buffer.byteLength(raw)
