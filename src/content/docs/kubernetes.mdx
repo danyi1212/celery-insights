@@ -1,37 +1,44 @@
-Use the [Celery Insights Helm chart](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#install) to deploy on Kubernetes. Follow its installation guide to create a credentials Secret, configure HTTPS ingress, and install the chart.
+Deploy Celery Insights on Kubernetes with the Helm chart. It connects to your existing Celery broker and result backend and installs a shared SurrealDB instance for task history.
 
-The chart connects to your existing Celery broker and result backend. By default, it installs an Insights Deployment and one private, shared in-memory SurrealDB instance. One elected Insights pod collects events; all replicas serve the dashboard and APIs.
+## Install with Helm
 
-## Configure your installation
+Follow the [Helm installation guide](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#install):
 
-Keep your Helm settings in `values.yaml` and pass that file when installing or upgrading. Start with the installation guide's HTTPS example, then add the options you need:
+1. Create a Secret containing your Celery connection details and authentication credentials.
+2. Create `values.yaml` with your public HTTPS URL, ingress settings, and TLS Secret.
+3. Install the chart, then open the dashboard and sign in.
 
-| Need                                           | Helm values                                            | Guide                                                                                                                                                           |
-| ---------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| History that survives database restarts        | `surrealdb.surrealdb.path` and `surrealdb.persistence` | [Persistent storage](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#keep-history-on-disk)                              |
-| Your own SurrealDB instance or SurrealDB Cloud | `surrealdb.enabled: false` and `database.externalUrl`  | [External database](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#use-an-external-database)                           |
-| More Insights pods                             | `replicaCount` or `autoscaling`                        | [Replicas and CPU HPA](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#scale-insights)                                  |
-| OIDC or custom application settings            | `authentication` and `config.toml`                     | [Authentication and configuration](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#configure-authentication-and-celery) |
-| Existing Celery Python configuration           | `config.python` alongside `config.toml`                | [Configuration files](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#configure-authentication-and-celery)              |
+The chart generates authentication configuration for an `admin` account. You do not need to write a configuration file for the first installation.
 
-The default database loses history when its pod is replaced. Choose persistent storage before installing if you need to retain it. Extra Insights pods improve web capacity and availability; they share one ingestion leader. Advanced database scaling belongs to an externally managed SurrealDB installation.
+## Change the settings
 
-## Extend the chart
+Keep your changes in `values.yaml` and use that file for each Helm upgrade. For example, to run two Insights pods with a larger CPU request, add:
 
-Use `resources`, `nodeSelector`, `tolerations`, `affinity`, and `podAnnotations` to fit your cluster. Use `extraEnv` with Secret references for additional credentials, and `extraVolumes`/`extraVolumeMounts` for certificates or configuration files. Keep credentials out of Helm values and ConfigMaps.
-
-See [all chart values](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/values.yaml) for the available options. The chart's `surrealdb` section configures its official SurrealDB dependency; the included database supports one instance using memory or local disk.
-
-Chart-managed configuration changes restart Insights automatically. After changing an existing Secret or ConfigMap, follow the [upgrade and maintenance instructions](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#upgrade-and-maintain). All replicas must share the same session key.
-
-## When you need plain YAML
-
-Render the chart for deployment systems that require Kubernetes YAML:
-
-```sh
-helm template insights oci://ghcr.io/danyi1212/charts/celery-insights \
-  --version 0.1.0 --kube-version 1.35.0 --namespace celery-insights \
-  -f values.yaml --skip-tests > manifests.yaml
+```yaml
+replicaCount: 2
+resources:
+  requests:
+    cpu: 500m
 ```
 
-Set `--kube-version` to your target cluster's version and review the rendered resources before deploying. Create the referenced Secrets separately. When deploying rendered YAML, your deployment system manages updates and resource cleanup instead of Helm.
+Both pods serve the dashboard and APIs. One elected pod collects Celery events, and another can take over if it fails.
+
+Use `authentication` to change the Basic account or configure OIDC. For custom application settings, supply `config.toml`; you can also supply `config.python` for Celery configuration. The [configuration guide](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#configure-authentication-and-celery) explains these options and how to use existing ConfigMaps or Secrets.
+
+## Keep history and scale
+
+The default database is in memory, so replacing its pod loses history. Enable [persistent storage](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#keep-history-on-disk) before installing if you need history to survive restarts. You can also connect to an [external SurrealDB instance](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#use-an-external-database), including SurrealDB Cloud.
+
+For automatic scaling, enable `autoscaling` and install Metrics Server. HPA scales Insights for web capacity and availability; event collection still runs on one leader. The database included in the chart stays a single instance. Use a separately managed database when you need advanced database scaling.
+
+## Extend your deployment
+
+The chart supports standard Kubernetes settings:
+
+- Use `resources`, `nodeSelector`, `tolerations`, and `affinity` to control pod placement and resource allocation.
+- Use `extraEnv` with Secret references for additional credentials.
+- Use `extraVolumes` and `extraVolumeMounts` for certificates or other files.
+
+See [chart values](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/values.yaml) for the available settings. Keep credentials in Secrets and use the same session key on every replica.
+
+Chart-managed configuration changes restart the pods automatically. After editing an existing Secret or ConfigMap, restart the Insights Deployment to load the changes.
