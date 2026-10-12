@@ -4,7 +4,7 @@ The default is an Insights Deployment and one private shared in-memory SurrealDB
 
 Create an existing credentials Secret, set the external HTTPS public URL, and configure your ingress controller and TLS Secret. The chart generates authentication TOML with one Basic administrator by default; OIDC and custom TOML/Python files are supported. Credentials stay in Kubernetes Secrets, and the session key must be shared by all replicas and retained across upgrades.
 
-Follow the [chart README](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md) for installation, storage profiles, configuration migration, authentication, HPA, and E2E verification. Chart publication remains gated on a matching application image and hosted SurrealDB Cloud verification; development installations must select an image built from the Helm PR.
+Follow the [Helm installation guide](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md) to create a credentials Secret, configure HTTPS ingress, and install. The same guide covers persistent storage, external databases, HPA, OIDC, custom configuration files, and upgrades.
 
 ## Manual manifests
 
