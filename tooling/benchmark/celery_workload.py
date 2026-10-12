@@ -14,7 +14,7 @@ from surrealdb import AsyncSurreal
 
 from tooling.benchmark.pipeline import distribution, query, record_name
 
-app = Celery("celery-benchmark", broker=os.environ["BROKER_URL"], backend=os.environ["RESULT_BACKEND"])
+app = Celery("celery-benchmark", broker=os.environ.get("BROKER_URL"), backend=os.environ.get("RESULT_BACKEND"))
 app.conf.update(
     task_track_started=True,
     task_send_sent_event=os.environ.get("BENCH_MONITORED") == "true",
@@ -190,6 +190,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if min(args.tasks, args.rate, args.iterations) <= 0:
         parser.error("Task count, rate and iterations must be positive")
+    if not os.environ.get("BROKER_URL") or not os.environ.get("RESULT_BACKEND"):
+        parser.error("BROKER_URL and RESULT_BACKEND are required to run the workload")
     if args.mode == "worker":
         app.worker_main(["worker", "--loglevel=WARNING", "--concurrency=2", "--hostname=benchmark-worker@%h"])
     else:

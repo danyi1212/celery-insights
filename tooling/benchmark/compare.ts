@@ -68,6 +68,7 @@ function contract(run: unknown) {
     "compose.yml",
     "observation.ts",
     "ingress.ts",
+    "controller.ts",
   ])
     fields[`harness.${file}`] = get(run, "harness", "files", `tooling/benchmark/${file}`)
   for (const key of ["NanoCpus", "Memory", "MemorySwap", "CpuQuota", "CpuPeriod", "CpusetCpus"])
@@ -211,7 +212,7 @@ export function extractMetrics(run: unknown) {
     for (const percentile of ["p50", "p95", "p99"])
       add(
         `pipeline.${key}.${percentile}`,
-        get(run, "pipeline", "measurement_contract") === "typed-refresh-v1" &&
+        ["typed-refresh-v1", "typed-refresh-v2"].includes(String(get(run, "pipeline", "measurement_contract"))) &&
           key !== "viewer_query_ms" &&
           get(run, "pipeline", "private_live", "complete") !== true
           ? null

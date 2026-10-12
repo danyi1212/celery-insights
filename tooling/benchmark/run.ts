@@ -1,3 +1,4 @@
+import { requireBenchmarkController } from "./controller"
 import { execFile } from "node:child_process"
 import { mkdir, writeFile, readFile } from "node:fs/promises"
 import { createHash } from "node:crypto"
@@ -13,6 +14,7 @@ import { benchmarkQueries } from "./queries"
 import { storageSnapshotScript } from "./storage"
 import { benchmarkMaintenance } from "./maintenance"
 
+requireBenchmarkController()
 const execute = promisify(execFile)
 const args = process.argv.slice(2)
 const valueOptions = new Set([
@@ -227,6 +229,7 @@ try {
     "compose.yml",
     "observation.ts",
     "ingress.ts",
+    "controller.ts",
   ].map((file) => `tooling/benchmark/${file}`)
   harnessFiles.push(
     "runtime/observation/queries.ts",
@@ -427,6 +430,7 @@ try {
     browser: "local-https-proxy",
     programmatic: "internal-http-ws-basic",
     accountRole: "administrator",
+    ingressTrace: process.env.BENCH_INGRESS_TRACE === "true",
   }
   phase = "ingestion"
   const producerArgs = [
@@ -509,7 +513,9 @@ try {
   }
   if (args.includes("--browser")) {
     phase = "browser"
-    report.browser = await measureResources("browser-journey", () => benchmarkBrowser(ingress!.url, browserProfile))
+    report.browser = await measureResources("browser-journey", () =>
+      benchmarkBrowser(ingress!.url, browserProfile, output),
+    )
   }
   sampling = false
   await sampler

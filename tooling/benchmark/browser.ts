@@ -1,4 +1,5 @@
-import { chromium } from "../playwright"
+import { chromium, type Page } from "../playwright"
+import { resolve } from "node:path"
 import { benchmarkAccount } from "./ingress"
 import { CborCodec } from "surrealdb"
 
@@ -139,8 +140,28 @@ export async function benchmarkLiveBrowser<T>(
   return { production: result, browser: measurements }
 }
 
-export async function benchmarkBrowser(url: string, profile: "desktop" | "constrained" = "desktop") {
+export async function benchmarkBrowser(
+  url: string,
+  profile: "desktop" | "constrained" = "desktop",
+  diagnosticsDirectory?: string,
+) {
+  const measurementProfile = {
+    viewport: { width: 1440, height: 900 },
+    device: "desktop",
+    name: profile,
+    network:
+      profile === "constrained"
+        ? { latencyMs: 150, downloadBitsPerSecond: 1_600_000, uploadBitsPerSecond: 750_000 }
+        : "unthrottled",
+    cpuThrottleRate: profile === "constrained" ? 4 : 1,
+    initialCache: "fresh-context",
+  }
   const browser = await chromium.launch()
+  let phase = "sign-in"
+  let diagnosticPage: Page | undefined
+  let selectedTaskHref: string | null = null
+  const errors: string[] = []
+  const completed: Record<string, unknown> = {}
   try {
     const context = await browser.newContext({
       ignoreHTTPSErrors: true,
@@ -175,10 +196,13 @@ export async function benchmarkBrowser(url: string, profile: "desktop" | "constr
       ;(window as unknown as { __benchmarkMetrics: BrowserMetrics }).__benchmarkMetrics = metrics
     })
     const page = await context.newPage()
+    diagnosticPage = page
+    const signInStarted = performance.now()
     await signInBenchmark(page, url)
+    completed.signInMs = performance.now() - signInStarted
     const session = await context.newCDPSession(page)
     await session.send("Network.enable")
-    let phase = "initial-navigation"
+    phase = "initial-navigation"
     const sentPayloads: { phase: string; opcode: number; payloadData: string }[] = []
     const socketTraffic: Record<
       string,
@@ -212,7 +236,6 @@ export async function benchmarkBrowser(url: string, profile: "desktop" | "constr
       })
       await session.send("Emulation.setCPUThrottlingRate", { rate: 4 })
     }
-    const errors: string[] = []
     page.on("pageerror", (error) => errors.push(error.message))
     page.on("response", (response) => {
       if (response.status() >= 400) errors.push(`${response.url()}: HTTP ${response.status()}`)
@@ -254,6 +277,7 @@ export async function benchmarkBrowser(url: string, profile: "desktop" | "constr
     await painted()
     const explorerUsefulDataMs = performance.now() - started
     const initial = await capture()
+    completed.explorerUsefulDataMs = explorerUsefulDataMs
     const search = page.getByPlaceholder("Search tasks, workers, errors…")
     phase = "search-typing"
     const searchStart = performance.now()
@@ -288,12 +312,17 @@ export async function benchmarkBrowser(url: string, profile: "desktop" | "constr
     await painted()
     const searchPasteResetMs = performance.now() - pasteResetStart
     const href = await firstTask.getAttribute("href")
+    selectedTaskHref = href
     const task = href?.split("/tasks/bench-")[1]?.split("?")[0]
     if (!task) throw new Error(`Unexpected benchmark task link: ${href}`)
     phase = "task-navigation"
     const navigationStart = performance.now()
-    await firstTask.click()
-    await page.waitForURL("**/tasks/bench-*")
+    // A refetch can reorder rows after reading href. Bind the click to that exact task.
+    await page
+      .locator(`table tbody tr a[href=${JSON.stringify(href)}]`)
+      .first()
+      .click()
+    await page.waitForURL((destination) => destination.pathname === new URL(href!, url).pathname)
     await page.getByText("benchmark.work", { exact: true }).first().waitFor({ state: "visible", timeout: 30_000 })
     await page.waitForFunction((id) => document.body.innerText.includes(`benchmark-result-${id}`), task)
     await painted()
@@ -329,17 +358,7 @@ export async function benchmarkBrowser(url: string, profile: "desktop" | "constr
     return {
       status: errors.length ? "failed" : "passed",
       version: browser.version(),
-      profile: {
-        viewport: { width: 1440, height: 900 },
-        device: "desktop",
-        name: profile,
-        network:
-          profile === "constrained"
-            ? { latencyMs: 150, downloadBitsPerSecond: 1_600_000, uploadBitsPerSecond: 750_000 }
-            : "unthrottled",
-        cpuThrottleRate: profile === "constrained" ? 4 : 1,
-        initialCache: "fresh-context",
-      },
+      profile: measurementProfile,
       explorerUsefulDataMs,
       searchNoMatchMs,
       typedSearch: { expected: typedSearch, observed: typedSearchObserved },
@@ -384,6 +403,36 @@ export async function benchmarkBrowser(url: string, profile: "desktop" | "constr
         "Interaction duration is a laboratory observation, not field INP. Sub-16ms events may be absent.",
         "Resource Timing covers fetched assets; WebSocket data, unfetched lazy chunks, and whole-build bundle sizes are separate.",
       ],
+    }
+  } catch (error) {
+    let screenshot: string | null = null
+    if (diagnosticPage && diagnosticsDirectory) {
+      screenshot = resolve(diagnosticsDirectory, "browser-failure.png")
+      try {
+        await diagnosticPage.screenshot({ path: screenshot })
+      } catch {
+        screenshot = null
+      }
+    }
+    let bodyPreview: string | null = null
+    try {
+      bodyPreview = (await diagnosticPage?.locator("body").innerText())?.slice(0, 4000) ?? null
+    } catch {
+      /* Retain the original failure. */
+    }
+    return {
+      status: "failed",
+      version: browser.version(),
+      profile: measurementProfile,
+      failedPhase: phase,
+      error: String(error),
+      currentUrl: diagnosticPage?.url() ?? null,
+      selectedTaskHref,
+      screenshot,
+      bodyPreview,
+      completed,
+      errors,
+      limitations: ["Incomplete journey; partial successful measurements are diagnostic, not a passing baseline."],
     }
   } finally {
     await browser.close()

@@ -1,5 +1,7 @@
 # Benchmark tool (in development)
 
+Measurements require **Bun >=1.4.2** (the project pins 1.4.2), Docker and OpenSSL. The controller records its actual version. A repeated local HTTPS asset failure on Bun 1.3.10 disappeared with the same fixture on 1.4.2; older measurement controllers are rejected before setup. Comparison/history commands can still read retained historical reports.
+
 This first slice exercises real RabbitMQ delivery, the normal production ingestion loops,
 Redis result fetching/polling, workflow writes, authorized typed reads, and public refresh-driven convergence.
 Optional Chromium journeys measure Explorer's first useful rows and navigation to task details.
@@ -10,7 +12,7 @@ metrics, and record fetched asset bytes. `--api` adds fixed-arrival HTTP/MCP con
 Use a current source-built image, not an unrelated local image:
 
 ```shell
-docker compose -f tooling/benchmark/compose.yml -p ci-benchmark-build build app
+docker build -t celery-insights-benchmark:local .
 bun run bench --tasks 256 --rate 100 --browser
 bun run bench --tasks 256 --rate 500
 bun run bench --tasks 128 --rate 100 --result-bytes 102400
@@ -137,7 +139,10 @@ remote ingress profiles. No database credentials or arbitrary SQL travel through
 `--reader-mode shared` (default) paces typed task-list requests on the public refresh observer's
 connection. `separate` uses another public connection; `none` removes background list traffic.
 Public subscriptions send refresh markers every five seconds, then clients refetch authorized
-records. `pipeline.public_refresh` reports publication-to-raw-event and terminal-to-result freshness
+records in a timestamp window with a one-second overlap. An unconditional full snapshot after
+publication and the committed-count witness must reconcile every event/result, including late or
+older timestamps; the oracle still rejects missing/duplicated history. This bounds repeated reads
+during long runs without assuming timestamp order. `pipeline.public_refresh` reports publication-to-raw-event and terminal-to-result freshness
 including that cadence. Completeness is required alongside the independent persisted-data oracle.
 Additional clients exercise the same public refresh/refetch contract. Slow delay paces refetching;
 it does not simulate a bandwidth-constrained network or prove reconnect recovery.
@@ -162,7 +167,7 @@ can be measured without this provenance guard, but is unsuitable as an exact CI 
 Image fetch duration is not native pod cold-start latency.
 
 - Resource guidance is bounded to measured workloads; see [the sizing example](../../docs/benchmark-resources.md).
-- The viewer reader is paced every 100 ms. Its latency is observed under ingestion; its rate is not query capacity.
+- The public typed reader is paced every 100 ms. Its latency is observed under ingestion; its rate is not query capacity.
 - Publication-to-raw-event-LIVE and terminal-to-result-LIVE use one generator/observer monotonic clock.
   Result polling can supply terminal state before ingestion drains; they are separate metrics.
 - Persisted correctness uses a separate private database connection. Public refresh delivery must
@@ -334,7 +339,7 @@ health response, and the incomplete/diagnostic status of the RocksDB attempts. T
 ## Native notification burst diagnosis
 
 Against a disposable native database with owner access, isolate notification bursts from broker
-delivery, ingestion queries, and the Bun proxy:
+delivery and the public observation API:
 
 ```shell
 python tooling/benchmark/live_burst_probe.py --url ws://127.0.0.1:19917/rpc --repetitions 3

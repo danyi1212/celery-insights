@@ -1,5 +1,7 @@
 # Benchmark calibration — 2026-10-10–12
 
+These sections describe the earlier database-proxy contract. Current main uses authenticated typed reads and five-second refresh markers; old notification limits, noise floors and sizing results do not establish current behavior. Current migration evidence is in [the typed-read record](benchmark-evidence-typed-2026-10-12.json).
+
 These are local experiments with explicit workload and duration limits. The bounded sizing example is in [resource guidance](benchmark-resources.md); broader sustainable capacity remains unproven.
 The benchmark implementation is in `tooling/benchmark/`; reproduce using its README.
 

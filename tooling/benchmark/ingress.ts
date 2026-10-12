@@ -38,6 +38,8 @@ export async function benchmarkIngress(output: string) {
     "-out",
     resolve(directory, "certificate.pem"),
   ])
+  const trace: Record<string, unknown>[] = []
+  const tracing = process.env.BENCH_INGRESS_TRACE === "true"
   let backend: URL | undefined
   const server = Bun.serve({
     hostname: "127.0.0.1",
@@ -67,13 +69,38 @@ export async function benchmarkIngress(output: string) {
         })
         return upgraded ? undefined : new Response(null, { status: 502 })
       }
-      return fetch(destination, {
+      const observation =
+        tracing && destination.pathname.endsWith(".css")
+          ? ({
+              path: destination.pathname,
+              started: performance.now(),
+              headers: Object.fromEntries(
+                [...request.headers].filter(([key]) => !["cookie", "authorization"].includes(key)),
+              ),
+            } as Record<string, unknown>)
+          : null
+      if (observation) trace.push(observation)
+      const upstream = await fetch(destination, {
         method: request.method,
         headers: request.headers,
         ...(request.method === "GET" || request.method === "HEAD" ? {} : { body: request.body }),
         redirect: "manual",
         signal: AbortSignal.timeout(120000),
       })
+      // Bun fetch decodes response bodies. Frame the relay's actual bytes and
+      // remove upstream connection/framing headers before serving over TLS.
+      const headers = new Headers(upstream.headers)
+      for (const header of ["connection", "keep-alive", "transfer-encoding", "content-length", "content-encoding"])
+        headers.delete(header)
+      const body = [204, 205, 304].includes(upstream.status) ? null : await upstream.arrayBuffer()
+      if (observation)
+        Object.assign(observation, {
+          status: upstream.status,
+          bytes: body?.byteLength ?? 0,
+          elapsedMs: performance.now() - Number(observation.started),
+          responseHeaders: Object.fromEntries(headers),
+        })
+      return new Response(body, { status: upstream.status, headers })
     },
     websocket: {
       maxPayloadLength: 16 * 1024 * 1024,
@@ -119,6 +146,7 @@ export async function benchmarkIngress(output: string) {
     },
     async close() {
       await server.stop(true)
+      if (tracing) await writeFile(resolve(output, "ingress-trace.json"), JSON.stringify(trace, null, 2))
     },
   }
 }

@@ -16,6 +16,7 @@ import base64
 import websockets
 from surrealdb.connections.async_ws import AsyncWsSurrealConnection
 from collections import Counter
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -85,9 +86,14 @@ async def public_subscription(db: Any, table: str):
     return await db.subscribe_live(subscription)
 
 
-async def public_rows(db: Any, table: str, search: str = "bench-") -> list[dict]:
+async def public_rows(db: Any, table: str, search: str = "bench-", since: datetime | None = None) -> list[dict]:
     """Use the public request contract, without SQL, namespace or database credentials."""
     rows = []
+    window = (
+        {"from": since.astimezone(UTC).isoformat().replace("+00:00", "Z"), "to": "9999-12-31T23:59:59Z"}
+        if since
+        else {}
+    )
     while True:
         page = await query(
             db,
@@ -95,6 +101,7 @@ async def public_rows(db: Any, table: str, search: str = "bench-") -> list[dict]
             {
                 "request": {
                     "operation": "list",
+                    **window,
                     "table": table,
                     "query": search,
                     "limit": 1000,
@@ -105,6 +112,36 @@ async def public_rows(db: Any, table: str, search: str = "bench-") -> list[dict]
         rows.extend(page)
         if len(page) < 1000:
             return rows
+
+
+class PublicSnapshot:
+    """Bound repeated reads; an unconditional final snapshot catches older/out-of-order records."""
+
+    def __init__(self, table: str):
+        self.table = table
+        self.cursor: datetime | None = None
+        self.returned_rows = 0
+        self.reads = 0
+        self.reconciled = False
+
+    async def read(self, db: Any, *, complete: bool = False) -> list[dict]:
+        full = complete and not self.reconciled
+        rows = await public_rows(
+            db, self.table, since=None if full or self.cursor is None else self.cursor - timedelta(seconds=1)
+        )
+        self.reads += 1
+        self.returned_rows += len(rows)
+        field = "timestamp" if self.table == "event" else "last_updated"
+        for row in rows:
+            timestamp = row[field]
+            if not isinstance(timestamp, datetime):
+                timestamp = datetime.fromisoformat(str(timestamp))
+            if timestamp.tzinfo is None:
+                raise ValueError("Public snapshot timestamp must have a timezone")
+            self.cursor = max(self.cursor, timestamp) if self.cursor else timestamp
+        if full:
+            self.reconciled = True
+        return rows
 
 
 def record_name(value: Any) -> str:
@@ -243,11 +280,15 @@ async def run(args: argparse.Namespace) -> dict:
     fanout_connections = []
     fanout_streams = []
     fanout_seen: list[dict[int, float]] = []
+    public_task_snapshot = PublicSnapshot("task")
+    public_event_snapshot = PublicSnapshot("event")
+    fanout_snapshots: list[PublicSnapshot] = []
     for _ in range(args.live_clients - 1):
         client = PublicObservation(os.environ["BENCH_PUBLIC_URL"])
         fanout_streams.append(await public_subscription(client, "event"))
         fanout_connections.append(client)
         fanout_seen.append({})
+        fanout_snapshots.append(PublicSnapshot("event"))
 
     async def observe_fanout(index: int) -> None:
         delay_ms = args.slow_client_delay_ms if index == len(fanout_streams) - 1 else 0
@@ -256,7 +297,9 @@ async def run(args: argparse.Namespace) -> dict:
                 raise RuntimeError("Public subscription did not emit a refresh marker")
             if delay_ms:
                 await asyncio.sleep(delay_ms / 1000)
-            for row in await public_rows(fanout_connections[index], "event"):
+            for row in await fanout_snapshots[index].read(
+                fanout_connections[index], complete=finished.is_set() and all_events_observed_at is not None
+            ):
                 sequence = json.loads(row["data"]).get("bench_sequence")
                 if sequence in event_emitted:
                     fanout_seen[index].setdefault(sequence, (time.perf_counter() - event_emitted[sequence]) * 1000)
@@ -265,11 +308,19 @@ async def run(args: argparse.Namespace) -> dict:
         async for refresh in public_stream:
             if not refresh.get("__observation_refresh"):
                 raise RuntimeError("Public subscription did not emit a refresh marker")
-            for row in await public_rows(public_db, "task"):
+            for row in await public_task_snapshot.read(
+                public_db, complete=finished.is_set() and all_events_observed_at is not None
+            ):
                 task_id = record_name(row["id"])
                 if task_id in emitted and row.get("state") == "SUCCESS" and row.get("result") is not None:
+                    index = int(task_id.removeprefix("bench-"))
+                    expected = repr(f"benchmark-result-{index}" + "x" * args.result_bytes)[:102400]
+                    if row["result"] != expected or row.get("workflow_id") != f"bench-{index // 4 * 4}":
+                        raise RuntimeError(f"Public task payload differs: {task_id}")
                     public_result_seen.setdefault(task_id, (time.perf_counter() - emitted[task_id]) * 1000)
-            for row in await public_rows(public_db, "event"):
+            for row in await public_event_snapshot.read(
+                public_db, complete=finished.is_set() and all_events_observed_at is not None
+            ):
                 sequence = json.loads(row["data"]).get("bench_sequence")
                 if sequence in event_emitted:
                     public_event_seen.setdefault(sequence, (time.perf_counter() - event_emitted[sequence]) * 1000)
@@ -397,15 +448,20 @@ async def run(args: argparse.Namespace) -> dict:
                 len(public_result_seen) == args.tasks
                 and len(public_event_seen) == published
                 and all(len(seen) == published for seen in fanout_seen)
+                and public_task_snapshot.reconciled
+                and public_event_snapshot.reconciled
+                and all(snapshot.reconciled for snapshot in fanout_snapshots)
             )
-            if finished.is_set() and (live_complete or observer_failed):
-                counts = await query(
-                    validation_db,
-                    "SELECT count() AS count FROM event WHERE task_id IN $ids GROUP ALL",
-                    {"ids": task_ids},
-                )
-                if counts and counts[0]["count"] >= published:
-                    all_events_observed_at = time.perf_counter()
+            if finished.is_set():
+                if all_events_observed_at is None:
+                    counts = await query(
+                        validation_db,
+                        "SELECT count() AS count FROM event WHERE task_id IN $ids GROUP ALL",
+                        {"ids": task_ids},
+                    )
+                    if counts and counts[0]["count"] >= published:
+                        all_events_observed_at = time.perf_counter()
+                if all_events_observed_at is not None and (live_complete or observer_failed):
                     break
             await asyncio.sleep(0.05)
         if not finished.is_set():
@@ -457,9 +513,10 @@ async def run(args: argparse.Namespace) -> dict:
             "published_events_per_second": published / (publication_finished_at - start)
             if publication_finished_at is not None and publication_finished_at > start
             else None,
-            "validated_event_goodput_per_second": len(events) / elapsed
-            if not correctness_errors and elapsed > 0
+            "validated_event_goodput_per_second": len(events) / (all_events_observed_at - start)
+            if not correctness_errors and all_events_observed_at is not None and all_events_observed_at > start
             else None,
+            "public_convergence_seconds": elapsed,
             "reader_mode": args.reader_mode,
             "published_events": published,
             "validated_events": len(events) if not correctness_errors else None,
@@ -475,7 +532,7 @@ async def run(args: argparse.Namespace) -> dict:
             "publication_to_raw_event_live_ms": distribution(list(event_seen.values())),
             "terminal_to_result_live_ms": distribution(list(result_seen.values())),
             "viewer_query_ms": distribution(query_times),
-            "measurement_contract": "typed-refresh-v1",
+            "measurement_contract": "typed-refresh-v2",
             "private_live": {
                 "complete": len(event_seen) == published and len(result_seen) == args.tasks and not private_errors,
                 "diagnostic_only": True,
@@ -485,6 +542,10 @@ async def run(args: argparse.Namespace) -> dict:
             },
             "public_refresh": {
                 "cadence_ms": 5000,
+                "strategy": "timestamp-window-with-final-snapshot",
+                "returned_rows": public_task_snapshot.returned_rows + public_event_snapshot.returned_rows,
+                "snapshot_reads": public_task_snapshot.reads + public_event_snapshot.reads,
+                "full_reconciliation": public_task_snapshot.reconciled and public_event_snapshot.reconciled,
                 "publication_to_raw_event_ms": distribution(list(public_event_seen.values())),
                 "terminal_to_result_ms": distribution(list(public_result_seen.values())),
                 "events": len(public_event_seen),
@@ -521,7 +582,9 @@ async def run(args: argparse.Namespace) -> dict:
                 "Native LIVE completeness is diagnostic; public refresh and exact persisted oracles "
                 "determine correctness.",
                 "Fixed 100ms query pacing is a background reader, not a query capacity measurement.",
-                "Raw-event drain uses a count query at 50ms intervals after publication; it is an upper bound.",
+                "Private raw-event drain polls at 50ms after publication, independently of public refresh. "
+                "Goodput divides validated events by publication-to-durable-count time. "
+                "Drain polling yields a timing upper bound and excludes public refresh.",
                 "On delivery failure, latency distributions describe successful partial observations only; "
                 "they cannot establish tail latency.",
             ],

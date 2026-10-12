@@ -3,11 +3,12 @@
 import json
 import asyncio
 from argparse import Namespace
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
 
-from tooling.benchmark.pipeline import distribution, validate, validate_existing, scheduled_seconds
+from tooling.benchmark.pipeline import PublicSnapshot, distribution, validate, validate_existing, scheduled_seconds
 
 
 def observations():
@@ -89,3 +90,32 @@ def test_absent_samples_and_small_samples_do_not_invent_tail_latency():
     assert distribution([])["p50"] is None
     assert distribution([2, 5, 1])["p50"] == 2
     assert distribution([2, 5, 1])["p99"] is None
+
+
+def test_public_snapshot_final_reconciliation_catches_late_older_events():
+    newer = {"id": "event:new", "timestamp": datetime(2026, 10, 12, 0, 0, 10, tzinfo=UTC)}
+    older = {"id": "event:late", "timestamp": datetime(2026, 10, 12, 0, 0, 3, tzinfo=UTC)}
+    requests = []
+    database = AsyncMock()
+
+    async def response(sql, bindings):
+        assert sql == "observation:read"
+        request = bindings["request"]
+        requests.append(request)
+        rows = [] if "from" in request else [newer, older] if len(requests) > 1 else [newer]
+        return {"result": [{"status": "OK", "result": rows}]}
+
+    database.query_raw.side_effect = response
+
+    async def inspect():
+        snapshot = PublicSnapshot("event")
+        assert await snapshot.read(database) == [newer]
+        assert await snapshot.read(database) == []
+        assert snapshot.reconciled is False
+        assert await snapshot.read(database, complete=True) == [newer, older]
+        assert snapshot.reconciled is True
+        assert snapshot.returned_rows == 3
+
+    asyncio.run(inspect())
+    assert requests[1]["from"] == "2026-10-12T00:00:09Z"
+    assert "from" not in requests[2]

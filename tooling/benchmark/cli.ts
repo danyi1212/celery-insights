@@ -1,7 +1,10 @@
+import { requireBenchmarkController } from "./controller"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import { createHash } from "node:crypto"
 import { compareRuns, comparisonMarkdown, provisionalBudgets } from "./compare"
+
+if (["replay", "celery", "failover", "pods", "suite"].includes(process.argv[2])) requireBenchmarkController()
 
 if (process.argv[2] === "replay") {
   const { benchmarkReplay } = await import("./replay")

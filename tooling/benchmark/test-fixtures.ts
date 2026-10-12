@@ -60,6 +60,7 @@ export const comparisonFixture = () => ({
         "compose.yml",
         "observation.ts",
         "ingress.ts",
+        "controller.ts",
       ].map((name) => [`tooling/benchmark/${name}`, "unchanged"]),
     ),
   },
@@ -70,7 +71,7 @@ export const comparisonFixture = () => ({
   },
   containerConfiguration: { NanoCpus: 2e9, Memory: 2e9, MemorySwap: 4e9, CpuQuota: 0, CpuPeriod: 0, CpusetCpus: "" },
   pipeline: {
-    measurement_contract: "typed-refresh-v1",
+    measurement_contract: "typed-refresh-v2",
     private_live: { complete: true },
     status: "passed",
     generator_healthy: true,
