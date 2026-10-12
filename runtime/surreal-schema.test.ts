@@ -87,6 +87,27 @@ describe("runSchemaMigration", () => {
     mockDb = createMockDb()
   })
 
+  it("retries transient conflicts when replicas initialize the shared schema", async () => {
+    vi.mocked(mockDb._queryResult.collect).mockRejectedValueOnce({ details: { kind: "TransactionConflict" } })
+    await runSchemaMigration(createConfig())
+    expect(mockDb.connect).toHaveBeenCalledTimes(2)
+    expect(mockDb.close).toHaveBeenCalledTimes(2)
+  })
+
+  it("preserves non-retryable errors", async () => {
+    const failure = new Error("invalid credentials")
+    mockDb.connect.mockRejectedValueOnce(failure)
+    await expect(runSchemaMigration(createConfig())).rejects.toBe(failure)
+    expect(mockDb.connect).toHaveBeenCalledTimes(1)
+  })
+
+  it("bounds repeated schema conflict retries", async () => {
+    const failure = { details: { kind: "TransactionConflict" } }
+    vi.mocked(mockDb._queryResult.collect).mockRejectedValue(failure)
+    await expect(runSchemaMigration(createConfig())).rejects.toBe(failure)
+    expect(mockDb.connect).toHaveBeenCalledTimes(5)
+  })
+
   it("connects as root", async () => {
     await runSchemaMigration(createConfig())
 

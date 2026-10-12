@@ -11,6 +11,7 @@ import readline from "node:readline"
 import { spawn, type ChildProcess } from "node:child_process"
 import { randomBytes } from "node:crypto"
 import { Surreal } from "surrealdb"
+import { publishBridgeStatus, readBridgeStatus } from "./runtime/shared-runtime-state"
 import { createCeleryBridge } from "./runtime/celery-bridge"
 import { ObservationApi } from "./runtime/observation-api"
 import { initializeAuthentication, secureApplicationRequest } from "./runtime/security/http"
@@ -131,6 +132,7 @@ let leaderElection: LeaderElection | null = null
 let mcpDb: Surreal | null = null
 let authentication: Awaited<ReturnType<typeof initializeAuthentication>> | null = null
 let cleanupTimer: ReturnType<typeof setTimeout> | null = null
+let statusTimer: ReturnType<typeof setTimeout> | null = null
 let ingestionStatus: IngestionStatus = "disabled"
 let shuttingDown = false
 const instanceId = generateInstanceId()
@@ -354,7 +356,7 @@ function spawnPython(): ChildProcess {
   }
 
   proc.on("exit", (code) => {
-    if (shuttingDown) return
+    if (shuttingDown || pythonProcess !== proc) return
     bunLogger.error(`Python ingester exited with code ${code}`)
     pythonProcess = null
     // If we're still leader, restart Python with backoff
@@ -363,7 +365,7 @@ function spawnPython(): ChildProcess {
       pythonRestartAttempts++
       bunLogger.warn(`Restarting Python subprocess in ${backoffMs}ms (attempt ${pythonRestartAttempts})`)
       setTimeout(() => {
-        if (!shuttingDown && (replaySnapshot || leaderElection?.isLeader)) {
+        if (!shuttingDown && !pythonProcess && (replaySnapshot || leaderElection?.isLeader)) {
           pythonProcess = spawnPython()
         }
       }, backoffMs)
@@ -380,22 +382,26 @@ async function shutdown(signal: string, exitCode = 0): Promise<void> {
   shuttingDown = true
   bunLogger.info(`Received ${signal} — shutting down`)
 
-  // 1. Release ingestion lock (if held)
-  if (leaderElection) {
-    await leaderElection.stop()
+  // Stop the ingester before allowing another replica to acquire the lease.
+  if (pythonProcess) {
+    const proc = pythonProcess
+    const exited = new Promise<void>((resolve) => proc.once("exit", () => resolve()))
+    proc.kill(signal === "SIGTERM" ? "SIGTERM" : "SIGINT")
+    await Promise.race([exited, Bun.sleep(10000)])
+    if (proc.exitCode === null && proc.signalCode === null) {
+      proc.kill("SIGKILL")
+      await exited
+    }
+    pythonProcess = null
   }
+  await leaderElection?.stop()
   await searchIndexes?.stop()
   await mcpDb?.close()
   if (cleanupTimer) clearTimeout(cleanupTimer)
+  if (statusTimer) clearTimeout(statusTimer)
 
   // 2. Kill child processes and wait for them to exit (with timeout)
   const exitPromises: Promise<void>[] = []
-
-  if (pythonProcess) {
-    const proc = pythonProcess
-    exitPromises.push(new Promise<void>((resolve) => proc.on("exit", () => resolve())))
-    proc.kill(signal === "SIGTERM" ? "SIGTERM" : "SIGINT")
-  }
 
   if (surrealProcess) {
     const proc = surrealProcess
@@ -544,7 +550,20 @@ const handleMcp = createMcpHandler({
   allowedHosts: runtimeConfig.mcpAllowedHosts?.split(",").map((host) => host.trim()),
   mode: () => (replaySnapshot ? "snapshot" : runtimeConfig.ingestionEnabled ? "live" : "ingestion_disabled"),
 })
-const observationApi = new ObservationApi(db, runtimeConfig, () => fetchJsonFromPython("/bridge/status"))
+const observationApi = new ObservationApi(db, runtimeConfig, () => readBridgeStatus(db))
+async function shareBridgeStatus(): Promise<void> {
+  if (shuttingDown) return
+  if (pythonProcess && (replaySnapshot || leaderElection?.isLeader)) {
+    try {
+      const status = await fetchJsonFromPython<Record<string, unknown>>("/bridge/status")
+      if (status) await publishBridgeStatus(db, status)
+    } catch {
+      bunLogger.warn("Unable to publish ingestion diagnostics")
+    }
+  }
+  if (!shuttingDown) statusTimer = setTimeout(shareBridgeStatus, 2000)
+}
+void shareBridgeStatus()
 async function periodicCleanup() {
   if (!replaySnapshot && runtimeConfig.ingestionEnabled && (!leaderElection || leaderElection.isLeader)) {
     try {
@@ -566,11 +585,11 @@ const server = Bun.serve({
       if (prefix && url.pathname === prefix) {
         return new Response(null, { status: 308, headers: { Location: `${prefix}/${url.search}` } })
       }
-      if (prefix && url.pathname !== "/health" && !url.pathname.startsWith(`${prefix}/`)) {
+      if (prefix && !["/health", "/ready"].includes(url.pathname) && !url.pathname.startsWith(`${prefix}/`)) {
         return new Response("Not Found", { status: 404 })
       }
       // Keep the root health endpoint available for container probes.
-      if (url.pathname !== "/health") url.pathname = url.pathname.slice(prefix.length)
+      if (!["/health", "/ready"].includes(url.pathname)) url.pathname = url.pathname.slice(prefix.length)
 
       const scope = /^\/(api|metrics|mcp)(?:\/|$)/.test(url.pathname) ? authentication!.scope(req) : null
       if (
@@ -739,6 +758,20 @@ const server = Bun.serve({
         })
       }
 
+      if (url.pathname === "/ready") {
+        try {
+          if (!authentication) throw new Error("Authentication unavailable")
+          await Promise.race([
+            db.query("RETURN true").collect(),
+            Bun.sleep(750).then(() => {
+              throw new Error("Readiness timed out")
+            }),
+          ])
+          return Response.json({ status: "ok" })
+        } catch {
+          return Response.json({ status: "unavailable" }, { status: 503 })
+        }
+      }
       // Bun-served endpoint: health check (always available)
       if (url.pathname === "/health") {
         return Response.json({

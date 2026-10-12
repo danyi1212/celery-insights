@@ -35,9 +35,11 @@ export async function secureApplicationRequest(
   dispatch: () => Promise<Response | undefined>,
 ): Promise<Response | undefined> {
   const pathname = new URL(request.url).pathname
-  if (prefix && pathname !== prefix && pathname !== "/health" && !pathname.startsWith(prefix + "/")) return dispatch()
-  const normalized = pathname === "/health" ? pathname : pathname.slice(prefix.length)
-  if (normalized === "/health" || /^\/(assets\/|favicon\.|robots\.txt$)/.test(normalized)) return dispatch()
+  if (prefix && pathname !== prefix && !["/health", "/ready"].includes(pathname) && !pathname.startsWith(prefix + "/"))
+    return dispatch()
+  const normalized = ["/health", "/ready"].includes(pathname) ? pathname : pathname.slice(prefix.length)
+  if (["/health", "/ready"].includes(normalized) || /^\/(assets\/|favicon\.|robots\.txt$)/.test(normalized))
+    return dispatch()
   try {
     if (!auth) throw new AuthError(503, "Authentication unavailable")
     const authResponse = await auth.handle(request, normalized)

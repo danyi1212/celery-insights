@@ -1,0 +1,16 @@
+# Add oidc-client-secret to credentials.existingSecret for this confidential client.
+authentication:
+  publicUrl: https://insights.example.com
+  mode: oidc
+  oidc:
+    issuer: https://identity.example.com
+    clientId: celery-insights
+    useClientSecret: true
+    scopes: openid profile
+    roleMappings:
+      - claim: groups
+        value: insights-admins
+        roles: [administrator]
+      - claim: groups
+        value: insights-viewers
+        roles: [viewer]

@@ -1,156 +1,286 @@
-Use shared external SurrealDB when running multiple pods. One elected pod collects Celery events; the others serve reads and can take over ingestion.
+Deploy Celery Insights on Kubernetes and connect it to your existing Celery broker and result backend. The chart installs an Insights Deployment and one private, shared in-memory SurrealDB instance through the official SurrealDB chart.
 
-## Preferred topology
+All Insights replicas share task history. One elected replica collects Celery events; the others serve the dashboard and APIs. The chart does not install Celery workers, a broker, or a result backend.
 
-- Use an external SurrealDB when running more than one pod.
-- Keep `INGESTION_LEADER_ELECTION=true` so only one pod writes Celery events at a time.
-- Back the Deployment with a ClusterIP Service and terminate TLS at the ingress or load balancer.
+## Install
 
-## When to use a PVC
+You need Kubernetes 1.30–1.35, Helm 3 or 4, and access to your Celery broker and result backend. For browser sign-in, use an existing ingress controller, a hostname pointing to it, and a TLS Secret in the installation namespace.
 
-- A PVC only makes sense for a single-replica Deployment using embedded RocksDB or SurrealKV.
-- Do not combine HPA with embedded local storage unless each replica is intentionally isolated.
-- For autoscaling or failover, move the database out of the pod and into shared infrastructure first.
+### 1. Create the credentials Secret
 
-## HPA expectations
+Replace the broker, backend, and administrator password below. The database passwords and session key are generated locally. Keep the Secret across upgrades: all replicas use the same session key.
 
-- Scale replicas for availability and frontend throughput, not ingestion throughput.
-- Leader election means one replica is the active ingester at any moment.
-- If the active ingester dies, another replica takes over after the lease expires and renews.
-
-## Deployment and service example
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: celery-insights
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: celery-insights
-  template:
-    metadata:
-      labels:
-        app: celery-insights
-    spec:
-      containers:
-        - name: app
-          image: ghcr.io/danyi1212/celery-insights:latest
-          ports:
-            - containerPort: 8555
-          env:
-            - name: BROKER_URL
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: broker-url
-            - name: RESULT_BACKEND
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: result-backend
-            - name: SURREALDB_EXTERNAL_URL
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: surrealdb-url
-            - name: CELERY_INSIGHTS_DATABASE_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: surrealdb-root-password
-            - name: SURREALDB_INGESTER_PASS
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: surrealdb-ingester-pass
-            - name: CELERY_INSIGHTS_SESSION_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights-auth
-                  key: session-secret
-            - name: INSIGHTS_ADMIN_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: admin-password
-            - name: INGESTION_LEADER_ELECTION
-              value: "true"
-            - name: LOG_FORMAT
-              value: "json"
-          volumeMounts:
-            - name: application-config
-              mountPath: /etc/celery-insights
-              readOnly: true
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8555
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8555
-      volumes:
-        - name: application-config
-          configMap:
-            name: celery-insights-config
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: celery-insights-config
-data:
-  config.toml: |
-    schema_version = 1
-    installation.public_url = "https://insights.example.com"
-    authentication.mode = "basic"
-    # Session secret comes from CELERY_INSIGHTS_SESSION_SECRET above.
-    [[authentication.accounts]]
-    username = "admin"
-    password_env = "INSIGHTS_ADMIN_PASSWORD"
-    roles = ["administrator"]
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: celery-insights
-spec:
-  selector:
-    app: celery-insights
-  ports:
-    - port: 80
-      targetPort: 8555
+```sh
+kubectl create namespace celery-insights
+kubectl -n celery-insights create secret generic celery-insights-credentials \
+  --from-literal=broker-url='amqp://USER:PASSWORD@YOUR-BROKER/' \
+  --from-literal=result-backend='redis://YOUR-BACKEND:6379/0' \
+  --from-literal=account-password='YOUR-ADMIN-PASSWORD' \
+  --from-literal=surrealdb-root-password="$(openssl rand -hex 32)" \
+  --from-literal=surrealdb-ingester-password="$(openssl rand -hex 32)" \
+  --from-literal=session-secret="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')"
 ```
 
-## HPA example
+You can also create this Secret from files or through your secret manager. Credentials belong in Secrets, not Helm values or ConfigMaps.
 
-Use HPA with shared external SurrealDB. Extra replicas add availability and web capacity, not parallel event ingestion.
+### 2. Create `values.yaml`
+
+Replace the hostname, ingress class, and TLS Secret name to match your cluster. `authentication.publicUrl` must be the URL users open in their browser.
 
 ```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: celery-insights
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: celery-insights
+authentication:
+  publicUrl: https://insights.example.com
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: insights.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: insights-tls
+      hosts: [insights.example.com]
+```
+
+### 3. Install and sign in
+
+```sh
+helm upgrade --install insights oci://ghcr.io/danyi1212/charts/celery-insights \
+  --version 0.1.0 --namespace celery-insights -f values.yaml --wait
+```
+
+Open `https://insights.example.com/` and sign in as `admin` with the `account-password` from your Secret. The chart generates the authentication configuration for you.
+
+The default database is in memory. Replacing an Insights pod preserves history; replacing the database pod loses it. Enable persistent storage below if you need history to survive database restarts.
+
+## Keep history on disk
+
+Add this to `values.yaml` **before your first installation**:
+
+```yaml
+surrealdb:
+  surrealdb:
+    path: rocksdb:/data/surreal
+  persistence:
+    enabled: true
+    size: 10Gi
+```
+
+The PVC uses the cluster's default StorageClass and remains after Helm uninstall. To use a PVC you already created, replace the managed claim settings with:
+
+```yaml
+surrealdb:
+  surrealdb:
+    path: rocksdb:/data/surreal
+  persistence:
+    enabled: false
+  volumes:
+    - name: existing-data
+      persistentVolumeClaim:
+        claimName: surrealdb-data
+  volumeMounts:
+    - name: existing-data
+      mountPath: /data
+```
+
+Replace `surrealdb-data` with your claim's name. Helm does not create or delete that claim.
+
+Database upgrades interrupt access because the managed instance uses the Recreate strategy. Switching an existing memory database to disk starts fresh history unless you export and restore it. Back up before storage or database upgrades; Helm rollback does not reverse data migrations. Changing StorageClass or shrinking a PVC requires a separate storage migration.
+
+## Use an external database
+
+For a separately managed SurrealDB installation or SurrealDB Cloud, add:
+
+```yaml
+surrealdb:
+  enabled: false
+database:
+  externalUrl: wss://YOUR-INSTANCE.surreal.cloud/rpc
+```
+
+Use SurrealDB 3.3.0 and put its root password in the `surrealdb-root-password` Secret key. The application provisions its schema using a root-level account named `root`. Confirm your hosted instance allows those operations. The chart connects to the instance; it does not create it or manage its storage and scaling.
+
+## Scale Insights
+
+Set `replicaCount` for a fixed number of pods, or add CPU autoscaling:
+
+```yaml
+autoscaling:
+  enabled: true
   minReplicas: 2
   maxReplicas: 6
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 70
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 80
+  targetCPUUtilizationPercentage: 70
 ```
+
+CPU HPA needs Metrics Server and CPU requests; the chart provides a default request. Extra replicas add web capacity and availability. One leader still collects events and runs automatic cleanup. The managed database stays a single instance; use an external installation for advanced database scaling.
+
+Size resources and retention for your workload. Cluster history metrics are shared across replicas, so do not sum their identical gauges. Process metrics describe each pod; ingestion diagnostics describe the leader and expire after 15 seconds without an update.
+
+## Configure authentication
+
+The chart configures one Basic account named `admin` by default. To change its name or role, add:
+
+```yaml
+authentication:
+  basic:
+    username: operator
+    roles: [operator]
+```
+
+The password still comes from the `account-password` Secret key. See [Authentication & Authorization](/documentation/authentication) for the permissions of each role.
+
+### Use OIDC
+
+Register a web client with your identity provider and set its callback to `https://insights.example.com/api/auth/callback`. Include any installation subpath in that URL. For a confidential client, enable `client_secret_post`. Configure the provider to include the claims used in role mappings in the ID token.
+
+Add the provider's client secret to the credentials Secret before upgrading:
+
+```sh
+kubectl -n celery-insights patch secret celery-insights-credentials \
+  --type merge -p '{"stringData":{"oidc-client-secret":"YOUR-OIDC-CLIENT-SECRET"}}'
+```
+
+Add the provider settings and explicit role mappings to `values.yaml`:
+
+```yaml
+authentication:
+  publicUrl: https://insights.example.com
+  mode: oidc
+  oidc:
+    issuer: https://identity.example.com
+    clientId: celery-insights
+    useClientSecret: true
+    scopes: openid profile
+    roleMappings:
+      - claim: groups
+        value: insights-admins
+        roles: [administrator]
+      - claim: groups
+        value: insights-viewers
+        roles: [viewer]
+```
+
+Replace the issuer, client ID, and group names with those from your provider. For a public client, set `useClientSecret: false` and omit the client-secret key. Accounts need a matching role mapping to sign in.
+
+## Supply application configuration
+
+The chart generates `config.toml` by default. To supply your own, choose one source:
+
+- `config.toml.structured`: settings in YAML, rendered as TOML.
+- `config.toml.content`: literal TOML. Load a local file with `--set-file config.toml.content=./config.toml`.
+- `config.toml.existingConfigMap`: an existing ConfigMap. `config.toml.key` selects the file key.
+- `config.toml.existingSecret`: an existing Secret. `config.toml.key` selects the file key.
+
+A custom TOML source replaces the whole generated file. Include `schema_version`, `installation.public_url`, and authentication settings. Keep `authentication.mode` in Helm values consistent with the file so the chart selects the right Secret keys. For example, this custom configuration keeps the Basic account and changes logging:
+
+```yaml
+config:
+  toml:
+    structured:
+      schema_version: 1
+      installation:
+        public_url: https://insights.example.com
+      authentication:
+        mode: basic
+        accounts:
+          - username: admin
+            password_env: INSIGHTS_ACCOUNT_PASSWORD
+            roles: [administrator]
+      logging:
+        format: json
+        level: info
+```
+
+For a file you already maintain, create a ConfigMap:
+
+```sh
+kubectl -n celery-insights create configmap insights-config --from-file=config.toml
+```
+
+Then select it in `values.yaml`:
+
+```yaml
+config:
+  toml:
+    existingConfigMap: insights-config
+    key: config.toml
+```
+
+Choose one source per file. Use an existing Secret when the file contains sensitive values. See [Configuration](/documentation/configuration) for application settings and precedence.
+
+### Add Python configuration
+
+You can also supply `config.py` alongside TOML using `config.python.content`, `existingConfigMap`, or `existingSecret`. For example:
+
+```yaml
+config:
+  python:
+    content: |
+      from pathlib import Path
+      broker_url = Path("/etc/celery-insights/celery/broker-url").read_text()
+      result_backend = Path("/etc/celery-insights/celery/result-backend").read_text()
+      task_serializer = "json"
+```
+
+With Python selected, Celery connection settings come from that module and the chart mounts the broker/backend Secret files above. Do not also set Celery connection or option settings in TOML. Python receives a restricted environment, so use these files for credentials.
+
+Both files mount read-only at `/etc/celery-insights/`. Raw file content is used literally. Use `config.env` for non-sensitive environment settings.
+
+## Extend the deployment
+
+Set `resources` to size the Insights pods. Use `nodeSelector`, `tolerations`, and `affinity` for pod placement, and `podAnnotations` for integrations such as metrics collection.
+
+Use `extraEnv` to reference additional credentials without putting them in Helm values:
+
+```yaml
+extraEnv:
+  - name: INSIGHTS_READER_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: reader-credentials
+        key: password
+```
+
+You can reference that variable from an additional account in your custom TOML. For certificates or other secret files, add a volume and mount:
+
+```yaml
+extraVolumes:
+  - name: custom-certificates
+    secret:
+      secretName: insights-certificates
+extraVolumeMounts:
+  - name: custom-certificates
+    mountPath: /etc/celery-insights/certificates
+    readOnly: true
+```
+
+Create the referenced Secrets before upgrading. To inspect all chart settings without leaving your terminal:
+
+```sh
+helm show values oci://ghcr.io/danyi1212/charts/celery-insights --version 0.1.0
+```
+
+## Upgrade and maintain
+
+Keep your settings in `values.yaml` and apply changes with the install command above. Change `--version` when upgrading to a new chart release. Chart-managed configuration changes restart the pods automatically. After editing an existing Secret or ConfigMap, restart Insights:
+
+```sh
+kubectl -n celery-insights rollout restart deployment/insights-celery-insights
+```
+
+Rotating the shared session key signs everyone out. Changing an initialized database's root password requires updating the database account before changing its Secret. If you rename the credentials Secret or its root-password key, also update `surrealdb.podExtraEnv` for `SURREAL_PASS`; `SURREAL_USER` stays `root`.
+
+For a subpath, include it in the public URL and configure the same prefix:
+
+```yaml
+authentication:
+  publicUrl: https://insights.example.com/tools/celery
+config:
+  env:
+    URL_PREFIX: /tools/celery
+```
+
+Also change the ingress path to `/tools/celery`. Preserve that prefix at your proxy and allow WebSocket upgrades. Plain HTTP port-forwarding can check `/health` and `/ready`, but browser sessions require HTTPS.
+
+`/health` reports process status. `/ready` checks initialized authentication and database access; it does not prove broker connectivity or active ingestion.

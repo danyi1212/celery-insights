@@ -95,6 +95,29 @@ bun run test:observation
 bun run test:security
 ```
 
+
+## Helm chart development
+
+Operator installation and configuration live in the [Kubernetes documentation](src/content/docs/kubernetes.mdx). To work on the chart from a checkout:
+
+```sh
+helm repo add surrealdb https://helm.surrealdb.com
+helm dependency build charts/celery-insights
+helm lint --strict charts/celery-insights
+uv run python tooling/helm/chart_test.py
+```
+
+Use the local chart path instead of its OCI URL when installing a checkout. Set `image.tag` to an image built from the same source, and supply your installation values:
+
+```sh
+helm upgrade --install insights charts/celery-insights \
+  --namespace celery-insights -f values.yaml --set image.tag=YOUR-IMAGE-TAG --wait
+```
+
+Kubernetes E2E uses a disposable Kind cluster named `celery-helm`. Build and load `celery-insights-helm:e2e` and `celery-insights-test-project:local`, install Playwright Chromium, then run `uv run python tooling/helm/e2e.py`. The runner owns its fixture namespace; do not run it against a shared cluster. CI exercises Helm 3 and 4, TLS login, replicas, failover, storage and CPU HPA.
+
+The publication workflow validates generated authentication configuration inside the selected released application image. Chart and application versions are independent. Before setting `celery-insights.io/release-ready` to `true`, verify that image and hosted Cloud access. A `chart-vVERSION` tag matching `Chart.yaml` publishes the OCI package. Record release verification results in the PR or issue.
+
 ## Coding standards
 
 ### General

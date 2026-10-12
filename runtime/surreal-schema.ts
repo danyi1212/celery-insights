@@ -26,6 +26,7 @@ function toSurrealStrand(value: string): string {
  * Fields and indexes use OVERWRITE to allow schema evolution.
  */
 export const CORE_SCHEMA = `
+DEFINE TABLE IF NOT EXISTS runtime_state TYPE NORMAL SCHEMALESS PERMISSIONS NONE;
 DEFINE TABLE IF NOT EXISTS search_config SCHEMALESS PERMISSIONS FOR select FULL FOR create, update, delete NONE;
 
 DEFINE TABLE IF NOT EXISTS task SCHEMAFULL
@@ -314,6 +315,32 @@ async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
  * ingester user, all tables/fields/indexes, and optional frontend auth.
  */
 export async function runSchemaMigration(config: Config, logger?: Logger): Promise<void> {
+  const log = logger ?? bunLogger
+  // Replicas bootstrap the same schema concurrently. SurrealDB reports these
+  // write conflicts as retryable; every migration step is idempotent.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await runSchemaMigrationOnce(config, log)
+      return
+    } catch (error) {
+      if (
+        attempt >= 4 ||
+        typeof error !== "object" ||
+        error === null ||
+        !("details" in error) ||
+        typeof error.details !== "object" ||
+        error.details === null ||
+        !("kind" in error.details) ||
+        error.details.kind !== "TransactionConflict"
+      )
+        throw error
+      log.warn("Concurrent schema migration conflicted; retrying")
+      await new Promise((resolve) => setTimeout(resolve, 100 * 2 ** attempt + Math.random() * 100))
+    }
+  }
+}
+
+async function runSchemaMigrationOnce(config: Config, logger?: Logger): Promise<void> {
   const log = logger ?? bunLogger
   const ns = assertIdent(config.surrealdbNamespace, "namespace")
   const dbName = assertIdent(config.surrealdbDatabase, "database")

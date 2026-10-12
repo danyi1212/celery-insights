@@ -63,6 +63,10 @@ The read-only MCP endpoint uses the same configured-account authentication and p
 
 Ask an agent: “Find the `reports.render` task I spawned in the last 15 minutes and tell me whether it finished.” See [the tool contract](MCP_DESIGN.md) for arguments, responses and pagination.
 
+## Kubernetes
+
+Deploy with the [Helm installation guide](https://celery-insights.vercel.app/documentation/kubernetes). It connects to your existing Celery cluster and includes a shared SurrealDB instance, with optional persistent storage, an external database, and CPU autoscaling. Follow the guide to create a credentials Secret, configure HTTPS ingress, and install.
+
 ## Documentation
 
 - [Authentication & Authorization](src/content/docs/authentication.mdx) for password accounts, OIDC, roles and sessions
