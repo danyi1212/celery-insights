@@ -10,8 +10,8 @@ interface MainNavigationViewProps {
 
 const MainNavigationView: React.FC<MainNavigationViewProps> = ({ expanded }) => {
   return (
-    <div className="flex h-full flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto">
+    <div className="flex min-h-full flex-col">
+      <div className="flex-1">
         <SidebarGroup className="pt-3">
           <SidebarGroupContent>
             <SidebarMenu>
