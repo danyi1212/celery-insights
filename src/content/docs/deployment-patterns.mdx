@@ -1,171 +1,74 @@
-Configure explicit accounts and HTTPS ingress for every application deployment. Use the same TOML account configuration and secret inputs on every replica. See [configured accounts](/documentation/configuration#configured-application-accounts).
+Choose storage based on how long history must last and how many app replicas you need.
 
-Choose the SurrealDB topology first. That one decision determines whether the app behaves like a disposable single container, a durable single node, or a shared multi-replica service.
+| Deployment                            | Storage            | Tradeoff                               |
+| ------------------------------------- | ------------------ | -------------------------------------- |
+| Evaluation or disposable instance     | Embedded memory    | History disappears on restart          |
+| One app instance with durable history | Embedded disk      | Database remains tied to that instance |
+| Multiple replicas or failover         | External SurrealDB | Requires a shared database you operate |
 
-## Summary
+Every deployment needs [configured accounts and HTTPS ingress](/documentation/setup). Examples below use the `config.toml` and `secrets/` directory from that setup.
 
-### [Single container with in-memory SurrealDB](#single-container-with-in-memory-surrealdb)
+## Embedded memory
 
-Best for: local evaluation, smoke tests, and disposable environments.
-
-Watch for: all history disappears on restart.
-
-### [Single container with persistent local disk](#single-container-with-persistent-local-disk)
-
-Best for: one-node production, homelab, VM deployments, and Docker Compose setups that need local durability.
-
-Watch for: horizontal scaling will create divergent local databases.
-
-### [Multiple app replicas with external SurrealDB](#multiple-app-replicas-with-external-surrealdb)
-
-Best for: high availability, Kubernetes, wallboards, and any topology where the dashboard should survive pod or node loss.
-
-Watch for: you need an external SurrealDB endpoint you control and should validate bootstrap compatibility before using managed offerings such as SurrealDB Cloud.
-
-### [Pods excluded from ingestion leadership](#pods-excluded-from-ingestion-leadership)
-
-Best for: niche scaling systems where some pods should serve the UI only and must be excluded from leadership entirely.
-
-Watch for: this is not the normal multi-replica pattern. Most deployments should keep ingestion enabled and rely on leader election instead.
-
-## Single container with in-memory SurrealDB
-
-Use the embedded database in memory for demos, CI, preview environments, or short-lived operator sessions.
-
-### Best for
-
-- Local evaluation
-- Smoke tests
-- Disposable environments
-
-### Watch for
-
-- All history disappears on restart.
-- Do not use this if operators expect durable task history.
-
-### Key env vars
-
-- `SURREALDB_STORAGE=memory`
-
-### Example
+This is the default. Use it when history can be discarded:
 
 ```sh
-docker run -p 8555:8555 --name celery-insights \
-  -e BROKER_URL=amqp://user:pass@rabbitmq:5672// \
-  -e RESULT_BACKEND=redis://redis:6379/0 \
+docker run -p 127.0.0.1:8555:8555 \
+  -v "$PWD/config.toml:/etc/celery-insights/config.toml:ro" \
+  -v "$PWD/secrets:/run/secrets/insights:ro" \
   -e SURREALDB_STORAGE=memory \
   ghcr.io/danyi1212/celery-insights:latest
 ```
 
-### Notes
+## Embedded disk
 
-- This is the default storage mode, so the explicit env var is mostly for clarity.
-- If you scale beyond one replica, move to an external SurrealDB first so history stays shared.
+Mount a durable volume and configure a stable database root password in TOML:
 
-## Single container with persistent local disk
-
-Keep the embedded SurrealDB, but bind `/data` and switch storage to a durable engine.
-
-### Best for
-
-- One-node production
-- Homelab
-- VM deployments
-- Docker Compose setups that need local durability
-
-### Watch for
-
-- The database lives with that single instance.
-- Replacing the container is fine, but horizontal scaling will create divergent local databases.
-
-### Key env vars
-
-- `SURREALDB_STORAGE=rocksdb:///data/surreal`
-- `VOLUME /data`
-
-### Example
+```toml
+[database.observation]
+root_password_file = "/run/secrets/insights/database-root-password"
+```
 
 ```sh
-docker run -p 8555:8555 --name celery-insights \
+docker run -p 127.0.0.1:8555:8555 \
+  -v "$PWD/config.toml:/etc/celery-insights/config.toml:ro" \
+  -v "$PWD/secrets:/run/secrets/insights:ro" \
   -v celery-insights-data:/data \
-  -e BROKER_URL=amqp://user:pass@rabbitmq:5672// \
-  -e RESULT_BACKEND=redis://redis:6379/0 \
   -e SURREALDB_STORAGE=rocksdb:///data/surreal \
   ghcr.io/danyi1212/celery-insights:latest
 ```
 
-### Notes
+- `surrealkv:///data/surreal` is also supported.
+- Keep one app replica. Separate local databases do not share history or leadership.
+- Reuse the existing root credential when opening an existing database.
 
-- `surrealkv:///data/surreal` is also supported if you prefer SurrealKV over RocksDB.
-- Persist `/data` with a named Docker volume, host path, or attached disk.
+## External SurrealDB
 
-## Multiple app replicas with external SurrealDB
+All replicas use the same database, accounts and session secret:
 
-Point every Celery Insights replica at the same SurrealDB instance and keep leader election enabled.
+```toml
+[database.observation]
+mode = "external"
+url = "wss://surrealdb.example.com/rpc"
+root_password_file = "/run/secrets/insights/database-root-password"
+ingester_password_file = "/run/secrets/insights/database-ingester-password"
 
-### Best for
-
-- High availability
-- Kubernetes
-- Wallboards
-- Any topology where the dashboard should survive pod or node loss
-
-### Watch for
-
-- The current bootstrap flow only lets you configure the SurrealDB URL.
-- Use an external endpoint you control and validate its root/bootstrap compatibility before adopting a managed service such as SurrealDB Cloud.
-
-### Key env vars
-
-- `SURREALDB_EXTERNAL_URL=wss://surrealdb.example.com/rpc`
-- `INGESTION_LEADER_ELECTION=true`
-
-### Example
-
-```sh
-docker run -p 8555:8555 --name celery-insights \
-  -e BROKER_URL=amqp://user:pass@rabbitmq:5672// \
-  -e RESULT_BACKEND=redis://redis:6379/0 \
-  -e SURREALDB_EXTERNAL_URL=wss://surrealdb.example.com/rpc \
-  -e SURREALDB_INGESTER_PASS=replace-this \
-  -v "$PWD/config.toml:/etc/celery-insights/config.toml:ro" --env-file deployment.env \
-  -e INGESTION_LEADER_ELECTION=true \
-  ghcr.io/danyi1212/celery-insights:latest
+[ingestion]
+leader_election.enabled = true
 ```
 
-### Notes
+- Keep the database endpoint private. Its credentials are separate from application accounts.
+- Verify root/bootstrap access before using a managed database service.
+- Keep ingestion enabled on each replica so it can take over after leader failure.
+- Replicas improve availability and web capacity; one elected ingester writes Celery events.
 
-- Run at least two replicas if you want failover for the ingester.
-- Shared SurrealDB makes replicas interchangeable and keeps leader election meaningful across the whole deployment.
+## Replicas that only serve reads
 
-## Pods excluded from ingestion leadership
+To exclude a replica from ingestion and leadership:
 
-Set `INGESTION_ENABLED=false` when a pod must never spawn the Python ingester or participate in leader election.
-
-### Best for
-
-- Niche scaling systems where some pods should serve the UI only and must be excluded from leadership entirely
-
-### Watch for
-
-- This is not the normal multi-replica pattern.
-- Most deployments should keep ingestion enabled and rely on leader election instead.
-
-### Key env vars
-
-- `INGESTION_ENABLED=false`
-- `SURREALDB_EXTERNAL_URL=wss://surrealdb.example.com/rpc`
-
-### Example
-
-```sh
-docker run -p 8555:8555 --name celery-insights-ui-only \
-  -e SURREALDB_EXTERNAL_URL=wss://surrealdb.example.com/rpc \
-  -e INGESTION_ENABLED=false \
-  ghcr.io/danyi1212/celery-insights:latest
+```toml
+[ingestion]
+enabled = false
 ```
 
-### Notes
-
-- These pods only read existing data from SurrealDB and can never take over ingestion if the leader disappears.
-- Use this only when your scheduler or traffic model explicitly requires non-leader-capable pods.
+Use this with the shared external database. These replicas cannot take over ingestion; other replicas must collect the events.

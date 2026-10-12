@@ -26,13 +26,8 @@ const DashboardWelcomeBanner: React.FC<DashboardWelcomeBannerProps> = ({ isDemo 
             )}
           </div>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Learn where workflow activity, failures, and worker context show up. Celery Insights becomes useful once
-            task events are flowing, so the tour stays visible until the dashboard has real activity.
+            Explore tasks, workflows and workers. Connect your cluster and enable task events to see live activity.
           </p>
-          <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-            <span className="rounded-full bg-background/80 px-3 py-1">Enable Celery task events</span>
-            <span className="rounded-full bg-background/80 px-3 py-1">Inspect full workflows in one click</span>
-          </div>
         </div>
       </div>
       <div className="flex items-center gap-2 self-start">
@@ -43,7 +38,12 @@ const DashboardWelcomeBanner: React.FC<DashboardWelcomeBannerProps> = ({ isDemo 
             Setup
           </a>
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => useSettingsStore.setState({ hideWelcomeBanner: true })}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Hide welcome banner"
+          onClick={() => useSettingsStore.setState({ hideWelcomeBanner: true })}
+        >
           <X className="size-4" />
         </Button>
       </div>

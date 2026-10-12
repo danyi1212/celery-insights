@@ -1,37 +1,56 @@
-Celery Insights works best when you decide the storage topology first and only then fill in the connection details around it.
+Connect a Celery cluster, configure sign-in, then choose how to retain task history.
 
-## Recommended order
+## Configure the app
 
-1. Pick a deployment pattern.
-   Decide first whether you are running with memory, local disk, or external SurrealDB.
-2. Set the core connection variables.
-   Most installs only need a broker URL, result backend, and a few SurrealDB settings.
-3. Match the app to your Celery topology.
-   Use environment variables for simple clusters and a mounted config file for Sentinel or custom transports.
-4. Apply production guardrails.
-   Lock down credentials, wire health checks, and understand how leader election affects scaling.
+Save `config.toml` using your deployment's secret storage:
 
-## Operator notes
+```toml
+schema_version = 1
+installation.public_url = "https://insights.example.com"
+authentication.mode = "basic"
+authentication.session.secret_file = "/run/secrets/insights/session-secret"
 
-- The docs are bundled into the app, so operators can use them from a live deployment.
-- External SurrealDB is the preferred path for HA, Kubernetes, and multi-replica deployments.
-- Use a mounted Celery config file only when broker and result env vars are no longer enough.
+[[authentication.accounts]]
+username = "admin"
+password_file = "/run/secrets/insights/admin-password"
+roles = ["administrator"]
 
-## Fast local start
+[celery]
+broker_url = "amqp://user:pass@rabbitmq:5672//"
+result_backend = "redis://redis:6379/0"
+```
 
-Use this for a disposable local run:
+- Generate a shared session secret: `openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n'`.
+- Put the account password and session secret in the referenced files.
+- Set up HTTPS ingress for the public URL. Keep port 8555 private and enable WebSocket forwarding.
+- For SSO, see [OIDC configuration](/documentation/authentication#openid-connect).
 
 ```sh
-docker run -p 8555:8555 --name celery-insights \
-  -e BROKER_URL=amqp://user:pass@rabbitmq:5672// \
-  -e RESULT_BACKEND=redis://redis:6379/0 \
-  -e SURREALDB_STORAGE=memory \
+docker run -p 127.0.0.1:8555:8555 --name celery-insights \
+  -v "$PWD/config.toml:/etc/celery-insights/config.toml:ro" \
+  -v "$PWD/secrets:/run/secrets/insights:ro" \
   ghcr.io/danyi1212/celery-insights:latest
 ```
 
-## What to read next
+Open your HTTPS public URL and sign in. The default memory database loses history on restart; use [persistent storage or external SurrealDB](/documentation/deployment-patterns) when history must survive.
 
-- Go to [/documentation/configuration](/documentation/configuration) for the full environment variable reference.
-- Go to [/documentation/deployment-patterns](/documentation/deployment-patterns) to choose between memory, local disk, and shared external SurrealDB.
-- Go to [/documentation/celery-clusters](/documentation/celery-clusters) if the cluster needs Sentinel, transport options, or multiple worker pools.
-- Go to [/documentation/debug-bundles](/documentation/debug-bundles) if you need to capture or replay a real incident.
+## Enable Celery events
+
+Apply these settings to the Celery application and restart its workers:
+
+```python
+app.conf.worker_send_task_events = True
+app.conf.task_send_sent_event = True
+app.conf.task_track_started = True
+app.conf.result_extended = True
+```
+
+The first two provide task events; the last two add started timestamps and result metadata.
+
+## Next steps
+
+- [Authentication & Authorization](/documentation/authentication): accounts, SSO, roles and policies.
+- [Configuration](/documentation/configuration): connection settings and overrides.
+- [Celery clusters](/documentation/celery-clusters): Sentinel, TLS and custom serializers.
+- [Kubernetes](/documentation/kubernetes): shared storage, probes and replicas.
+- [Debug bundles](/documentation/debug-bundles): capture and replay an incident.

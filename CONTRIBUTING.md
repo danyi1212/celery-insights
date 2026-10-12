@@ -1,12 +1,6 @@
-## Application authentication during development
-
-Bun owns configured HTTP Basic accounts and every application request. Configure a secret-backed TOML file selected by `CELERY_INSIGHTS_CONFIG_FILE`, explicit accounts/roles, and HTTPS ingress matching `installation.public_url`. See [the example](docs/configuration.example.toml). Vite application routes must pass through Bun; do not introduce direct Python or database proxies to bypass authentication. The TLS E2E fixture supplies synthetic configured accounts and an ingress automatically for tests.
-
-Python is the Celery bridge. Authentication secrets stay out of Python and browser storage. There are no password hashes, account/session tables, MFA or account lifecycle APIs to develop. OIDC is a separate maintained-library integration; OPA can restrict application permissions.
-
 # Contributing to Celery Insights
 
-This guide covers bug reports, feature requests, local development, and the project conventions contributors are expected to follow.
+These standards apply to human and agent contributions. Read them before changing code, UI or documentation.
 
 ## Reporting Bugs
 
@@ -19,7 +13,7 @@ If you have found a bug, we would like to know. Before you file a bug report, ma
 
 To report a bug, create a new GitHub issue with the `bug` label and include a minimal reproduction plus any steps needed to reproduce it.
 
-When the issue depends on real task history, logs, or runtime config, also attach a redacted `debug bundle v2` from **Settings** -> **Download diagnostics**. Keep secrets redacted unless someone investigating the issue explicitly asks for the unredacted bundle.
+When the issue depends on real task history, logs, or runtime config, also attach a redacted `debug bundle v2` from **Settings** -> **Download diagnostics**. Configuration credentials are always redacted; review task payloads and logs before sharing.
 
 If you are not sure whether it is a bug, start with GitHub Discussions. Other users may have seen the same behavior and can help narrow it down.
 
@@ -39,188 +33,98 @@ To contribute to the project, follow these steps:
 4. Run the project checks before you open the pull request:
    - For Python code: [ruff](https://github.com/astral-sh/ruff), [ty](https://github.com/astral-sh/ty), and `pytest`
    - For frontend code: [Oxlint](https://oxc.rs/docs/guide/usage/linter.html), [Oxfmt](https://oxc.rs/docs/guide/usage/formatter.html), TypeScript, and Vitest
-5. Open a pull request to the main branch.
-6. Check the CI workflow statuses and for comments on your pull request.
+5. Review the change through the user workflow described below.
+6. Open a pull request to `main` explaining the problem, resulting behavior, validation and remaining limitations. Link its issue when one exists.
+7. Address review feedback and failing CI checks. Keep plans, progress and run-specific results in the issue or PR, not new repository documents.
 
 ## Local development
 
-### Prerequisites
+Requirements: Bun, uv, Python 3.14+, Docker for E2E, and SurrealDB 3.3.0 for native database tests. Pinned runtime versions live in `Dockerfile`, `package.json` and `.python-version`.
 
-- Python 3.14+
-- [Bun](https://bun.sh/)
-- [SurrealDB](https://surrealdb.com/install) (v3.3+, production and CI use v3.3.0)
-- An IDE (we suggest PyCharm, but you can use your preferred IDE)
+```sh
+git clone https://github.com/<your_username>/celery-insights.git
+cd celery-insights
+bun install
+uv sync
+uv run pre-commit install
+```
 
-### Create dev environment
+Configure accounts, a session secret and `installation.public_url` using [the setup example](src/content/docs/setup.mdx). Keep secrets out of Git. Select your TOML file with `CELERY_INSIGHTS_CONFIG_FILE`.
 
-1. Clone your fork of the Celery Insights repository.
-
-    ```shell
-    git clone https://github.com/<your_username>/celery-insights.git
-    ```
-
-2. Navigate to the root folder of the repository.
-
-    ```shell
-    cd celery-insights/
-    ```
-
-3. Install the Python dependencies using [uv](https://docs.astral.sh/uv/).
-
-    ```shell
-    uv sync
-    ```
-
-4. Install pre-commit hooks
-
-   ```shell
-   pre-commit install
-   ```
-
-5. Install the frontend dependencies using Bun.
-
-    ```shell
-    bun install
-    ```
-
-6. Create `.env` file
-
-    ```shell
-    cd server/
-    cp .env.example .env
-    ```
-
-### Run the development stack
-
-The quickest way to start all services at once is:
-
-```shell
+```sh
+export CELERY_INSIGHTS_CONFIG_FILE=/absolute/path/to/config.toml
 bun run dev:all
 ```
 
-If you use `just`, the repo also includes `just dev`, `just lint`, `just typecheck`, and related helper recipes.
+- Bun supervises SurrealDB and the private Python Celery bridge; Vite serves the frontend on port 3000.
+- Authentication requires HTTPS ingress matching `installation.public_url`. Route frontend traffic to Vite and API/WebSocket traffic to Bun on port 8555.
+- Run `bun run dev` for Vite alone, or `bun run dev:server` for the Bun supervisor alone.
+- Python is launched through Bun with a validated settings snapshot, not a separate public server or `server/.env`.
+- Add application settings to the Bun schema/registry. Python receives only its required subset.
 
-### Debug bundles and snapshot replay
+### Authentication during development
 
-Use this workflow when you need to reproduce a real incident locally without reconnecting to the original broker or result backend.
+- Configure explicit password accounts or OIDC, a shared session secret and HTTPS ingress matching `installation.public_url`. See [the configuration example](docs/configuration.example.toml).
+- Route application API and WebSocket requests through Bun. The TLS E2E fixture supplies synthetic accounts and ingress for tests.
+- Keep authentication secrets out of Python and browser storage. Account lifecycle and MFA belong to the external identity provider; OPA can restrict application permissions.
 
-Capture:
+### Diagnostics and replay
 
-```shell
-# From the running app UI:
-# Settings -> Download diagnostics
+Download diagnostics from **Settings** while the problem is visible. Configuration credentials are always redacted, but task data and logs may still contain sensitive information.
+
+```sh
+just start                                     # local test cluster
+just reload                                    # rebuild the app service
+just start-debug /absolute/path/to/bundle.zip   # offline, read-only replay
 ```
 
-Replay with the local test compose stack:
+These helpers use `test_project/docker-compose.yml`; supply your authentication TOML and secret inputs for manual deployments. E2E creates its own authenticated fixture.
 
-```shell
-just start
-just start-reload
-just start-debug /absolute/path/to/debug-bundle-v2.zip
+### Runtime and MCP
+
+- Bun owns APIs, metrics, exports, backups, retention and authorization.
+- Python collects Celery observations through a private Unix socket created by Bun.
+- Production browsers use typed observation reads; the demo uses local WASM queries.
+- MCP is served by Bun at `/mcp`, with the same configured accounts. See [client setup](CONFIGURATION.md#mcp-access-for-agents) and [tool contracts](MCP_DESIGN.md).
+- `runtime/mcp/` owns validation, queries, cursors and response budgets. Tools read stored observations without controlling Celery.
+
+Native acceptance:
+
+```sh
+bun run test:observation
+bun run test:security
 ```
 
-What these recipes do:
-
-- `just start` starts `test_project/docker-compose.yml` in detached mode
-- `just start-reload` rebuilds and recreates only the `celery-insights` service
-- `just start-debug ...` starts the test stack with `DEBUG_BUNDLE_PATH` set on the `celery-insights` service
-
-Replay mode is offline and read-only by design. It restores the bundled `task`, `event`, and `worker` data into embedded SurrealDB and disables mutating settings actions.
-
-Or run them in separate terminals:
-
-1. Start SurrealDB
-
-    ```shell
-   bun run dev:surreal
-   ```
-
-2. Start the Python ingester (provided PyCharm run configuration `run server`)
-
-    ```shell
-   cd server/
-   python run.py
-   ```
-
-3. Start the frontend dev server (provided PyCharm run configuration `dev`)
-
-    ```shell
-   bun dev
-   ```
-
-4. Open browser to <http://localhost:3000>
-
-> **Note:** All application settings are owned by Bun (`runtime/config.ts`) and passed to Python via environment variables. The Bun package root is the repository root, but the application source now lives at the repository root under `src/`, `runtime/`, and `e2e/`. When adding new configuration, define it in the Bun config schema first.
-
-### Runtime ownership
-
-Bun serves application APIs, metrics, CSV exports, backups and retention/cleanup. Python handles Celery ingestion and polling through a Unix socket in an owner-only temporary directory created by Bun; it no longer listens on a public TCP port. `bun run dev:all` starts the Bun supervisor and Vite, and Vite proxies application traffic through Bun. Activate the Python virtual environment before starting the supervisor.
-
-Use `bun run test:observation` for native API acceptance with SurrealDB 3.3.0. Use `bun run test:security` for configured-account verification.
-
-### MCP development
-
-Bun serves MCP at `http://localhost:8555/mcp`. The Vite dev server on port 3000 does not serve
-the MCP endpoint. With SurrealDB and the Python ingester already running, start Bun against
-that database in another terminal:
-
-```shell
-bun run build
-SURREALDB_EXTERNAL_URL=ws://localhost:8557/rpc INGESTION_ENABLED=false bun run start
-```
-
-This Bun process reads the existing database while the separate ingester keeps collecting events.
-Use the same namespace, database, and credentials as your development services.
-
-Tool contracts live in [`MCP_DESIGN.md`](MCP_DESIGN.md); connection settings and client examples
-live in [`CONFIGURATION.md`](CONFIGURATION.md#mcp-access-for-agents). Operator documentation is
-in `src/content/docs/mcp.mdx`, served at `/documentation/mcp` with navigation and Copy as Markdown.
-
-`runtime/mcp/` owns argument validation, read queries, cursor handling, response budgets, and the
-protocol adapter. MCP calls must read stored observations without changing or polling Celery.
-Keep selectors simple and counts scoped correctly; distinguish unavailable data from empty data,
-and response truncation from source truncation. Update the tool contract and in-app docs when
-changing public behavior.
-
-Run the focused MCP integration tests with `bunx vitest run runtime/mcp/mcp.test.ts`, and the
-ingestion regression with `uv run pytest server/events/ingester_integration_test.py`.
-Both use isolated native SurrealDB instances; the CLI must be on PATH.
-
-## Code Styles
+## Coding standards
 
 ### General
 
-- Write short, concise functions and classes.
-- Provide detailed types and variables, including generics when needed.
-- Do not abbreviate variable and function names.
+- Keep functions focused and use names that explain their purpose.
+- Type interfaces and boundaries; use generics when they express a real relationship.
+- Keep changes in the owning process. Bun owns application configuration and requests; Python owns Celery collection.
+- Follow repository formatter/linter configuration. Use Bun for JS tooling and uv for Python tooling.
+- Use `trash` instead of shell `rm` when removing files.
 
 ### Python
 
 - Use type annotations, including generics when required. Code should be 100% type covered.
 - Avoid creating undocumented dictionaries. Use dataclasses, Pydantic models, classes, named tuples, etc.
 - Avoid blocking the main thread. Use asyncio interfaces whenever possible, or use asyncio.to_thread for blocking code.
-- Always log exceptions and errors. New package loggers should be added to `logging_config.py`.
+- Use `logging.getLogger(__name__)` for operational logs and errors. Register new package loggers in `logging_config.py`.
+- Use absolute imports from the Python package root.
 - Test files should end with `_test.py`, and not start with `test_?.py`.
 
 ### TypeScript
 
 - Use TypeScript only, avoid using vanilla JavaScript.
-- Provide detailed types and variables, including generics when needed.
-- Prefer arrow functions and one-liner expressions.
-- Avoid storing React state multiple times. Use `useMemo` for derived states. Example:
+- Prefer arrow functions where they improve readability; keep expressions readable.
+- Use `bunLogger` or `createLogger` from `runtime/logger.ts` for Bun runtime logs.
+- Avoid storing React state multiple times. Compute derived values during render; use `useMemo` when caching an expensive computation helps. Example:
 
     ```tsx
-    const MyComponent: React.FC<{items: string[]}> = ({items}) => {
-        // Dont
-        const [lengthBad, setLength] = useState(items.length)
-        useEffect(() => setLength(items.length), [items])
-
-        // Do
-        const lengthGood = useMemo(() => items.length, [items])
-    }
+    const TaskCount = ({ items }: { items: string[] }) => <span>{items.length}</span>
     ```
 
-- Avoid unnecessary React re-renders. Performance is important.
 - Bun commands and tooling run from the repository root.
 - Keep the frontend split by responsibility:
   - `src/` for the browser application
@@ -236,18 +140,30 @@ Both use isolated native SurrealDB instances; the CLI must be on PATH.
 - Use [Lucide React](https://lucide.dev/) for all icons.
 - Dark mode is toggled via `.dark` class on `<html>`. Use Tailwind's `dark:` variant for dark-mode-specific styles.
 
-### Design Guidelines
+## Writing and documentation
 
-- Users are likely to be technical, so provide full information and messages.
-- Always show task avatars instead of IDs, and type colors near task types.
-- Add tooltips with description and help icons where needed.
-- Reactions should be near interactions; avoid toasters, popups, etc.
-- Add placeholders for loading or empty containers.
-- Display error inside components and provide detailed information.
+- Lead with the action, result or fact the reader needs. Use plain language and short paragraphs.
+- Use bullets for steps or parallel choices, tables for comparisons and inline code blocks for runnable examples.
+- Explain why a constraint exists when it is not obvious. Remove comments that only narrate the code.
+- Describe verified behavior and limits. Missing observations do not prove success, inactivity or an absent relationship.
+- Keep error messages specific: what failed, what is known and what the user can do next. Avoid guessed causes and promotional copy.
+- Maintain one source for each instruction; link to it instead of copying it. Update the relevant operator page when setup or behavior changes.
+- Keep issue plans, progress reports and dated test results in GitHub. Repository documentation should remain useful after the PR merges.
+
+## User-experience review
+
+Review every feature or change as the user will encounter it, not only as a code diff:
+
+- Start from the user's entry point and complete the intended task with realistic data and permissions.
+- For UI changes, use the running app. Check loading, empty, error and restricted states, plus recovery or retry where relevant.
+- Check responsive layout, keyboard use, clear labels and feedback next to the affected action.
+- Distinguish browser preferences from shared server settings. Label unavailable or restricted observations without inventing values.
+- For APIs, MCP and deployment changes, exercise the client, tool call or documented command the user will run.
+- In the PR, report what you exercised and any gaps. Use task avatars/type colors for scanning while keeping technical identifiers available when needed.
 
 ## Testing
 
-Code should be test-covered as much as possible.
+Test changed behavior and failure cases. Keep fixtures deterministic.
 
 Unit tests should be written close to the module they are testing, with the same module name.
 For example, tests for `models.py` should be at `models_test.py` in the same folder.
@@ -271,6 +187,14 @@ the tests clear data in its `test/mcp` database.
 The Python ingestion integration test also starts an isolated SurrealDB process; it skips when
 the CLI is unavailable locally, and CI installs the CLI to run it.
 
+To compare search indexing workloads locally, run the same integration test with an output path:
+
+```sh
+SEARCH_BENCHMARK_OUTPUT=/tmp/search-index-workloads.jsonl uv run pytest server/events/search_indexing_integration_test.py --log-cli-level=INFO
+```
+
+The report measures the local test workload, not production throughput. Keep run-specific results in the relevant issue or PR.
+
 ```shell
 bun run test          # all tests (single run)
 bun run test:watch    # watch mode
@@ -289,32 +213,33 @@ E2E tests run against the full docker-compose stack (celery-insights + Celery wo
 bun run e2e
 ```
 
-**With the stack already running** (faster iteration):
+**With previously built images** (faster iteration):
 
 ```shell
-cd test_project && docker compose --profile interactive up --build -d
-E2E_SKIP_COMPOSE=1 bun run e2e
+E2E_SKIP_BUILD=1 bun run e2e  # reuse existing images, still create the authenticated fixture
 ```
 
 **Headed mode** (opens a browser so you can watch the tests run):
 
 ```shell
-E2E_SKIP_COMPOSE=1 bun run e2e:headed
+bun run e2e:headed
 ```
 
 **Playwright UI mode** (interactive test runner with time-travel debugging):
 
 ```shell
-E2E_SKIP_COMPOSE=1 bun run e2e:ui
+bun run e2e:ui
 ```
 
-> **Tip:** When iterating locally, keep the docker-compose stack running and use `E2E_SKIP_COMPOSE=1` to skip the slow build step. Use `--headed` to see what the tests are doing, or `--ui` for the full Playwright inspector.
+`E2E_SKIP_COMPOSE=1` skips startup and teardown; use it only with an existing authenticated E2E stack.
 
 ### Reverse proxy E2E coverage
 
 For new frontend features, use `appUrl` from `src/lib/app-url.ts` for same-origin endpoints and public assets, and `appHref` for plain anchor links. TanStack Router links apply the mount path automatically.
 
-CI runs the complete Playwright suite at the origin root and behind nginx at `/tools/celery/`. Run the proxy deployment locally with:
+CI runs the application suite at the origin root. With a URL prefix, Playwright runs only `reverse-proxy.spec.ts`: login redirects and cookie scope, assets, deep links, WebSockets, documentation links, downloads, MCP and sibling-route isolation. The separate OIDC browser acceptance checks callbacks at both paths.
+
+Run the focused proxy suite locally with:
 
 ```shell
 URL_PREFIX=/tools/celery bun run e2e

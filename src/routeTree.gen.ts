@@ -16,6 +16,7 @@ import { Route as ExplorerRouteImport } from './routes/explorer'
 import { Route as Raw_eventsRouteImport } from './routes/raw_events'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as DocumentationIndexRouteImport } from './routes/documentation.index'
+import { Route as DocumentationAuthenticationRouteImport } from './routes/documentation.authentication'
 import { Route as DocumentationCeleryClustersRouteImport } from './routes/documentation.celery-clusters'
 import { Route as DocumentationConfigurationRouteImport } from './routes/documentation.configuration'
 import { Route as DocumentationDebugBundlesRouteImport } from './routes/documentation.debug-bundles'
@@ -63,6 +64,12 @@ const DocumentationIndexRoute = DocumentationIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DocumentationRoute,
 } as any)
+const DocumentationAuthenticationRoute =
+  DocumentationAuthenticationRouteImport.update({
+    id: '/authentication',
+    path: '/authentication',
+    getParentRoute: () => DocumentationRoute,
+  } as any)
 const DocumentationCeleryClustersRoute =
   DocumentationCeleryClustersRouteImport.update({
     id: '/celery-clusters',
@@ -131,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/explorer': typeof ExplorerRoute
   '/raw_events': typeof Raw_eventsRoute
   '/settings': typeof SettingsRoute
+  '/documentation/authentication': typeof DocumentationAuthenticationRoute
   '/documentation/celery-clusters': typeof DocumentationCeleryClustersRoute
   '/documentation/configuration': typeof DocumentationConfigurationRoute
   '/documentation/debug-bundles': typeof DocumentationDebugBundlesRoute
@@ -150,6 +158,7 @@ export interface FileRoutesByTo {
   '/explorer': typeof ExplorerRoute
   '/raw_events': typeof Raw_eventsRoute
   '/settings': typeof SettingsRoute
+  '/documentation/authentication': typeof DocumentationAuthenticationRoute
   '/documentation/celery-clusters': typeof DocumentationCeleryClustersRoute
   '/documentation/configuration': typeof DocumentationConfigurationRoute
   '/documentation/debug-bundles': typeof DocumentationDebugBundlesRoute
@@ -171,6 +180,7 @@ export interface FileRoutesById {
   '/explorer': typeof ExplorerRoute
   '/raw_events': typeof Raw_eventsRoute
   '/settings': typeof SettingsRoute
+  '/documentation/authentication': typeof DocumentationAuthenticationRoute
   '/documentation/celery-clusters': typeof DocumentationCeleryClustersRoute
   '/documentation/configuration': typeof DocumentationConfigurationRoute
   '/documentation/debug-bundles': typeof DocumentationDebugBundlesRoute
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/explorer'
     | '/raw_events'
     | '/settings'
+    | '/documentation/authentication'
     | '/documentation/celery-clusters'
     | '/documentation/configuration'
     | '/documentation/debug-bundles'
@@ -212,6 +223,7 @@ export interface FileRouteTypes {
     | '/explorer'
     | '/raw_events'
     | '/settings'
+    | '/documentation/authentication'
     | '/documentation/celery-clusters'
     | '/documentation/configuration'
     | '/documentation/debug-bundles'
@@ -232,6 +244,7 @@ export interface FileRouteTypes {
     | '/explorer'
     | '/raw_events'
     | '/settings'
+    | '/documentation/authentication'
     | '/documentation/celery-clusters'
     | '/documentation/configuration'
     | '/documentation/debug-bundles'
@@ -307,6 +320,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/documentation/'
       preLoaderRoute: typeof DocumentationIndexRouteImport
+      parentRoute: typeof DocumentationRoute
+    }
+    '/documentation/authentication': {
+      id: '/documentation/authentication'
+      path: '/authentication'
+      fullPath: '/documentation/authentication'
+      preLoaderRoute: typeof DocumentationAuthenticationRouteImport
       parentRoute: typeof DocumentationRoute
     }
     '/documentation/celery-clusters': {
@@ -390,6 +410,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface DocumentationRouteChildren {
+  DocumentationAuthenticationRoute: typeof DocumentationAuthenticationRoute
   DocumentationCeleryClustersRoute: typeof DocumentationCeleryClustersRoute
   DocumentationConfigurationRoute: typeof DocumentationConfigurationRoute
   DocumentationDebugBundlesRoute: typeof DocumentationDebugBundlesRoute
@@ -402,6 +423,7 @@ interface DocumentationRouteChildren {
 }
 
 const DocumentationRouteChildren: DocumentationRouteChildren = {
+  DocumentationAuthenticationRoute: DocumentationAuthenticationRoute,
   DocumentationCeleryClustersRoute: DocumentationCeleryClustersRoute,
   DocumentationConfigurationRoute: DocumentationConfigurationRoute,
   DocumentationDebugBundlesRoute: DocumentationDebugBundlesRoute,

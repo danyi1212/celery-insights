@@ -6,7 +6,7 @@ import { createFileRoute } from "@tanstack/react-router"
 const DocumentationDeploymentPatternsPage = () => (
   <DocsPage
     title="Deployment Patterns"
-    description="Memory, local disk, shared external SurrealDB, and advanced ingestion-control patterns."
+    description="Choose memory, persistent disk or shared external storage."
     group="Reference"
     source={{ path: "src/content/docs/deployment-patterns.mdx", markdown: deploymentPatternsMarkdown }}
     previousPage={{ title: "MCP Interface", href: "/documentation/mcp" }}

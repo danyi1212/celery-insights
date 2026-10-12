@@ -1,0 +1,159 @@
+Choose one sign-in method per installation:
+
+- **Password accounts:** explicitly configure usernames, passwords and roles in TOML.
+- **OpenID Connect (OIDC):** use your identity provider for sign-in, MFA, recovery and account lifecycle.
+
+Both use the login page and a browser session. Celery Insights has no registration, account editor or identity database. Each installation serves one Celery cluster.
+
+## Password accounts
+
+Mount this TOML and select it with `CELERY_INSIGHTS_CONFIG_FILE`:
+
+```toml
+schema_version = 1
+installation.public_url = "https://insights.example.com"
+authentication.mode = "basic"
+authentication.session.secret_file = "/run/secrets/insights/session-secret"
+
+[[authentication.accounts]]
+username = "admin"
+password_file = "/run/secrets/insights/admin-password"
+roles = ["administrator"]
+
+[[authentication.accounts]]
+username = "reader"
+password_env = "INSIGHTS_READER_PASSWORD"
+roles = ["viewer"]
+```
+
+Choose exactly one password source per account:
+
+| TOML setting    | Example                                         | Deployment input                                                                                    |
+| --------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `password`      | `password = "replace-with-your-password"`       | Treat the entire TOML file as a secret.                                                             |
+| `password_file` | `password_file = "/run/secrets/admin-password"` | Mount a secret file; relative paths resolve from the TOML directory. One final newline is stripped. |
+| `password_env`  | `password_env = "INSIGHTS_ADMIN_PASSWORD"`      | Inject that variable, for example with Kubernetes `secretKeyRef`.                                   |
+
+- There are no default accounts or passwords. Usernames are case-sensitive; missing/empty secrets and conflicting sources fail startup validation.
+- Passwords are deployment secrets. They never enter Python, configuration output, backups or diagnostics.
+- Roll out every replica after changing accounts, roles or referenced secrets.
+- `SURREALDB_FRONTEND_PASS` is retired. Configure application accounts when upgrading; database credentials are separate.
+
+## OpenID Connect
+
+1. Register a web client at your identity provider.
+2. Set the exact callback URL: `https://insights.example.com/api/auth/callback`. Include any installation prefix, such as `/tools/celery/api/auth/callback`.
+3. For a confidential client, enable `client_secret_post`. Public clients use PKCE without a client secret.
+4. Include the claims you map to roles in the **ID token**.
+
+```toml
+schema_version = 1
+installation.public_url = "https://insights.example.com"
+authentication.mode = "oidc"
+authentication.session.secret_file = "/run/secrets/insights/session-secret"
+
+[authentication.oidc]
+issuer = "https://idp.example.com/realms/operations"
+client_id = "celery-insights"
+client_secret_file = "/run/secrets/insights/oidc-client-secret"
+scopes = "openid profile groups"
+
+[[authentication.oidc.role_mappings]]
+claim = "groups"
+value = "celery-insights-admins"
+roles = ["administrator"]
+
+[[authentication.oidc.role_mappings]]
+claim = "sub"
+value = "provider-subject-for-a-viewer"
+roles = ["viewer"]
+```
+
+- Use the issuer from your provider's discovery document. The issuer and provider endpoints require HTTPS with trusted certificates.
+- Match a top-level string claim or an exact member of a string array. Matching mappings combine their roles; no match means no access.
+- `CELERY_INSIGHTS_OIDC_CLIENT_SECRET` or `_FILE` can override the client secret. Omit the secret for a public client.
+- The verified issuer and subject identify the user; email/display names never grant access. OPA sees `oidc:<subject>` as the account ID.
+- `openid-client` handles discovery, code exchange, PKCE and token validation. Provider access/refresh tokens are discarded.
+
+## Roles
+
+Access requires a role grant. Optional OPA policies can further restrict it.
+
+| Role            | Permissions                                                                                                     |
+| --------------- | --------------------------------------------------------------------------------------------------------------- |
+| `viewer`        | Task/worker metadata, analytics and retention overview.                                                         |
+| `operator`      | Viewer access, plus retention changes and cleanup.                                                              |
+| `administrator` | Operator access, plus sensitive payloads, exports, diagnostics, backups, restore, history clearing and metrics. |
+
+- Payloads include task arguments/results/failures, raw events and worker inspection data.
+- Browser preferences, such as theme and event display limit, stay editable for every role. They change only that browser.
+- Replay installations always reject writes. Diagnostics always redact configuration credentials.
+
+## Sessions and deployment
+
+Generate a 32-byte base64url session secret and mount it at the path used above:
+
+```sh
+openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n' > session-secret
+```
+
+- Serve HTTPS at `installation.public_url`. Keep Bun, the database and the Python bridge private behind your ingress; preserve `Authorization` and `Origin` headers.
+- Supply the same authentication configuration and session secret to every replica. Inline `authentication.session.secret` and `CELERY_INSIGHTS_SESSION_SECRET` / `_FILE` are also supported.
+- Cookies are encrypted, HttpOnly, Secure, SameSite=Lax and scoped to the installation path. Credentials are never stored in browser storage.
+- Sessions last eight hours by default. Set `authentication.session.max_age_seconds` from 300 to 86400 seconds.
+- **Sign out** clears this browser's cookie. Copied cookies remain valid until expiry or configuration/secret rotation; there is no session database.
+- Rotating the session secret signs everyone out. Authentication configuration changes invalidate sessions after all replicas roll out.
+- IdP account/group changes apply at the next login or expiry. A shorter session lifetime reduces that delay. Application logout does not log out of the IdP.
+- Rate-limit login requests at your ingress.
+
+Programmatic clients can send explicit Basic credentials in password mode. Write requests also need the configured `Origin` and `X-Celery-Insights-Request: 1`; WebSockets require `Origin`. See [MCP client setup](/documentation/mcp). IdP bearer tokens are not supported for MCP.
+
+## Custom policies with OPA
+
+Add a private OPA decision endpoint to either authentication setup:
+
+```toml
+[authorization.opa]
+decision_url = "http://opa:8181/v1/data/celery_insights/allow"
+timeout_ms = 1000
+```
+
+For example, deny maintenance changes for account `monitor` while keeping its role-permitted reads:
+
+```rego
+package celery_insights
+import rego.v1
+
+default allow := false
+
+allow if {
+    input.version == 1
+    not restricted
+}
+
+restricted if {
+    input.principal.account_id == "monitor"
+    some action in input.actions
+    action in {"backup.import", "history.clear", "retention.update", "cleanup.run"}
+}
+```
+
+- Roles and OPA must both allow access. OPA cannot grant additional role permissions.
+- Policies can also restrict task/worker rows and payload fields. Filtering applies before search, counts, analytics, pagination and exports.
+- Checks cover navigation, APIs, observation reads, exports, metrics, MCP and live connections. Live connections recheck every five seconds.
+- Policy changes apply on subsequent checks without restarting Insights. Already delivered data cannot be recalled.
+- Keep OPA private. Remote bearer tokens require HTTPS; configure `bearer_token_file` or `CELERY_INSIGHTS_OPA_BEARER_TOKEN` / `_FILE`.
+
+See [the OPA contract and runnable examples](https://github.com/danyi1212/celery-insights/blob/main/AUTHORIZATION.md) for scoped policies, action names and local testing commands.
+
+## Troubleshooting access
+
+| What you see                          | What to check                                                                                                                |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Login required                        | Your session expired; sign in again.                                                                                         |
+| OIDC login fails                      | Exact callback URL, trusted issuer certificates, client authentication method and mapped ID-token claims.                    |
+| Access denied (403)                   | The account's role and OPA decision. A visible control can still be denied by policy.                                        |
+| Policy unavailable (503)              | OPA connectivity, timeout and decision format. The operation stays blocked; retry after recovery. Your session stays active. |
+| Restricted payload or missing records | Role restrictions or OPA scope. Hidden records appear absent.                                                                |
+
+Health checks, public assets and logout remain available during an OPA outage.

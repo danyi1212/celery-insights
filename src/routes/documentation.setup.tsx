@@ -6,7 +6,7 @@ import { createFileRoute } from "@tanstack/react-router"
 const DocumentationSetupPage = () => (
   <DocsPage
     title="Quick Start"
-    description="Choose a topology, set the core variables, and bring Celery Insights online in the right order."
+    description="Configure sign-in, connect Celery and choose storage."
     group="Getting Started"
     source={{ path: "src/content/docs/setup.mdx", markdown: setupMarkdown }}
     nextPage={{ title: "Configuration", href: "/documentation/configuration" }}

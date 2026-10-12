@@ -1,6 +1,6 @@
 # Custom authorization with OPA
 
-Use OPA to restrict what configured accounts can see or do:
+Configure sign-in and roles using [Authentication & Authorization](src/content/docs/authentication.mdx). Use OPA to restrict what those accounts can see or do:
 
 - **Roles grant permissions; OPA can only restrict them.** Access requires both to allow it.
 - OPA is optional. Without a decision URL, built-in roles apply.

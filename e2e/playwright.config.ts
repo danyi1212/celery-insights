@@ -1,6 +1,6 @@
 import { defineConfig } from "../tooling/playwright"
 
-import { appBaseURL } from "./helpers/app-url"
+import { appBaseURL, urlPrefix } from "./helpers/app-url"
 
 const isCI = !!process.env.CI
 
@@ -32,6 +32,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      ...(urlPrefix ? { testMatch: "**/reverse-proxy.spec.ts" } : { testIgnore: "**/reverse-proxy.spec.ts" }),
       use: { browserName: "chromium" },
     },
   ],

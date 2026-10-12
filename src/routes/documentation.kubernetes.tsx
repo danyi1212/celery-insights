@@ -6,7 +6,7 @@ import { createFileRoute } from "@tanstack/react-router"
 const DocumentationKubernetesPage = () => (
   <DocsPage
     title="Kubernetes and HPA"
-    description="Recommended manifests, probes, replica strategy, and autoscaling guardrails."
+    description="Shared storage, replica settings and Kubernetes manifests."
     group="Operations"
     source={{ path: "src/content/docs/kubernetes.mdx", markdown: kubernetesMarkdown }}
     previousPage={{ title: "Deployment Patterns", href: "/documentation/deployment-patterns" }}

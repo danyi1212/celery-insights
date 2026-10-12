@@ -8,7 +8,13 @@ export const helpNavigation = [
   {
     title: "Configuration",
     href: "/documentation/configuration",
-    description: "Full environment variable reference.",
+    description: "TOML settings, environment overrides and secret sources.",
+    group: "Reference",
+  },
+  {
+    title: "Authentication & Authorization",
+    href: "/documentation/authentication",
+    description: "Password accounts, OIDC sign-in, roles and OPA policies.",
     group: "Reference",
   },
   {
