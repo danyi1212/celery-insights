@@ -17,7 +17,7 @@ docker run -p 127.0.0.1:8555:8555 --name celery-insights \
   --env-file deployment.env ghcr.io/danyi1212/celery-insights:latest
 ```
 
-Open the HTTPS public URL configured in `installation.public_url`. The browser prompts for a configured username and password. Built-in operator docs are available under `/documentation` at the same URL.
+Open the HTTPS public URL configured in `installation.public_url`. Sign in with a configured account or your OIDC provider. Built-in operator docs are available under `/documentation` at the same URL.
 
 ## Required Celery Event Settings
 
@@ -69,6 +69,7 @@ An official Helm chart is being developed in [`charts/celery-insights`](charts/c
 
 ## Documentation
 
+- [Authentication & Authorization](src/content/docs/authentication.mdx) for password accounts, OIDC, roles and sessions
 - [`AUTHORIZATION.md`](AUTHORIZATION.md) for restrictive OPA decisions, deployment setup and tested policy examples
 - [`CONFIGURATION.md`](CONFIGURATION.md) for the full environment variable reference, setup patterns, metrics endpoints, and reverse-proxy behavior
 - [`Support Matrix`](CONFIGURATION.md#support-matrix) for broker, serializer, and result-backend compatibility

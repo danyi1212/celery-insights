@@ -1,24 +1,6 @@
 ## Application authentication
 
-Mount a TOML configuration selected by `CELERY_INSIGHTS_CONFIG_FILE`. Configure HTTPS ingress and explicit password accounts (or an external OIDC provider):
-
-```toml
-schema_version = 1
-installation.public_url = "https://insights.example.com"
-authentication.mode = "basic"
-authentication.session.secret_file = "/run/secrets/insights/session-secret"
-
-[[authentication.accounts]]
-username = "admin"
-password_env = "INSIGHTS_ADMIN_PASSWORD"
-roles = ["administrator"]
-```
-
-For each account choose exactly one of `password`, `password_file`, or `password_env`. Inline passwords require treating the TOML as a secret. File references resolve relative to TOML and lose one terminal newline. Missing/empty secrets, conflicting sources, duplicates and invalid roles fail validation without revealing values. No default account or password exists. Mount files from Kubernetes Secrets or inject the referenced variable using `secretKeyRef`; the application has no Kubernetes dependency.
-
-Keep Bun/database listeners private behind HTTPS ingress, and preserve Authorization/Origin. Roll out all replicas after changing credentials or roles. Browsers use a login page, encrypted HttpOnly cookies and application logout. Supply the same 32-byte base64url session secret on all replicas; generate it with `openssl rand -base64 32 | tr "+/" "-_" | tr -d "=\n"`. Session expiry defaults to eight hours. Logout clears the local cookie; copied cookies remain valid until expiry or configuration/secret rotation. OIDC discovery, PKCE and token validation use `openid-client`; configure explicit claim-to-role mappings and register the exact `/api/auth/callback` URL, including any URL prefix. See [the complete password/OIDC guide](src/content/docs/configuration.mdx#openid-connect). The IdP owns MFA, recovery and account lifecycle. Explicit Basic headers remain for programmatic clients in password mode; IdP bearer-token authentication for MCP is not supported.
-
-Roles are `viewer`, `operator`, and `administrator`. Viewers can read task/worker metadata and analytics; operators can also manage retention and cleanup. Payload access requires administrator grants. Account secrets never enter Python, diagnostics, config output or observation backups.
+See [Authentication & Authorization](src/content/docs/authentication.mdx) for password accounts, OIDC, secret sources, sessions and roles. Mount your TOML with `CELERY_INSIGHTS_CONFIG_FILE`, serve the installation over HTTPS and keep Bun/database listeners private.
 
 ## Custom authorization
 

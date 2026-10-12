@@ -6,7 +6,7 @@ import { createFileRoute } from "@tanstack/react-router"
 const DocumentationDebugBundlesPage = () => (
   <DocsPage
     title="Debug Bundles"
-    description="Capture a reproducible snapshot, replay it offline, and hand incidents across operators and maintainers."
+    description="Capture diagnostics and replay task history offline."
     group="Operations"
     source={{ path: "src/content/docs/debug-bundles.mdx", markdown: debugBundlesMarkdown }}
     previousPage={{ title: "Production Notes", href: "/documentation/production-notes" }}

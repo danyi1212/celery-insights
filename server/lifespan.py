@@ -18,15 +18,13 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(_):
-    logger.info("Welcome to Celery Insights!")
+async def lifespan(app):
+    logger.info("Starting Celery bridge")
     settings = get_settings()
 
-    # Update timezone
     os.environ["TZ"] = settings.timezone
     time.tzset()
 
-    # 1. Initialize SurrealDB connection
     await init_surrealdb(settings)
 
     celery_app = None
@@ -37,10 +35,8 @@ async def lifespan(_):
     result_backend_poller = None
 
     if not settings.debug_snapshot_mode:
-        # 2. Connect to Celery broker
         celery_app = await get_celery_app()
 
-        # 3. Start services: EventReceiver -> SurrealDBIngester -> WorkerPoller
         result_fetcher = ResultFetcher(celery_app)
         result_backend_poller = ResultBackendPoller(
             celery_app, search_indexing_enabled=settings.search_indexing_enabled
@@ -64,9 +60,9 @@ async def lifespan(_):
         logger.info("Debug snapshot mode enabled; Celery ingestion disabled")
 
     # Expose ingestion status to the private bridge
-    _.state.settings = settings
-    _.state.ingester = ingester
-    _.state.debug_snapshot_mode = settings.debug_snapshot_mode
+    app.state.settings = settings
+    app.state.ingester = ingester
+    app.state.debug_snapshot_mode = settings.debug_snapshot_mode
 
     try:
         yield
@@ -83,4 +79,4 @@ async def lifespan(_):
         if event_receiver is not None:
             event_receiver.stop()
         await close_surrealdb()
-        logger.info("Goodbye! See you soon.")
+        logger.info("Celery bridge stopped")

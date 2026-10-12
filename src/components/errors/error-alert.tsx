@@ -13,7 +13,7 @@ const ErrorAlert: React.FC<ErrorAlertProps> = (props) => {
     return <ApiErrorAlert error={err as { status: number; body: unknown }} />
   }
   console.error(props.error)
-  const message = err instanceof Error ? err.message : "We have encountered an unknown error"
+  const message = err instanceof Error ? err.message : "An unexpected error occurred"
   const denied = /Access denied|Operation requires unrestricted observation access|You don’t have permission/i.test(
     message,
   )

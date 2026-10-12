@@ -1,4 +1,4 @@
-Debug bundles are the fastest way to move a real Celery Insights incident from an operator's browser into a reproducible local investigation.
+Capture task history, diagnostics and recent logs to reproduce an incident without reconnecting to the original cluster.
 
 ## What a debug bundle captures
 
@@ -6,7 +6,6 @@ Debug bundles are the fastest way to move a real Celery Insights incident from a
 
 It includes:
 
-- effective runtime config, with secrets redacted by default
 - redacted effective configuration; raw TOML, secret files, and mounted `config.py` are excluded from newly generated bundles
 - runtime diagnostics, retention settings, health metadata, and version details
 - a structured JSON export of `task`, `event`, and `worker`
@@ -34,8 +33,12 @@ Snapshot replay starts the app in an offline, read-only mode from a mounted bund
 
 ### Docker run
 
+Use the account configuration and secret files from [setup](/documentation/setup). Replay still requires authentication.
+
 ```bash
-docker run --rm -p 8555:8555 \
+docker run --rm -p 127.0.0.1:8555:8555 \
+  -v "$PWD/config.toml:/etc/celery-insights/config.toml:ro" \
+  -v "$PWD/secrets:/run/secrets/insights:ro" \
   -v "$PWD/debug-bundle-v2.zip:/snapshot/debug-bundle-v2.zip:ro" \
   -e DEBUG_BUNDLE_PATH=/snapshot/debug-bundle-v2.zip \
   ghcr.io/danyi1212/celery-insights:latest

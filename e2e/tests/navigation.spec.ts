@@ -19,7 +19,9 @@ test.describe("Navigation", () => {
     await expect(page).toHaveURL(/\/documentation\/setup/)
     await expect(page.getByRole("heading", { name: "Quick Start" })).toBeVisible()
     await expect(page.getByRole("link", { name: "Back to Dashboard" })).toBeVisible()
-    await expect(page.getByRole("link", { name: "Configuration", exact: true })).toBeVisible()
+    await expect(
+      page.locator("[data-sidebar=sidebar]").getByRole("link", { name: "Configuration", exact: true }),
+    ).toBeVisible()
 
     await page.getByRole("link", { name: "Back to Dashboard" }).click()
     await expect(page).toHaveURL(appURL("/"))
