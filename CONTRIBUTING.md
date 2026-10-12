@@ -98,7 +98,7 @@ bun run test:security
 
 ## Helm chart development
 
-Operator installation and configuration live in the [chart guide](charts/celery-insights/README.md). To work on the chart from a checkout:
+Operator installation and configuration live in the [Kubernetes documentation](src/content/docs/kubernetes.mdx). To work on the chart from a checkout:
 
 ```sh
 helm repo add surrealdb https://helm.surrealdb.com

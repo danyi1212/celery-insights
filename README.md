@@ -65,7 +65,7 @@ Ask an agent: “Find the `reports.render` task I spawned in the last 15 minutes
 
 ## Kubernetes
 
-Deploy with the [Celery Insights Helm chart](charts/celery-insights/README.md). It connects to your existing Celery cluster and includes a shared SurrealDB instance, with optional persistent storage, an external database, and CPU autoscaling. Follow the chart guide to create a credentials Secret, configure HTTPS ingress, and install.
+Deploy with the [Helm installation guide](https://celery-insights.vercel.app/documentation/kubernetes). It connects to your existing Celery cluster and includes a shared SurrealDB instance, with optional persistent storage, an external database, and CPU autoscaling. Follow the guide to create a credentials Secret, configure HTTPS ingress, and install.
 
 ## Documentation
 
