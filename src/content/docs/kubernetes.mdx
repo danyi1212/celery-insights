@@ -1,150 +1,37 @@
-Deploy Celery Insights against your existing Celery cluster using the [official Helm chart](https://github.com/danyi1212/celery-insights/tree/main/charts/celery-insights). It installs no Celery workers, broker, or result backend.
+Use the [Celery Insights Helm chart](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#install) to deploy on Kubernetes. Follow its installation guide to create a credentials Secret, configure HTTPS ingress, and install the chart.
 
-The default is an Insights Deployment and one private shared in-memory SurrealDB instance, using the official SurrealDB dependency. Add a PVC for persistent history, or disable the dependency and connect to an externally managed SurrealDB instance. Insights replicas share ingestion leadership and authenticated application sessions. CPU HPA scales Insights; advanced database scaling belongs to a separately managed database.
+The chart connects to your existing Celery broker and result backend. By default, it installs an Insights Deployment and one private, shared in-memory SurrealDB instance. One elected Insights pod collects events; all replicas serve the dashboard and APIs.
 
-Create an existing credentials Secret, set the external HTTPS public URL, and configure your ingress controller and TLS Secret. The chart generates authentication TOML with one Basic administrator by default; OIDC and custom TOML/Python files are supported. Credentials stay in Kubernetes Secrets, and the session key must be shared by all replicas and retained across upgrades.
+## Configure your installation
 
-Follow the [Helm installation guide](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md) to create a credentials Secret, configure HTTPS ingress, and install. The same guide covers persistent storage, external databases, HPA, OIDC, custom configuration files, and upgrades.
+Keep your Helm settings in `values.yaml` and pass that file when installing or upgrading. Start with the installation guide's HTTPS example, then add the options you need:
 
-## Manual manifests
+| Need                                           | Helm values                                            | Guide                                                                                                                                                           |
+| ---------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| History that survives database restarts        | `surrealdb.surrealdb.path` and `surrealdb.persistence` | [Persistent storage](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#keep-history-on-disk)                              |
+| Your own SurrealDB instance or SurrealDB Cloud | `surrealdb.enabled: false` and `database.externalUrl`  | [External database](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#use-an-external-database)                           |
+| More Insights pods                             | `replicaCount` or `autoscaling`                        | [Replicas and CPU HPA](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#scale-insights)                                  |
+| OIDC or custom application settings            | `authentication` and `config.toml`                     | [Authentication and configuration](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#configure-authentication-and-celery) |
+| Existing Celery Python configuration           | `config.python` alongside `config.toml`                | [Configuration files](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#configure-authentication-and-celery)              |
 
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: celery-insights
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: celery-insights
-  template:
-    metadata:
-      labels:
-        app: celery-insights
-    spec:
-      containers:
-        - name: app
-          image: ghcr.io/danyi1212/celery-insights:latest
-          ports:
-            - containerPort: 8555
-          resources:
-            requests:
-              cpu: 250m
-              memory: 512Mi
-          env:
-            - name: CELERY_INSIGHTS_CONFIG_FILE
-              value: /etc/celery-insights/config.toml
-            - name: CELERY_INSIGHTS_DATABASE_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: surrealdb-root-password
-            - name: BROKER_URL
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: broker-url
-            - name: RESULT_BACKEND
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: result-backend
-            - name: SURREALDB_EXTERNAL_URL
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: surrealdb-url
-            - name: SURREALDB_INGESTER_PASS
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: surrealdb-ingester-pass
-            - name: CELERY_INSIGHTS_SESSION_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights-auth
-                  key: session-secret
-            - name: INSIGHTS_ADMIN_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: celery-insights
-                  key: admin-password
-            - name: INGESTION_LEADER_ELECTION
-              value: "true"
-            - name: LOG_FORMAT
-              value: "json"
-          volumeMounts:
-            - name: application-config
-              mountPath: /etc/celery-insights
-              readOnly: true
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: 8555
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8555
-      volumes:
-        - name: application-config
-          configMap:
-            name: celery-insights-config
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: celery-insights-config
-data:
-  config.toml: |
-    schema_version = 1
-    installation.public_url = "https://insights.example.com"
-    authentication.mode = "basic"
-    # Session secret comes from CELERY_INSIGHTS_SESSION_SECRET above.
-    [[authentication.accounts]]
-    username = "admin"
-    password_env = "INSIGHTS_ADMIN_PASSWORD"
-    roles = ["administrator"]
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: celery-insights
-spec:
-  selector:
-    app: celery-insights
-  ports:
-    - port: 80
-      targetPort: 8555
+The default database loses history when its pod is replaced. Choose persistent storage before installing if you need to retain it. Extra Insights pods improve web capacity and availability; they share one ingestion leader. Advanced database scaling belongs to an externally managed SurrealDB installation.
+
+## Extend the chart
+
+Use `resources`, `nodeSelector`, `tolerations`, `affinity`, and `podAnnotations` to fit your cluster. Use `extraEnv` with Secret references for additional credentials, and `extraVolumes`/`extraVolumeMounts` for certificates or configuration files. Keep credentials out of Helm values and ConfigMaps.
+
+See [all chart values](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/values.yaml) for the available options. The chart's `surrealdb` section configures its official SurrealDB dependency; the included database supports one instance using memory or local disk.
+
+Chart-managed configuration changes restart Insights automatically. After changing an existing Secret or ConfigMap, follow the [upgrade and maintenance instructions](https://github.com/danyi1212/celery-insights/blob/main/charts/celery-insights/README.md#upgrade-and-maintain). All replicas must share the same session key.
+
+## When you need plain YAML
+
+Render the chart for deployment systems that require Kubernetes YAML:
+
+```sh
+helm template insights oci://ghcr.io/danyi1212/charts/celery-insights \
+  --version 0.1.0 --kube-version 1.35.0 --namespace celery-insights \
+  -f values.yaml --skip-tests > manifests.yaml
 ```
 
-## HPA example
-
-Use shared SurrealDB, Metrics Server, and resource requests before enabling HPA. Scale web capacity and availability; only the elected leader ingests events.
-
-```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: celery-insights
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: celery-insights
-  minReplicas: 2
-  maxReplicas: 6
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 70
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 80
-```
+Set `--kube-version` to your target cluster's version and review the rendered resources before deploying. Create the referenced Secrets separately. When deploying rendered YAML, your deployment system manages updates and resource cleanup instead of Helm.
