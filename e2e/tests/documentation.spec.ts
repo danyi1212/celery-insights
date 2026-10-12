@@ -11,12 +11,17 @@ const documentationPages = [
     title: "Quick Start",
     href: "/documentation/setup",
     sourcePath: "src/content/docs/setup.mdx",
-    tocHeading: "Operator notes",
+    tocHeading: "Enable Celery events",
   },
   {
     title: "Configuration",
     href: "/documentation/configuration",
     sourcePath: "src/content/docs/configuration.mdx",
+  },
+  {
+    title: "Authentication & Authorization",
+    href: "/documentation/authentication",
+    sourcePath: "src/content/docs/authentication.mdx",
   },
   {
     title: "MCP Interface",
@@ -89,8 +94,8 @@ test.describe("Documentation", () => {
 
     await page.getByRole("link", { name: documentationPages[0].tocHeading! }).click()
 
-    await expect(page).toHaveURL(/\/documentation\/setup#operator-notes$/)
-    await expect(page.locator("#operator-notes")).toBeVisible()
+    await expect(page).toHaveURL(/\/documentation\/setup#enable-celery-events$/)
+    await expect(page.locator("#enable-celery-events")).toBeVisible()
   })
 
   test("copies the raw markdown source for a documentation page", async ({ page }) => {

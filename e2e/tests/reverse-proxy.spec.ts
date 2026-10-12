@@ -38,7 +38,7 @@ test.describe("Public mount path", () => {
 
   test("plain documentation links retain the mount path", async ({ page }) => {
     await page.goto("/documentation/setup")
-    await page.getByRole("link", { name: "/documentation/configuration", exact: true }).click()
+    await page.getByRole("article").getByRole("link", { name: "Configuration", exact: true }).click()
     await expect(page).toHaveURL(appURL("/documentation/configuration"))
     await expect(page.getByRole("heading", { name: "Configuration", exact: true })).toBeVisible()
   })
