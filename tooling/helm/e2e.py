@@ -33,7 +33,11 @@ HTTPS_PORT = None
 
 
 def command(*args, data=None):
-    result = subprocess.run(args, input=data, capture_output=True, text=True, check=True)
+    result = subprocess.run(args, input=data, capture_output=True, text=True)
+    if result.returncode:
+        error = subprocess.CalledProcessError(result.returncode, args, output=result.stdout, stderr=result.stderr)
+        error.add_note(result.stderr)
+        raise error
     return result.stdout
 
 
@@ -444,8 +448,26 @@ class HelmLifecycle(unittest.TestCase):
             # Crash PID 1 to leave the lease behind, rather than exercising only
             # graceful SIGTERM/release. A subsequent query must reclaim expiry.
             pod = json.loads(kube("get", "pod", leader, "-o", "json"))
-            container = pod["status"]["containerStatuses"][0]["containerID"].removeprefix("containerd://")
-            command("docker", "exec", pod["spec"]["nodeName"], "crictl", "stop", "--timeout", "0", container)
+            container_status = pod["status"]["containerStatuses"][0]
+            restarts = container_status["restartCount"]
+            container = container_status["containerID"].removeprefix("containerd://")
+            node = pod["spec"]["nodeName"]
+            # Kill from the ancestor PID namespace: Linux protects namespace
+            # init from SIGKILL sent by another process inside that namespace.
+            inspected = json.loads(command("docker", "exec", node, "crictl", "inspect", container))
+            pid = inspected["info"]["pid"]
+            self.assertIsInstance(pid, int)
+            self.assertGreater(pid, 1)
+            command("docker", "exec", node, "kill", "-KILL", str(pid))
+
+            def killed():
+                status = json.loads(kube("get", "pod", leader, "-o", "json"))["status"]["containerStatuses"][0]
+                return (
+                    status["restartCount"] > restarts
+                    and status.get("lastState", {}).get("terminated", {}).get("exitCode") == 137
+                )
+
+            poll(killed, 90)
             kube("delete", "pod", leader, "--wait=false")
 
             # A replacement may win before the original standby. Both are valid
