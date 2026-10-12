@@ -3,7 +3,7 @@ import os from "node:os"
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile, cp } from "node:fs/promises"
 import type { Config } from "./config"
 import { SETTINGS } from "./config-registry"
-import type { Surreal } from "surrealdb"
+import { DateTime, type Surreal } from "surrealdb"
 
 export interface DebugBundleClientInfo {
   includeSecrets?: boolean
@@ -255,10 +255,10 @@ export async function exportSurrealNative(config: Config): Promise<string> {
     "--records",
     "true",
     "--tables",
-    "task,event,worker",
+    "task,event,worker,workflow,workflow_task",
     "-",
   ])
-  return extractSurrealTableData(fullExport, ["event", "task", "worker"])
+  return extractSurrealTableData(fullExport, ["event", "task", "worker", "workflow", "workflow_task"])
 }
 
 export function extractSurrealTableData(sql: string, tables: readonly string[]): string {
@@ -280,7 +280,9 @@ export function extractSurrealTableData(sql: string, tables: readonly string[]):
 
 export async function importSurrealNative(config: Config, db: Surreal, sourcePath: string): Promise<void> {
   await resolveQueryResult(
-    db.query("DELETE FROM task; DELETE FROM event; DELETE FROM worker; DELETE FROM ingestion_lock;"),
+    db.query(
+      "DELETE FROM workflow_task; DELETE FROM workflow; DELETE FROM task; DELETE FROM event; DELETE FROM worker; DELETE FROM ingestion_lock;",
+    ),
   )
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "celery-insights-surreal-import-"))
   const importPath = path.join(tempRoot, "surreal-import.surql")
@@ -354,9 +356,11 @@ function reviveDateFields(
   for (const field of DATETIME_FIELDS[table]) {
     const value = revived[field]
     if (typeof value !== "string") continue
-    const parsed = new Date(value)
-    if (Number.isNaN(parsed.valueOf())) continue
-    revived[field] = parsed
+    try {
+      revived[field] = new DateTime(value)
+    } catch {
+      /* Preserve invalid input for the existing import validation/error path. */
+    }
   }
   return revived
 }
@@ -402,6 +406,8 @@ export async function importSurrealData(db: Surreal, data: SurrealExport): Promi
   const chunkSize = 1000
   const queryLines = [
     "BEGIN TRANSACTION",
+    "DELETE FROM workflow_task",
+    "DELETE FROM workflow",
     "DELETE FROM task",
     "DELETE FROM event",
     "DELETE FROM worker",

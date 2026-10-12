@@ -1,0 +1,213 @@
+name: Benchmark main image
+
+on:
+  workflow_run:
+    workflows: [Deploy docker image]
+    types: [completed]
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  measure:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    env:
+      SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+      BUILD_RUN_ID: ${{ github.event.workflow_run.id }}
+      BUILD_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+    steps:
+      - name: Record attempt before setup
+        run: |
+          python - <<'PY'
+          import datetime, json, os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / 'benchmark-attempt'
+          root.mkdir()
+          with Path(os.environ['GITHUB_ENV']).open('a') as environment:
+              environment.write(f'BENCH_OUTPUT={root}\n')
+          attempt = {
+              'schemaVersion': 1,
+              'repository': os.environ['GITHUB_REPOSITORY'],
+              'sourceSha': os.environ['SOURCE_SHA'],
+              'buildRunId': int(os.environ['BUILD_RUN_ID']),
+              'buildAttempt': int(os.environ['BUILD_ATTEMPT']),
+              'measurementRunId': int(os.environ['GITHUB_RUN_ID']),
+              'measurementAttempt': int(os.environ['GITHUB_RUN_ATTEMPT']),
+              'startedAt': datetime.datetime.now(datetime.UTC).isoformat(),
+              'status': 'incomplete',
+              'artifactRetentionDays': 30,
+          }
+          (root / 'attempt.json').write_text(json.dumps(attempt, indent=2) + '\n')
+          PY
+
+      - name: Checkout the exact built source
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      - name: Download immutable build handoff
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: benchmark-image-regular-${{ github.event.workflow_run.run_attempt }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/benchmark-image
+
+      - name: Validate source and build provenance
+        run: |
+          image=$(python tooling/benchmark/image_manifest.py resolve \
+            --repository "$GITHUB_REPOSITORY" --source-sha "$SOURCE_SHA" \
+            --build-run-id "$BUILD_RUN_ID" --build-attempt "$BUILD_ATTEMPT" \
+            --path "$RUNNER_TEMP/benchmark-image/image.json")
+          printf 'BENCH_IMAGE=%s\n' "$image" >> "$GITHUB_ENV"
+          cp "$RUNNER_TEMP/benchmark-image/image.json" "$BENCH_OUTPUT/image.json"
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '26.10.0'
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: '1.4.2'
+      - name: Install benchmark dependencies
+        run: |
+          bun install --frozen-lockfile
+          bunx playwright install --with-deps chromium
+
+      - name: Log in for image retrieval
+        uses: docker/login-action@v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Measure the representative default profile
+        id: measure
+        env:
+          BENCH_CPU: '2'
+          BENCH_MEMORY: '2g'
+          BENCH_INDEXING: 'false'
+          BENCH_STORAGE: rocksdb:///data/store
+          BENCH_NOTIFICATION_BUFFER: '100'
+        run: |
+          bun run bench --image "$BENCH_IMAGE" --pull --expected-source-sha "$SOURCE_SHA" \
+            --tasks 128 --rate 20 --history-tasks 10000 --reader-mode shared \
+            --api --request-count 240 --request-rate 12 --request-concurrency 32 \
+            --queries --browser --browser-live --restart --artifacts --runner-class github-ubuntu-default \
+            --output "$BENCH_OUTPUT/run"
+
+      - name: Finalize attempt and job summary
+        if: always()
+        env:
+          MEASUREMENT_OUTCOME: ${{ steps.measure.outcome }}
+        run: |
+          python - <<'PY'
+          import datetime, hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ['BENCH_OUTPUT'])
+          attempt_file = root / 'attempt.json'
+          attempt = json.loads(attempt_file.read_text())
+          result_file = root / 'run/result.json'
+          def mapping(value):
+              return value if isinstance(value, dict) else {}
+          try:
+              result = mapping(json.loads(result_file.read_text())) if result_file.exists() else {}
+          except json.JSONDecodeError:
+              result = {}
+              attempt['reportError'] = 'Benchmark result is invalid JSON; raw evidence retained'
+          if result and result.get('sourceSha') != attempt['sourceSha']:
+              result = {}
+              attempt['reportError'] = 'Benchmark source identity does not match triggering build'
+          attempt.update({
+              'finishedAt': datetime.datetime.now(datetime.UTC).isoformat(),
+              'status': result.get('status') if result.get('status') in ['passed', 'failed', 'incomplete', 'inconclusive'] else 'incomplete',
+              'measurementStep': os.environ['MEASUREMENT_OUTCOME'],
+              'resultSha256': hashlib.sha256(result_file.read_bytes()).hexdigest() if result_file.exists() else None,
+          })
+          if result.get('executionContractVersion') == 1 and mapping(result.get('cleanup')).get('status') != 'passed':
+              attempt['status'] = 'incomplete'
+              attempt['reportError'] = 'Benchmark finalization is incomplete: private cleanup did not pass'
+          attempt_file.write_text(json.dumps(attempt, indent=2) + '\n')
+          pipeline = mapping(result.get('pipeline'))
+          requests = mapping(result.get('requests'))
+          persisted = mapping(pipeline.get('persisted_correctness'))
+          dropped = requests.get('droppedRequests')
+          dropped_count = len(dropped) if isinstance(dropped, list) else 'unavailable'
+          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as summary:
+              summary.write(f"## Benchmark: {attempt['status']}\n\nSource: `{attempt['sourceSha']}`.\n\n")
+              summary.write(f"Pipeline: {pipeline.get('status', 'unavailable')}; "
+                            f"persisted correctness: {persisted.get('passed', 'unavailable')}; "
+                            f"complete LIVE delivery: {pipeline.get('live_delivery_complete', 'unavailable')}.\n\n")
+              summary.write(f"API: {requests.get('status', 'unavailable')}; "
+                            f"dropped scheduled requests: {dropped_count}.\n\n")
+              summary.write('Timing is report-only pending noise calibration. Correctness, incomplete setup and '
+                            'inconclusive offered load remain explicit outcomes. Raw evidence expires after 30 days.\n')
+          PY
+
+      - name: Retain evidence for every attempt
+        id: upload
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: benchmark-attempt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/benchmark-attempt
+          retention-days: 30
+          if-no-files-found: error
+
+  publish:
+    needs: measure
+    if: >-
+      always() && needs.measure.result != 'skipped' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    concurrency:
+      group: benchmark-results-publish
+      cancel-in-progress: false
+      queue: max
+    env:
+      SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+      BUILD_RUN_ID: ${{ github.event.workflow_run.id }}
+      BUILD_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+    steps:
+      - name: Checkout trusted publisher and source ancestry
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: '1.4.2'
+      - name: Download this measurement's evidence
+        if: needs.measure.outputs.artifact-id != ''
+        id: download
+        continue-on-error: true
+        uses: actions/download-artifact@v8.0.1
+        with:
+          artifact-ids: ${{ needs.measure.outputs.artifact-id }}
+          path: ${{ runner.temp }}/benchmark-input
+          merge-multiple: true
+      - name: Publish immutable results and report-only comparisons
+        env:
+          BENCH_INPUT: ${{ runner.temp }}/benchmark-input
+        run: bun run tooling/benchmark/publish.ts

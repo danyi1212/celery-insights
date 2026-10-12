@@ -6,6 +6,7 @@ import { ObservationApi } from "../runtime/observation-api"
 import { validateConfig } from "../runtime/config"
 import { CORE_SCHEMA } from "../runtime/surreal-schema"
 import { Surreal } from "surrealdb"
+import { LeaderElection } from "../runtime/leader-election"
 const binary = process.env.SURREAL_BINARY ?? "surreal"
 const version = Bun.spawnSync([binary, "version"])
 if (version.exitCode !== 0 || !Buffer.from(version.stdout).toString().includes("3.3.0")) {
@@ -54,6 +55,9 @@ try {
     python_version: "fixture",
     ingestion: { events_ingested_total: 1, flushes_total: 1, buffer_size: 0, queue_size: 0 },
   }))
+  await root.query(
+    "UPDATE task:sample SET last_updated = d'2026-10-11T10:00:00.123456789Z'; UPDATE event:sample SET timestamp = d'2026-10-11T10:00:00.234567891Z'; UPDATE worker:sample SET last_updated = d'2026-10-11T10:00:00.345678912Z';",
+  )
   assert.deepEqual(await api.counts(), { tasks: 1, events: 1, workers: 1 })
   for (const path of ["/metrics", "/metrics/verbose", "/metrics/system"]) {
     const response = await api.metrics(path)
@@ -114,8 +118,75 @@ try {
   const [restoredWorkflows, restoredEdges] = await root.query<[Array<{ task_count: number }>, unknown[]]>(
     "SELECT * FROM workflow; SELECT * FROM workflow_task;",
   )
+  const restored = await (await api.handle(
+    new Request("http://localhost/api/settings/export"),
+    "/api/settings/export",
+    false,
+  ))!.json()
+  assert.equal(
+    restored.tasks[0].last_updated,
+    backup.tasks[0].last_updated,
+    "Backup restore lost task timestamp precision",
+  )
+  assert.equal(
+    restored.events[0].timestamp,
+    backup.events[0].timestamp,
+    "Backup restore lost event timestamp precision",
+  )
+  assert.equal(
+    restored.workers[0].last_updated,
+    backup.workers[0].last_updated,
+    "Backup restore lost worker timestamp precision",
+  )
   assert.equal(restoredWorkflows[0].task_count, 1)
   assert.equal(restoredEdges.length, 1)
+  await root.query(
+    "CREATE ingestion_lock:leader SET holder = 'old-instance', acquired_at = time::now() - 1m, heartbeat = time::now() - 1m, ttl_seconds = 30;",
+  )
+  const successor = new LeaderElection({
+    db: root,
+    config: validateConfig({}),
+    instanceId: "successor",
+    onBecomeLeader: () => {},
+    onLoseLeadership: () => {},
+  })
+  const contender = new LeaderElection({
+    db: root,
+    config: validateConfig({}),
+    instanceId: "contender",
+    onBecomeLeader: () => {},
+    onLoseLeadership: () => {},
+  })
+  try {
+    assert.equal(await successor.start(), "leader", "A stale native lock must allow takeover")
+    assert.equal(await contender.start(), "standby", "A fresh native lock must exclude a second leader")
+  } finally {
+    await contender.stop()
+    await successor.stop()
+  }
+  await root.query(
+    "UPDATE workflow:sample SET last_updated = time::now(); CREATE workflow:old SET root_task_id = 'old', aggregate_state = 'SUCCESS', task_count = 1, last_updated = time::now() - 2h; CREATE task:old SET type = 'old', state = 'SUCCESS', workflow_id = 'old', last_updated = time::now() - 2h; CREATE event:old SET task_id = 'old', event_type = 'task-succeeded', timestamp = time::now() - 2h; CREATE worker:old SET status = 'offline', last_updated = time::now() - 2h;",
+  )
+  await api.handle(
+    new Request("http://localhost/api/settings/retention", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        cleanup_interval_seconds: 60,
+        task_max_count: null,
+        task_retention_hours: 0.5,
+        dead_worker_retention_hours: 0.5,
+      }),
+    }),
+    "/api/settings/retention",
+    false,
+  )
+  await api.cleanup()
+  assert.deepEqual(
+    await api.counts(),
+    { tasks: 1, events: 1, workers: 1 },
+    "Fractional-hour retention must remove old workflows/events and offline workers",
+  )
   const update = new Request("http://localhost/api/settings/retention", {
     method: "PUT",
     headers: { "content-type": "application/json" },

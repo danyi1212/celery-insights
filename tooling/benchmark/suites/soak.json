@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "name": "small-soak-burst",
+      "repetitions": 1,
+      "args": [
+        "--tasks",
+        "4600",
+        "--rate",
+        "20",
+        "--burst-rate",
+        "100",
+        "--burst-seconds",
+        "5",
+        "--burst-at-seconds",
+        "300",
+        "--history-tasks",
+        "1000",
+        "--browser-live",
+        "--restart",
+        "--resource-interval-seconds",
+        "10"
+      ],
+      "environment": { "BENCH_CPU": "1", "BENCH_MEMORY": "1g" }
+    }
+  ]
+}

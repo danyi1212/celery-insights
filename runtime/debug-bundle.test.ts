@@ -1,8 +1,34 @@
 import { describe, expect, it, vi } from "vitest"
 import { parseConfig } from "./config"
+import { DateTime } from "surrealdb"
 import { exportSurrealData, extractSurrealTableData, importSurrealData, redactConfig } from "./debug-bundle"
 
 describe("debug-bundle surreal helpers", () => {
+  it("preserves sub-millisecond task/event/worker timestamps in legacy JSON imports", async () => {
+    const db = { query: vi.fn().mockResolvedValue([]) }
+    await importSurrealData(db as never, {
+      version: 1,
+      tasks: [{ id: "task:sample", last_updated: "2026-10-12T07:00:00.123456789Z" }],
+      events: [{ id: "event:sample", timestamp: "2026-10-12T07:00:00.234567891Z" }],
+      workers: [{ id: "worker:sample", last_updated: "2026-10-12T07:00:00.345678912Z" }],
+    })
+    const bindings = db.query.mock.calls[0][1]
+    expect(bindings.tasks_0[0].data.last_updated.toISOString()).toBe("2026-10-12T07:00:00.123456789Z")
+    expect(bindings.events_0[0].data.timestamp.toISOString()).toBe("2026-10-12T07:00:00.234567891Z")
+    expect(bindings.workers_0[0].data.last_updated.toISOString()).toBe("2026-10-12T07:00:00.345678912Z")
+  })
+  it("keeps native workflow summaries and membership without exporting database users", () => {
+    const section = (table: string, body: string) =>
+      `-- ------------------------------\n-- TABLE: ${table}\n-- ------------------------------\n\n-- ------------------------------\n-- TABLE DATA: ${table}\n-- ------------------------------\n\n${body}\n`
+    const sql =
+      "DEFINE USER owner ON DATABASE PASSWORD 'private';\n" +
+      section("workflow", "INSERT [{ id: workflow:root, task_count: 2, retry_count: 3 }];") +
+      section("workflow_task", "INSERT RELATION [{ id: workflow_task:edge, in: workflow:root, out: task:child }];")
+    const extracted = extractSurrealTableData(sql, ["task", "event", "worker", "workflow", "workflow_task"])
+    expect(extracted).toContain("task_count: 2, retry_count: 3")
+    expect(extracted).toContain("in: workflow:root, out: task:child")
+    expect(extracted).not.toContain("DEFINE USER")
+  })
   it("extracts only table data statements from a native surreal export", () => {
     const sql = `-- ------------------------------
 -- OPTION
@@ -160,13 +186,13 @@ INSERT [{ id: task:1, last_updated: d'2026-03-14T21:30:33.586144Z' }];
           id: "1",
           data: {
             state: "SUCCESS",
-            failed_at: new Date("2026-03-14T18:43:05.917351Z"),
-            first_observed_at: new Date("2026-03-14T18:40:00.000000Z"),
+            failed_at: new DateTime("2026-03-14T18:43:05.917351Z"),
+            first_observed_at: new DateTime("2026-03-14T18:40:00.000000Z"),
           },
         },
       ],
-      events_0: [{ id: "1", data: { timestamp: new Date("2026-03-14T18:43:05.917351Z") } }],
-      workers_0: [{ id: "1", data: { last_updated: new Date("2026-03-14T18:43:05.917351Z") } }],
+      events_0: [{ id: "1", data: { timestamp: new DateTime("2026-03-14T18:43:05.917351Z") } }],
+      workers_0: [{ id: "1", data: { last_updated: new DateTime("2026-03-14T18:43:05.917351Z") } }],
     })
   })
 })

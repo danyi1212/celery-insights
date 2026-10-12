@@ -121,7 +121,7 @@ export class LeaderElection {
                     WHERE
                         holder = NONE
                         OR holder = $id
-                        OR heartbeat < time::now() - $ttl * 1s`,
+                        OR heartbeat < time::now() - duration::from_secs($ttl)`,
           {
             id: this.instanceId,
             ttl: this.config.ingestionLockTtlSeconds,

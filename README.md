@@ -17,6 +17,10 @@ docker run -p 8555:8555 --name celery-insights ghcr.io/danyi1212/celery-insights
 
 Then open <http://localhost:8555/>. Once the app is running, the built-in operator docs are also available at <http://localhost:8555/documentation>.
 
+## Benchmarking and sizing
+
+Use the [benchmark CLI](tooling/benchmark/README.md) for ingestion, API, browser, storage, startup and regression checks. [Measured resource guidance](docs/benchmark-resources.md) gives a bounded starting allocation with its workload and evidence.
+
 ## Required Celery Event Settings
 
 Celery Insights relies on Celery events to populate workers, task state transitions, and task detail pages.

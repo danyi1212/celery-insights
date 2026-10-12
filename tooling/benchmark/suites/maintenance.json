@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "name": "indexed-128-cleanup-import",
+      "repetitions": 1,
+      "args": ["--tasks", "32", "--rate", "100", "--history-tasks", "128", "--maintenance"],
+      "environment": {
+        "BENCH_INDEXING": "true"
+      }
+    },
+    {
+      "name": "indexed-1k-cleanup-import",
+      "repetitions": 1,
+      "args": ["--tasks", "32", "--rate", "100", "--history-tasks", "1000", "--maintenance"],
+      "environment": {
+        "BENCH_INDEXING": "true"
+      }
+    }
+  ]
+}

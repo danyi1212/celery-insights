@@ -88,6 +88,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v7.4.0
         with:
           context: .
@@ -99,3 +100,22 @@ jobs:
           # Keep variants separate and include intermediate dependency/build stages.
           cache-from: type=gha,version=2,scope=deploy-${{ matrix.variant || 'regular' }}
           cache-to: type=gha,version=2,mode=max,scope=deploy-${{ matrix.variant || 'regular' }}
+
+      - name: Record exact main image for benchmarking
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && matrix.variant == ''
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          python tooling/benchmark/image_manifest.py create \
+            --repository "$GITHUB_REPOSITORY" --source-sha "$GITHUB_SHA" \
+            --build-run-id "$GITHUB_RUN_ID" --build-attempt "$GITHUB_RUN_ATTEMPT" \
+            --digest "$IMAGE_DIGEST" --path "$RUNNER_TEMP/benchmark-image/image.json"
+
+      - name: Upload benchmark image handoff
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && matrix.variant == ''
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: benchmark-image-regular-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/benchmark-image/image.json
+          if-no-files-found: error
+          retention-days: 30

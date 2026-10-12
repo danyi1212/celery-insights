@@ -1,0 +1,56 @@
+services:
+  broker:
+    image: rabbitmq:4.3.6-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: benchmark
+      RABBITMQ_DEFAULT_PASS: benchmark
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  results:
+    image: redis:8.10.2-alpine
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  app:
+    image: ${BENCH_IMAGE:-celery-insights-benchmark:local}
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    cpus: ${BENCH_CPU:-2}
+    mem_limit: ${BENCH_MEMORY:-2g}
+    ports: ["127.0.0.1::8555"]
+    environment:
+      BROKER_URL: amqp://benchmark:benchmark@broker/
+      RESULT_BACKEND: redis://results:6379/0
+      SURREALDB_STORAGE: ${BENCH_STORAGE:-rocksdb:///data/store}
+      SEARCH_INDEXING_ENABLED: ${BENCH_INDEXING:-false}
+      SURREAL_WEBSOCKET_RESPONSE_CHANNEL_SIZE: ${BENCH_NOTIFICATION_BUFFER:-100}
+      LOG_FORMAT: json
+      SURREALDB_INGESTER_PASS: benchmark-ingester
+    volumes: ["data:/data"]
+    depends_on:
+      broker:
+        condition: service_healthy
+      results:
+        condition: service_healthy
+  producer:
+    image: ${BENCH_IMAGE:-celery-insights-benchmark:local}
+    entrypoint: [python, /benchmark/pipeline.py]
+    environment:
+      BROKER_URL: amqp://benchmark:benchmark@broker/
+      RESULT_BACKEND: redis://results:6379/0
+      BENCH_DB_URL: ws://app:8555/surreal/rpc
+      BENCH_WRITER_PASSWORD: benchmark-ingester
+    volumes: ["./:/benchmark:ro"]
+    depends_on: [app]
+  storage:
+    image: ${BENCH_IMAGE:-celery-insights-benchmark:local}
+    entrypoint: [python]
+    volumes: ["data:/data:ro"]
+volumes:
+  data:

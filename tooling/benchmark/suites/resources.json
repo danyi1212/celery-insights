@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "name": "half-cpu-512m",
+      "repetitions": 1,
+      "args": [
+        "--tasks",
+        "600",
+        "--rate",
+        "20",
+        "--history-tasks",
+        "1000",
+        "--browser-live",
+        "--restart",
+        "--resource-interval-seconds",
+        "10"
+      ],
+      "environment": { "BENCH_CPU": "0.5", "BENCH_MEMORY": "512m" }
+    },
+    {
+      "name": "one-cpu-1g",
+      "repetitions": 1,
+      "args": [
+        "--tasks",
+        "600",
+        "--rate",
+        "20",
+        "--history-tasks",
+        "1000",
+        "--browser-live",
+        "--restart",
+        "--resource-interval-seconds",
+        "10"
+      ],
+      "environment": { "BENCH_CPU": "1", "BENCH_MEMORY": "1g" }
+    },
+    {
+      "name": "two-cpu-2g",
+      "repetitions": 1,
+      "args": [
+        "--tasks",
+        "600",
+        "--rate",
+        "20",
+        "--history-tasks",
+        "1000",
+        "--browser-live",
+        "--restart",
+        "--resource-interval-seconds",
+        "10"
+      ],
+      "environment": { "BENCH_CPU": "2", "BENCH_MEMORY": "2g" }
+    },
+    {
+      "name": "four-cpu-4g",
+      "repetitions": 1,
+      "args": [
+        "--tasks",
+        "600",
+        "--rate",
+        "20",
+        "--history-tasks",
+        "1000",
+        "--browser-live",
+        "--restart",
+        "--resource-interval-seconds",
+        "10"
+      ],
+      "environment": { "BENCH_CPU": "4", "BENCH_MEMORY": "4g" }
+    }
+  ]
+}

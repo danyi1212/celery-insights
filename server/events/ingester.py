@@ -503,10 +503,15 @@ def build_children_update(event: dict, idx: int) -> tuple[str, dict]:
         return "", {}
 
     p = f"ch{idx}"
-    params = {f"{p}_parent": parent_id, f"{p}_child": child_id}
+    params = {
+        f"{p}_parent": parent_id,
+        f"{p}_child": child_id,
+        f"{p}_workflow": event.get("root_id") or parent_id,
+    }
     query = (
         f"UPSERT type::record('task', ${p}_parent) SET "
         f"children = array::union(children ?? [], [${p}_child]), "
+        f"workflow_id = workflow_id ?? ${p}_workflow, "
         f"state = state ?? 'PENDING', "
         f"last_updated = last_updated ?? time::now()"
     )
