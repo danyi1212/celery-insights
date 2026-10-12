@@ -22,7 +22,7 @@ const DocumentationNavigationView: React.FC<DocumentationNavigationViewProps> = 
   const location = useLocation()
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-full flex-col">
       <SidebarGroup className="grow">
         <SidebarGroupContent className="space-y-4">
           <div
