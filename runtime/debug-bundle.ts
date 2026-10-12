@@ -3,7 +3,7 @@ import os from "node:os"
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import type { Config } from "./config"
 import { SETTINGS } from "./config-registry"
-import { TextCodec, type RecordIdValue, type Surreal } from "surrealdb"
+import { DateTime, TextCodec, type RecordIdValue, type Surreal } from "surrealdb"
 import { z } from "zod"
 
 const exportSchema = z
@@ -294,9 +294,11 @@ function reviveDateFields(
   for (const field of DATETIME_FIELDS[table]) {
     const value = revived[field]
     if (typeof value !== "string") continue
-    const parsed = new Date(value)
-    if (Number.isNaN(parsed.valueOf())) continue
-    revived[field] = parsed
+    try {
+      revived[field] = new DateTime(value)
+    } catch {
+      /* Preserve invalid input for the existing import validation/error path. */
+    }
   }
   return revived
 }
@@ -343,6 +345,8 @@ export async function importSurrealData(db: Surreal, data: SurrealExport): Promi
   const chunkSize = 1000
   const queryLines = [
     "BEGIN TRANSACTION",
+    "DELETE FROM workflow_task",
+    "DELETE FROM workflow",
     "DELETE FROM task",
     "DELETE FROM event",
     "DELETE FROM worker",

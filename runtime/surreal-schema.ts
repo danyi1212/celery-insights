@@ -301,7 +301,7 @@ export function planWorkflowBackfill(
   return steps
 }
 
-async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
+export async function backfillWorkflows(db: Surreal, log: Logger): Promise<void> {
   const [tasks] = await db.query<[BackfillTaskRecord[]]>("SELECT * FROM task").collect()
   if (!Array.isArray(tasks) || !tasks.length) return
   for (const step of planWorkflowBackfill(tasks)) await db.query(step.sql, step.bindings).collect()

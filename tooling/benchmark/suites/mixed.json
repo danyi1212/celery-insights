@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "name": "indexed-write-api",
+      "repetitions": 1,
+      "args": [
+        "--tasks",
+        "128",
+        "--rate",
+        "20",
+        "--history-tasks",
+        "1000",
+        "--api-during-ingestion",
+        "--request-count",
+        "180",
+        "--request-rate",
+        "5",
+        "--queries",
+        "--browser-live",
+        "--restart"
+      ],
+      "environment": {
+        "BENCH_CPU": "1",
+        "BENCH_MEMORY": "1g",
+        "BENCH_INDEXING": "true"
+      }
+    },
+    {
+      "name": "extended-api",
+      "repetitions": 1,
+      "args": [
+        "--tasks",
+        "32",
+        "--rate",
+        "100",
+        "--history-tasks",
+        "1000",
+        "--api",
+        "--api-extended",
+        "--request-count",
+        "180",
+        "--request-rate",
+        "10"
+      ],
+      "environment": {}
+    }
+  ]
+}

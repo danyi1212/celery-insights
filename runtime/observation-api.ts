@@ -2,7 +2,7 @@ import os from "node:os"
 import { trimQuery } from "../src/lib/task-search"
 import { buildIndexedTaskSearch, buildIndexedWorkflowSearch } from "../src/lib/indexed-search"
 import { Gauge, Histogram, Registry } from "prom-client"
-import { RecordId, type Surreal } from "surrealdb"
+import { DateTime, RecordId, type Surreal } from "surrealdb"
 import { z } from "zod"
 import { planWorkflowBackfill } from "./surreal-schema"
 import type { Config } from "./config"
@@ -260,10 +260,11 @@ export class ObservationApi {
               : ["last_updated"]
         for (const field of dateFields) {
           if (typeof content[field] === "string") {
-            const date = new Date(content[field])
-            if (!Number.isFinite(date.valueOf()))
+            try {
+              content[field] = new DateTime(content[field])
+            } catch {
               return Response.json({ success: false, error: "Invalid backup timestamp" })
-            content[field] = date
+            }
           }
         }
         bindings[`${table}_${index}_id`] = idString(id)
@@ -304,7 +305,7 @@ export class ObservationApi {
     }
     if (this.retention.task_retention_hours !== null && this.retention.task_retention_hours !== undefined) {
       const [workflows] = await this.db.query<[Array<{ id: RecordId }>]>(
-        "SELECT id FROM workflow WHERE last_updated < time::now() - $hours * 1h",
+        "SELECT id FROM workflow WHERE last_updated < time::now() - duration::from_millis(<int>($hours * 3600000))",
         { hours: this.retention.task_retention_hours },
       )
       for (const workflow of workflows) remove.add(workflow.id)
@@ -317,9 +318,12 @@ export class ObservationApi {
       )
     }
     if (this.retention.dead_worker_retention_hours !== null && this.retention.dead_worker_retention_hours !== undefined)
-      await this.db.query("DELETE worker WHERE status = 'offline' AND last_updated < time::now() - $hours * 1h;", {
-        hours: this.retention.dead_worker_retention_hours,
-      })
+      await this.db.query(
+        "DELETE worker WHERE status = 'offline' AND last_updated < time::now() - duration::from_millis(<int>($hours * 3600000));",
+        {
+          hours: this.retention.dead_worker_retention_hours,
+        },
+      )
   }
   cleanupInterval(): number {
     return this.retention.cleanup_interval_seconds * 1000

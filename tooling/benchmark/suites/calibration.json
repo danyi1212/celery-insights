@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "name": "small-core",
+      "repetitions": 5,
+      "args": [
+        "--tasks",
+        "32",
+        "--rate",
+        "100",
+        "--history-tasks",
+        "1000",
+        "--api",
+        "--queries",
+        "--browser",
+        "--browser-live",
+        "--artifacts",
+        "--restart"
+      ],
+      "environment": { "BENCH_CPU": "2", "BENCH_MEMORY": "2g" }
+    }
+  ]
+}

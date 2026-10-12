@@ -19,6 +19,10 @@ docker run -p 127.0.0.1:8555:8555 --name celery-insights \
 
 Open the HTTPS public URL configured in `installation.public_url`. The browser prompts for a configured username and password. Built-in operator docs are available under `/documentation` at the same URL.
 
+## Benchmarking and sizing
+
+Use the [benchmark CLI](tooling/benchmark/README.md) for ingestion, API, browser, storage, startup and regression checks. [Measured resource guidance](docs/benchmark-resources.md) gives a bounded starting allocation with its workload and evidence.
+
 ## Required Celery Event Settings
 
 Celery Insights relies on Celery events to populate workers, task state transitions, and task detail pages.

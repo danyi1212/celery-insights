@@ -1,0 +1,2561 @@
+{
+  "capturedAt": "2026-10-12",
+  "kind": "local-development-evidence",
+  "limitations": [
+    "Dirty source-built images have no OCI revision label; timing is exploratory and not a hosted-main baseline.",
+    "Bun/controller and observer-contract changes create separate comparison cohorts.",
+    "Failed trials retain their correct-data evidence and cannot serve as valid references."
+  ],
+  "runtimeExperiment": {
+    "fixtureHashesMatch": true,
+    "oldController": "1.3.10",
+    "supportedController": "1.4.2",
+    "officialBunArchiveSha256": "90987a3a16d7db556d886ac3d551e7b6d3edf0a1cf43acaed622e8676be1d12f"
+  },
+  "cases": [
+    {
+      "status": "failed",
+      "scenario": {
+        "tasks": 32,
+        "rate": 20,
+        "readerMode": "shared",
+        "liveClients": 1,
+        "slowClientDelayMs": 0,
+        "resultBytes": "0",
+        "dropSequence": "-1",
+        "requests": null,
+        "browser": "desktop",
+        "liveBrowser": false,
+        "concurrentRequests": null,
+        "restart": false,
+        "maintenance": false,
+        "resourceIntervalSeconds": 0,
+        "burst": null,
+        "artifacts": false,
+        "history": {
+          "tasks": 10000,
+          "payloadBytes": 256,
+          "referenceTime": "2026-10-12T09:16:11.502Z",
+          "setupDeadlineSeconds": 600
+        },
+        "queries": null
+      },
+      "image": {
+        "reference": "celery-insights-benchmark:typed-read",
+        "id": "sha256:e291b65df2914bee50a96e4c7e7c48941ab000e3056440e9d8cab8cdd4c28e06",
+        "architecture": "arm64",
+        "unpackedBytes": 892566197,
+        "revision": null
+      },
+      "harness": {
+        "bunVersion": "1.3.10",
+        "files": {
+          "tooling/benchmark/run.ts": "12d53d9a2f61bbe1a27be5531f3750931bf258a8af5502b0287a5ba71ad506da",
+          "tooling/benchmark/requests.ts": "db82b7788e41c547e650b84c5e6d1f1af131d6bde982110026fe3fa13e5722e2",
+          "tooling/benchmark/browser.ts": "9b7f9c5918c442f8bfd411d479cea30b49f738484967b4ca057496be231f92fa",
+          "tooling/benchmark/artifacts.ts": "ec50d82fab085a6f959b0ad0d10b7eb3ddf9a9e7b7395ba27673207c5fa01da4",
+          "tooling/benchmark/resources.ts": "847bfe8ea28739e7a07933426f1101b239bd6305577743e39fe91bf56b61e596",
+          "tooling/benchmark/queries.ts": "229150dcd41957981a87fce05f313f19140c7b6102a1700f7c00922733c89561",
+          "tooling/benchmark/storage.ts": "6c02ad8dd2b0762619af4a033e575cd80dad567720c3254189d284f81aa95dba",
+          "tooling/benchmark/maintenance.ts": "8f7dcdb7aaa8ec8398da441716f5594c5ba781060b3965655ed68ebc274c7196",
+          "tooling/benchmark/history.py": "d8e8e4127b19cfc71e2397947c60479d062198655542be8f29eb88eb35978e88",
+          "tooling/benchmark/pipeline.py": "3a25343d48bedb3c05b68e3ff9e0266e989e9a100bc7cc855f8a01f05000ad96",
+          "tooling/benchmark/compose.yml": "c6dee51c506c89ef7e89a3ac640e5c4f2da58efac54da687e82fc2ddb503b94a",
+          "tooling/benchmark/observation.ts": "1429f37da397c970d1ad13e09840a2349e6281e121c317b71538cb8e8ef413df",
+          "tooling/benchmark/ingress.ts": "3b1cabbc05dba996a70836ca338fc978eebbd62c91608020110940afc32470ee",
+          "runtime/observation/queries.ts": "b82181a9c41340956edd93cf42dce04c2a0c968f5750d27dee7e5b859b95d48a",
+          "src/lib/task-search.ts": "836a8afb6882d53bb366d3c20596ae3aac524e0145974342b03ca482360c9ce5",
+          "src/lib/indexed-search.ts": "dd2e3162d8a3fded344b2bdfdf5db683ee50a08766f69efbbea59de07575b9fe",
+          "src/types/surreal-records.ts": "c46a2a39303eaf1f022c2784915a933c5686d0912e2e728caf067340104805a0",
+          "bun.lock": "e1ba80c0828d4677978c14b650f7b344af1f2691f82cca6ec428fd4b93aea682",
+          "uv.lock": "3cc8ecdc5336976c7dd9ca3fb5739120560033fd2a46782881641127e04c86ca"
+        }
+      },
+      "transport": {
+        "browser": "local-https-proxy",
+        "programmatic": "internal-http-ws-basic",
+        "accountRole": "administrator",
+        "ingressTrace": true
+      },
+      "sourceSha": "c43fa7fc48753b6a31d49b530b17f26928423fdb",
+      "costAccounting": {
+        "beforeCleanupMs": 84690.205416,
+        "totalControllerMs": 86028.35925000001
+      },
+      "cleanup": {
+        "status": "passed",
+        "durationMs": 1337.7009580000013,
+        "commandCode": 0
+      },
+      "path": "test-results/benchmark/typed-refresh-browser-trace/result.json",
+      "sha256": "7def2ef4849b9625859b7a9488c9956239594fe3fe863d2effed49b71de2e3b5",
+      "pipeline": {
+        "status": "passed",
+        "errors": [],
+        "fixture": {
+          "version": 1,
+          "tasks": 32,
+          "events": 128,
+          "result_bytes": 0
+        },
+        "offered_events_per_second": 20,
+        "arrival_schedule": {
+          "steady_rate": 20,
+          "burst_rate": 0,
+          "burst_seconds": 0,
+          "burst_at_seconds": 0,
+          "planned_seconds": 6.4
+        },
+        "publication_seconds": 6.355169419999584,
+        "published_events_per_second": 20.141083823381123,
+        "validated_event_goodput_per_second": 20.09231528532813,
+        "public_convergence_seconds": 11.094090672000675,
+        "reader_mode": "shared",
+        "published_events": 128,
+        "validated_events": 128,
+        "persisted_correctness": {
+          "passed": true,
+          "errors": []
+        },
+        "live_delivery_complete": true,
+        "raw_event_drain_observed": true,
+        "elapsed_seconds": 11.094090672000675,
+        "drain_seconds": 0.015425416000653058,
+        "publication_lag_ms": {
+          "p50": 1.4174590007316468,
+          "p95": 10.37800300000491,
+          "p99": null,
+          "max": 10.428002999833375
+        },
+        "terminal_to_live_ms": {
+          "p50": 14.065500001379405,
+          "p95": 18.858499999623746,
+          "p99": null,
+          "max": 21.91974999914237
+        },
+        "publication_to_raw_event_live_ms": {
+          "p50": 74.04387499991572,
+          "p95": 161.72804099915083,
+          "p99": null,
+          "max": 169.48045899880526
+        },
+        "terminal_to_result_live_ms": {
+          "p50": 15.947166000842117,
+          "p95": 21.026958000220475,
+          "p99": null,
+          "max": 24.870707999070873
+        },
+        "viewer_query_ms": {
+          "p50": 28.781458000594284,
+          "p95": 165.30570899885788,
+          "p99": null,
+          "max": 865.0144590010314
+        },
+        "measurement_contract": "typed-refresh-v1",
+        "private_live": {
+          "complete": true,
+          "diagnostic_only": true,
+          "events": 128,
+          "results": 32,
+          "errors": []
+        },
+        "public_refresh": {
+          "cadence_ms": 5000,
+          "publication_to_raw_event_ms": {
+            "p50": 4143.7467519990605,
+            "p95": 5862.60441900049,
+            "p99": null,
+            "max": 6094.464502999472
+          },
+          "terminal_to_result_ms": {
+            "p50": 4422.511376998955,
+            "p95": 5175.500377001299,
+            "p99": null,
+            "max": 5220.539793999706
+          },
+          "events": 128,
+          "results": 32,
+          "complete": true
+        },
+        "live_notifications": 239,
+        "live_bytes": 147790,
+        "fanout": {
+          "clients": 1,
+          "slow_client_delay_ms": 0,
+          "observations": [
+            {
+              "client": 1,
+              "raw_events": 128,
+              "delay_ms": 0
+            }
+          ],
+          "limitations": [
+            "Public refresh clients refetch raw events; the primary client also refetches task results.",
+            "Slow-client delay paces iterator consumption; SDK/socket buffers may continue reading.",
+            "Protocol clients share the generator process; this is not multiple rendered browsers."
+          ]
+        },
+        "generator_healthy": true,
+        "limitations": [
+          "Public freshness includes the 5-second refresh cadence and authorized typed reads.",
+          "Unprefixed LIVE latency metrics observe the private native database, not the public API. Native LIVE completeness is diagnostic; public refresh and exact persisted oracles determine correctness.",
+          "Fixed 100ms query pacing is a background reader, not a query capacity measurement.",
+          "Private raw-event drain polls at 50ms after publication, independently of public refresh. Goodput divides validated events by publication-to-durable-count time. Drain polling yields a timing upper bound and excludes public refresh.",
+          "On delivery failure, latency distributions describe successful partial observations only; they cannot establish tail latency."
+        ],
+        "generator_resources": {
+          "elapsed_seconds": 11.491375921999861,
+          "cpu_seconds": 0.41196799999999995,
+          "average_cpu_cores": 0.03585018911541313,
+          "process_peak_rss_bytes": 86245376,
+          "container_limits_and_peak": {
+            "cpu.max": "max 100000",
+            "memory.max": "max",
+            "memory.peak": "75718656"
+          },
+          "limitations": [
+            "Generator and observer share this process, including readiness, workload, validation and cleanup.",
+            "RSS/cgroup peaks are cumulative since startup; not publication-only or additive app memory.",
+            "Publisher lag detects unsustainable arrivals; resource averages alone do not prove headroom."
+          ]
+        }
+      },
+      "browser": {
+        "status": "failed",
+        "version": "153.0.8010.12",
+        "profile": {
+          "name": "desktop"
+        },
+        "failedPhase": "task-navigation",
+        "error": "TimeoutError: waitForFunction: Timeout 30000ms exceeded.",
+        "currentUrl": "https://127.0.0.1:54304/tasks/bench-31",
+        "selectedTaskHref": "/tasks/bench-31",
+        "screenshot": "/Users/danyishai/.codex/worktrees/b6bc/celery-insights/test-results/benchmark/typed-refresh-browser-trace/browser-failure.png",
+        "completed": {
+          "signInMs": 275.51895800000057,
+          "explorerUsefulDataMs": 1377.7499160000007
+        },
+        "errors": [
+          "https://127.0.0.1:54304/assets/tasks-DLioOiRN.css: net::ERR_TOO_MANY_RETRIES"
+        ],
+        "limitations": [
+          "Incomplete journey; partial successful measurements are diagnostic, not a passing baseline."
+        ]
+      }
+    },
+    {
+      "status": "passed",
+      "scenario": {
+        "tasks": 32,
+        "rate": 20,
+        "readerMode": "shared",
+        "liveClients": 1,
+        "slowClientDelayMs": 0,
+        "resultBytes": "0",
+        "dropSequence": "-1",
+        "requests": null,
+        "browser": "desktop",
+        "liveBrowser": false,
+        "concurrentRequests": null,
+        "restart": false,
+        "maintenance": false,
+        "resourceIntervalSeconds": 0,
+        "burst": null,
+        "artifacts": false,
+        "history": {
+          "tasks": 10000,
+          "payloadBytes": 256,
+          "referenceTime": "2026-10-12T09:19:29.385Z",
+          "setupDeadlineSeconds": 600
+        },
+        "queries": null
+      },
+      "image": {
+        "reference": "celery-insights-benchmark:typed-read",
+        "id": "sha256:e291b65df2914bee50a96e4c7e7c48941ab000e3056440e9d8cab8cdd4c28e06",
+        "architecture": "arm64",
+        "unpackedBytes": 892566197,
+        "revision": null
+      },
+      "harness": {
+        "bunVersion": "1.4.2",
+        "files": {
+          "tooling/benchmark/run.ts": "12d53d9a2f61bbe1a27be5531f3750931bf258a8af5502b0287a5ba71ad506da",
+          "tooling/benchmark/requests.ts": "db82b7788e41c547e650b84c5e6d1f1af131d6bde982110026fe3fa13e5722e2",
+          "tooling/benchmark/browser.ts": "9b7f9c5918c442f8bfd411d479cea30b49f738484967b4ca057496be231f92fa",
+          "tooling/benchmark/artifacts.ts": "ec50d82fab085a6f959b0ad0d10b7eb3ddf9a9e7b7395ba27673207c5fa01da4",
+          "tooling/benchmark/resources.ts": "847bfe8ea28739e7a07933426f1101b239bd6305577743e39fe91bf56b61e596",
+          "tooling/benchmark/queries.ts": "229150dcd41957981a87fce05f313f19140c7b6102a1700f7c00922733c89561",
+          "tooling/benchmark/storage.ts": "6c02ad8dd2b0762619af4a033e575cd80dad567720c3254189d284f81aa95dba",
+          "tooling/benchmark/maintenance.ts": "8f7dcdb7aaa8ec8398da441716f5594c5ba781060b3965655ed68ebc274c7196",
+          "tooling/benchmark/history.py": "d8e8e4127b19cfc71e2397947c60479d062198655542be8f29eb88eb35978e88",
+          "tooling/benchmark/pipeline.py": "3a25343d48bedb3c05b68e3ff9e0266e989e9a100bc7cc855f8a01f05000ad96",
+          "tooling/benchmark/compose.yml": "c6dee51c506c89ef7e89a3ac640e5c4f2da58efac54da687e82fc2ddb503b94a",
+          "tooling/benchmark/observation.ts": "1429f37da397c970d1ad13e09840a2349e6281e121c317b71538cb8e8ef413df",
+          "tooling/benchmark/ingress.ts": "3b1cabbc05dba996a70836ca338fc978eebbd62c91608020110940afc32470ee",
+          "runtime/observation/queries.ts": "b82181a9c41340956edd93cf42dce04c2a0c968f5750d27dee7e5b859b95d48a",
+          "src/lib/task-search.ts": "836a8afb6882d53bb366d3c20596ae3aac524e0145974342b03ca482360c9ce5",
+          "src/lib/indexed-search.ts": "dd2e3162d8a3fded344b2bdfdf5db683ee50a08766f69efbbea59de07575b9fe",
+          "src/types/surreal-records.ts": "c46a2a39303eaf1f022c2784915a933c5686d0912e2e728caf067340104805a0",
+          "bun.lock": "e1ba80c0828d4677978c14b650f7b344af1f2691f82cca6ec428fd4b93aea682",
+          "uv.lock": "3cc8ecdc5336976c7dd9ca3fb5739120560033fd2a46782881641127e04c86ca"
+        }
+      },
+      "transport": {
+        "browser": "local-https-proxy",
+        "programmatic": "internal-http-ws-basic",
+        "accountRole": "administrator",
+        "ingressTrace": true
+      },
+      "sourceSha": "c43fa7fc48753b6a31d49b530b17f26928423fdb",
+      "costAccounting": {
+        "beforeCleanupMs": 52075.411208,
+        "totalControllerMs": 53396.569208
+      },
+      "cleanup": {
+        "status": "passed",
+        "durationMs": 1320.6474579999995,
+        "commandCode": 0
+      },
+      "path": "test-results/benchmark/typed-refresh-browser-bun142/result.json",
+      "sha256": "6630032b1282f09f59223251b7710df41e95f4a6ab212e516e969a04093e6751",
+      "pipeline": {
+        "status": "passed",
+        "errors": [],
+        "fixture": {
+          "version": 1,
+          "tasks": 32,
+          "events": 128,
+          "result_bytes": 0
+        },
+        "offered_events_per_second": 20,
+        "arrival_schedule": {
+          "steady_rate": 20,
+          "burst_rate": 0,
+          "burst_seconds": 0,
+          "burst_at_seconds": 0,
+          "planned_seconds": 6.4
+        },
+        "publication_seconds": 6.358192544999838,
+        "published_events_per_second": 20.13150735748964,
+        "validated_event_goodput_per_second": 19.948883314910695,
+        "public_convergence_seconds": 11.110112546000892,
+        "reader_mode": "shared",
+        "published_events": 128,
+        "validated_events": 128,
+        "persisted_correctness": {
+          "passed": true,
+          "errors": []
+        },
+        "live_delivery_complete": true,
+        "raw_event_drain_observed": true,
+        "elapsed_seconds": 11.110112546000892,
+        "drain_seconds": 0.05820670800130756,
+        "publication_lag_ms": {
+          "p50": 1.922751999882344,
+          "p95": 10.367295000105692,
+          "p99": null,
+          "max": 10.452670000813846
+        },
+        "terminal_to_live_ms": {
+          "p50": 12.377707998894039,
+          "p95": 15.245291999235633,
+          "p99": null,
+          "max": 45.10295900035999
+        },
+        "publication_to_raw_event_live_ms": {
+          "p50": 76.39274999928602,
+          "p95": 162.83716699945217,
+          "p99": null,
+          "max": 187.94483300007414
+        },
+        "terminal_to_result_live_ms": {
+          "p50": 13.76995799910219,
+          "p95": 16.51129200035939,
+          "p99": null,
+          "max": 48.70245900019654
+        },
+        "viewer_query_ms": {
+          "p50": 35.27287500037346,
+          "p95": 151.53941700009455,
+          "p99": null,
+          "max": 841.2929590012936
+        },
+        "measurement_contract": "typed-refresh-v1",
+        "private_live": {
+          "complete": true,
+          "diagnostic_only": true,
+          "events": 128,
+          "results": 32,
+          "errors": []
+        },
+        "public_refresh": {
+          "cadence_ms": 5000,
+          "publication_to_raw_event_ms": {
+            "p50": 4100.315793999471,
+            "p95": 5846.457128000111,
+            "p99": null,
+            "max": 6052.770252999835
+          },
+          "terminal_to_result_ms": {
+            "p50": 4447.484708998672,
+            "p95": 5202.952710000318,
+            "p99": null,
+            "max": 5247.443001000647
+          },
+          "events": 128,
+          "results": 32,
+          "complete": true
+        },
+        "live_notifications": 240,
+        "live_bytes": 148505,
+        "fanout": {
+          "clients": 1,
+          "slow_client_delay_ms": 0,
+          "observations": [
+            {
+              "client": 1,
+              "raw_events": 128,
+              "delay_ms": 0
+            }
+          ],
+          "limitations": [
+            "Public refresh clients refetch raw events; the primary client also refetches task results.",
+            "Slow-client delay paces iterator consumption; SDK/socket buffers may continue reading.",
+            "Protocol clients share the generator process; this is not multiple rendered browsers."
+          ]
+        },
+        "generator_healthy": true,
+        "limitations": [
+          "Public freshness includes the 5-second refresh cadence and authorized typed reads.",
+          "Unprefixed LIVE latency metrics observe the private native database, not the public API. Native LIVE completeness is diagnostic; public refresh and exact persisted oracles determine correctness.",
+          "Fixed 100ms query pacing is a background reader, not a query capacity measurement.",
+          "Private raw-event drain polls at 50ms after publication, independently of public refresh. Goodput divides validated events by publication-to-durable-count time. Drain polling yields a timing upper bound and excludes public refresh.",
+          "On delivery failure, latency distributions describe successful partial observations only; they cannot establish tail latency."
+        ],
+        "generator_resources": {
+          "elapsed_seconds": 11.481164504000844,
+          "cpu_seconds": 0.366411,
+          "average_cpu_cores": 0.03191409720436604,
+          "process_peak_rss_bytes": 86380544,
+          "container_limits_and_peak": {
+            "cpu.max": "max 100000",
+            "memory.max": "max",
+            "memory.peak": "75472896"
+          },
+          "limitations": [
+            "Generator and observer share this process, including readiness, workload, validation and cleanup.",
+            "RSS/cgroup peaks are cumulative since startup; not publication-only or additive app memory.",
+            "Publisher lag detects unsustainable arrivals; resource averages alone do not prove headroom."
+          ]
+        }
+      },
+      "browser": {
+        "status": "passed",
+        "version": "153.0.8010.12",
+        "profile": {
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "device": "desktop",
+          "name": "desktop",
+          "network": "unthrottled",
+          "cpuThrottleRate": 1,
+          "initialCache": "fresh-context"
+        },
+        "explorerUsefulDataMs": 1363.4197920000006,
+        "searchNoMatchMs": 20148.032958000003,
+        "typedSearch": {
+          "expected": "benchmark-no-such-task",
+          "observed": "benchmark-no-such-task"
+        },
+        "searchResetMs": 117.79879200000141,
+        "searchPasteNoMatchMs": 1867.0329169999968,
+        "searchPasteResetMs": 114.92520899999363,
+        "socketTraffic": {
+          "initial-navigation": {
+            "sentFrames": 4,
+            "receivedFrames": 4,
+            "sentPayloadBytes": 493,
+            "receivedPayloadBytes": 30205
+          },
+          "search-typing": {
+            "sentFrames": 22,
+            "receivedFrames": 26,
+            "sentPayloadBytes": 5852,
+            "receivedPayloadBytes": 106889
+          },
+          "search-reset-after-typing": {
+            "sentFrames": 1,
+            "receivedFrames": 0,
+            "sentPayloadBytes": 287,
+            "receivedPayloadBytes": 0
+          },
+          "search-paste": {
+            "sentFrames": 1,
+            "receivedFrames": 2,
+            "sentPayloadBytes": 310,
+            "receivedPayloadBytes": 29491
+          },
+          "search-reset-after-paste": {
+            "sentFrames": 1,
+            "receivedFrames": 0,
+            "sentPayloadBytes": 287,
+            "receivedPayloadBytes": 0
+          },
+          "task-navigation": {
+            "sentFrames": 6,
+            "receivedFrames": 7,
+            "sentPayloadBytes": 553,
+            "receivedPayloadBytes": 34297
+          }
+        },
+        "taskNavigationUsefulDataMs": 817.2565419999955,
+        "initialDocument": {
+          "ttfbMs": 6.5,
+          "fcpMs": 52,
+          "lcpAtUsefulRowsMs": 112,
+          "clsAtUsefulRows": 0.046241297341177975
+        },
+        "journey": {
+          "cls": 0.046241297341177975,
+          "recordedInteractionCount": 13,
+          "maximumRecordedInteractionDurationMs": 24,
+          "longTaskCount": 1,
+          "longTaskDurationMs": 58,
+          "assetTransferBytes": 782721,
+          "assetEncodedBodyBytes": 2060951,
+          "assetDecodedBodyBytes": 2060951
+        },
+        "errors": [],
+        "limitations": [
+          "One laboratory journey after ingestion on the declared fixture; no live-rendering or field-vitals claim.",
+          "Typing uses 10ms between characters; paste uses a distinct absent term to avoid reusing the typed query cache. Their order is fixed and database caches are warm.",
+          "WebSocket frame counts include all data protocol traffic during each phase, including background work; they are not decoded query counts.",
+          "LCP is sampled at useful rows; SPA navigation has its own data-and-result paint milestone.",
+          "Interaction duration is a laboratory observation, not field INP. Sub-16ms events may be absent.",
+          "Resource Timing covers fetched assets; WebSocket data, unfetched lazy chunks, and whole-build bundle sizes are separate."
+        ]
+      }
+    },
+    {
+      "status": "failed",
+      "scenario": {
+        "tasks": 128,
+        "rate": 20,
+        "readerMode": "shared",
+        "liveClients": 1,
+        "slowClientDelayMs": 0,
+        "resultBytes": "0",
+        "dropSequence": "-1",
+        "requests": {
+          "count": 240,
+          "rate": 12,
+          "maxInFlight": 32,
+          "mixVersion": 1
+        },
+        "browser": "desktop",
+        "liveBrowser": true,
+        "concurrentRequests": null,
+        "restart": true,
+        "maintenance": false,
+        "resourceIntervalSeconds": 0,
+        "burst": null,
+        "artifacts": true,
+        "history": {
+          "tasks": 10000,
+          "payloadBytes": 256,
+          "referenceTime": "2026-10-12T09:25:26.459Z",
+          "setupDeadlineSeconds": 600
+        },
+        "queries": {
+          "repetitions": 3
+        }
+      },
+      "image": {
+        "reference": "celery-insights-benchmark:typed-read",
+        "id": "sha256:e291b65df2914bee50a96e4c7e7c48941ab000e3056440e9d8cab8cdd4c28e06",
+        "architecture": "arm64",
+        "unpackedBytes": 892566197,
+        "revision": null
+      },
+      "harness": {
+        "bunVersion": "1.4.2",
+        "files": {
+          "tooling/benchmark/run.ts": "2cbb97097469673b192dc17c13c42a2f7c1df26c868c26a4624ab9aa33e62191",
+          "tooling/benchmark/requests.ts": "db82b7788e41c547e650b84c5e6d1f1af131d6bde982110026fe3fa13e5722e2",
+          "tooling/benchmark/browser.ts": "9b7f9c5918c442f8bfd411d479cea30b49f738484967b4ca057496be231f92fa",
+          "tooling/benchmark/artifacts.ts": "ec50d82fab085a6f959b0ad0d10b7eb3ddf9a9e7b7395ba27673207c5fa01da4",
+          "tooling/benchmark/resources.ts": "847bfe8ea28739e7a07933426f1101b239bd6305577743e39fe91bf56b61e596",
+          "tooling/benchmark/queries.ts": "229150dcd41957981a87fce05f313f19140c7b6102a1700f7c00922733c89561",
+          "tooling/benchmark/storage.ts": "6c02ad8dd2b0762619af4a033e575cd80dad567720c3254189d284f81aa95dba",
+          "tooling/benchmark/maintenance.ts": "8f7dcdb7aaa8ec8398da441716f5594c5ba781060b3965655ed68ebc274c7196",
+          "tooling/benchmark/history.py": "d8e8e4127b19cfc71e2397947c60479d062198655542be8f29eb88eb35978e88",
+          "tooling/benchmark/pipeline.py": "3a25343d48bedb3c05b68e3ff9e0266e989e9a100bc7cc855f8a01f05000ad96",
+          "tooling/benchmark/compose.yml": "c6dee51c506c89ef7e89a3ac640e5c4f2da58efac54da687e82fc2ddb503b94a",
+          "tooling/benchmark/observation.ts": "1429f37da397c970d1ad13e09840a2349e6281e121c317b71538cb8e8ef413df",
+          "tooling/benchmark/ingress.ts": "3b1cabbc05dba996a70836ca338fc978eebbd62c91608020110940afc32470ee",
+          "tooling/benchmark/controller.ts": "66c7ebb1a9377a746ce976429838c64a09b3a8c77b4647226e1442fb79c75a69",
+          "runtime/observation/queries.ts": "b82181a9c41340956edd93cf42dce04c2a0c968f5750d27dee7e5b859b95d48a",
+          "src/lib/task-search.ts": "836a8afb6882d53bb366d3c20596ae3aac524e0145974342b03ca482360c9ce5",
+          "src/lib/indexed-search.ts": "dd2e3162d8a3fded344b2bdfdf5db683ee50a08766f69efbbea59de07575b9fe",
+          "src/types/surreal-records.ts": "c46a2a39303eaf1f022c2784915a933c5686d0912e2e728caf067340104805a0",
+          "bun.lock": "e1ba80c0828d4677978c14b650f7b344af1f2691f82cca6ec428fd4b93aea682",
+          "uv.lock": "3cc8ecdc5336976c7dd9ca3fb5739120560033fd2a46782881641127e04c86ca"
+        }
+      },
+      "transport": {
+        "browser": "local-https-proxy",
+        "programmatic": "internal-http-ws-basic",
+        "accountRole": "administrator",
+        "ingressTrace": false
+      },
+      "sourceSha": "c43fa7fc48753b6a31d49b530b17f26928423fdb",
+      "costAccounting": {
+        "beforeCleanupMs": 132150.340542,
+        "totalControllerMs": 133481.204292
+      },
+      "cleanup": {
+        "status": "passed",
+        "durationMs": 1330.2454169999983,
+        "commandCode": 0
+      },
+      "path": "test-results/benchmark/typed-refresh-core-10k-bun142/result.json",
+      "sha256": "a92c7d5e12ee69a25a995d238a90d9c6cd339d96242cff63edb7a2fa0bbb7a7f",
+      "pipeline": {
+        "status": "passed",
+        "errors": [],
+        "fixture": {
+          "version": 1,
+          "tasks": 128,
+          "events": 512,
+          "result_bytes": 0
+        },
+        "offered_events_per_second": 20,
+        "arrival_schedule": {
+          "steady_rate": 20,
+          "burst_rate": 0,
+          "burst_seconds": 0,
+          "burst_at_seconds": 0,
+          "planned_seconds": 25.6
+        },
+        "publication_seconds": 25.551064302999293,
+        "published_events_per_second": 20.038304233765295,
+        "validated_event_goodput_per_second": 19.90508216627197,
+        "public_convergence_seconds": 31.084215763999964,
+        "reader_mode": "shared",
+        "published_events": 512,
+        "validated_events": 512,
+        "persisted_correctness": {
+          "passed": true,
+          "errors": []
+        },
+        "live_delivery_complete": true,
+        "raw_event_drain_observed": true,
+        "elapsed_seconds": 31.084215763999964,
+        "drain_seconds": 0.17100987499907205,
+        "publication_lag_ms": {
+          "p50": 1.7326769982908274,
+          "p95": 10.139209998669685,
+          "p99": null,
+          "max": 10.526427999867138
+        },
+        "terminal_to_live_ms": {
+          "p50": 13.790292001431226,
+          "p95": 27.505792000738438,
+          "p99": null,
+          "max": 59.00549999932991
+        },
+        "publication_to_raw_event_live_ms": {
+          "p50": 75.70699999996577,
+          "p95": 167.1741669997573,
+          "p99": null,
+          "max": 187.22341700049583
+        },
+        "terminal_to_result_live_ms": {
+          "p50": 15.174166999713634,
+          "p95": 30.667875000290223,
+          "p99": null,
+          "max": 61.17404199903831
+        },
+        "viewer_query_ms": {
+          "p50": 28.000457999951323,
+          "p95": 247.68054199921608,
+          "p99": null,
+          "max": 1093.113209000876
+        },
+        "measurement_contract": "typed-refresh-v1",
+        "private_live": {
+          "complete": true,
+          "diagnostic_only": true,
+          "events": 512,
+          "results": 128,
+          "errors": []
+        },
+        "public_refresh": {
+          "cadence_ms": 5000,
+          "publication_to_raw_event_ms": {
+            "p50": 3608.9920839986007,
+            "p95": 5829.578752000089,
+            "p99": null,
+            "max": 6325.405335999676
+          },
+          "terminal_to_result_ms": {
+            "p50": 2927.1920430001046,
+            "p95": 5085.598543999367,
+            "p99": null,
+            "max": 5238.081293000505
+          },
+          "events": 512,
+          "results": 128,
+          "complete": true
+        },
+        "live_notifications": 959,
+        "live_bytes": 595567,
+        "fanout": {
+          "clients": 1,
+          "slow_client_delay_ms": 0,
+          "observations": [
+            {
+              "client": 1,
+              "raw_events": 512,
+              "delay_ms": 0
+            }
+          ],
+          "limitations": [
+            "Public refresh clients refetch raw events; the primary client also refetches task results.",
+            "Slow-client delay paces iterator consumption; SDK/socket buffers may continue reading.",
+            "Protocol clients share the generator process; this is not multiple rendered browsers."
+          ]
+        },
+        "generator_healthy": true,
+        "limitations": [
+          "Public freshness includes the 5-second refresh cadence and authorized typed reads.",
+          "Unprefixed LIVE latency metrics observe the private native database, not the public API. Native LIVE completeness is diagnostic; public refresh and exact persisted oracles determine correctness.",
+          "Fixed 100ms query pacing is a background reader, not a query capacity measurement.",
+          "Private raw-event drain polls at 50ms after publication, independently of public refresh. Goodput divides validated events by publication-to-durable-count time. Drain polling yields a timing upper bound and excludes public refresh.",
+          "On delivery failure, latency distributions describe successful partial observations only; they cannot establish tail latency."
+        ],
+        "generator_resources": {
+          "elapsed_seconds": 31.456577390001257,
+          "cpu_seconds": 0.799459,
+          "average_cpu_cores": 0.02541468482372513,
+          "process_peak_rss_bytes": 86827008,
+          "container_limits_and_peak": {
+            "cpu.max": "max 100000",
+            "memory.max": "max",
+            "memory.peak": "75485184"
+          },
+          "limitations": [
+            "Generator and observer share this process, including readiness, workload, validation and cleanup.",
+            "RSS/cgroup peaks are cumulative since startup; not publication-only or additive app memory.",
+            "Publisher lag detects unsustainable arrivals; resource averages alone do not prove headroom."
+          ]
+        }
+      },
+      "browser": {
+        "status": "failed",
+        "version": "153.0.8010.12",
+        "profile": {
+          "name": "desktop"
+        },
+        "failedPhase": "search-typing",
+        "error": "TimeoutError: waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('No tasks found.', { exact: true }) to be visible\u001b[22m\n",
+        "currentUrl": "https://127.0.0.1:55270/explorer?query=benchmark-no-such-task",
+        "selectedTaskHref": null,
+        "screenshot": "/Users/danyishai/.codex/worktrees/b6bc/celery-insights/test-results/benchmark/typed-refresh-core-10k-bun142/browser-failure.png",
+        "completed": {
+          "signInMs": 220.65620800000033,
+          "explorerUsefulDataMs": 1866.6585829999967
+        },
+        "errors": [],
+        "limitations": [
+          "Incomplete journey; partial successful measurements are diagnostic, not a passing baseline."
+        ]
+      },
+      "liveBrowser": {
+        "status": "passed",
+        "version": "153.0.8010.12",
+        "profile": {
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "cache": "fresh-context",
+          "network": "unthrottled"
+        },
+        "firstObservedTask": "bench-22",
+        "finalTask": "bench-127",
+        "errors": [],
+        "limitations": [
+          "Launch-to-paint includes producer container startup, backend warmup, ingestion and the Explorer refresh interval; it is not publish-to-paint latency.",
+          "One measured browser with active ingestion; no fan-out, field INP or reconnect claim.",
+          "The final task/result oracle validates browser convergence; independent producer validation checks full history and workflow/result correctness."
+        ],
+        "producerLaunchToFirstRowsMs": 5877.258542000001,
+        "searchToObservedRowsMs": 64.05983399999968,
+        "navigationToObservedResultMs": 6749.694833999998,
+        "producerLaunchToFinalRowsMs": 27639.146833,
+        "navigationToFinalResultMs": 101.84229200000118
+      },
+      "queries": {
+        "status": "passed",
+        "manifest": {
+          "tasks": 10000,
+          "events": 40000,
+          "workflows": 2500,
+          "failures": 1000,
+          "failureWorkflows": 1000
+        },
+        "validationMs": 24733.809374999997,
+        "idValidation": {
+          "task": {
+            "records": 10000,
+            "idSha256": "2868cee83d16633813abaf8659241f654dfbc35da40e9c6ec936fb2934235c26"
+          },
+          "event": {
+            "records": 40000,
+            "idSha256": "85584d7ffb1e377d59ff0fa761a293d459e5431209d7fcadb226a39af43aa2a7"
+          },
+          "workflow": {
+            "records": 2500,
+            "idSha256": "98c93d7a90885810df323ab3536ef8b35ae2ee0ef6919de7f924b764d04058fc"
+          }
+        },
+        "cases": [
+          {
+            "name": "tasks.all",
+            "status": "passed",
+            "expectedMatches": 10128,
+            "rowLimit": 50,
+            "samplesMs": [
+              805.3592499999941,
+              825.4235829999961,
+              804.2387500000041
+            ],
+            "medianMs": 805.3592499999941,
+            "minMs": 804.2387500000041,
+            "maxMs": 825.4235829999961,
+            "responseJsonBytes": 36472
+          },
+          {
+            "name": "tasks.large-page",
+            "status": "passed",
+            "expectedMatches": 10128,
+            "rowLimit": 200,
+            "samplesMs": [
+              822.8386660000106,
+              810.7257499999978,
+              831.5211249999993
+            ],
+            "medianMs": 822.8386660000106,
+            "minMs": 810.7257499999978,
+            "maxMs": 831.5211249999993,
+            "responseJsonBytes": 147768
+          },
+          {
+            "name": "tasks.failure",
+            "status": "passed",
+            "expectedMatches": 1000,
+            "rowLimit": 50,
+            "samplesMs": [
+              223.0266249999986,
+              221.28866700000071,
+              226.15595900001063
+            ],
+            "medianMs": 223.0266249999986,
+            "minMs": 221.28866700000071,
+            "maxMs": 226.15595900001063,
+            "responseJsonBytes": 34743
+          },
+          {
+            "name": "tasks.type",
+            "status": "passed",
+            "expectedMatches": 2500,
+            "rowLimit": 50,
+            "samplesMs": [
+              557.7554999999993,
+              548.6834170000075,
+              542.8712919999962
+            ],
+            "medianMs": 548.6834170000075,
+            "minMs": 542.8712919999962,
+            "maxMs": 557.7554999999993,
+            "responseJsonBytes": 45608
+          },
+          {
+            "name": "tasks.common-search",
+            "status": "passed",
+            "expectedMatches": 10000,
+            "rowLimit": 50,
+            "samplesMs": [
+              877.6715409999888,
+              860.0409169999912,
+              860.7486670000071
+            ],
+            "medianMs": 860.7486670000071,
+            "minMs": 860.0409169999912,
+            "maxMs": 877.6715409999888,
+            "responseJsonBytes": 47717
+          },
+          {
+            "name": "tasks.kwargs",
+            "status": "passed",
+            "expectedMatches": 920,
+            "rowLimit": 50,
+            "samplesMs": [
+              1130.9051670000044,
+              1145.2444579999865,
+              1133.374542000005
+            ],
+            "medianMs": 1133.374542000005,
+            "minMs": 1130.9051670000044,
+            "maxMs": 1145.2444579999865,
+            "responseJsonBytes": 45243
+          },
+          {
+            "name": "tasks.no-match",
+            "status": "passed",
+            "expectedMatches": 0,
+            "rowLimit": 50,
+            "samplesMs": [
+              1113.9512079999986,
+              1134.6587080000027,
+              1123.3636249999981
+            ],
+            "medianMs": 1123.3636249999981,
+            "minMs": 1113.9512079999986,
+            "maxMs": 1134.6587080000027,
+            "responseJsonBytes": 30
+          },
+          {
+            "name": "workflows.all",
+            "status": "passed",
+            "expectedMatches": 2532,
+            "rowLimit": 50,
+            "samplesMs": [
+              118.716499999995,
+              119.19679199998791,
+              113.22950000000128
+            ],
+            "medianMs": 118.716499999995,
+            "minMs": 113.22950000000128,
+            "maxMs": 119.19679199998791,
+            "responseJsonBytes": 20395
+          },
+          {
+            "name": "workflows.failure",
+            "status": "passed",
+            "expectedMatches": 1000,
+            "rowLimit": 50,
+            "samplesMs": [
+              97.33904199999233,
+              91.89237499999581,
+              97.768167000002
+            ],
+            "medianMs": 97.33904199999233,
+            "minMs": 91.89237499999581,
+            "maxMs": 97.768167000002,
+            "responseJsonBytes": 18071
+          },
+          {
+            "name": "workflows.kwargs",
+            "status": "passed",
+            "expectedMatches": 920,
+            "rowLimit": 50,
+            "samplesMs": [
+              302.8809170000022,
+              301.81287500000326,
+              299.2190410000039
+            ],
+            "medianMs": 301.81287500000326,
+            "minMs": 299.2190410000039,
+            "maxMs": 302.8809170000022,
+            "responseJsonBytes": 20418
+          }
+        ],
+        "referenceTime": "2026-10-12T09:25:26.459Z",
+        "limitations": [
+          "Warm-cache sequential read latency, not offered query throughput or cold-cache performance.",
+          "Public paginated ID/state validation runs outside timing; private history seeding independently validates relation record IDs.",
+          "Median/range across few repetitions; no tail percentile or resource-sizing gate. Query plans are unsupported by the public API."
+        ]
+      },
+      "requests": {
+        "status": "passed",
+        "offeredRequestsPerSecond": 12,
+        "plannedRequests": 240,
+        "attemptedRequests": 240,
+        "successfulRequests": 240,
+        "droppedRequests": [],
+        "publicationMs": 19916.117583,
+        "elapsedMs": 20295.750958000004,
+        "completedGoodputPerSecond": 11.825135246123962,
+        "generatorHealthy": true,
+        "peakInFlight": 4,
+        "maxInFlight": 32,
+        "cases": [
+          {
+            "name": "http.config",
+            "attempted": 40,
+            "successful": 40,
+            "failures": [],
+            "successfulResponseMs": {
+              "p50": 0.9142920000012964,
+              "p95": 2.2411670000001322,
+              "p99": null,
+              "max": 2.7052919999987353
+            },
+            "allAttemptsScheduledToCompleteMs": {
+              "p50": 3.234916000001249,
+              "p95": 5.5015000000130385,
+              "p99": null,
+              "max": 12.104625000007218
+            },
+            "headersMs": {
+              "p50": 0.8328340000007302,
+              "p95": 2.209000000002561,
+              "p99": null,
+              "max": 2.6204579999903217
+            },
+            "scheduleLagMs": {
+              "p50": 1.9642500000045402,
+              "p95": 4.589791000005789,
+              "p99": null,
+              "max": 9.433708000011393
+            },
+            "responseBytes": 6040
+          },
+          {
+            "name": "http.settings-info",
+            "attempted": 40,
+            "successful": 40,
+            "failures": [],
+            "successfulResponseMs": {
+              "p50": 7.720332999990205,
+              "p95": 22.798125000001164,
+              "p99": null,
+              "max": 25.109333999993396
+            },
+            "allAttemptsScheduledToCompleteMs": {
+              "p50": 8.8819166666799,
+              "p95": 22.765374666676507,
+              "p99": null,
+              "max": 25.45754166667757
+            },
+            "headersMs": {
+              "p50": 7.659041999999317,
+              "p95": 22.763458000001265,
+              "p99": null,
+              "max": 25.074458000002778
+            },
+            "scheduleLagMs": {
+              "p50": 1.0436666666792007,
+              "p95": 2.0141666666750098,
+              "p99": null,
+              "max": 2.335249666677555
+            },
+            "responseBytes": 24731
+          },
+          {
+            "name": "http.metrics",
+            "attempted": 40,
+            "successful": 40,
+            "failures": [],
+            "successfulResponseMs": {
+              "p50": 36.47954200000095,
+              "p95": 73.19808299999568,
+              "p99": null,
+              "max": 85.34316600000602
+            },
+            "allAttemptsScheduledToCompleteMs": {
+              "p50": 37.50220833333151,
+              "p95": 74.14829133333114,
+              "p99": null,
+              "max": 90.22587433333683
+            },
+            "headersMs": {
+              "p50": 36.44929200000479,
+              "p95": 73.15766699999222,
+              "p99": null,
+              "max": 85.30291699999361
+            },
+            "scheduleLagMs": {
+              "p50": 1.095749333340791,
+              "p95": 2.1823333333304618,
+              "p99": null,
+              "max": 4.882708333330811
+            },
+            "responseBytes": 73640
+          },
+          {
+            "name": "mcp.task-overview",
+            "attempted": 40,
+            "successful": 40,
+            "failures": [],
+            "successfulResponseMs": {
+              "p50": 97.64758299999812,
+              "p95": 155.8007920000091,
+              "p99": null,
+              "max": 206.6100410000072
+            },
+            "allAttemptsScheduledToCompleteMs": {
+              "p50": 99.04033300001174,
+              "p95": 158.35158300001058,
+              "p99": null,
+              "max": 208.8107910000108
+            },
+            "headersMs": {
+              "p50": 97.52212500000314,
+              "p95": 155.66449999999895,
+              "p99": null,
+              "max": 206.50970899999083
+            },
+            "scheduleLagMs": {
+              "p50": 1.2757910000073025,
+              "p95": 2.0540000000037253,
+              "p99": null,
+              "max": 2.5507910000014817
+            },
+            "responseBytes": 115966
+          },
+          {
+            "name": "mcp.task-history",
+            "attempted": 40,
+            "successful": 40,
+            "failures": [],
+            "successfulResponseMs": {
+              "p50": 15.903749999997672,
+              "p95": 79.04349999999977,
+              "p99": null,
+              "max": 134.48904200000106
+            },
+            "allAttemptsScheduledToCompleteMs": {
+              "p50": 17.500416666676756,
+              "p95": 81.34229166667501,
+              "p99": null,
+              "max": 135.79499966667208
+            },
+            "headersMs": {
+              "p50": 15.772624999997788,
+              "p95": 78.91716700000688,
+              "p99": null,
+              "max": 134.2827499999985
+            },
+            "scheduleLagMs": {
+              "p50": 1.4320826666807989,
+              "p95": 2.04999966667674,
+              "p99": null,
+              "max": 2.2987916666752426
+            },
+            "responseBytes": 81246
+          },
+          {
+            "name": "mcp.workflow-overview",
+            "attempted": 40,
+            "successful": 40,
+            "failures": [],
+            "successfulResponseMs": {
+              "p50": 240.5942919999943,
+              "p95": 483.84100000000035,
+              "p99": null,
+              "max": 542.5658330000006
+            },
+            "allAttemptsScheduledToCompleteMs": {
+              "p50": 242.0864583333314,
+              "p95": 485.78245833332767,
+              "p99": null,
+              "max": 543.1294993333286
+            },
+            "headersMs": {
+              "p50": 240.39070899999933,
+              "p95": 483.79412500000035,
+              "p99": null,
+              "max": 542.4743749999907
+            },
+            "scheduleLagMs": {
+              "p50": 1.4208333333372138,
+              "p95": 1.986874333335436,
+              "p99": null,
+              "max": 2.3742493333411403
+            },
+            "responseBytes": 227486
+          }
+        ],
+        "limitations": [
+          "Fixed mixed-request arrival schedule after ingestion; not a sustained or mixed-write capacity result.",
+          "Goodput includes bounded drain; timeouts/failures and generator drops are explicit.",
+          "Per-case tail estimates with small sample counts are diagnostic, not regression gates."
+        ],
+        "warmupRequests": 6,
+        "warmupMs": 407.7609999999986
+      },
+      "restart": {
+        "status": "passed",
+        "tasks": 128,
+        "events": 512,
+        "workflows": 32,
+        "validatedDataMs": 111.28787499910686,
+        "retries": 0,
+        "errors": [],
+        "generator_resources": {
+          "elapsed_seconds": 0.11195445799967274,
+          "cpu_seconds": 0.017188000000000148,
+          "average_cpu_cores": 0.15352671351461852,
+          "process_peak_rss_bytes": 74715136,
+          "container_limits_and_peak": {
+            "cpu.max": "max 100000",
+            "memory.max": "max",
+            "memory.peak": "54214656"
+          },
+          "limitations": [
+            "Generator and observer share this process, including readiness, workload, validation and cleanup.",
+            "RSS/cgroup peaks are cumulative since startup; not publication-only or additive app memory.",
+            "Publisher lag detects unsustainable arrivals; resource averages alone do not prove headroom."
+          ]
+        },
+        "restartToValidatedDataMs": 2860.8267079999932,
+        "cache": "image-present-existing-volume-page-cache-unspecified",
+        "limitations": [
+          "Orderly Compose restart including shutdown, command and validator startup; not native pod cold/warm startup or crash recovery."
+        ]
+      }
+    },
+    {
+      "status": "passed",
+      "scenario": {
+        "tasks": 128,
+        "rate": 20,
+        "readerMode": "shared",
+        "liveClients": 1,
+        "slowClientDelayMs": 0,
+        "resultBytes": "0",
+        "dropSequence": "-1",
+        "requests": {
+          "count": 240,
+          "rate": 12,
+          "maxInFlight": 32,
+          "mixVersion": 1
+        },
+        "browser": "desktop",
+        "liveBrowser": true,
+        "concurrentRequests": null,
+        "restart": true,
+        "maintenance": false,
+        "resourceIntervalSeconds": 0,
+        "burst": null,
+        "artifacts": true,
+        "history": {
+          "tasks": 10000,
+          "payloadBytes": 256,
+          "referenceTime": "2026-10-12T09:44:21.724Z",
+          "setupDeadlineSeconds": 600
+        },
+        "queries": {
+          "repetitions": 3
+        }
+      },
+      "image": {
+        "reference": "celery-insights-benchmark:typed-search",
+        "id": "sha256:fa4f4cebd6babee3a104aa3830953fadf5714555d86675a54b858bd3e99a0509",
+        "architecture": "arm64",
+        "unpackedBytes": 892577322,
+        "revision": null
+      },
+      "harness": {
+        "bunVersion": "1.4.2",
+        "files": {
+          "tooling/benchmark/run.ts": "2cbb97097469673b192dc17c13c42a2f7c1df26c868c26a4624ab9aa33e62191",
+          "tooling/benchmark/requests.ts": "db82b7788e41c547e650b84c5e6d1f1af131d6bde982110026fe3fa13e5722e2",
+          "tooling/benchmark/browser.ts": "9b7f9c5918c442f8bfd411d479cea30b49f738484967b4ca057496be231f92fa",
+          "tooling/benchmark/artifacts.ts": "ec50d82fab085a6f959b0ad0d10b7eb3ddf9a9e7b7395ba27673207c5fa01da4",
+          "tooling/benchmark/resources.ts": "847bfe8ea28739e7a07933426f1101b239bd6305577743e39fe91bf56b61e596",
+          "tooling/benchmark/queries.ts": "229150dcd41957981a87fce05f313f19140c7b6102a1700f7c00922733c89561",
+          "tooling/benchmark/storage.ts": "6c02ad8dd2b0762619af4a033e575cd80dad567720c3254189d284f81aa95dba",
+          "tooling/benchmark/maintenance.ts": "8f7dcdb7aaa8ec8398da441716f5594c5ba781060b3965655ed68ebc274c7196",
+          "tooling/benchmark/history.py": "d8e8e4127b19cfc71e2397947c60479d062198655542be8f29eb88eb35978e88",
+          "tooling/benchmark/pipeline.py": "3a25343d48bedb3c05b68e3ff9e0266e989e9a100bc7cc855f8a01f05000ad96",
+          "tooling/benchmark/compose.yml": "c6dee51c506c89ef7e89a3ac640e5c4f2da58efac54da687e82fc2ddb503b94a",
+          "tooling/benchmark/observation.ts": "1429f37da397c970d1ad13e09840a2349e6281e121c317b71538cb8e8ef413df",
+          "tooling/benchmark/ingress.ts": "3b1cabbc05dba996a70836ca338fc978eebbd62c91608020110940afc32470ee",
+          "tooling/benchmark/controller.ts": "66c7ebb1a9377a746ce976429838c64a09b3a8c77b4647226e1442fb79c75a69",
+          "runtime/observation/queries.ts": "b82181a9c41340956edd93cf42dce04c2a0c968f5750d27dee7e5b859b95d48a",
+          "src/lib/task-search.ts": "836a8afb6882d53bb366d3c20596ae3aac524e0145974342b03ca482360c9ce5",
+          "src/lib/indexed-search.ts": "dd2e3162d8a3fded344b2bdfdf5db683ee50a08766f69efbbea59de07575b9fe",
+          "src/types/surreal-records.ts": "c46a2a39303eaf1f022c2784915a933c5686d0912e2e728caf067340104805a0",
+          "bun.lock": "e1ba80c0828d4677978c14b650f7b344af1f2691f82cca6ec428fd4b93aea682",
+          "uv.lock": "3cc8ecdc5336976c7dd9ca3fb5739120560033fd2a46782881641127e04c86ca"
+        }
+      },
+      "transport": {
+        "browser": "local-https-proxy",
+        "programmatic": "internal-http-ws-basic",
+        "accountRole": "administrator",
+        "ingressTrace": false
+      },
+      "sourceSha": "c43fa7fc48753b6a31d49b530b17f26928423fdb",
+      "costAccounting": {
+        "beforeCleanupMs": 131818.175375,
+        "totalControllerMs": 133143.455709
+      },
+      "cleanup": {
+        "status": "passed",
+        "durationMs": 1324.5599169999768,
+        "commandCode": 0
+      },
+      "path": "test-results/benchmark/typed-refresh-core-10k-search/result.json",
+      "sha256": "5cc75f3cfe995d949de79b6c729a2cf0e6af515ec4aab2d8205e4b66fd30c569",
+      "pipeline": {
+        "status": "passed",
+        "errors": [],
+        "fixture": {
+          "version": 1,
+          "tasks": 128,
+          "events": 512,
+          "result_bytes": 0
+        },
+        "offered_events_per_second": 20,
+        "arrival_schedule": {
+          "steady_rate": 20,
+          "burst_rate": 0,
+          "burst_seconds": 0,
+          "burst_at_seconds": 0,
+          "planned_seconds": 25.6
+        },
+        "publication_seconds": 25.55201738699907,
+        "published_events_per_second": 20.037556809917753,
+        "validated_event_goodput_per_second": 20.00251134108415,
+        "public_convergence_seconds": 31.093619138999202,
+        "reader_mode": "shared",
+        "published_events": 512,
+        "validated_events": 512,
+        "persisted_correctness": {
+          "passed": true,
+          "errors": []
+        },
+        "live_delivery_complete": true,
+        "raw_event_drain_observed": true,
+        "elapsed_seconds": 31.093619138999202,
+        "drain_seconds": 0.044768499999918276,
+        "publication_lag_ms": {
+          "p50": 1.7766719996874514,
+          "p95": 10.3539669995385,
+          "p99": null,
+          "max": 10.612836999280617
+        },
+        "terminal_to_live_ms": {
+          "p50": 13.353124999412103,
+          "p95": 38.22891699928732,
+          "p99": null,
+          "max": 48.018290999607416
+        },
+        "publication_to_raw_event_live_ms": {
+          "p50": 82.10791700003028,
+          "p95": 169.77154199958022,
+          "p99": null,
+          "max": 205.97733300019172
+        },
+        "terminal_to_result_live_ms": {
+          "p50": 14.927290998457465,
+          "p95": 39.78987499976938,
+          "p99": null,
+          "max": 50.824374999137945
+        },
+        "viewer_query_ms": {
+          "p50": 28.10245799992117,
+          "p95": 176.2140829996497,
+          "p99": null,
+          "max": 991.2920420010778
+        },
+        "measurement_contract": "typed-refresh-v1",
+        "private_live": {
+          "complete": true,
+          "diagnostic_only": true,
+          "events": 512,
+          "results": 128,
+          "errors": []
+        },
+        "public_refresh": {
+          "cadence_ms": 5000,
+          "publication_to_raw_event_ms": {
+            "p50": 3564.956501000779,
+            "p95": 5810.278668999672,
+            "p99": null,
+            "max": 6221.8871700006275
+          },
+          "terminal_to_result_ms": {
+            "p50": 2943.9668340000935,
+            "p95": 5085.859168999377,
+            "p99": null,
+            "max": 5234.582752000279
+          },
+          "events": 512,
+          "results": 128,
+          "complete": true
+        },
+        "live_notifications": 959,
+        "live_bytes": 595576,
+        "fanout": {
+          "clients": 1,
+          "slow_client_delay_ms": 0,
+          "observations": [
+            {
+              "client": 1,
+              "raw_events": 512,
+              "delay_ms": 0
+            }
+          ],
+          "limitations": [
+            "Public refresh clients refetch raw events; the primary client also refetches task results.",
+            "Slow-client delay paces iterator consumption; SDK/socket buffers may continue reading.",
+            "Protocol clients share the generator process; this is not multiple rendered browsers."
+          ]
+        },
+        "generator_healthy": true,
+        "limitations": [
+          "Public freshness includes the 5-second refresh cadence and authorized typed reads.",
+          "Unprefixed LIVE latency metrics observe the private native database, not the public API. Native LIVE completeness is diagnostic; public refresh and exact persisted oracles determine correctness.",
+          "Fixed 100ms query pacing is a background reader, not a query capacity measurement.",
+          "Private raw-event drain polls at 50ms after publication, independently of public refresh. Goodput divides validated events by publication-to-durable-count time. Drain polling yields a timing upper bound and excludes public refresh.",
+          "On delivery failure, latency distributions describe successful partial observations only; they cannot establish tail latency."
+        ],
+        "generator_resources": {
+          "elapsed_seconds": 31.467833515000166,
+          "cpu_seconds": 0.817587,
+          "average_cpu_cores": 0.02598167425826346,
+          "process_peak_rss_bytes": 86671360,
+          "container_limits_and_peak": {
+            "cpu.max": "max 100000",
+            "memory.max": "max",
+            "memory.peak": "77225984"
+          },
+          "limitations": [
+            "Generator and observer share this process, including readiness, workload, validation and cleanup.",
+            "RSS/cgroup peaks are cumulative since startup; not publication-only or additive app memory.",
+            "Publisher lag detects unsustainable arrivals; resource averages alone do not prove headroom."
+          ]
+        }
+      },
+      "browser": {
+        "status": "passed",
+        "version": "153.0.8010.12",
+        "profile": {
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "device": "desktop",
+          "name": "desktop",
+          "network": "unthrottled",
+          "cpuThrottleRate": 1,
+          "initialCache": "fresh-context"
+        },
+        "explorerUsefulDataMs": 1358.8946670000005,
+        "searchNoMatchMs": 2289.6618749999907,
+        "typedSearch": {
+          "expected": "benchmark-no-such-task",
+          "observed": "benchmark-no-such-task"
+        },
+        "searchResetMs": 82.73345800000243,
+        "searchPasteNoMatchMs": 2366.9944160000014,
+        "searchPasteResetMs": 83.00104200000351,
+        "socketTraffic": {
+          "initial-navigation": {
+            "sentFrames": 4,
+            "receivedFrames": 4,
+            "sentPayloadBytes": 493,
+            "receivedPayloadBytes": 27166
+          },
+          "search-typing": {
+            "sentFrames": 1,
+            "receivedFrames": 1,
+            "sentPayloadBytes": 308,
+            "receivedPayloadBytes": 190
+          },
+          "search-reset-after-typing": {
+            "sentFrames": 1,
+            "receivedFrames": 0,
+            "sentPayloadBytes": 286,
+            "receivedPayloadBytes": 0
+          },
+          "search-paste": {
+            "sentFrames": 2,
+            "receivedFrames": 4,
+            "sentPayloadBytes": 424,
+            "receivedPayloadBytes": 27372
+          },
+          "search-reset-after-paste": {
+            "sentFrames": 1,
+            "receivedFrames": 0,
+            "sentPayloadBytes": 286,
+            "receivedPayloadBytes": 0
+          },
+          "task-navigation": {
+            "sentFrames": 6,
+            "receivedFrames": 7,
+            "sentPayloadBytes": 556,
+            "receivedPayloadBytes": 31088
+          }
+        },
+        "taskNavigationUsefulDataMs": 864.4535840000026,
+        "initialDocument": {
+          "ttfbMs": 4.700000047683716,
+          "fcpMs": 52,
+          "lcpAtUsefulRowsMs": 112,
+          "clsAtUsefulRows": 0.0462370963809585
+        },
+        "journey": {
+          "cls": 0.0462370963809585,
+          "recordedInteractionCount": 24,
+          "maximumRecordedInteractionDurationMs": 32,
+          "longTaskCount": 1,
+          "longTaskDurationMs": 72,
+          "assetTransferBytes": 1018501,
+          "assetEncodedBodyBytes": 2061175,
+          "assetDecodedBodyBytes": 2061175
+        },
+        "errors": [],
+        "limitations": [
+          "One laboratory journey after ingestion on the declared fixture; no live-rendering or field-vitals claim.",
+          "Typing uses 10ms between characters; paste uses a distinct absent term to avoid reusing the typed query cache. Their order is fixed and database caches are warm.",
+          "WebSocket frame counts include all data protocol traffic during each phase, including background work; they are not decoded query counts.",
+          "LCP is sampled at useful rows; SPA navigation has its own data-and-result paint milestone.",
+          "Interaction duration is a laboratory observation, not field INP. Sub-16ms events may be absent.",
+          "Resource Timing covers fetched assets; WebSocket data, unfetched lazy chunks, and whole-build bundle sizes are separate."
+        ]
+      },
+      "liveBrowser": {
+        "status": "passed",
+        "version": "153.0.8010.12",
+        "profile": {
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "cache": "fresh-context",
+          "network": "unthrottled"
+        },
+        "firstObservedTask": "bench-28",
+        "finalTask": "bench-127",
+        "errors": [],
+        "limitations": [
+          "Launch-to-paint includes producer container startup, backend warmup, ingestion and the Explorer refresh interval; it is not publish-to-paint latency.",
+          "One measured browser with active ingestion; no fan-out, field INP or reconnect claim.",
+          "The final task/result oracle validates browser convergence; independent producer validation checks full history and workflow/result correctness."
+        ],
+        "producerLaunchToFirstRowsMs": 6393.374416999999,
+        "searchToObservedRowsMs": 81.10858300000109,
+        "navigationToObservedResultMs": 6216.625292000001,
+        "producerLaunchToFinalRowsMs": 27674.252084,
+        "navigationToFinalResultMs": 99.65362499999901
+      },
+      "queries": {
+        "status": "passed",
+        "manifest": {
+          "tasks": 10000,
+          "events": 40000,
+          "workflows": 2500,
+          "failures": 1000,
+          "failureWorkflows": 1000
+        },
+        "validationMs": 24806.99637500001,
+        "idValidation": {
+          "task": {
+            "records": 10000,
+            "idSha256": "2868cee83d16633813abaf8659241f654dfbc35da40e9c6ec936fb2934235c26"
+          },
+          "event": {
+            "records": 40000,
+            "idSha256": "85584d7ffb1e377d59ff0fa761a293d459e5431209d7fcadb226a39af43aa2a7"
+          },
+          "workflow": {
+            "records": 2500,
+            "idSha256": "98c93d7a90885810df323ab3536ef8b35ae2ee0ef6919de7f924b764d04058fc"
+          }
+        },
+        "cases": [
+          {
+            "name": "tasks.all",
+            "status": "passed",
+            "expectedMatches": 10128,
+            "rowLimit": 50,
+            "samplesMs": [
+              800.6064999999944,
+              824.3982499999984,
+              798.1253339999967
+            ],
+            "medianMs": 800.6064999999944,
+            "minMs": 798.1253339999967,
+            "maxMs": 824.3982499999984,
+            "responseJsonBytes": 36464
+          },
+          {
+            "name": "tasks.large-page",
+            "status": "passed",
+            "expectedMatches": 10128,
+            "rowLimit": 200,
+            "samplesMs": [
+              827.1285829999979,
+              806.8966669999936,
+              810.181666000004
+            ],
+            "medianMs": 810.181666000004,
+            "minMs": 806.8966669999936,
+            "maxMs": 827.1285829999979,
+            "responseJsonBytes": 147744
+          },
+          {
+            "name": "tasks.failure",
+            "status": "passed",
+            "expectedMatches": 1000,
+            "rowLimit": 50,
+            "samplesMs": [
+              221.34612500001094,
+              222.74420799998916,
+              218.06916600000113
+            ],
+            "medianMs": 221.34612500001094,
+            "minMs": 218.06916600000113,
+            "maxMs": 222.74420799998916,
+            "responseJsonBytes": 34743
+          },
+          {
+            "name": "tasks.type",
+            "status": "passed",
+            "expectedMatches": 2500,
+            "rowLimit": 50,
+            "samplesMs": [
+              536.9373750000086,
+              550.8800839999894,
+              538.2922499999986
+            ],
+            "medianMs": 538.2922499999986,
+            "minMs": 536.9373750000086,
+            "maxMs": 550.8800839999894,
+            "responseJsonBytes": 45608
+          },
+          {
+            "name": "tasks.common-search",
+            "status": "passed",
+            "expectedMatches": 10000,
+            "rowLimit": 50,
+            "samplesMs": [
+              873.1747500000056,
+              856.2957920000044,
+              849.2137080000102
+            ],
+            "medianMs": 856.2957920000044,
+            "minMs": 849.2137080000102,
+            "maxMs": 873.1747500000056,
+            "responseJsonBytes": 47717
+          },
+          {
+            "name": "tasks.kwargs",
+            "status": "passed",
+            "expectedMatches": 920,
+            "rowLimit": 50,
+            "samplesMs": [
+              1118.5009169999976,
+              1137.0015409999905,
+              1117.2099170000001
+            ],
+            "medianMs": 1118.5009169999976,
+            "minMs": 1117.2099170000001,
+            "maxMs": 1137.0015409999905,
+            "responseJsonBytes": 45243
+          },
+          {
+            "name": "tasks.no-match",
+            "status": "passed",
+            "expectedMatches": 0,
+            "rowLimit": 50,
+            "samplesMs": [
+              1099.899916999988,
+              1124.8724999999977,
+              1103.0275830000028
+            ],
+            "medianMs": 1103.0275830000028,
+            "minMs": 1099.899916999988,
+            "maxMs": 1124.8724999999977,
+            "responseJsonBytes": 30
+          },
+          {
+            "name": "workflows.all",
+            "status": "passed",
+            "expectedMatches": 2532,
+            "rowLimit": 50,
+            "samplesMs": [
+              111.63150000000314,
+              108.77683299999626,
+              107.6195000000007
+            ],
+            "medianMs": 108.77683299999626,
+            "minMs": 107.6195000000007,
+            "maxMs": 111.63150000000314,
+            "responseJsonBytes": 20395
+          },
+          {
+            "name": "workflows.failure",
+            "status": "passed",
+            "expectedMatches": 1000,
+            "rowLimit": 50,
+            "samplesMs": [
+              99.35429200000362,
+              98.91233300000022,
+              93.10983299999498
+            ],
+            "medianMs": 98.91233300000022,
+            "minMs": 93.10983299999498,
+            "maxMs": 99.35429200000362,
+            "responseJsonBytes": 18071
+          },
+          {
+            "name": "workflows.kwargs",
+            "status": "passed",
+            "expectedMatches": 920,
+            "rowLimit": 50,
+            "samplesMs": [
+              296.5350410000101,
+              300.84029100000043,
+              298.03775000000314
+            ],
+            "medianMs": 298.03775000000314,
+            "minMs": 296.5350410000101,
+            "maxMs": 300.84029100000043,
+            "responseJsonBytes": 20416
+          }
+        ],
+        "referenceTime": "2026-10-12T09:44:21.724Z",
+        "limitations": [
+          "Warm-cache sequential read latency, not offered query throughput or cold-cache performance.",
+          "Public paginated ID/state validation runs outside timing; private history seeding independently validates relation record IDs.",
+          "Median/range across few repetitions; no tail percentile or resource-sizing gate. Query plans are unsupported by the public API."
+        ]
+      },
+      "requests": {
+        "status": "passed",
+        "offeredRequestsPerSecond": 12,
+        "plannedRequests": 240,
+        "attemptedRequests": 240,
+        "successfulRequests": 240,
+        "droppedRequests": [],
+        "publicationMs": 19917.91425,
+        "elapsedMs": 20150.936208,
+        "completedGoodputPerSecond": 11.910116608116653,
+        "generatorHealthy": true,
+        "peakInFlight": 2,
+        "maxInFlight": 32,
+        "cases": [
+          {
+            "name": "http.config",
+            "attempted": 40,
+            "successful": 40,
+            "failures": [],
+            "successfulResponseMs": {
+              "p50": 0.8040840000030585,
+              "p95": 0.9976250000036089,
+              "p99": null,
+              "max": 2.2953749999869615
+            },
+            "allAttemptsScheduledToCompleteMs": {
+              "p50": 2.1735830000106944,
+              "p95": 4.116250000006403,
+              "p99": null,
+              "max": 6.187082999997074
+            },
+            "headersMs": {
+              "p50": 0.7606250000098953,
+              "p95": 0.9180420000047889,
+              "p99": null,
+              "max": 2.2230840000120224
+            },
+            "scheduleLagMs": {
+              "p50": 1.342958000008366,
+              "p95": 3.15175000000454,
+              "p99": null,
+              "max": 3.8917080000101123
+            },
+            "responseBytes": 6040
+          },
+          {
+            "name": "http.settings-info",
+            "attempted": 40,
+            "successful": 40,
+            "failures": [],
+            "successfulResponseMs": {
+              "p50": 7.804625000004307,
+              "p95": 8.882666000004974,
+              "p99": null,
+              "max": 9.730666999996174
+            },
+            "allAttemptsScheduledToCompleteMs": {
+              "p50": 9.048958666680846,
+              "p95": 10.708499666681746,
+              "p99": null,
+              "max": 11.666458666673861
+            },
+            "headersMs": {
+              "p50": 7.736791999996058,
+              "p95": 8.810624999998254,
+              "p99": null,
+              "max": 9.600666999991518
+            },
+            "scheduleLagMs": {
+              "p50": 1.2945836666767718,
+              "p95": 1.9413746666687075,
+              "p99": null,
+              "max": 2.0039586666825926
+            },
+            "responseBytes": 24733
+          },
+          {
+            "name": "http.metrics",
+            "attempted": 40,
+            "successful": 40,
+            "failures": [],
+            "successfulResponseMs": {
+              "p50": 35.64175000000978,
+              "p95": 39.02941600000486,
+              "p99": null,
+              "max": 39.83166599999822
+            },
+            "allAttemptsScheduledToCompleteMs": {
+              "p50": 36.68416633333254,
+              "p95": 39.5337913333351,
+              "p99": null,
+              "max": 40.36379133333685
+            },
+            "headersMs": {
+              "p50": 35.59037499999977,
+              "p95": 38.98087499999383,
+              "p99": null,
+              "max": 39.76054099999601
+            },
+            "scheduleLagMs": {
+              "p50": 1.1415833333303453,
+              "p95": 1.8839163333323086,
+              "p99": null,
+              "max": 2.5082913333317265
+            },
+            "responseBytes": 73640
+          },
+          {
+            "name": "mcp.task-overview",
+            "attempted": 40,
+            "successful": 40,
+            "failures": [],
+            "successfulResponseMs": {
+              "p50": 95.40595800000301,
+              "p95": 100.88720899999316,
+              "p99": null,
+              "max": 102.15770899999188
+            },
+            "allAttemptsScheduledToCompleteMs": {
+              "p50": 96.86516700001084,
+              "p95": 101.13204199999745,
+              "p99": null,
+              "max": 103.37904200000048
+            },
+            "headersMs": {
+              "p50": 95.30812500001048,
+              "p95": 100.7754169999971,
+              "p99": null,
+              "max": 102.07474999999977
+            },
+            "scheduleLagMs": {
+              "p50": 1.3667080000013812,
+              "p95": 1.925875000000815,
+              "p99": null,
+              "max": 2.0318330000009155
+            },
+            "responseBytes": 115966
+          },
+          {
+            "name": "mcp.task-history",
+            "attempted": 40,
+            "successful": 40,
+            "failures": [],
+            "successfulResponseMs": {
+              "p50": 14.140458000008948,
+              "p95": 21.04558300001372,
+              "p99": null,
+              "max": 21.46424999998999
+            },
+            "allAttemptsScheduledToCompleteMs": {
+              "p50": 15.265166666678851,
+              "p95": 20.802624666670454,
+              "p99": null,
+              "max": 22.099749666682328
+            },
+            "headersMs": {
+              "p50": 13.974833000000217,
+              "p95": 20.90745899999456,
+              "p99": null,
+              "max": 21.349167000007583
+            },
+            "scheduleLagMs": {
+              "p50": 1.2846666666737292,
+              "p95": 1.8797916666808305,
+              "p99": null,
+              "max": 1.948583666671766
+            },
+            "responseBytes": 81246
+          },
+          {
+            "name": "mcp.workflow-overview",
+            "attempted": 40,
+            "successful": 40,
+            "failures": [],
+            "successfulResponseMs": {
+              "p50": 239.15116700000362,
+              "p95": 247.8983750000043,
+              "p99": null,
+              "max": 252.17916699999478
+            },
+            "allAttemptsScheduledToCompleteMs": {
+              "p50": 241.07700033333094,
+              "p95": 247.9626663333329,
+              "p99": null,
+              "max": 256.3375833333266
+            },
+            "headersMs": {
+              "p50": 238.90462499999558,
+              "p95": 247.69754199999443,
+              "p99": null,
+              "max": 252.07479199999943
+            },
+            "scheduleLagMs": {
+              "p50": 1.6433333333261544,
+              "p95": 4.121041333331959,
+              "p99": null,
+              "max": 4.427708333329065
+            },
+            "responseBytes": 227406
+          }
+        ],
+        "limitations": [
+          "Fixed mixed-request arrival schedule after ingestion; not a sustained or mixed-write capacity result.",
+          "Goodput includes bounded drain; timeouts/failures and generator drops are explicit.",
+          "Per-case tail estimates with small sample counts are diagnostic, not regression gates."
+        ],
+        "warmupRequests": 6,
+        "warmupMs": 393.2197079999896
+      },
+      "restart": {
+        "status": "passed",
+        "tasks": 128,
+        "events": 512,
+        "workflows": 32,
+        "validatedDataMs": 109.9517080001533,
+        "retries": 0,
+        "errors": [],
+        "generator_resources": {
+          "elapsed_seconds": 0.11052083400136326,
+          "cpu_seconds": 0.016506000000000007,
+          "average_cpu_cores": 0.14934740720284836,
+          "process_peak_rss_bytes": 74649600,
+          "container_limits_and_peak": {
+            "cpu.max": "max 100000",
+            "memory.max": "max",
+            "memory.peak": "54521856"
+          },
+          "limitations": [
+            "Generator and observer share this process, including readiness, workload, validation and cleanup.",
+            "RSS/cgroup peaks are cumulative since startup; not publication-only or additive app memory.",
+            "Publisher lag detects unsustainable arrivals; resource averages alone do not prove headroom."
+          ]
+        },
+        "restartToValidatedDataMs": 2707.329249999995,
+        "cache": "image-present-existing-volume-page-cache-unspecified",
+        "limitations": [
+          "Orderly Compose restart including shutdown, command and validator startup; not native pod cold/warm startup or crash recovery."
+        ]
+      }
+    },
+    {
+      "status": "passed",
+      "scenario": {
+        "tasks": 32,
+        "rate": 20,
+        "readerMode": "shared",
+        "liveClients": 3,
+        "slowClientDelayMs": 100,
+        "resultBytes": "0",
+        "dropSequence": "-1",
+        "requests": null,
+        "browser": null,
+        "liveBrowser": true,
+        "concurrentRequests": null,
+        "restart": true,
+        "maintenance": false,
+        "resourceIntervalSeconds": 0,
+        "burst": null,
+        "artifacts": false,
+        "history": {
+          "tasks": 1000,
+          "payloadBytes": 256,
+          "referenceTime": "2026-10-12T10:01:58.269Z",
+          "setupDeadlineSeconds": 600
+        },
+        "queries": null
+      },
+      "image": {
+        "reference": "celery-insights-benchmark:typed-search",
+        "id": "sha256:fa4f4cebd6babee3a104aa3830953fadf5714555d86675a54b858bd3e99a0509",
+        "architecture": "arm64",
+        "unpackedBytes": 892577322,
+        "revision": null
+      },
+      "harness": {
+        "bunVersion": "1.4.2",
+        "files": {
+          "tooling/benchmark/run.ts": "2cbb97097469673b192dc17c13c42a2f7c1df26c868c26a4624ab9aa33e62191",
+          "tooling/benchmark/requests.ts": "db82b7788e41c547e650b84c5e6d1f1af131d6bde982110026fe3fa13e5722e2",
+          "tooling/benchmark/browser.ts": "66bb79d6dd130f47600eaa5a145ff9f8820addfb46252ceb74432eba18bc1d3b",
+          "tooling/benchmark/artifacts.ts": "ec50d82fab085a6f959b0ad0d10b7eb3ddf9a9e7b7395ba27673207c5fa01da4",
+          "tooling/benchmark/resources.ts": "847bfe8ea28739e7a07933426f1101b239bd6305577743e39fe91bf56b61e596",
+          "tooling/benchmark/queries.ts": "229150dcd41957981a87fce05f313f19140c7b6102a1700f7c00922733c89561",
+          "tooling/benchmark/storage.ts": "6c02ad8dd2b0762619af4a033e575cd80dad567720c3254189d284f81aa95dba",
+          "tooling/benchmark/maintenance.ts": "8f7dcdb7aaa8ec8398da441716f5594c5ba781060b3965655ed68ebc274c7196",
+          "tooling/benchmark/history.py": "d8e8e4127b19cfc71e2397947c60479d062198655542be8f29eb88eb35978e88",
+          "tooling/benchmark/pipeline.py": "76feff60e049d6f896d67eb3e45eba41eadd8a45550aa3a2590460d3bb47933b",
+          "tooling/benchmark/compose.yml": "c6dee51c506c89ef7e89a3ac640e5c4f2da58efac54da687e82fc2ddb503b94a",
+          "tooling/benchmark/observation.ts": "1429f37da397c970d1ad13e09840a2349e6281e121c317b71538cb8e8ef413df",
+          "tooling/benchmark/ingress.ts": "3b1cabbc05dba996a70836ca338fc978eebbd62c91608020110940afc32470ee",
+          "tooling/benchmark/controller.ts": "66c7ebb1a9377a746ce976429838c64a09b3a8c77b4647226e1442fb79c75a69",
+          "runtime/observation/queries.ts": "b82181a9c41340956edd93cf42dce04c2a0c968f5750d27dee7e5b859b95d48a",
+          "src/lib/task-search.ts": "836a8afb6882d53bb366d3c20596ae3aac524e0145974342b03ca482360c9ce5",
+          "src/lib/indexed-search.ts": "dd2e3162d8a3fded344b2bdfdf5db683ee50a08766f69efbbea59de07575b9fe",
+          "src/types/surreal-records.ts": "c46a2a39303eaf1f022c2784915a933c5686d0912e2e728caf067340104805a0",
+          "bun.lock": "e1ba80c0828d4677978c14b650f7b344af1f2691f82cca6ec428fd4b93aea682",
+          "uv.lock": "3cc8ecdc5336976c7dd9ca3fb5739120560033fd2a46782881641127e04c86ca"
+        }
+      },
+      "transport": {
+        "browser": "local-https-proxy",
+        "programmatic": "internal-http-ws-basic",
+        "accountRole": "administrator",
+        "ingressTrace": false
+      },
+      "sourceSha": "c43fa7fc48753b6a31d49b530b17f26928423fdb",
+      "costAccounting": {
+        "beforeCleanupMs": 25802.419665999998,
+        "totalControllerMs": 27159.324540999998
+      },
+      "cleanup": {
+        "status": "passed",
+        "durationMs": 1356.2909580000014,
+        "commandCode": 0
+      },
+      "path": "test-results/benchmark/typed-refresh-window-proof/result.json",
+      "sha256": "a7393814596a5689c25af2bb662767d9521f5c80ab93acaa81a8c54eb29ae5a7",
+      "pipeline": {
+        "status": "passed",
+        "errors": [],
+        "fixture": {
+          "version": 1,
+          "tasks": 32,
+          "events": 128,
+          "result_bytes": 0
+        },
+        "offered_events_per_second": 20,
+        "arrival_schedule": {
+          "steady_rate": 20,
+          "burst_rate": 0,
+          "burst_seconds": 0,
+          "burst_at_seconds": 0,
+          "planned_seconds": 6.4
+        },
+        "publication_seconds": 6.3511634200003755,
+        "published_events_per_second": 20.15378782364766,
+        "validated_event_goodput_per_second": 20.096868728550405,
+        "public_convergence_seconds": 10.018459380000422,
+        "reader_mode": "shared",
+        "published_events": 128,
+        "validated_events": 128,
+        "persisted_correctness": {
+          "passed": true,
+          "errors": []
+        },
+        "live_delivery_complete": true,
+        "raw_event_drain_observed": true,
+        "elapsed_seconds": 10.018459380000422,
+        "drain_seconds": 0.017987999999604654,
+        "publication_lag_ms": {
+          "p50": 1.5705020006864245,
+          "p95": 10.55975300041645,
+          "p99": null,
+          "max": 10.852127999532613
+        },
+        "terminal_to_live_ms": {
+          "p50": 7.179707999966922,
+          "p95": 10.244416000205092,
+          "p99": null,
+          "max": 22.657374998743762
+        },
+        "publication_to_raw_event_live_ms": {
+          "p50": 59.00045900125406,
+          "p95": 134.21612499951152,
+          "p99": null,
+          "max": 154.00516699992295
+        },
+        "terminal_to_result_live_ms": {
+          "p50": 8.94687499931024,
+          "p95": 12.868583000454237,
+          "p99": null,
+          "max": 28.269124999496853
+        },
+        "viewer_query_ms": {
+          "p50": 12.685833000432467,
+          "p95": 22.674833999190014,
+          "p99": null,
+          "max": 27.010458001313964
+        },
+        "measurement_contract": "typed-refresh-v2",
+        "private_live": {
+          "complete": true,
+          "diagnostic_only": true,
+          "events": 128,
+          "results": 32,
+          "errors": []
+        },
+        "public_refresh": {
+          "cadence_ms": 5000,
+          "strategy": "timestamp-window-with-final-snapshot",
+          "returned_rows": 290,
+          "snapshot_reads": 4,
+          "full_reconciliation": true,
+          "publication_to_raw_event_ms": {
+            "p50": 3218.2429599997704,
+            "p95": 4815.319836001436,
+            "p99": null,
+            "max": 5025.303794000138
+          },
+          "terminal_to_result_ms": {
+            "p50": 4200.228126999718,
+            "p95": 4941.769002000001,
+            "p99": null,
+            "max": 5001.746627000102
+          },
+          "events": 128,
+          "results": 32,
+          "complete": true
+        },
+        "live_notifications": 240,
+        "live_bytes": 148505,
+        "fanout": {
+          "clients": 3,
+          "slow_client_delay_ms": 100,
+          "observations": [
+            {
+              "client": 1,
+              "raw_events": 128,
+              "delay_ms": 0
+            },
+            {
+              "client": 2,
+              "raw_events": 128,
+              "delay_ms": 0,
+              "publication_to_raw_event_live_ms": {
+                "p50": 3207.1752100000595,
+                "p95": 4804.35566900087,
+                "p99": null,
+                "max": 5014.3406269999105
+              }
+            },
+            {
+              "client": 3,
+              "raw_events": 128,
+              "delay_ms": 100,
+              "publication_to_raw_event_live_ms": {
+                "p50": 3209.27362600014,
+                "p95": 4855.160168999646,
+                "p99": null,
+                "max": 5008.934878000218
+              }
+            }
+          ],
+          "limitations": [
+            "Public refresh clients refetch raw events; the primary client also refetches task results.",
+            "Slow-client delay paces iterator consumption; SDK/socket buffers may continue reading.",
+            "Protocol clients share the generator process; this is not multiple rendered browsers."
+          ]
+        },
+        "generator_healthy": true,
+        "limitations": [
+          "Public freshness includes the 5-second refresh cadence and authorized typed reads.",
+          "Unprefixed LIVE latency metrics observe the private native database, not the public API. Native LIVE completeness is diagnostic; public refresh and exact persisted oracles determine correctness.",
+          "Fixed 100ms query pacing is a background reader, not a query capacity measurement.",
+          "Private raw-event drain polls at 50ms after publication, independently of public refresh. Goodput divides validated events by publication-to-durable-count time. Drain polling yields a timing upper bound and excludes public refresh.",
+          "On delivery failure, latency distributions describe successful partial observations only; they cannot establish tail latency."
+        ],
+        "generator_resources": {
+          "elapsed_seconds": 10.321692670999255,
+          "cpu_seconds": 0.573824,
+          "average_cpu_cores": 0.055593982333175536,
+          "process_peak_rss_bytes": 86478848,
+          "container_limits_and_peak": {
+            "cpu.max": "max 100000",
+            "memory.max": "max",
+            "memory.peak": "73289728"
+          },
+          "limitations": [
+            "Generator and observer share this process, including readiness, workload, validation and cleanup.",
+            "RSS/cgroup peaks are cumulative since startup; not publication-only or additive app memory.",
+            "Publisher lag detects unsustainable arrivals; resource averages alone do not prove headroom."
+          ]
+        }
+      },
+      "liveBrowser": {
+        "status": "passed",
+        "version": "153.0.8010.12",
+        "profile": {
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "cache": "fresh-context",
+          "network": "unthrottled"
+        },
+        "firstObservedTask": "bench-29",
+        "finalTask": "bench-31",
+        "errors": [],
+        "limitations": [
+          "Launch-to-paint includes producer container startup, backend warmup, ingestion and the Explorer refresh interval; it is not publish-to-paint latency.",
+          "One measured browser with active ingestion; no fan-out, field INP or reconnect claim.",
+          "The final task/result oracle validates browser convergence; independent producer validation checks full history and workflow/result correctness."
+        ],
+        "producerLaunchToFirstRowsMs": 5386.511625000001,
+        "searchToObservedRowsMs": 78.53658300000097,
+        "navigationToObservedResultMs": 3733.268291999999,
+        "producerLaunchToFinalRowsMs": 10033.267582999999,
+        "navigationToFinalResultMs": 97.90729199999987
+      },
+      "restart": {
+        "status": "passed",
+        "tasks": 32,
+        "events": 128,
+        "workflows": 8,
+        "validatedDataMs": 33.88479199929861,
+        "retries": 0,
+        "errors": [],
+        "generator_resources": {
+          "elapsed_seconds": 0.03490470799988543,
+          "cpu_seconds": 0.012066999999999987,
+          "average_cpu_cores": 0.3457126757811466,
+          "process_peak_rss_bytes": 74600448,
+          "container_limits_and_peak": {
+            "cpu.max": "max 100000",
+            "memory.max": "max",
+            "memory.peak": "54652928"
+          },
+          "limitations": [
+            "Generator and observer share this process, including readiness, workload, validation and cleanup.",
+            "RSS/cgroup peaks are cumulative since startup; not publication-only or additive app memory.",
+            "Publisher lag detects unsustainable arrivals; resource averages alone do not prove headroom."
+          ]
+        },
+        "restartToValidatedDataMs": 2285.6196249999994,
+        "cache": "image-present-existing-volume-page-cache-unspecified",
+        "limitations": [
+          "Orderly Compose restart including shutdown, command and validator startup; not native pod cold/warm startup or crash recovery."
+        ]
+      }
+    },
+    {
+      "status": "passed",
+      "image": {
+        "reference": "celery-insights-benchmark:typed-search",
+        "id": "sha256:fa4f4cebd6babee3a104aa3830953fadf5714555d86675a54b858bd3e99a0509",
+        "architecture": "arm64",
+        "unpackedBytes": 892577322
+      },
+      "harness": {
+        "bunVersion": "1.4.2",
+        "files": {
+          "deployment.ts": "36ced0c6c154c09e7f4fe12cd3cecd58adf6ba781cb88b6a8b64d77eaa43136d",
+          "browser.ts": "66bb79d6dd130f47600eaa5a145ff9f8820addfb46252ceb74432eba18bc1d3b",
+          "pipeline.py": "3a25343d48bedb3c05b68e3ff9e0266e989e9a100bc7cc855f8a01f05000ad96"
+        }
+      },
+      "sourceSha": "c43fa7fc48753b6a31d49b530b17f26928423fdb",
+      "cleanedUp": true,
+      "cluster": "ci-bench-32605a7f",
+      "path": "test-results/benchmark/typed-refresh-pods-cached/deployment.json",
+      "sha256": "7784100b49a712ff519d820765826a8445666fa4fd50665dced8d4bc978744f9",
+      "browser": {
+        "status": "passed",
+        "version": "153.0.8010.12",
+        "profile": {
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "device": "desktop",
+          "name": "desktop",
+          "network": "unthrottled",
+          "cpuThrottleRate": 1,
+          "initialCache": "fresh-context"
+        },
+        "explorerUsefulDataMs": 245.6929999999993,
+        "searchNoMatchMs": 1190.106500000009,
+        "typedSearch": {
+          "expected": "benchmark-no-such-task",
+          "observed": "benchmark-no-such-task"
+        },
+        "searchResetMs": 67.94020899999305,
+        "searchPasteNoMatchMs": 833.9969169999968,
+        "searchPasteResetMs": 66.68025000000489,
+        "socketTraffic": {
+          "initial-navigation": {
+            "sentFrames": 4,
+            "receivedFrames": 4,
+            "sentPayloadBytes": 493,
+            "receivedPayloadBytes": 14684
+          },
+          "search-typing": {
+            "sentFrames": 1,
+            "receivedFrames": 1,
+            "sentPayloadBytes": 308,
+            "receivedPayloadBytes": 190
+          },
+          "search-reset-after-typing": {
+            "sentFrames": 1,
+            "receivedFrames": 1,
+            "sentPayloadBytes": 286,
+            "receivedPayloadBytes": 14442
+          },
+          "search-paste": {
+            "sentFrames": 1,
+            "receivedFrames": 1,
+            "sentPayloadBytes": 309,
+            "receivedPayloadBytes": 190
+          },
+          "search-reset-after-paste": {
+            "sentFrames": 1,
+            "receivedFrames": 1,
+            "sentPayloadBytes": 286,
+            "receivedPayloadBytes": 14442
+          },
+          "task-navigation": {
+            "sentFrames": 6,
+            "receivedFrames": 6,
+            "sentPayloadBytes": 552,
+            "receivedPayloadBytes": 4996
+          }
+        },
+        "taskNavigationUsefulDataMs": 113.7001670000027,
+        "initialDocument": {
+          "ttfbMs": 6.299999952316284,
+          "fcpMs": 56,
+          "lcpAtUsefulRowsMs": 132,
+          "clsAtUsefulRows": 0.01906569291730967
+        },
+        "journey": {
+          "cls": 0.01906569291730967,
+          "recordedInteractionCount": 25,
+          "maximumRecordedInteractionDurationMs": 32,
+          "longTaskCount": 0,
+          "longTaskDurationMs": 0,
+          "assetTransferBytes": 797235,
+          "assetEncodedBodyBytes": 2061175,
+          "assetDecodedBodyBytes": 2061175
+        },
+        "errors": [],
+        "limitations": [
+          "One laboratory journey after ingestion on the declared fixture; no live-rendering or field-vitals claim.",
+          "Typing uses 10ms between characters; paste uses a distinct absent term to avoid reusing the typed query cache. Their order is fixed and database caches are warm.",
+          "WebSocket frame counts include all data protocol traffic during each phase, including background work; they are not decoded query counts.",
+          "LCP is sampled at useful rows; SPA navigation has its own data-and-result paint milestone.",
+          "Interaction duration is a laboratory observation, not field INP. Sub-16ms events may be absent.",
+          "Resource Timing covers fetched assets; WebSocket data, unfetched lazy chunks, and whole-build bundle sizes are separate."
+        ]
+      },
+      "cases": [
+        {
+          "name": "cached-image-empty-store",
+          "uid": "9c7fd24c-64f2-428f-977b-cafa40bf0b7d",
+          "createdAt": "2026-10-12T09:58:29Z",
+          "scheduledMs": 0,
+          "containerStartedMs": 1000,
+          "storeInitStartedMs": 1000,
+          "storeInitFinishedMs": 1000,
+          "dataProbeReadyMs": 3000,
+          "imageId": "docker.io/library/import-2026-10-12@sha256:3111186fc626cfc77c8c067bfdede4000bb43855a3a8cb7ccdb8001c2a9ca485",
+          "restartCount": 0,
+          "applyToValidatedDataMs": 8595.937749999997,
+          "validation": {
+            "status": "passed",
+            "errors": [],
+            "fixture": {
+              "version": 1,
+              "tasks": 32,
+              "events": 128,
+              "result_bytes": 0
+            },
+            "offered_events_per_second": 100,
+            "arrival_schedule": {
+              "steady_rate": 100,
+              "burst_rate": 0,
+              "burst_seconds": 0,
+              "burst_at_seconds": 0,
+              "planned_seconds": 1.28
+            },
+            "publication_seconds": 1.271161750999454,
+            "published_events_per_second": 100.6952890923281,
+            "validated_event_goodput_per_second": 96.8867590413762,
+            "public_convergence_seconds": 4.636918669000806,
+            "reader_mode": "shared",
+            "published_events": 128,
+            "validated_events": 128,
+            "persisted_correctness": {
+              "passed": true,
+              "errors": []
+            },
+            "live_delivery_complete": true,
+            "raw_event_drain_observed": true,
+            "elapsed_seconds": 4.636918669000806,
+            "drain_seconds": 0.04996820800079149,
+            "publication_lag_ms": {
+              "p50": 0.7860009994328787,
+              "p95": 3.607709000352788,
+              "p99": null,
+              "max": 4.7466260007786865
+            },
+            "terminal_to_live_ms": {
+              "p50": 14.830000000074506,
+              "p95": 42.11954200036416,
+              "p99": null,
+              "max": 44.31300000032934
+            },
+            "publication_to_raw_event_live_ms": {
+              "p50": 107.06170800040127,
+              "p95": 224.16754199912248,
+              "p99": null,
+              "max": 252.5491249998595
+            },
+            "terminal_to_result_live_ms": {
+              "p50": 16.8756660004874,
+              "p95": 45.28533300072013,
+              "p99": null,
+              "max": 51.6055830012192
+            },
+            "viewer_query_ms": {
+              "p50": 3.880208001646679,
+              "p95": 11.753624999983003,
+              "p99": null,
+              "max": 40.30400000010559
+            },
+            "measurement_contract": "typed-refresh-v1",
+            "private_live": {
+              "complete": true,
+              "diagnostic_only": true,
+              "events": 128,
+              "results": 32,
+              "errors": []
+            },
+            "public_refresh": {
+              "cadence_ms": 5000,
+              "publication_to_raw_event_ms": {
+                "p50": 3950.93212699976,
+                "p95": 4530.922669000574,
+                "p99": null,
+                "max": 4591.375918998892
+              },
+              "terminal_to_result_ms": {
+                "p50": 3464.989460000652,
+                "p95": 3615.1186260012764,
+                "p99": null,
+                "max": 3624.1933349992905
+              },
+              "events": 128,
+              "results": 32,
+              "complete": true
+            },
+            "live_notifications": 240,
+            "live_bytes": 148505,
+            "fanout": {
+              "clients": 1,
+              "slow_client_delay_ms": 0,
+              "observations": [
+                {
+                  "client": 1,
+                  "raw_events": 128,
+                  "delay_ms": 0
+                }
+              ],
+              "limitations": [
+                "Public refresh clients refetch raw events; the primary client also refetches task results.",
+                "Slow-client delay paces iterator consumption; SDK/socket buffers may continue reading.",
+                "Protocol clients share the generator process; this is not multiple rendered browsers."
+              ]
+            },
+            "generator_healthy": true,
+            "limitations": [
+              "Public freshness includes the 5-second refresh cadence and authorized typed reads.",
+              "Unprefixed LIVE latency metrics observe the private native database, not the public API. Native LIVE completeness is diagnostic; public refresh and exact persisted oracles determine correctness.",
+              "Fixed 100ms query pacing is a background reader, not a query capacity measurement.",
+              "Private raw-event drain polls at 50ms after publication, independently of public refresh. Goodput divides validated events by publication-to-durable-count time. Drain polling yields a timing upper bound and excludes public refresh.",
+              "On delivery failure, latency distributions describe successful partial observations only; they cannot establish tail latency."
+            ],
+            "generator_resources": {
+              "elapsed_seconds": 5.308681043999968,
+              "cpu_seconds": 0.3303440000000001,
+              "average_cpu_cores": 0.062227132740130406,
+              "process_peak_rss_bytes": 86405120,
+              "container_limits_and_peak": {
+                "cpu.max": "100000 100000",
+                "memory.max": "536870912",
+                "memory.peak": "71106560"
+              },
+              "limitations": [
+                "Generator and observer share this process, including readiness, workload, validation and cleanup.",
+                "RSS/cgroup peaks are cumulative since startup; not publication-only or additive app memory.",
+                "Publisher lag detects unsustainable arrivals; resource averages alone do not prove headroom."
+              ]
+            }
+          }
+        },
+        {
+          "name": "cached-image-retained-store",
+          "uid": "72a93aa4-0e35-48c6-bd52-5d1599b98c3b",
+          "createdAt": "2026-10-12T09:59:08Z",
+          "scheduledMs": 0,
+          "containerStartedMs": 1000,
+          "storeInitStartedMs": 1000,
+          "storeInitFinishedMs": 1000,
+          "dataProbeReadyMs": 3000,
+          "imageId": "docker.io/library/import-2026-10-12@sha256:3111186fc626cfc77c8c067bfdede4000bb43855a3a8cb7ccdb8001c2a9ca485",
+          "restartCount": 0,
+          "applyToValidatedDataMs": 3466.2756669999944,
+          "validation": {
+            "status": "passed",
+            "tasks": 32,
+            "events": 128,
+            "workflows": 8,
+            "validatedDataMs": 73.0009170001722,
+            "retries": 0,
+            "errors": [],
+            "generator_resources": {
+              "elapsed_seconds": 0.07357899999988149,
+              "cpu_seconds": 0.012361999999999995,
+              "average_cpu_cores": 0.168009894127671,
+              "process_peak_rss_bytes": 74756096,
+              "container_limits_and_peak": {
+                "cpu.max": "100000 100000",
+                "memory.max": "536870912",
+                "memory.peak": "58277888"
+              },
+              "limitations": [
+                "Generator and observer share this process, including readiness, workload, validation and cleanup.",
+                "RSS/cgroup peaks are cumulative since startup; not publication-only or additive app memory.",
+                "Publisher lag detects unsustainable arrivals; resource averages alone do not prove headroom."
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

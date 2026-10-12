@@ -149,11 +149,9 @@ const ExplorerPage = () => {
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={params.query}
-            onChange={(event) =>
-              startTransition(() => {
-                void setParams({ query: event.target.value, pageCount: 1 }, { history: "replace" })
-              })
-            }
+            onChange={(event) => {
+              void setParams({ query: event.target.value, pageCount: 1 }, { history: "replace" })
+            }}
             className="pl-9"
             placeholder={mode === "tasks" ? "Search tasks, workers, errors…" : "Search root task IDs and workflows…"}
           />
