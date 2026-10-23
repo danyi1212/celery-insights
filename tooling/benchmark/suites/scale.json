@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "name": "rocksdb-1k",
+      "repetitions": 1,
+      "args": ["--tasks", "32", "--rate", "100", "--history-tasks", "1000", "--queries", "--browser", "--restart"],
+      "environment": {}
+    },
+    {
+      "name": "rocksdb-10k",
+      "repetitions": 1,
+      "args": ["--tasks", "32", "--rate", "100", "--history-tasks", "10000", "--queries", "--browser", "--restart"],
+      "environment": {}
+    },
+    {
+      "name": "rocksdb-indexed-10k",
+      "repetitions": 1,
+      "args": ["--tasks", "32", "--rate", "100", "--history-tasks", "10000", "--queries", "--browser", "--restart"],
+      "environment": { "BENCH_INDEXING": "true" }
+    },
+    {
+      "name": "surrealkv-100k",
+      "repetitions": 1,
+      "args": ["--tasks", "32", "--rate", "100", "--history-tasks", "100000", "--queries", "--browser", "--restart"],
+      "environment": { "BENCH_STORAGE": "surrealkv:///data/store" }
+    }
+  ]
+}

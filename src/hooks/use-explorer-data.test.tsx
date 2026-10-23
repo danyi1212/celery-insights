@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { renderHook, waitFor } from "@testing-library/react"
+import { act, renderHook, waitFor } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { deserializeTimeRange } from "@lib/time-range-utils"
 import { useExplorerData, type ExplorerQueryState } from "./use-explorer-data"
@@ -114,4 +114,31 @@ describe("useExplorerData", () => {
     expect(queryString).toContain("AND worker != NONE GROUP BY worker")
     expect(queryString).not.toContain("WHERE worker != NONE GROUP BY worker")
   })
+})
+
+it("rapid search edits cancel superseded work before database requests", async () => {
+  vi.useFakeTimers()
+  mockQuery.mockClear()
+  mockQuery.mockResolvedValue([[], [{ count: 0 }], [], [], [], []])
+  const hook = renderHook(({ text }) => useExplorerData({ ...createState(), query: text }), {
+    initialProps: { text: "b" },
+    wrapper: createWrapper(),
+  })
+  try {
+    for (const text of ["be", "bench", "benchmark-no-such-task"]) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20)
+      })
+      hook.rerender({ text })
+    }
+    expect(mockQuery).not.toHaveBeenCalled()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+    expect(mockQuery).toHaveBeenCalledTimes(1)
+    expect(mockQuery.mock.calls[0][1].query).toBe("benchmark-no-such-task")
+  } finally {
+    hook.unmount()
+    vi.useRealTimers()
+  }
 })

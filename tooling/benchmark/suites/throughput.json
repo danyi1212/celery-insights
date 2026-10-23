@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "name": "durable-10k-100eps-stress",
+      "repetitions": 1,
+      "args": ["--tasks", "128", "--rate", "100", "--history-tasks", "10000", "--browser-live"],
+      "environment": {
+        "BENCH_CPU": "2",
+        "BENCH_MEMORY": "2g",
+        "BENCH_INDEXING": "false",
+        "BENCH_NOTIFICATION_BUFFER": "100"
+      }
+    },
+    {
+      "name": "durable-10k-500eps-stress",
+      "repetitions": 1,
+      "args": ["--tasks", "128", "--rate", "500", "--history-tasks", "10000", "--browser-live"],
+      "environment": {
+        "BENCH_CPU": "2",
+        "BENCH_MEMORY": "2g",
+        "BENCH_INDEXING": "false",
+        "BENCH_NOTIFICATION_BUFFER": "100"
+      }
+    }
+  ]
+}

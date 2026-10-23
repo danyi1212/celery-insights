@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "name": "five-live-clients",
+      "repetitions": 1,
+      "args": ["--tasks", "32", "--rate", "100", "--history-tasks", "1000", "--live-clients", "5", "--browser-live"],
+      "environment": {}
+    },
+    {
+      "name": "paced-live-consumer",
+      "repetitions": 1,
+      "args": [
+        "--tasks",
+        "32",
+        "--rate",
+        "100",
+        "--history-tasks",
+        "1000",
+        "--live-clients",
+        "2",
+        "--slow-client-delay-ms",
+        "100",
+        "--browser-live"
+      ],
+      "environment": {}
+    }
+  ]
+}

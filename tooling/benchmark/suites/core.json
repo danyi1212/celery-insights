@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "name": "durable-10k-core",
+      "repetitions": 1,
+      "args": [
+        "--tasks",
+        "128",
+        "--rate",
+        "20",
+        "--history-tasks",
+        "10000",
+        "--reader-mode",
+        "shared",
+        "--api",
+        "--request-count",
+        "240",
+        "--request-rate",
+        "12",
+        "--request-concurrency",
+        "32",
+        "--queries",
+        "--browser",
+        "--browser-live",
+        "--restart",
+        "--artifacts"
+      ],
+      "environment": {
+        "BENCH_CPU": "2",
+        "BENCH_MEMORY": "2g",
+        "BENCH_INDEXING": "false",
+        "BENCH_NOTIFICATION_BUFFER": "100"
+      }
+    }
+  ]
+}

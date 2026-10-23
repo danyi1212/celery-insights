@@ -77,7 +77,7 @@ jobs:
           curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.3.4/surreal-v3.3.4.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-integration"
           echo "$RUNNER_TEMP/surreal-integration" >> "$GITHUB_PATH"
       - name: Run pytest
-        run: uv run pytest server --doctest-modules --junitxml=junit/test-results.xml --cov=server --cov-report=xml --cov-report=html -n auto
+        run: uv run pytest server tooling/benchmark --doctest-modules --junitxml=junit/test-results.xml --cov=server --cov-report=xml --cov-report=html -n auto
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2.25.0
         if: always()

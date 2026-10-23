@@ -45,7 +45,7 @@ const config = resolvedConfig.config
 configureLogging(config.logFormat, config.logLevel)
 for (const warning of resolvedConfig.warnings) bunLogger.warn(warning)
 import { startSearchIndexes, type SearchIndexes } from "./runtime/search-indexes"
-import { runSchemaMigration } from "./runtime/surreal-schema"
+import { backfillWorkflows, runSchemaMigration } from "./runtime/surreal-schema"
 import { createMcpHandler } from "./runtime/mcp"
 
 const LOGO = `
@@ -485,6 +485,12 @@ if (replaySnapshot) {
   } else {
     throw new Error("Debug snapshot does not contain SurrealDB export data")
   }
+  // Older bundles contain only task/event/worker records. Migration ran against
+  // the empty replay store, so reconstruct their derived graph after import.
+  const [workflowCounts] = await db
+    .query<[{ count: number }[]]>("SELECT count() AS count FROM workflow GROUP ALL;")
+    .collect()
+  if (!workflowCounts[0]?.count) await backfillWorkflows(db, bunLogger)
   pythonRestartAttempts = 0
   pythonProcess = spawnPython()
   ingestionStatus = "read-only"

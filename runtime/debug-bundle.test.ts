@@ -1,8 +1,23 @@
 import { describe, expect, it, vi } from "vitest"
+import { DateTime } from "surrealdb"
 import { parseConfig } from "./config"
 import { exportSurrealData, importSurrealData, redactConfig } from "./debug-bundle"
 
 describe("debug-bundle surreal helpers", () => {
+  it("preserves sub-millisecond task/event/worker timestamps in legacy JSON imports", async () => {
+    const db = { query: vi.fn().mockResolvedValue([]) }
+    await importSurrealData(db as never, {
+      version: 1,
+      tasks: [{ id: "task:sample", last_updated: "2026-10-12T07:00:00.123456789Z" }],
+      events: [{ id: "event:sample", timestamp: "2026-10-12T07:00:00.234567891Z" }],
+      workers: [{ id: "worker:sample", last_updated: "2026-10-12T07:00:00.345678912Z" }],
+    })
+    const bindings = db.query.mock.calls[0][1]
+    expect(bindings.tasks_0[0].data.last_updated.toISOString()).toBe("2026-10-12T07:00:00.123456789Z")
+    expect(bindings.events_0[0].data.timestamp.toISOString()).toBe("2026-10-12T07:00:00.234567891Z")
+    expect(bindings.workers_0[0].data.last_updated.toISOString()).toBe("2026-10-12T07:00:00.345678912Z")
+  })
+
   it("exports data when query resolves to raw arrays", async () => {
     const db = {
       query: vi
@@ -116,15 +131,15 @@ describe("debug-bundle surreal helpers", () => {
           id: 1,
           data: {
             state: "SUCCESS",
-            failed_at: new Date("2026-03-14T18:43:05.917351Z"),
-            first_observed_at: new Date("2026-03-14T18:40:00.000000Z"),
-            execution_observed_at: new Date("2026-03-14T18:42:00.000000Z"),
-            execution_active_at: new Date("2026-03-14T18:41:00.000000Z"),
+            failed_at: new DateTime("2026-03-14T18:43:05.917351Z"),
+            first_observed_at: new DateTime("2026-03-14T18:40:00.000000Z"),
+            execution_observed_at: new DateTime("2026-03-14T18:42:00.000000Z"),
+            execution_active_at: new DateTime("2026-03-14T18:41:00.000000Z"),
           },
         },
       ],
-      events_0: [{ id: 1, data: { timestamp: new Date("2026-03-14T18:43:05.917351Z") } }],
-      workers_0: [{ id: 1, data: { last_updated: new Date("2026-03-14T18:43:05.917351Z") } }],
+      events_0: [{ id: 1, data: { timestamp: new DateTime("2026-03-14T18:43:05.917351Z") } }],
+      workers_0: [{ id: 1, data: { last_updated: new DateTime("2026-03-14T18:43:05.917351Z") } }],
     })
   })
 })

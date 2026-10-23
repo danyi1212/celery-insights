@@ -200,7 +200,27 @@ export const useExplorerData = (state: ExplorerQueryState, pageSize = 50): UseEx
     enabled: status === "connected",
     placeholderData: (previousData) => previousData,
     refetchInterval: isLiveTimeRange(state.range) ? LIVE_REFETCH_MS : false,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
+      // Defer server work until typing settles. React Query aborts inactive keys,
+      // so intermediate searches never enter the serialized observation RPC queue.
+      if (trimQuery(state.query)) {
+        await new Promise<void>((resolve, reject) => {
+          if (signal.aborted) {
+            reject(signal.reason)
+            return
+          }
+          const abort = () => {
+            clearTimeout(timer)
+            reject(signal.reason)
+          }
+          const timer = setTimeout(() => {
+            signal.removeEventListener("abort", abort)
+            resolve()
+          }, 300)
+          signal.addEventListener("abort", abort, { once: true })
+        })
+      }
+
       const bindings = resolveTimeRangeBindings(state.range, new Date())
 
       if (state.mode === "tasks") {
