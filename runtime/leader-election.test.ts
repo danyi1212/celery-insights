@@ -18,6 +18,7 @@ function createConfig(overrides: Partial<Config> = {}): Config {
     port: 8555,
     urlPrefix: "",
     surrealdbUrl: "ws://localhost:8557/rpc",
+    surrealdbRootPass: "root",
     surrealdbIngesterPass: "changeme",
     surrealdbNamespace: "celery_insights",
     surrealdbDatabase: "main",
@@ -209,6 +210,18 @@ describe("LeaderElection", () => {
 
       await election.stop()
     })
+  })
+
+  it("stops ingestion when the database heartbeat fails", async () => {
+    mockDb._queryResult.collect = vi.fn().mockResolvedValue([[{ holder: "testhost:1234:abc123" }]])
+    const election = createElection({ ingestionLockHeartbeatSeconds: 5, ingestionLockTtlSeconds: 15 })
+    await election.start()
+    mockDb._queryResult.collect = vi.fn().mockRejectedValue(new Error("database unavailable"))
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(election.isLeader).toBe(false)
+    expect(election.status).toBe("standby")
+    expect(onLoseLeadershipCalls).toBe(1)
+    await election.stop()
   })
 
   describe("standby polling", () => {

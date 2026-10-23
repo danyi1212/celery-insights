@@ -70,6 +70,7 @@ export class ObservationApi {
     private readonly db: Pick<Surreal, "query">,
     private readonly config: Config,
     private readonly bridgeStatus: () => Promise<Row | null>,
+    private readonly controlDb: Pick<Surreal, "query"> = db,
   ) {
     this.retention = {
       cleanup_interval_seconds: config.cleanupIntervalSeconds,
@@ -79,7 +80,7 @@ export class ObservationApi {
     }
   }
   withDatabase(db: Pick<Surreal, "query">): ObservationApi {
-    const view = new ObservationApi(db, this.config, this.bridgeStatus)
+    const view = new ObservationApi(db, this.config, this.bridgeStatus, this.controlDb)
     view.retention = this.retention
     return view
   }
@@ -96,6 +97,11 @@ export class ObservationApi {
       ),
     )
     return { tasks, events, workers }
+  }
+  private async refreshRetention(): Promise<void> {
+    const [rows] = await this.controlDb.query<[Row[]]>("SELECT * FROM runtime_state:retention").json().collect()
+    const settings = rows?.[0]?.settings
+    if (settings !== undefined) this.retention = retentionSchema.parse(settings)
   }
   private async boundedBody(request: Request, limit: number): Promise<Uint8Array> {
     const reader = request.body?.getReader()
@@ -175,7 +181,11 @@ export class ObservationApi {
         const parsed = retentionSchema.safeParse(await this.json(request))
         if (!parsed.success) throw new HttpError(422, "Invalid retention settings")
         this.retention = parsed.data
+        await this.controlDb
+          .query("UPSERT runtime_state:retention SET settings = $settings", { settings: parsed.data })
+          .collect()
       }
+      await this.refreshRetention()
       return Response.json({ settings: this.retention, counts: await this.counts() })
     }
     if (pathname === "/api/settings/cleanup" && request.method === "POST") {
@@ -287,6 +297,7 @@ export class ObservationApi {
     return Response.json({ success: true, imported })
   }
   async cleanup(): Promise<void> {
+    await this.refreshRetention()
     const remove = new Set<RecordId>()
     if (this.retention.task_max_count !== null && this.retention.task_max_count !== undefined) {
       const total = Number((await this.rows("SELECT count() AS total FROM task GROUP ALL"))[0]?.total ?? 0)

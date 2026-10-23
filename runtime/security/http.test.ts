@@ -111,7 +111,11 @@ describe("Bun configured-account gate", () => {
     )
   })
   it("keeps public probes/assets available and honors the configured prefix", async () => {
-    expect((await run(request("/health", "GET", { authorization: "" }), null).response)?.status).toBe(200)
+    for (const endpoint of ["/health", "/ready", "/tools/celery/ready"]) {
+      expect(
+        (await run(request(endpoint, "GET", { authorization: "" }), null, false, "/tools/celery").response)?.status,
+      ).toBe(200)
+    }
     expect((await run(request("/assets/app.js", "GET", { authorization: "" }), null).response)?.status).toBe(200)
     expect((await run(request("/tools/celery/api/settings/info"), auth, false, "/tools/celery").response)?.status).toBe(
       200,

@@ -1,0 +1,24 @@
+# Custom TOML replaces the generated file; include the full auth configuration.
+authentication:
+  publicUrl: https://insights.example.com
+config:
+  toml:
+    structured:
+      schema_version: 1
+      installation:
+        public_url: https://insights.example.com
+      authentication:
+        mode: basic
+        accounts:
+          - username: admin
+            password_env: INSIGHTS_ACCOUNT_PASSWORD
+            roles: [administrator]
+      logging:
+        format: json
+        level: info
+  python:
+    content: |
+      from pathlib import Path
+      broker_url = Path("/etc/celery-insights/celery/broker-url").read_text()
+      result_backend = Path("/etc/celery-insights/celery/result-backend").read_text()
+      task_serializer = "json"

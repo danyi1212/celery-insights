@@ -277,6 +277,7 @@ dev = [
     { name = "pytest-env" },
     { name = "pytest-mock" },
     { name = "pytest-xdist" },
+    { name = "pyyaml" },
     { name = "ruff" },
     { name = "ty" },
 ]
@@ -309,6 +310,7 @@ dev = [
     { name = "pytest-env" },
     { name = "pytest-mock" },
     { name = "pytest-xdist" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "ruff" },
     { name = "ty" },
 ]

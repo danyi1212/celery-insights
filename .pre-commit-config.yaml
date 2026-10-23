@@ -15,7 +15,7 @@ repos:
       - id: check-json
       - id: check-toml
       - id: check-yaml
-        exclude: ^e2e/docker-compose\.auth\.yml$
+        exclude: ^(charts/[^/]+/templates/|e2e/docker-compose\.auth\.yml$)
       - id: check-yaml
         name: check Docker Compose YAML syntax
         args: [--unsafe]

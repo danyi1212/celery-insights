@@ -1,0 +1,4 @@
+surrealdb:
+  enabled: false
+database:
+  externalUrl: wss://YOUR-INSTANCE.surreal.cloud/rpc
