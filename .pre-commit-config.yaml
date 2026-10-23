@@ -1,7 +1,7 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 ci:
-  skip: [ty, oxlint, oxfmt, tsc, vitest]
+  skip: [ty, oxlint, oxfmt, typecheck, vitest]
 exclude: ^(\.agents/|frontend/app/services/server)
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -64,8 +64,8 @@ repos:
         types: [ file ]
         pass_filenames: false
 
-      - id: tsc
-        name: tsc
+      - id: typecheck
+        name: TypeScript type check
         entry: bun run typecheck
         language: system
         files: ^(src|runtime|e2e|tooling)/.*\.[jt]sx?$|^(bun-entry|vite\.config|vitest\.config|vitest\.setup)\.ts$

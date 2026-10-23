@@ -106,7 +106,7 @@ jobs:
       - name: Oxfmt
         run: bun run format
       - name: TypeScript
-        run: bunx tsc --noEmit
+        run: bun run typecheck
 
   test-frontend:
     name: Test frontend

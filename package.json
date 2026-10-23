@@ -8,7 +8,7 @@
         "dev": "bunx --bun vite dev --port 3000",
         "build": "bunx --bun vite build",
         "start": "bun --no-env-file run bun-entry.ts",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "bun check",
         "check:frontend": "bun run typecheck && bun run lint && bun run format && bun run test",
         "format": "oxfmt --check src runtime bun-entry.ts e2e tooling vite.config.ts vitest.config.ts vitest.setup.ts",
         "format-fix": "oxfmt src runtime bun-entry.ts e2e tooling vite.config.ts vitest.config.ts vitest.setup.ts",
