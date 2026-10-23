@@ -13,9 +13,9 @@ import { CORE_SCHEMA } from "../runtime/surreal-schema"
 import { Surreal, Table } from "surrealdb"
 const binary = process.env.SURREAL_BINARY ?? "surreal"
 const version = Bun.spawnSync([binary, "version"])
-if (version.exitCode !== 0 || !Buffer.from(version.stdout).toString().includes("3.3.0")) {
-  if (process.env.CI) throw new Error("Application acceptance requires pinned SurrealDB 3.3.0\n")
-  process.stdout.write("Database acceptance requires SurrealDB 3.3.0\n")
+if (version.exitCode !== 0 || !Buffer.from(version.stdout).toString().includes("3.3.4")) {
+  if (process.env.CI) throw new Error("Application acceptance requires pinned SurrealDB 3.3.4\n")
+  process.stdout.write("Database acceptance requires SurrealDB 3.3.4\n")
   process.exit(0)
 }
 const listener = createServer()

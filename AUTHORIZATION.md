@@ -61,7 +61,7 @@ Try it locally:
 ```sh
 docker run --rm -p 127.0.0.1:8181:8181 \
   -v "$PWD/policy.rego:/policies/policy.rego:ro" \
-  openpolicyagent/opa:1.21.1 run --server --addr=0.0.0.0:8181 /policies/policy.rego
+  openpolicyagent/opa:1.21.4 run --server --addr=0.0.0.0:8181 /policies/policy.rego
 
 curl --fail-with-body http://127.0.0.1:8181/v1/data/celery_insights/allow \
   -H 'Content-Type: application/json' \

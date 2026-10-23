@@ -109,7 +109,7 @@ export class ObservationRpc {
         let result: unknown
         switch (rpc.method) {
           case "version":
-            result = "surrealdb-3.3.0"
+            result = "surrealdb-3.3.4"
             break
           case "ping":
           case "health":

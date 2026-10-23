@@ -85,8 +85,8 @@ def check(mode, label):
 with server("3.0.2", "persisted-data") as binary:
     check("seed", "old-seed")
     subprocess.run([str(binary), "export", *args, str(root / "pre-upgrade.surql")], check=True)
-with server("3.3.0", "persisted-data"):
+with server("3.3.4", "persisted-data"):
     check("check", "in-place-upgrade")
-with server("3.3.0", "restored-data") as binary:
+with server("3.3.4", "restored-data") as binary:
     subprocess.run([str(binary), "import", *args, str(root / "pre-upgrade.surql")], check=True)
     check("check", "backup-restore")

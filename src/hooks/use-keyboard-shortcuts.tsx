@@ -1,12 +1,4 @@
-import {
-  HotkeysProvider,
-  formatHotkey,
-  rawHotkeyToParsedHotkey,
-  useHotkey,
-  useHotkeySequence,
-  type Hotkey,
-  type RawHotkey,
-} from "@tanstack/react-hotkeys"
+import { HotkeysProvider, useHotkey, type RawHotkeyChord } from "@tanstack/react-hotkeys"
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, type ReactNode } from "react"
 
 export interface ShortcutTrigger {
@@ -59,31 +51,30 @@ const normalizedKeyMap: Record<string, string> = {
   tab: "Tab",
 }
 
-const toHotkey = (trigger: ShortcutTrigger): RawHotkey => ({
+const toHotkey = (trigger: ShortcutTrigger): RawHotkeyChord => ({
   alt: trigger.alt,
   key: normalizedKeyMap[trigger.key.toLowerCase()] ?? trigger.key.toUpperCase(),
   mod: trigger.mod,
   shift: trigger.shift,
 })
 
-const toSequenceHotkey = (trigger: ShortcutTrigger): Hotkey =>
-  formatHotkey(rawHotkeyToParsedHotkey(toHotkey(trigger))) as Hotkey
-
 const getHotkeyOptions = (shortcut: RegisteredShortcut) => ({
   enabled: shortcut.enabled !== false,
   ignoreInputs: !shortcut.allowInInput,
   preventDefault: shortcut.preventDefault !== false,
-  requireReset: true,
   stopPropagation: false,
 })
 
 const ShortcutHotkeyBinding = ({ shortcut }: { shortcut: RegisteredShortcut }) => {
-  useHotkey(toHotkey(shortcut.sequence[0]!), shortcut.handler, getHotkeyOptions(shortcut))
+  useHotkey(toHotkey(shortcut.sequence[0]!), shortcut.handler, {
+    ...getHotkeyOptions(shortcut),
+    requireReset: true,
+  })
   return null
 }
 
 const ShortcutSequenceBinding = ({ shortcut }: { shortcut: RegisteredShortcut }) => {
-  useHotkeySequence(shortcut.sequence.map(toSequenceHotkey), shortcut.handler, {
+  useHotkey(shortcut.sequence.map(toHotkey), shortcut.handler, {
     ...getHotkeyOptions(shortcut),
     timeout: SEQUENCE_TIMEOUT_MS,
   })
@@ -157,9 +148,6 @@ export const KeyboardShortcutsProvider = ({ children }: { children: ReactNode })
     <HotkeysProvider
       defaultOptions={{
         hotkey: {
-          stopPropagation: false,
-        },
-        hotkeySequence: {
           stopPropagation: false,
           timeout: SEQUENCE_TIMEOUT_MS,
         },

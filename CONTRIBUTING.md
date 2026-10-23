@@ -39,7 +39,7 @@ To contribute to the project, follow these steps:
 
 ## Local development
 
-Requirements: Bun, uv, Python 3.14+, Docker for E2E, and SurrealDB 3.3.0 for native database tests. Pinned runtime versions live in `Dockerfile`, `package.json` and `.python-version`.
+Requirements: Bun, uv, Python 3.14+, Docker for E2E, and SurrealDB 3.3.4 for native database tests. Pinned runtime versions live in `Dockerfile`, `package.json` and `.python-version`.
 
 ```sh
 git clone https://github.com/<your_username>/celery-insights.git
@@ -204,7 +204,7 @@ Frontend unit tests use [Vitest](https://vitest.dev/) with [Testing Library](htt
 Tests are colocated next to the module they test, suffixed `.test.ts` or `.test.tsx` (e.g., `task-avatar.tsx` -> `task-avatar.test.tsx`).
 
 MCP integration tests start an isolated in-memory SurrealDB process and require the SurrealDB 3.3+ CLI
-on PATH (production and CI use v3.3.0). They exercise real queries, paging, viewer permissions,
+on PATH (production and CI use v3.3.4). They exercise real queries, paging, viewer permissions,
 schema migration, and the HTTP protocol. Set `MCP_TEST_URL` only for a disposable test server;
 the tests clear data in its `test/mcp` database.
 The Python ingestion integration test also starts an isolated SurrealDB process; it skips when

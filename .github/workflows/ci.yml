@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
         if: github.event_name == 'pull_request'
-      - uses: dorny/paths-filter@v4
+      - uses: dorny/paths-filter@v4.0.3
         if: github.event_name == 'pull_request'
         id: filter
         with:
@@ -45,8 +45,8 @@ jobs:
     if: needs.changes.outputs.backend == 'true'
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: astral-sh/setup-uv@v10.2.0
-      - uses: actions/setup-python@v7.0.0
+      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version-file: ".python-version"
       - name: Install dependencies
@@ -65,8 +65,8 @@ jobs:
     if: needs.changes.outputs.backend == 'true'
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: astral-sh/setup-uv@v10.2.0
-      - uses: actions/setup-python@v7.0.0
+      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version-file: ".python-version"
       - name: Install dependencies
@@ -74,12 +74,12 @@ jobs:
       - name: Install SurrealDB for native integration tests
         run: |
           mkdir -p "$RUNNER_TEMP/surreal-integration"
-          curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.3.0/surreal-v3.3.0.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-integration"
+          curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.3.4/surreal-v3.3.4.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-integration"
           echo "$RUNNER_TEMP/surreal-integration" >> "$GITHUB_PATH"
       - name: Run pytest
         run: uv run pytest server --doctest-modules --junitxml=junit/test-results.xml --cov=server --cov-report=xml --cov-report=html -n auto
       - name: Publish test results
-        uses: EnricoMi/publish-unit-test-result-action@v2.24.0
+        uses: EnricoMi/publish-unit-test-result-action@v2.25.0
         if: always()
         with:
           files: junit/test-results.xml
@@ -93,12 +93,12 @@ jobs:
     if: needs.changes.outputs.frontend == 'true'
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-node@v7.0.0
+      - uses: actions/setup-node@v7.1.0
         with:
-          node-version: "26.10.0"
+          node-version: "26.12.1"
       - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.4"
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Oxlint
@@ -115,18 +115,18 @@ jobs:
     if: needs.changes.outputs.frontend == 'true'
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-node@v7.0.0
+      - uses: actions/setup-node@v7.1.0
         with:
-          node-version: "26.10.0"
+          node-version: "26.12.1"
       - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.4"
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Install SurrealDB for native integration tests
         run: |
           mkdir -p "$RUNNER_TEMP/surreal-integration"
-          curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.3.0/surreal-v3.3.0.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-integration"
+          curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.3.4/surreal-v3.3.4.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-integration"
           echo "$RUNNER_TEMP/surreal-integration" >> "$GITHUB_PATH"
       - name: Vitest
         run: bun run test
@@ -164,18 +164,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: docker/setup-buildx-action@v4.4.1
-      - uses: actions/setup-node@v7.0.0
+      - uses: actions/setup-node@v7.1.0
         with:
-          node-version: "26.10.0"
+          node-version: "26.12.1"
       - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.4"
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
       - name: Build E2E images
-        uses: docker/bake-action@v7.4.0
+        uses: docker/bake-action@v7.5.0
         with:
           files: ./docker-bake.hcl
           targets: e2e
@@ -191,7 +191,7 @@ jobs:
           openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost -addext subjectAltName=DNS:localhost,IP:127.0.0.1 -keyout "$oidc_fixture_dir/key.pem" -out "$oidc_fixture_dir/certificate.pem"
           NODE_EXTRA_CA_CERTS="$oidc_fixture_dir/certificate.pem" OIDC_FIXTURE_CERT="$oidc_fixture_dir/certificate.pem" OIDC_FIXTURE_KEY="$oidc_fixture_dir/key.pem" bun run tooling/verify-oidc.ts
       - name: Publish Playwright summary
-        uses: daun/playwright-report-summary@v4.1.0
+        uses: daun/playwright-report-summary@v4.1.1
         if: always() && hashFiles('playwright-report/results.json') != ''
         with:
           report-file: playwright-report/results.json
@@ -199,13 +199,13 @@ jobs:
           comment-title: E2E test results (${{ matrix.deployment.name }})
           job-summary: true
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         if: always()
         with:
           name: playwright-report-${{ matrix.deployment.name }}
           path: playwright-report/
       - name: Upload traces on failure
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         if: failure()
         with:
           name: playwright-traces-${{ matrix.deployment.name }}
@@ -254,8 +254,8 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - uses: oven-sh/setup-bun@v2.2.0
         with:
-          bun-version: "1.4.2"
-      - uses: actions/setup-python@v7.0.0
+          bun-version: "1.4.4"
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version-file: ".python-version"
       - name: Install dependencies
@@ -264,14 +264,14 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/surreal-old" "$RUNNER_TEMP/surreal-new"
           curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.0.2/surreal-v3.0.2.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-old"
-          curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.3.0/surreal-v3.3.0.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-new"
+          curl -fsSL https://github.com/surrealdb/surrealdb/releases/download/v3.3.4/surreal-v3.3.4.linux-amd64.tgz | tar -xz -C "$RUNNER_TEMP/surreal-new"
           echo "SURREAL_OLD_BINARY=$RUNNER_TEMP/surreal-old/surreal" >> "$GITHUB_ENV"
           echo "SURREAL_NEW_BINARY=$RUNNER_TEMP/surreal-new/surreal" >> "$GITHUB_ENV"
       - name: Validate existing datastore and backup restore
         run: python tooling/verify-surreal-upgrade.py
       - name: Upload database validation evidence
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: database-upgrade-evidence
           path: /tmp/celery-surreal-upgrade-*/
