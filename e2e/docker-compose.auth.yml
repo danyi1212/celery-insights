@@ -7,7 +7,7 @@ services:
     ports: !override
       - "${E2E_INTERACTIVE_PORT:-8000}:8000"
   opa:
-    image: openpolicyagent/opa:1.21.1
+    image: openpolicyagent/opa:1.21.4
     command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies/opa.rego", "/policies/data.json"]
     volumes:
       - ../examples/opa:/examples:ro

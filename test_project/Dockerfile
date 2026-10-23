@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.27.1
-FROM python:3.14.8-alpine3.24 AS base
+FROM python:3.14.9-alpine3.24 AS base
 
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
@@ -9,7 +9,7 @@ FROM base AS build
 
 WORKDIR /tmp
 
-COPY --from=ghcr.io/astral-sh/uv:0.12.20 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.5 /uv /usr/local/bin/uv
 COPY pyproject.toml uv.lock* /tmp/
 
 RUN uv export --no-hashes --frozen --no-emit-project -o requirements.txt

@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.27.1
-ARG SURREALDB_VERSION=v3.3.0
+ARG SURREALDB_VERSION=v3.3.4
 
-FROM python:3.14.8-slim-trixie AS python-base
+FROM python:3.14.9-slim-trixie AS python-base
 
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
@@ -11,7 +11,7 @@ FROM python-base AS requirements-stage
 
 WORKDIR /tmp
 
-COPY --from=ghcr.io/astral-sh/uv:0.12.20 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.5 /uv /usr/local/bin/uv
 COPY ./pyproject.toml ./uv.lock* /tmp/
 
 ARG VARIANT=regular
@@ -33,7 +33,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install --python /usr/local/bin/python --prefix=/install --link-mode=copy -r ./requirements.txt
 
 # The SPA and Bun JavaScript bundle are architecture-independent.
-FROM --platform=$BUILDPLATFORM oven/bun:1.4.2-slim AS front-build
+FROM --platform=$BUILDPLATFORM oven/bun:1.4.4-slim AS front-build
 
 WORKDIR /app
 
@@ -53,7 +53,7 @@ RUN bun build runtime/config-cli.ts --target=bun --outfile ./config-cli.js
 
 # Keep the runtime binary on the target architecture, even when front-build
 # runs on a different architecture.
-FROM oven/bun:1.4.2-slim AS bun-runtime
+FROM oven/bun:1.4.4-slim AS bun-runtime
 
 FROM surrealdb/surrealdb:${SURREALDB_VERSION} AS surreal-runtime
 

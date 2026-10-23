@@ -1,6 +1,6 @@
 services:
   rabbitmq:
-    image: rabbitmq:4.3.6-management-alpine
+    image: rabbitmq:4.3.7-management-alpine
     volumes:
       - ./rabbitmq.conf:/etc/rabbitmq/conf.d/20-celery.conf:ro
     ports:
@@ -83,7 +83,7 @@ services:
   reverse-proxy:
     profiles:
       - reverse-proxy
-    image: nginx:alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
+    image: nginx:alpine@sha256:a3554c0d0b48177b1413c26e01f695334428020d9df01243fbae3e11cfd17417
     ports:
       - "${E2E_PROXY_PORT:-8558}:80"
     volumes:
