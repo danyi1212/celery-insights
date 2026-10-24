@@ -41,7 +41,7 @@ COPY /package.json /bun.lock* ./
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 
 COPY /tsconfig.json /vite.config.ts ./
-COPY /tooling ./tooling
+COPY /tooling/tsconfig-aliases.ts ./tooling/tsconfig-aliases.ts
 COPY /src ./src
 COPY /runtime ./runtime
 COPY /public ./public

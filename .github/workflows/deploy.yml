@@ -32,15 +32,15 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      all-image: ${{ github.event_name != 'pull_request' || steps.filter.outputs.all-image == 'true' }}
+      all-image: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && steps.filter.outputs.all-image == 'true') || (github.event_name == 'push' && steps.filter.outputs.image == 'true') }}
     steps:
       - uses: actions/checkout@v7.0.1
-        if: github.event_name == 'pull_request'
       - uses: dorny/paths-filter@v4.0.3
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         id: filter
         with:
           filters: .github/ci-filters.yml
+          base: ${{ github.event.pull_request.base.sha || github.event.before }}
 
   build-and-push-image:
     runs-on: ubuntu-latest

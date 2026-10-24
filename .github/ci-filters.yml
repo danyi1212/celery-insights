@@ -1,6 +1,6 @@
 # Keep workflow changes in their own filters so the affected jobs validate them.
 backend:
-  - '**/*.py'
+  - 'server/**'
   - 'pyproject.toml'
   - 'uv.lock'
   - '.python-version'
@@ -8,11 +8,20 @@ backend:
   - '.github/workflows/ci.yml'
   - '.github/ci-filters.yml'
 
+# Python tooling needs lint, not the Celery server's unit tests.
+python-tools:
+  - 'tooling/**/*.py'
+  - 'test_project/**/*.py'
+
+typescript-tools:
+  - 'tooling/**/*.ts'
+
 frontend:
   - 'src/**'
   - 'runtime/**'
   - 'e2e/**'
-  - 'tooling/**/*.ts'
+  - 'tooling/verify-*.ts'
+  - 'tooling/tsconfig-aliases.ts'
   - 'public/**'
   - 'package.json'
   - 'bun.lock*'
@@ -31,6 +40,7 @@ frontend:
 # E2E also runs for frontend/backend changes, as combined in the CI workflow.
 integration:
   - 'examples/opa/**'
+  - 'tooling/playwright.ts'
   - 'Dockerfile'
   - '.dockerignore'
   - 'docker-bake.hcl'
@@ -67,12 +77,23 @@ all-image:
   - '.github/ci-filters.yml'
 
 helm:
-  - 'charts/**'
+  - 'charts/**/Chart.yaml'
+  - 'charts/**/Chart.lock'
+  - 'charts/**/values*.yaml'
+  - 'charts/**/values*.json'
+  - 'charts/**/templates/**'
+  - 'charts/**/examples/**'
+  - 'charts/**/.helmignore'
   - 'tooling/helm/**'
+  - 'tooling/playwright.ts'
   - 'runtime/**'
   - 'server/**'
   - 'bun-entry.ts'
   - 'Dockerfile'
+  - '.dockerignore'
+  - 'docker-bake.hcl'
+  - 'tooling/tsconfig-aliases.ts'
+  - '.python-version'
   - 'test_project/**'
   - 'pyproject.toml'
   - 'uv.lock'
@@ -80,5 +101,51 @@ helm:
   - 'bun.lock'
   - '.github/workflows/ci.yml'
   - '.github/workflows/publish-chart.yml'
+  - '.github/workflows/deploy.yml'
+  - '.github/ci-filters.yml'
+
+# Release helpers and chart contracts do not need a Kubernetes cluster.
+helm-e2e:
+  - 'charts/**/Chart.yaml'
+  - 'charts/**/Chart.lock'
+  - 'charts/**/values*.yaml'
+  - 'charts/**/values*.json'
+  - 'charts/**/templates/**'
+  - 'tooling/helm/e2e.py'
+  - 'tooling/helm/browser.ts'
+  - 'tooling/playwright.ts'
+  - 'runtime/**'
+  - 'server/**'
+  - 'bun-entry.ts'
+  - 'Dockerfile'
+  - '.dockerignore'
+  - 'docker-bake.hcl'
+  - 'test_project/**'
+  - 'pyproject.toml'
+  - 'uv.lock'
+  - '.python-version'
+  - 'package.json'
+  - 'bun.lock'
+  - '.github/workflows/ci.yml'
+  - '.github/ci-filters.yml'
+
+# Main image publication includes browser/runtime changes as well as Python.
+image:
+  - 'server/**'
+  - 'src/**'
+  - 'runtime/**'
+  - 'public/**'
+  - 'tooling/tsconfig-aliases.ts'
+  - 'bun-entry.ts'
+  - 'index.html'
+  - 'package.json'
+  - 'bun.lock*'
+  - 'tsconfig.json'
+  - 'vite.config.ts'
+  - 'pyproject.toml'
+  - 'uv.lock'
+  - '.python-version'
+  - 'Dockerfile'
+  - '.dockerignore'
   - '.github/workflows/deploy.yml'
   - '.github/ci-filters.yml'

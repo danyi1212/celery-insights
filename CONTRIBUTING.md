@@ -201,6 +201,20 @@ Test changed behavior and failure cases. Keep fixtures deterministic.
 Unit tests should be written close to the module they are testing, with the same module name.
 For example, tests for `models.py` should be at `models_test.py` in the same folder.
 
+### CI selection and caches
+
+Pull requests and pushes to `main` select jobs through `.github/ci-filters.yml`. Python and TypeScript tooling changes run their language checks without automatically running application test suites. Helm release-tool changes run chart contracts and non-root image validation. Kubernetes lifecycle tests run for chart deployment, runtime, and integration changes.
+
+CI workflow and filter changes run the affected suites to validate the pipeline itself. Stable release tags always build the release images. Main-branch image builds run only when image inputs change.
+
+Run the path-filter regression tests before changing job selection:
+
+```sh
+bun test tooling/ci-filters.test.ts
+```
+
+Bun download caches use the runner platform and lockfile. uv manages its dependency cache. Docker builds use scoped BuildKit caches. Browser system dependencies and disposable Kubernetes clusters are installed for the jobs that need them.
+
 ### Unit tests (Python)
 
 ```shell
