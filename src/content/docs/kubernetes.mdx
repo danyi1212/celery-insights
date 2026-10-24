@@ -45,9 +45,11 @@ ingress:
 
 ### 3. Install and sign in
 
+Helm charts use the same version as stable Celery Insights releases. Chart `0.3.1` installs application image `0.3.1` by default.
+
 ```sh
 helm upgrade --install insights oci://ghcr.io/danyi1212/charts/celery-insights \
-  --version 0.1.0 --namespace celery-insights -f values.yaml --wait
+  --version 0.3.1 --namespace celery-insights -f values.yaml --wait
 ```
 
 Open `https://insights.example.com/` and sign in as `admin` with the `account-password` from your Secret. The chart generates the authentication configuration for you.
@@ -258,7 +260,7 @@ extraVolumeMounts:
 Create the referenced Secrets before upgrading. To inspect all chart settings without leaving your terminal:
 
 ```sh
-helm show values oci://ghcr.io/danyi1212/charts/celery-insights --version 0.1.0
+helm show values oci://ghcr.io/danyi1212/charts/celery-insights --version 0.3.1
 ```
 
 ## Upgrade and maintain

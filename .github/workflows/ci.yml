@@ -314,6 +314,7 @@ jobs:
           helm dependency build charts/celery-insights
           helm lint --strict charts/celery-insights
           uv run python tooling/helm/chart_test.py
+          uv run python -m unittest tooling.helm.release_test
           bash tooling/helm/validate-manifests.sh
       - name: Build Kubernetes E2E images
         uses: docker/bake-action@v7.4.0

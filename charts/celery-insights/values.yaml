@@ -1,5 +1,4 @@
-# The application image must include this PR's shared runtime state and readiness changes.
-# Publication is gated until appVersion identifies such a released image.
+# Defaults to the application version shipped with this Helm chart.
 image:
   repository: ghcr.io/danyi1212/celery-insights
   tag: ""
