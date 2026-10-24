@@ -24,25 +24,32 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      backend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.backend == 'true' }}
-      frontend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.frontend == 'true' }}
-      e2e: ${{ github.event_name != 'pull_request' || steps.filter.outputs.backend == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.integration == 'true' }}
-      helm: ${{ github.event_name != 'pull_request' || steps.filter.outputs.helm == 'true' }}
-      database: ${{ github.event_name != 'pull_request' || steps.filter.outputs.database == 'true' }}
+      typescript: ${{ steps.filter.outputs.frontend == 'true' || steps.filter.outputs.typescript-tools == 'true' }}
+      python: ${{ steps.filter.outputs.backend == 'true' || steps.filter.outputs.python-tools == 'true' }}
+      helm_e2e: ${{ steps.filter.outputs.helm-e2e == 'true' }}
+      backend: ${{ steps.filter.outputs.backend == 'true' }}
+      frontend: ${{ steps.filter.outputs.frontend == 'true' }}
+      e2e: ${{ steps.filter.outputs.backend == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.integration == 'true' }}
+      helm: ${{ steps.filter.outputs.helm == 'true' }}
+      database: ${{ steps.filter.outputs.database == 'true' }}
     steps:
       - uses: actions/checkout@v7.0.1
-        if: github.event_name == 'pull_request'
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: "1.4.4"
+      - name: Check CI path filters
+        run: bun test tooling/ci-filters.test.ts
       - uses: dorny/paths-filter@v4.0.3
-        if: github.event_name == 'pull_request'
         id: filter
         with:
           filters: .github/ci-filters.yml
+          base: ${{ github.event.pull_request.base.sha || github.event.before }}
 
   lint-backend:
     name: Lint backend
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    if: needs.changes.outputs.python == 'true'
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: astral-sh/setup-uv@v10.3.2
@@ -90,7 +97,7 @@ jobs:
     name: Lint frontend
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    if: needs.changes.outputs.typescript == 'true'
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.1.0
@@ -99,6 +106,12 @@ jobs:
       - uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version: "1.4.4"
+      - name: Cache Bun packages
+        uses: actions/cache@v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-${{ runner.arch }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-bun-
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Oxlint
@@ -121,6 +134,12 @@ jobs:
       - uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version: "1.4.4"
+      - name: Cache Bun packages
+        uses: actions/cache@v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-${{ runner.arch }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-bun-
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Install SurrealDB for native integration tests
@@ -170,6 +189,12 @@ jobs:
       - uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version: "1.4.4"
+      - name: Cache Bun packages
+        uses: actions/cache@v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-${{ runner.arch }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-bun-
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Install Playwright browsers
@@ -258,6 +283,12 @@ jobs:
       - uses: actions/setup-python@v7.1.0
         with:
           python-version-file: ".python-version"
+      - name: Cache Bun packages
+        uses: actions/cache@v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-${{ runner.arch }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-bun-
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Download official database binaries
@@ -303,11 +334,19 @@ jobs:
         env:
           HELM_VERSION: ${{ matrix.helm }}
         run: bash tooling/helm/install-tools.sh
+      - name: Cache Bun packages
+        uses: actions/cache@v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-${{ runner.arch }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-bun-
       - name: Install application test dependencies
         run: |
           uv sync --locked
           bun install --frozen-lockfile
-          bunx playwright install --with-deps chromium
+      - name: Install Helm browser test dependencies
+        if: needs.changes.outputs.helm_e2e == 'true'
+        run: bunx playwright install --with-deps chromium
       - name: Validate chart contracts and Kubernetes schemas
         run: |
           helm repo add surrealdb https://helm.surrealdb.com
@@ -316,17 +355,18 @@ jobs:
           uv run python tooling/helm/chart_test.py
           uv run python -m unittest tooling.helm.release_test
           bash tooling/helm/validate-manifests.sh
-      - name: Build Kubernetes E2E images
+      - name: Build Helm validation images
         uses: docker/bake-action@v7.4.0
         with:
           files: ./docker-bake.hcl
-          targets: e2e
+          targets: ${{ needs.changes.outputs.helm_e2e == 'true' && 'e2e' || 'e2e-app' }}
           load: true
       - name: Validate configuration with the non-root application image
         env:
           HELM_CONFIG_VALIDATOR_IMAGE: celery-insights-app:local
         run: uv run python tooling/helm/chart_test.py
       - name: Run Kubernetes lifecycle and browser E2E
+        if: needs.changes.outputs.helm_e2e == 'true'
         env:
           HELM_E2E_KEEP: "1"
         run: |
@@ -335,7 +375,7 @@ jobs:
           kind load docker-image celery-insights-helm:e2e celery-insights-test-project:local --name celery-helm-ci
           uv run python tooling/helm/e2e.py
       - name: Collect Kubernetes diagnostics on failure
-        if: failure()
+        if: failure() && needs.changes.outputs.helm_e2e == 'true'
         run: |
           mkdir -p test-results/helm
           kubectl -n celery-helm-e2e get pods,deploy,svc,pvc,hpa -o wide > test-results/helm/resources.txt || true
@@ -347,7 +387,7 @@ jobs:
           name: helm-e2e-${{ matrix.helm }}
           path: test-results/helm/
       - name: Cleanup isolated cluster
-        if: always()
+        if: always() && needs.changes.outputs.helm_e2e == 'true'
         run: kind delete cluster --name celery-helm-ci
 
   results:
@@ -371,9 +411,9 @@ jobs:
               sys.exit('Change detection did not succeed')
           outputs = jobs['changes']['outputs']
           checks = {
-              'lint-backend': 'backend',
+              'lint-backend': 'python',
               'test-backend': 'backend',
-              'lint-frontend': 'frontend',
+              'lint-frontend': 'typescript',
               'test-frontend': 'frontend',
               'e2e': 'e2e',
               'e2e-results': 'always',
