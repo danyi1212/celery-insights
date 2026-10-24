@@ -30,7 +30,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend == 'true' }}
       frontend: ${{ steps.filter.outputs.frontend == 'true' }}
       e2e: ${{ steps.filter.outputs.backend == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.integration == 'true' }}
-      helm: ${{ steps.filter.outputs.helm == 'true' }}
+      helm: ${{ steps.filter.outputs.helm == 'true' || steps.filter.outputs.helm-e2e == 'true' }}
       database: ${{ steps.filter.outputs.database == 'true' }}
     steps:
       - uses: actions/checkout@v7.0.1
