@@ -120,6 +120,14 @@ A stable application tag such as `v0.3.1` releases both Docker images and the He
 
 Do not create separate chart tags or bump a separate chart version. Publication prepares chart metadata in its checkout, so a new application tag supplies the version automatically. For the first chart publication, make the GHCR chart package public and verify an anonymous Helm pull. Record release verification results in the PR or issue.
 
+If chart publication fails after the images publish, merge the workflow fix, then retry the existing release:
+
+```sh
+gh workflow run publish-chart.yml --ref main -f release-tag=v0.3.1
+```
+
+The retry uses the updated validation tools and restores the chart from the existing release tag. It validates the released image again before publishing. Rerunning the original release run uses its original workflow revision, so that run does not pick up a merged fix.
+
 ## Coding standards
 
 ### General
