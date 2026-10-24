@@ -116,7 +116,9 @@ helm upgrade --install insights charts/celery-insights \
 
 Kubernetes E2E uses a disposable Kind cluster named `celery-helm`. Build and load `celery-insights-helm:e2e` and `celery-insights-test-project:local`, install Playwright Chromium, then run `uv run python tooling/helm/e2e.py`. The runner owns its fixture namespace; do not run it against a shared cluster. CI exercises Helm 3 and 4, TLS login, replicas, failover, storage and CPU HPA.
 
-The publication workflow validates generated authentication configuration inside the selected released application image. Chart and application versions are independent. Before setting `celery-insights.io/release-ready` to `true`, verify that image and hosted Cloud access. A `chart-vVERSION` tag matching `Chart.yaml` publishes the OCI package. Record release verification results in the PR or issue.
+A stable application tag such as `v0.3.1` releases both Docker images and the Helm chart. The image workflow calls chart publication after both image builds succeed. Chart publication sets `version` and `appVersion` from the tag, validates the chart against the released image, and publishes it to GHCR. Prerelease tags publish images without publishing a chart.
+
+Do not create separate chart tags or bump a separate chart version. Publication prepares chart metadata in its checkout, so a new application tag supplies the version automatically. For the first chart publication, make the GHCR chart package public and verify an anonymous Helm pull. Record release verification results in the PR or issue.
 
 ## Coding standards
 

@@ -2,10 +2,8 @@ apiVersion: v2
 name: celery-insights
 description: Monitor an existing Celery cluster with a shared SurrealDB history store.
 type: application
-version: 0.1.0
+version: 0.3.1
 appVersion: "0.3.1"
-annotations:
-  celery-insights.io/release-ready: "false"
 kubeVersion: ">=1.30.0-0 <1.36.0-0"
 home: https://github.com/danyi1212/celery-insights
 sources:

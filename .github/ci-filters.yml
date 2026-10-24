@@ -80,4 +80,5 @@ helm:
   - 'bun.lock'
   - '.github/workflows/ci.yml'
   - '.github/workflows/publish-chart.yml'
+  - '.github/workflows/deploy.yml'
   - '.github/ci-filters.yml'
