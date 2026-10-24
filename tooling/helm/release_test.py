@@ -57,7 +57,7 @@ class HelmRelease(unittest.TestCase):
             subprocess.run(
                 ["bash", "-e", "-c", command],
                 cwd=checkout,
-                env={**os.environ, "RELEASE_TAG": "v2.4.6", "GITHUB_OUTPUT": str(output)},
+                env={**os.environ, "RELEASE_TAG": "v2.4.6", "GITHUB_OUTPUT": str(output), "GITHUB_EVENT_NAME": "push"},
                 check=True,
                 capture_output=True,
                 text=True,
@@ -97,7 +97,43 @@ class HelmRelease(unittest.TestCase):
         self.assertIn("!contains(github.ref_name, '-')", job["if"])
         self.assertIn("!contains(github.ref_name, '+')", job["if"])
         publish = yaml.load((ROOT / ".github/workflows/publish-chart.yml").read_text(), Loader=yaml.BaseLoader)
-        self.assertEqual(list(publish["on"]), ["workflow_call"])
+        self.assertEqual(set(publish["on"]), {"workflow_call", "workflow_dispatch"})
+
+    def test_retry_restores_the_release_chart_without_changing_the_tag_or_validator(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            chart = root / "charts/celery-insights"
+            chart.mkdir(parents=True)
+            metadata = {
+                "apiVersion": "v2",
+                "name": "celery-insights",
+                "version": "0.3.1",
+                "description": "Released chart",
+            }
+            (chart / "Chart.yaml").write_text(yaml.safe_dump(metadata))
+            validator = root / "validator.txt"
+            validator.write_text("Release validator")
+
+            def git(*args):
+                return subprocess.run(["git", *args], cwd=root, check=True, capture_output=True, text=True).stdout
+
+            git("init", "--quiet")
+            git("add", ".")
+            git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "commit", "-qm", "Release")
+            git("tag", "v0.3.1")
+            git("remote", "add", "origin", ".")
+            release_commit = git("rev-parse", "v0.3.1")
+            (chart / "Chart.yaml").write_text(yaml.safe_dump({**metadata, "description": "Unreleased chart"}))
+            (chart / "new-feature.yaml").write_text("Unreleased resource")
+            validator.write_text("Fixed validator")
+            git("add", ".")
+            git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "commit", "-qm", "Next changes")
+            self.assertEqual(prepare_release("v0.3.1", chart, restore_chart=True), "0.3.1")
+            restored = yaml.safe_load((chart / "Chart.yaml").read_text())
+            self.assertEqual(restored["description"], "Released chart")
+            self.assertFalse((chart / "new-feature.yaml").exists())
+            self.assertEqual(validator.read_text(), "Fixed validator")
+            self.assertEqual(git("rev-parse", "v0.3.1"), release_commit)
 
 
 if __name__ == "__main__":

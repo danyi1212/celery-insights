@@ -1,5 +1,11 @@
 name: Publish Helm chart
 on:
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        description: Existing stable application tag whose chart publication needs retrying
+        required: true
+        type: string
   workflow_call:
     inputs:
       release-tag:
@@ -8,6 +14,9 @@ on:
         type: string
 permissions:
   contents: read
+concurrency:
+  group: helm-publish-${{ inputs.release-tag }}
+  cancel-in-progress: false
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -29,7 +38,11 @@ jobs:
           RELEASE_TAG: ${{ inputs.release-tag }}
         run: |
           uv sync --locked
-          version=$(uv run python -m tooling.helm.release "$RELEASE_TAG")
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            version=$(uv run python -m tooling.helm.release "$RELEASE_TAG" --restore-chart)
+          else
+            version=$(uv run python -m tooling.helm.release "$RELEASE_TAG")
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Install pinned validation tools
         run: bash tooling/helm/install-tools.sh

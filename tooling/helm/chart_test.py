@@ -63,6 +63,9 @@ class ChartContract(unittest.TestCase):
                 config.name,
             ]
             if image := os.environ.get("HELM_CONFIG_VALIDATOR_IMAGE"):
+                # Only synthetic credentials are written here. Linux runners
+                # and the non-root image user have different UIDs.
+                os.fchmod(config.fileno(), 0o644)
                 command = [
                     "docker",
                     "run",

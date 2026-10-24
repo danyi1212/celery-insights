@@ -322,6 +322,10 @@ jobs:
           files: ./docker-bake.hcl
           targets: e2e
           load: true
+      - name: Validate configuration with the non-root application image
+        env:
+          HELM_CONFIG_VALIDATOR_IMAGE: celery-insights-app:local
+        run: uv run python tooling/helm/chart_test.py
       - name: Run Kubernetes lifecycle and browser E2E
         env:
           HELM_E2E_KEEP: "1"
