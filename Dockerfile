@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.27.1
 
-FROM python:3.14.9-slim-trixie AS python-base
+FROM python:3.15.0-slim-trixie AS python-base
 
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
