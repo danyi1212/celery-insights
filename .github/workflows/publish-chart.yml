@@ -25,7 +25,7 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.3
       - uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version: "1.4.4"

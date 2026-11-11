@@ -54,7 +54,7 @@ jobs:
     if: needs.changes.outputs.python == 'true'
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: astral-sh/setup-uv@v10.3.3
       - uses: actions/setup-python@v7.1.0
         with:
           python-version-file: ".python-version"
@@ -74,7 +74,7 @@ jobs:
     if: needs.changes.outputs.backend == 'true'
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: astral-sh/setup-uv@v10.3.3
       - uses: actions/setup-python@v7.1.0
         with:
           python-version-file: ".python-version"
@@ -324,7 +324,7 @@ jobs:
         helm: ["3.19.0", "4.3.0"]
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.3
       - uses: actions/setup-python@v7.0.0
         with:
           python-version-file: ".python-version"
