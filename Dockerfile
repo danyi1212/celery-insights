@@ -54,7 +54,7 @@ RUN bun build runtime/config-cli.ts --target=bun --outfile ./config-cli.js
 # runs on a different architecture.
 FROM oven/bun:1.4.4-slim AS bun-runtime
 
-FROM surrealdb/surrealdb:v3.3.4 AS surreal-runtime
+FROM surrealdb/surrealdb:v4.0.0 AS surreal-runtime
 
 FROM python-base
 
