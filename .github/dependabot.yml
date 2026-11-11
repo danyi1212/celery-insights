@@ -14,10 +14,6 @@ updates:
         applies-to: version-updates
         patterns:
           - "*"
-      bun-security-updates:
-        applies-to: security-updates
-        patterns:
-          - "*"
   - package-ecosystem: "pip" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:

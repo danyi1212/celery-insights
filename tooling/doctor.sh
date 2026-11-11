@@ -17,7 +17,13 @@ if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
 else
   echo '  Docker engine: unavailable (install Docker and start its engine)'
 fi
-echo '  Chromium: install with bunx playwright install chromium'
+if [[ ! -d node_modules/@playwright/test ]]; then
+  echo '  Chromium: unknown (install dependencies with bun install first)'
+elif bun -e 'const { chromium } = require("@playwright/test"); process.exit(require("node:fs").existsSync(chromium.executablePath()) ? 0 : 1)' >/dev/null 2>&1; then
+  echo '  Chromium: installed'
+else
+  echo '  Chromium: missing (install with bunx playwright install chromium)'
+fi
 if command -v surreal >/dev/null 2>&1; then
   echo "  SurrealDB: $(surreal version) (native tests use 3.3.4)"
 else

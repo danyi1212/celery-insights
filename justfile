@@ -13,7 +13,7 @@ help:
 
 # Report local development and test prerequisites.
 doctor:
-    @cd {{project}} && bash tooling/doctor.sh
+    @cd "{{project}}" && bash tooling/doctor.sh
 
 # ─── Check ────────────────────────────────────────────────────
 
