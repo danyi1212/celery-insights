@@ -34,6 +34,8 @@ jobs:
       database: ${{ steps.filter.outputs.database == 'true' }}
     steps:
       - uses: actions/checkout@v7.0.1
+      - name: Lint GitHub workflows
+        run: docker run --rm -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:1.7.12
       - uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version: "1.4.4"

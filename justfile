@@ -11,6 +11,10 @@ test_project := project / "test_project"
 help:
     just --list
 
+# Report local development and test prerequisites.
+doctor:
+    @cd {{project}} && bash tooling/doctor.sh
+
 # ─── Check ────────────────────────────────────────────────────
 
 # Run all checks (typecheck, lint, format, tests)
