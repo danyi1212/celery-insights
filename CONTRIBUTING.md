@@ -41,6 +41,8 @@ To contribute to the project, follow these steps:
 
 Requirements: Bun, uv, Python 3.14+, Docker for E2E, and SurrealDB 3.3.4 for native database tests. Pinned runtime versions live in `Dockerfile`, `package.json` and `.python-version`.
 
+Run `just doctor` to check local prerequisites without changing your installation.
+
 ```sh
 git clone https://github.com/<your_username>/celery-insights.git
 cd celery-insights
