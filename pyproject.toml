@@ -14,7 +14,7 @@ dependencies = [
     "pydantic-settings>=2",
     "dans-log-formatter",
     "redis>=5.0.8",
-    "surrealdb>=2,<3",
+    "surrealdb>=2,<4",
     "python-multipart>=0.0.32",
 ]
 
