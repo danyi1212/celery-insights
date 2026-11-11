@@ -70,7 +70,7 @@ jobs:
           mkdir -p chart-dist
           helm package charts/celery-insights --destination chart-dist
           helm push chart-dist/*.tgz oci://ghcr.io/danyi1212/charts
-      - uses: actions/upload-artifact@v7.0.1
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: helm-chart
           path: chart-dist/*.tgz

@@ -383,7 +383,7 @@ jobs:
           kubectl -n celery-helm-e2e get pods,deploy,svc,pvc,hpa -o wide > test-results/helm/resources.txt || true
           kubectl -n celery-helm-e2e get events > test-results/helm/events.txt || true
           kubectl -n celery-helm-e2e logs -l app.kubernetes.io/name=celery-insights --all-containers --prefix --tail=200 > test-results/helm/application.txt || true
-      - uses: actions/upload-artifact@v7.0.1
+      - uses: actions/upload-artifact@v7.0.2
         if: failure()
         with:
           name: helm-e2e-${{ matrix.helm }}
