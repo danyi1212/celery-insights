@@ -358,7 +358,7 @@ jobs:
           uv run python -m unittest tooling.helm.release_test
           bash tooling/helm/validate-manifests.sh
       - name: Build Helm validation images
-        uses: docker/bake-action@v7.4.0
+        uses: docker/bake-action@v7.5.0
         with:
           files: ./docker-bake.hcl
           targets: ${{ needs.changes.outputs.helm_e2e == 'true' && 'e2e' || 'e2e-app' }}
