@@ -325,7 +325,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: astral-sh/setup-uv@v10.2.0
-      - uses: actions/setup-python@v7.0.0
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version-file: ".python-version"
       - uses: oven-sh/setup-bun@v2.2.0
