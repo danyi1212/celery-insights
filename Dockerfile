@@ -32,7 +32,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install --python /usr/local/bin/python --prefix=/install --link-mode=copy -r ./requirements.txt
 
 # The SPA and Bun JavaScript bundle are architecture-independent.
-FROM --platform=$BUILDPLATFORM oven/bun:1.4.4-slim AS front-build
+FROM --platform=$BUILDPLATFORM oven/bun:1.4.5-slim AS front-build
 
 WORKDIR /app
 
@@ -52,7 +52,7 @@ RUN bun build runtime/config-cli.ts --target=bun --outfile ./config-cli.js
 
 # Keep the runtime binary on the target architecture, even when front-build
 # runs on a different architecture.
-FROM oven/bun:1.4.4-slim AS bun-runtime
+FROM oven/bun:1.4.5-slim AS bun-runtime
 
 FROM surrealdb/surrealdb:v3.3.4 AS surreal-runtime
 
